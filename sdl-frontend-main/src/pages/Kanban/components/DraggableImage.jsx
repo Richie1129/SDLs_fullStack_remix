@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { socket } from "../../../utils/socket";
 import { getUserSessions, getRagMessageBySession, testConnection } from "../../../api/rag";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const API_URL = "/proxy/api/v1/chats/a159fe08e2d411efb3910242ac120004"; // 指向後端代理
 const API_KEY = "ragflow-U0ZTc4MzdlZTJjYjExZWZiMzcyMDI0Mm"; // 保持不變，後端已使用此 Key
-
 
 const DraggableImage = () => {
   const initialPosition = { x: window.innerWidth - 100, y: window.innerHeight / 2 };
@@ -242,16 +243,40 @@ const DraggableImage = () => {
   // 修改：建立新的 session
   const createSession = async () => {
     try {
-      // 生成一個唯一的 session ID（使用時間戳和隨機數）
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      console.log("生成新的 session ID:", newSessionId);
+      // 調用 RAGFlow API 創建 session
+      const sessionPayload = { 
+        name: `對話 - ${new Date().toLocaleTimeString()}` 
+      };
+      
+      console.log("正在向 RAGFlow 創建 session...");
+      
+      const response = await fetch(`${API_URL}/sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        body: JSON.stringify(sessionPayload),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`創建 session 失敗: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const ragflowSessionId = data?.data?.id;
+      
+      if (!ragflowSessionId) {
+        throw new Error("無法從 RAGFlow 獲取 session_id");
+      }
+      
+      console.log("成功從 RAGFlow 獲取 session ID:", ragflowSessionId);
 
       // 設置當前會話ID
-      setCurrentChatId(newSessionId);
-      setSessionId(newSessionId);
+      setCurrentChatId(ragflowSessionId);
+      setSessionId(ragflowSessionId);
       
-      console.log("成功建立 session ID:", newSessionId);
-      return newSessionId;
+      return ragflowSessionId;
     } catch (error) {
       console.error("建立 session 失敗:", error);
       throw error;
@@ -272,14 +297,14 @@ const DraggableImage = () => {
         currentSessionId = await createSession();
       }
 
-      // 發送對話請求到 RAGFlow（但不傳送 session_id，讓 RAGFlow 獨立處理）
+      // 發送對話請求到 RAGFlow，包含 session_id
       const payload = {
         question,
         stream: false,
-        // 注意：不傳送 session_id，因為我們使用自己的 sessionId 管理
+        session_id: currentSessionId, // 使用 RAGFlow 提供的 session_id
       };
 
-      console.log("發送問題到 RAGFlow，自己的 session ID:", currentSessionId, "問題:", question);
+      console.log("發送問題到 RAGFlow，使用 session ID:", currentSessionId, "問題:", question);
 
       const response = await fetch(`${API_URL}/completions`, {
         method: "POST",
@@ -569,43 +594,76 @@ const DraggableImage = () => {
                     </div>
                   )}
                   {item.answer && (
-                    <div className="flex justify-start">
-                      <div
-                        className="p-3 rounded-lg shadow max-w-lg"
-                        style={{ backgroundColor: "#F0F0F0", color: "#333" }}
-                      >
-                        <p>{item.answer}</p>
-                      </div>
-                    </div>
-                  )}
+                <div className="flex justify-start">
+                  <div
+                    className="p-3 rounded-lg shadow max-w-lg"
+                    style={{ backgroundColor: "#F0F0F0", color: "#333" }}
+                  >
+                        <div className="markdown-content">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              // Custom components for better styling
+                              code: ({ node, className, children, ...props }) => {
+                                const match = /language-(\w+)/.exec(className || '');
+                                return match ? (
+                                  <pre className="bg-gray-100 p-3 rounded my-2 overflow-x-auto">
+                                    <code className="bg-transparent text-gray-800 text-xs" {...props}>
+                                      {children}
+                                    </code>
+                                  </pre>
+                                ) : (
+                                  <code className="bg-gray-200 text-gray-800 px-1 py-0.5 rounded text-xs" {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              },
+                              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                              ul: ({ children }) => <ul className="mb-2 pl-4 list-disc">{children}</ul>,
+                              ol: ({ children }) => <ol className="mb-2 pl-4 list-decimal">{children}</ol>,
+                              li: ({ children }) => <li className="mb-1">{children}</li>,
+                              h1: ({ children }) => <h1 className="text-lg font-semibold mt-4 mb-2 first:mt-0">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-base font-semibold mt-4 mb-2 first:mt-0">{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-sm font-semibold mt-4 mb-2 first:mt-0">{children}</h3>,
+                              blockquote: ({ children }) => <blockquote className="border-l-4 border-blue-300 pl-4 my-2 italic">{children}</blockquote>,
+                              strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                              // 如果需要，可以在這裡添加更多 HTML 元素的自定義組件
+                            }}
+                          >
+                            {item.answer}
+                          </ReactMarkdown>
+                        </div>
+                  </div>
                 </div>
+              )}
+            </div>
                 ))
               )}
-              <div ref={chatEndRef}></div>
-            </div>
+            <div ref={chatEndRef}></div>
+          </div>
 
             {/* 輸入區域 */}
-            <form
-              onSubmit={handleSubmit}
-              className="p-4 bg-white border-t flex items-center"
+          <form
+            onSubmit={handleSubmit}
+            className="p-4 bg-white border-t flex items-center"
               style={{ padding: "10px 0 0 0", borderTop: "1px solid #E0E0E0" }}
             >
-              <input
-                  type="text"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="輸入您的問題..."
-                  className="flex-1 p-2 border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-500 mr-4"
-              />
-              <button
-                  type="submit"
-                  className={`py-1 px-3 rounded-lg shadow transition-all text-white ${
-                  isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#5BA491] hover:bg-[#4a9076]"
-                  }`}
-                  disabled={isSubmitting}
-              >
-                  {isSubmitting ? "送出中..." : "送出"}
-              </button>
+            <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="輸入您的問題..."
+                className="flex-1 p-2 border border-gray-300 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-500 mr-4"
+            />
+            <button
+                type="submit"
+                className={`py-1 px-3 rounded-lg shadow transition-all text-white ${
+                isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-[#5BA491] hover:bg-[#4a9076]"
+                }`}
+                disabled={isSubmitting}
+            >
+                {isSubmitting ? "送出中..." : "送出"}
+            </button>
             </form>
           </div>
         </div>
