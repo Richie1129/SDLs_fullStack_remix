@@ -74,3 +74,13 @@ export const deleteSessionMessages = async (userId, sessionId) => {
     const response = await ragApi.delete(`/session/${userId}/${sessionId}`);
     return response.data;
 }
+
+// 新增：創建新會話並保存開場白到資料庫
+export const createNewSessionInDB = async (userId, sessionId, userName) => {
+    const response = await ragApi.post('/create-session', {
+        userId,
+        sessionId,
+        userName
+    });
+    return response.data;
+}

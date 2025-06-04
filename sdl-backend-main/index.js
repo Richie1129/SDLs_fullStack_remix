@@ -636,6 +636,36 @@ app.post('/proxy/api/v1/chats/:chatId/completions', async (req, res) => {
     }
 });
 
+// 新增：代理 DELETE 請求用於刪除 RAGFlow 會話
+app.delete('/proxy/api/v1/chats/:chatId/sessions/:sessionId', async (req, res) => {
+    try {
+        const { chatId, sessionId } = req.params;
+        console.log("代理刪除會話請求 - chatId:", chatId, "sessionId:", sessionId);
+        
+        const response = await axios.delete(
+            `https://140.115.126.193/api/v1/chats/${chatId}/sessions/${sessionId}`,
+            {
+                headers: {
+                    Authorization: `Bearer ${API_KEY}`,
+                    "Content-Type": "application/json",
+                },
+                httpsAgent: agent, // 忽略證書驗證
+            }
+        );
+        
+        console.log("RAGFlow 會話刪除成功:", response.data);
+        res.json(response.data);
+    } catch (error) {
+        console.error("代理請求失敗 (delete sessions):", error.message);
+        console.error("錯誤詳情:", error.response?.data);
+        res.status(error.response?.status || 500).json({ 
+            message: "代理請求失敗", 
+            error: error.message,
+            details: error.response?.data 
+        });
+    }
+});
+
 //api routes
 app.use('/api/users', require('./routes/user'));
 app.use('/api/projects', require('./routes/project'))

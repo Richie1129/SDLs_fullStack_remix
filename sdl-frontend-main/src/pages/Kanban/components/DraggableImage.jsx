@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { socket } from "../../../utils/socket";
-import { getUserSessions, getRagMessageBySession, testConnection, deleteSession, deleteSessionMessages } from "../../../api/rag";
+import { getUserSessions, getRagMessageBySession, testConnection, deleteSession, deleteSessionMessages, createNewSessionInDB } from "../../../api/rag";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
@@ -64,7 +64,7 @@ const DraggableImage = () => {
     if (showChat && chatSessions.length === 0 && !isLoadingSessions) {
       fetchChatSessions();
     }
-  }, [showChat, chatSessions.length, isLoadingSessions]);
+  }, [showChat]); // 移除 chatSessions.length 和 isLoadingSessions 從依賴項
 
   // 新增：當 currentChatId 改變時載入對話歷史
   useEffect(() => {
@@ -72,7 +72,7 @@ const DraggableImage = () => {
       loadChatHistory(currentChatId);
       setSessionId(currentChatId);
     }
-  }, [currentChatId, sessionId, isLoadingHistory]);
+  }, [currentChatId]); // 移除 sessionId 和 isLoadingHistory 從依賴項
 
   useEffect(() => {
     const handleResize = () => {
@@ -142,9 +142,10 @@ const DraggableImage = () => {
       if (sessions.length === 0) {
         console.log("沒有歷史對話，顯示空狀態");
         setChatSessions([]);
-        // 不自動創建新對話，讓用戶手動點擊「新對話」按鈕
-        // 設置開場白但不設置 currentChatId
-        setHistory([{ question: null, answer: OPENING_MESSAGE }]);
+        // 設置開場白，確保不會重複觸發 fetchChatSessions
+        if (history.length === 0) {
+          setHistory([{ question: null, answer: OPENING_MESSAGE }]);
+        }
       } else {
         console.log(`找到 ${sessions.length} 個歷史對話`);
         
@@ -155,8 +156,8 @@ const DraggableImage = () => {
         }));
         
         setChatSessions(formattedSessions);
-        // 設置第一個對話為當前對話
-        if (!currentChatId) {
+        // 設置第一個對話為當前對話（只有在沒有設置時）
+        if (!currentChatId && formattedSessions.length > 0) {
           setCurrentChatId(formattedSessions[0].id);
         }
       }
@@ -165,7 +166,9 @@ const DraggableImage = () => {
       console.error("錯誤詳情:", error.response?.data || error.message);
       setChatSessions([]);
       // 設置開場白作為默認狀態
-      setHistory([{ question: null, answer: OPENING_MESSAGE }]);
+      if (history.length === 0) {
+        setHistory([{ question: null, answer: OPENING_MESSAGE }]);
+      }
     } finally {
       setIsLoadingSessions(false);
     }
@@ -248,13 +251,36 @@ const DraggableImage = () => {
       // 重置歷史記錄為開場白
       setHistory([{ question: null, answer: OPENING_MESSAGE }]);
       
-      // 將新會話添加到會話列表
+      // 立即更新當前會話 ID
+      setCurrentChatId(newSessionId);
+      setSessionId(newSessionId);
+      
+      // 將新會話添加到會話列表（添加到最前面）
       const newSession = {
         id: newSessionId,
         name: `新對話 - ${new Date().toLocaleTimeString()}`
       };
       setChatSessions(prevSessions => [newSession, ...prevSessions]);
       
+      // 將開場白保存到資料庫，確保新會話會出現在歷史記錄中
+      try {
+        const userId = localStorage.getItem('id') || '1';
+        const userName = localStorage.getItem('username') || '未知用戶';
+        
+        // 使用新的 API 來創建會話記錄
+        await createNewSessionInDB(userId, newSessionId, userName);
+        console.log("新會話已保存到資料庫");
+        
+        // 延遲刷新對話歷史，確保資料庫記錄已生效
+        setTimeout(() => {
+          console.log("自動刷新對話歷史列表（新對話創建後）");
+          refreshChatSessions();
+        }, 1000);
+      } catch (saveError) {
+        console.warn("保存新會話到資料庫失敗，但不影響會話創建:", saveError);
+      }
+      
+      console.log("新會話創建成功:", newSessionId);
       return newSessionId;
     } catch (error) {
       console.error("創建新會話失敗:", error);
@@ -312,21 +338,28 @@ const DraggableImage = () => {
 
     setIsSubmitting(true); // 禁用按鈕，顯示送出中
     let currentSessionId = currentChatId;
+    let isNewSession = false; // 追蹤是否是新會話
+
+    // 先將用戶的問題添加到歷史記錄中，立即顯示
+    const userQuestion = question;
+    setHistory((prevHistory) => [...prevHistory, { question: userQuestion, answer: "正在思考中..." }]);
+    setQuestion(""); // 立即清空輸入框
 
     try {
       // 如果還沒有 session ID，先建立一個
       if (!currentSessionId) {
         currentSessionId = await createSession();
+        isNewSession = true; // 標記為新會話
       }
 
       // 發送對話請求到 RAGFlow，包含 session_id
       const payload = {
-        question,
+        question: userQuestion,
         stream: false,
         session_id: currentSessionId, // 使用 RAGFlow 提供的 session_id
       };
 
-      console.log("發送問題到 RAGFlow，使用 session ID:", currentSessionId, "問題:", question);
+      console.log("發送問題到 RAGFlow，使用 session ID:", currentSessionId, "問題:", userQuestion);
 
       const response = await fetch(`${API_URL}/completions`, {
         method: "POST",
@@ -340,8 +373,15 @@ const DraggableImage = () => {
       const data = await response.json();
       const answer = data?.data?.answer || "無法取得回答";
 
-      // 更新訊息記錄
-      setHistory((prevHistory) => [...prevHistory, { question, answer }]);
+      // 更新最後一條訊息的回答
+      setHistory((prevHistory) => {
+        const newHistory = [...prevHistory];
+        const lastIndex = newHistory.length - 1;
+        if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
+          newHistory[lastIndex] = { question: userQuestion, answer };
+        }
+        return newHistory;
+      });
 
       // 從 localStorage 獲取用戶信息
       const userId = localStorage.getItem('id') || '1';
@@ -353,7 +393,7 @@ const DraggableImage = () => {
       // 發送輸入訊息到後端的 socket，包含用戶資訊
       socket.emit("rag_message", {
         messageType: "input",
-        message: question,
+        message: userQuestion,
         author: userName || "用戶",
         creator: userId,
         room: projectId,
@@ -373,11 +413,29 @@ const DraggableImage = () => {
           userName: userName,
           sessionId: currentSessionId
         });
+        
+        // 如果是新會話，在訊息保存完成後更新對話歷史列表
+        if (isNewSession) {
+          console.log("檢測到新會話，3秒後自動更新對話歷史列表");
+          setTimeout(() => {
+            refreshChatSessions();
+          }, 3000); // 3秒後刷新對話歷史
+        }
       });
 
-      setQuestion(""); // 清空輸入框
     } catch (error) {
       console.error("處理訊息失敗:", error);
+      
+      // 如果發生錯誤，更新最後一條訊息顯示錯誤
+      setHistory((prevHistory) => {
+        const newHistory = [...prevHistory];
+        const lastIndex = newHistory.length - 1;
+        if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
+          newHistory[lastIndex] = { question: userQuestion, answer: "抱歉，發生錯誤，請稍後再試。" };
+        }
+        return newHistory;
+      });
+      
       // 如果是因為 session 問題，重置 sessionId 讓下次重新建立
       if (error.message.includes("session")) {
         setSessionId(null);
@@ -481,18 +539,22 @@ const DraggableImage = () => {
        
       console.log(`正在刪除對話: ${sessionId}`);
       
-      // 1. 嘗試從 RAGFlow 刪除會話（允許失敗）
+      // 1. 嘗試從 RAGFlow 刪除會話（允許失敗，因為可能不支持或會話不存在）
       let ragflowDeleteSuccess = false;
       try {
         await deleteSession(sessionId);
         console.log("已從 RAGFlow 刪除會話");
         ragflowDeleteSuccess = true;
       } catch (ragflowError) {
-        console.warn("從 RAGFlow 刪除會話失敗，可能會話已不存在:", ragflowError.message);
-        // RAGFlow 刪除失敗不影響後續流程
+        console.warn("從 RAGFlow 刪除會話失敗:", ragflowError.message);
+        // 檢查是否是 405 Method Not Allowed，這表示 RAGFlow 不支持此操作
+        if (ragflowError.message.includes("405") || ragflowError.message.includes("Method Not Allowed")) {
+          console.log("RAGFlow 不支持刪除操作，這是正常的");
+          ragflowDeleteSuccess = true; // 視為成功，因為不支持是正常的
+        }
       }
       
-      // 2. 從後端資料庫刪除相關訊息（這通常會成功）
+      // 2. 從後端資料庫刪除相關訊息
       let dbDeleteSuccess = false;
       try {
         await deleteSessionMessages(userId, sessionId);
@@ -500,10 +562,14 @@ const DraggableImage = () => {
         dbDeleteSuccess = true;
       } catch (dbError) {
         console.error("從資料庫刪除會話訊息失敗:", dbError);
-        // 如果資料庫也失敗，這是更嚴重的問題
+        // 如果是 404，可能該會話在資料庫中不存在，也視為成功
+        if (dbError.message.includes("404") || dbError.response?.status === 404) {
+          console.log("資料庫中沒有找到該會話的訊息，可能已不存在");
+          dbDeleteSuccess = true;
+        }
       }
       
-      // 3. 只要有一個刪除成功，就更新前端狀態
+      // 3. 只要至少有一個操作成功或資源不存在，就更新前端狀態
       if (ragflowDeleteSuccess || dbDeleteSuccess) {
         // 更新前端狀態
         setChatSessions(prevSessions => 
@@ -519,21 +585,15 @@ const DraggableImage = () => {
         
         console.log("對話刪除完成");
         
-        // 顯示成功訊息，註明刪除結果
-        let successMessage = `對話「${sessionName}」已成功刪除。`;
-        if (!ragflowDeleteSuccess) {
-          successMessage += '';
-        }
-        
         await showSwalWithCorrectZIndex({
           title: '刪除成功！',
-          text: successMessage,
+          text: `對話「${sessionName}」已成功刪除。`,
           icon: 'success',
           confirmButtonText: '確定'
         });
       } else {
-        // 兩個都失敗才顯示錯誤
-        throw new Error('無法從任何來源刪除會話');
+        // 只有在兩個都失敗且不是資源不存在的情況下才顯示錯誤
+        throw new Error('無法刪除會話：所有刪除操作都失敗了');
       }
 
     } catch (error) {
@@ -545,6 +605,34 @@ const DraggableImage = () => {
         icon: 'error',
         confirmButtonText: '確定'
       });
+    }
+  };
+
+  // 新增：刷新對話歷史列表（不影響當前對話狀態）
+  const refreshChatSessions = async () => {
+    try {
+      console.log("正在刷新對話歷史列表...");
+      
+      const userId = localStorage.getItem('id') || '1';
+      const sessions = await getUserSessions(userId);
+      
+      // 轉換數據格式
+      const formattedSessions = sessions.map((session, index) => ({
+        id: session.sessionId,
+        name: `對話 ${index + 1} - ${session.userName || '未知用戶'}`
+      }));
+      
+      setChatSessions(formattedSessions);
+      console.log(`對話歷史列表已更新，共 ${formattedSessions.length} 個對話`);
+      
+      // 如果當前沒有選中的對話，但有對話列表，選中最新的對話
+      if (!currentChatId && formattedSessions.length > 0) {
+        const latestSession = formattedSessions[0];
+        setCurrentChatId(latestSession.id);
+        console.log("自動選中最新對話:", latestSession.id);
+      }
+    } catch (error) {
+      console.error("刷新對話歷史列表失敗:", error);
     }
   };
 

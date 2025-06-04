@@ -188,3 +188,36 @@ exports.deleteSessionMessages = async (req, res) => {
         });
     }
 };
+
+// 新增：創建新會話並保存開場白
+exports.createNewSession = async (req, res) => {
+    const { userId, sessionId, userName } = req.body;
+    console.log("創建新會話，userId:", userId, "sessionId:", sessionId, "userName:", userName);
+
+    try {
+        const openingMessage = "嗨！我是一位專門輔導高中生科學探究與實作的自然科學導師。我會用適合高中生的語言，保持專業的同時，幫助你探索自然科學的奧秘，並引導你選擇一個有興趣的科展主題，以及更深入了解你的研究問題。什麼可以幫到你的嗎？";
+        
+        // 創建一條開場白記錄
+        const newMessage = await Rag_message.create({
+            input_message: null,  // 沒有用戶輸入
+            response_message: openingMessage,  // 系統開場白
+            author: "科學助手",
+            userId: userId,
+            userName: userName,
+            sessionId: sessionId
+        });
+
+        console.log("新會話創建成功，ID:", newMessage.id);
+        res.status(200).json({ 
+            message: "新會話創建成功", 
+            sessionId: sessionId,
+            messageId: newMessage.id
+        });
+    } catch (err) {
+        console.error("創建新會話錯誤:", err);
+        res.status(500).json({ 
+            error: '無法創建新會話', 
+            details: err.message 
+        });
+    }
+};

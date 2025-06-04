@@ -20,4 +20,7 @@ router.get('/sessions/:userId', controller.getUserSessions);
 // 新增：根據 userId 和 sessionId 刪除特定會話的所有訊息
 router.delete('/session/:userId/:sessionId', controller.deleteSessionMessages);
 
+// 新增：創建新會話並保存開場白
+router.post('/create-session', controller.createNewSession);
+
 module.exports = router;
