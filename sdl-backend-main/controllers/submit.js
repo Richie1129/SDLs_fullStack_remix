@@ -4,6 +4,7 @@ const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
 const Stage = require('../models/stage');
 const fs = require('fs').promises;
+const { logSubmitChange, logSubmitFieldChanges } = require('../utils/submitChangeLogger');
 
 exports.createSubmit = async(req, res) => {
     const { currentStage, currentSubStage, content, projectId } = req.body;
@@ -175,6 +176,9 @@ exports.updateSubmit = async (req, res) => {
       const submit = await Submit.findByPk(submitId);
       if (!submit) return res.status(404).json({ message: "找不到該提交記錄" });
   
+      // 記錄變更前的原始資料
+      const originalData = { content: submit.content };
+      
       // 1. 如果有新檔案
       if (req.files && req.files.length > 0) {
         // 這裡示範只取第一個檔案，你也可以遍歷多檔
@@ -184,11 +188,40 @@ exports.updateSubmit = async (req, res) => {
           fileData: buffer,
           fileName: file.filename
         });
+        
+        // 記錄檔案變更
+        try {
+          await logSubmitChange({
+            submitId: submit.id,
+            changeType: 'update',
+            fieldName: 'file',
+            oldValue: submit.fileName || '無檔案',
+            newValue: file.filename,
+            changedBy: '使用者', // 這裡可以從token或session取得使用者名稱
+            projectId: submit.projectId,
+            description: `檔案從「${submit.fileName || '無檔案'}」更新為「${file.filename}」`
+          });
+        } catch (logError) {
+          console.warn('記錄檔案變更失敗，但不影響主要功能:', logError);
+        }
       }
   
       // 2. 更新文字內容（如果有）
       if (content !== undefined) {
         await submit.update({ content });
+        
+        // 記錄內容變更
+        try {
+          await logSubmitFieldChanges(
+            originalData,
+            { content },
+            submit.id,
+            '使用者', // 這裡可以從token或session取得使用者名稱
+            submit.projectId
+          );
+        } catch (logError) {
+          console.warn('記錄內容變更失敗，但不影響主要功能:', logError);
+        }
       }
   
       return res.status(200).json({ message: "更新成功" });
@@ -197,6 +230,31 @@ exports.updateSubmit = async (req, res) => {
       return res.status(500).json({ message: "更新失敗" });
     }
   };
+
+// 取得提交變更記錄
+exports.getSubmitChangeLogs = async (req, res) => {
+    const { submitId } = req.params;
+    
+    try {
+        const SubmitChangeLog = require('../models/submit_change_log');
+        const changeLogs = await SubmitChangeLog.findAll({
+            where: { submitId },
+            order: [['createdAt', 'DESC']]
+        });
+        
+        res.status(200).json(changeLogs);
+    } catch (error) {
+        console.error('取得提交變更記錄失敗:', error);
+        
+        // 如果是表不存在的錯誤，返回空陣列
+        if (error.name === 'SequelizeDatabaseError' && error.message.includes('doesn\'t exist')) {
+            console.log('submit_change_logs表不存在，返回空記錄');
+            return res.status(200).json([]);
+        }
+        
+        res.status(500).json({ message: '取得變更記錄失敗', error: error.message });
+    }
+};
 
 // exports.getProfolioSubmit = async(req, res) => {
 //     const { projectId } = req.query;

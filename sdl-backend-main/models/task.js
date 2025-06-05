@@ -44,4 +44,9 @@ const Task = sequelize.define('task', {
 Task.belongsToMany(Tag, {through:"Card_Tag"});
 Tag.belongsToMany(Task, {through:"Card_Tag"});
 
+// 建立與 TaskChangeLog 的關聯
+const TaskChangeLog = require('./task_change_log');
+Task.hasMany(TaskChangeLog, { foreignKey: 'taskId', as: 'changeLogs' });
+TaskChangeLog.belongsTo(Task, { foreignKey: 'taskId' });
+
 module.exports = Task;

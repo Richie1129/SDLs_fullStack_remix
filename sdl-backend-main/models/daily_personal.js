@@ -19,7 +19,8 @@ const Daily_personal = sequelize.define('daily_personal', {
         allowNull:true,
     }
 }, {
-    tableName: 'daily_personals' // 👈 加上這行
+    tableName: 'daily_personals', // 👈 加上這行
+    timestamps: true // 啟用自動時間戳記
 });
 
 module.exports = Daily_personal;

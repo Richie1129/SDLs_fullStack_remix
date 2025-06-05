@@ -18,6 +18,8 @@ const Submit = sequelize.define('submit', {
         type: DataTypes.TEXT,
         allowNull:true,
     },
+}, {
+    timestamps: true // 啟用自動時間戳記
 });
 
 module.exports = Submit;

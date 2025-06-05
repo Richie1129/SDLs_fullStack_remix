@@ -23,6 +23,12 @@ const Rag_message = require('./models/rag_message')
 const Project = require('./models/project')
 const QuestionMessage = require('./models/question_message')
 const Announcement = require('./models/announcement');
+const TaskChangeLog = require('./models/task_change_log');
+const NodeChangeLog = require('./models/node_change_log');
+const SubmitChangeLog = require('./models/submit_change_log');
+const { logTaskChange, logFieldChanges } = require('./utils/taskChangeLogger');
+const { logNodeChange, logNodeFieldChanges } = require('./utils/nodeChangeLogger');
+const { logSubmitChange, logSubmitFieldChanges } = require('./utils/submitChangeLogger');
 const axios = require('axios');
 const https = require('https');
 const { rm } = require('fs');
@@ -194,6 +200,16 @@ io.on("connection", (socket) => {
                 columnId: columnId,
             });
             console.log("creatTask", creatTask)
+            
+            // 記錄任務創建
+            await logTaskChange({
+                taskId: creatTask.id,
+                changeType: 'create',
+                changedBy: extractedOwner,
+                projectId: projectId,
+                description: `創建新任務「${creatTask.title}」`
+            });
+            
             const addIntoTaskArray = await Column.findByPk(creatTask.columnId)
 
             addIntoTaskArray.task = [...addIntoTaskArray.task, creatTask.id];
@@ -209,7 +225,15 @@ io.on("connection", (socket) => {
                 }
             });
 
+            // 廣播任務創建事件與活動更新
             io.to(projectId).emit("taskItems", addIntoTaskArray);
+            io.to(projectId).emit("activityUpdate", {
+                type: 'create',
+                taskId: creatTask.id,
+                taskTitle: creatTask.title,
+                user: extractedOwner,
+                timestamp: new Date()
+            });
         } catch (error) {
             console.error("❌ 創建任務錯誤:", error);
         }
@@ -217,8 +241,12 @@ io.on("connection", (socket) => {
     
     //update card
     ensureListener(socket, "cardUpdated", async (data) => {
-        const { cardData, index, columnIndex, kanbanData, projectId } = data;
+        const { cardData, index, columnIndex, kanbanData, projectId, user } = data;
         try {
+            // 取得原始資料以比較變更
+            const originalTask = await Task.findByPk(cardData.id);
+            const changedBy = user?.username || cardData.owner || "未知";
+            
             const updateTask = await Task.update({
                 ...cardData,
                 files: cardData.files || [], // 確保 files 欄位存在
@@ -228,6 +256,18 @@ io.on("connection", (socket) => {
                     id: cardData.id
                 }
             });
+            
+            // 記錄欄位變更
+            if (originalTask) {
+                await logFieldChanges(
+                    originalTask.dataValues, 
+                    cardData, 
+                    cardData.id, 
+                    changedBy, 
+                    projectId
+                );
+            }
+            
             await Project.update({
                 id: projectId
             }, {
@@ -235,14 +275,23 @@ io.on("connection", (socket) => {
                     id: projectId
                 }
             });
+            
+            // 廣播任務更新事件與活動更新
             io.to(projectId).emit("taskItem", updateTask);
+            io.to(projectId).emit("activityUpdate", {
+                type: 'update',
+                taskId: cardData.id,
+                taskTitle: cardData.title,
+                user: changedBy,
+                timestamp: new Date()
+            });
         } catch (error) {
             console.error("更新卡片失敗:", error);
         }
     });
     //Delete card
     ensureListener(socket, "cardDelete", async (data) => {
-        const { cardData, index, columnIndex, kanbanData, projectId } = data;
+        const { cardData, index, columnIndex, kanbanData, projectId, user } = data;
 
         // Step 1: Retrieve the column and update it
         try {
@@ -253,8 +302,17 @@ io.on("connection", (socket) => {
             });
 
             if (column) {
-                // Filter out the task ID from the tasks array
+                // 記錄任務刪除
+                const changedBy = user?.username || cardData.owner || "未知";
+                await logTaskChange({
+                    taskId: cardData.id,
+                    changeType: 'delete',
+                    changedBy: changedBy,
+                    projectId: projectId,
+                    description: `刪除任務「${cardData.title}」`
+                });
 
+                // Filter out the task ID from the tasks array
                 const updatedTasks = column.task.filter(taskId => taskId !== cardData.id);
 
                 // Update the column with the new tasks array
@@ -273,9 +331,16 @@ io.on("connection", (socket) => {
                         id: projectId
                     }
                 });
-                // Emit the updated task information to all clients
-                // io.sockets.emit("taskItem", updateTask);
+                
+                // 廣播任務刪除事件與活動更新
                 io.to(projectId).emit("taskItem", updateTask);
+                io.to(projectId).emit("activityUpdate", {
+                    type: 'delete',
+                    taskId: cardData.id,
+                    taskTitle: cardData.title,
+                    user: changedBy,
+                    timestamp: new Date()
+                });
 
             } else {
                 console.error('Column not found or column tasks undefined');
@@ -288,16 +353,36 @@ io.on("connection", (socket) => {
     });
     //drag card
     ensureListener(socket, "cardItemDragged", async (data) => {
-        const { destination, source, kanbanData, projectId } = data;
+        const { destination, source, kanbanData, projectId, user } = data;
         const dragItem = {
             ...kanbanData[source.droppableId].task[source.index],
         };
+        
+        // 記錄移動操作
+        const changedBy = user?.username || dragItem.owner || "未知";
+        const sourceColumnName = kanbanData[source.droppableId].name;
+        const destinationColumnName = kanbanData[destination.droppableId].name;
+        
         kanbanData[source.droppableId].task.splice(source.index, 1);
         kanbanData[destination.droppableId].task.splice(
             destination.index,
             0,
             dragItem
         );
+        
+        // 只有當移動到不同欄位時才記錄
+        if (source.droppableId !== destination.droppableId) {
+            await logTaskChange({
+                taskId: dragItem.id,
+                changeType: 'move',
+                changedBy: changedBy,
+                projectId: projectId,
+                oldValue: sourceColumnName,
+                newValue: destinationColumnName,
+                description: `任務從「${sourceColumnName}」移動到「${destinationColumnName}」`
+            });
+        }
+        
         // io.sockets.emit("dragtaskItem", kanbanData);
         io.to(projectId).emit("dragtaskItem", kanbanData);
 
@@ -325,6 +410,19 @@ io.on("connection", (socket) => {
                 id: dragItem.id
             }
         });
+        
+        // 只有當移動到不同欄位時才廣播活動更新
+        if (source.droppableId !== destination.droppableId) {
+            io.to(projectId).emit("activityUpdate", {
+                type: 'move',
+                taskId: dragItem.id,
+                taskTitle: dragItem.title,
+                user: changedBy,
+                from: sourceColumnName,
+                to: destinationColumnName,
+                timestamp: new Date()
+            });
+        }
     });
     //create column
     ensureListener(socket, "ColumnCreated", async (data) => {
@@ -463,77 +561,136 @@ io.on("connection", (socket) => {
     //create nodes
     ensureListener(socket, "nodeCreate", async (data) => {
         const { title, content, ideaWallId, owner, from_id, projectId, colorindex } = data;
-        const createdNode = await Node.create({
-            title: title,
-            content: content,
-            ideaWallId: ideaWallId,
-            owner: owner,
-            colorindex: colorindex
-        });
-        if (from_id) {
-            const nodeRelation = await Node_relation.create({
-                from_id: from_id,
-                to_id: createdNode.id,
-                ideaWallId: ideaWallId
-            })
-        }
-        await Project.update({
-            id: projectId
-        }, {
-            where: {
-                id: projectId
-            }
-        });
-        // io.sockets.emit("nodeUpdated", createdNode);
-        io.to(projectId).emit("nodeUpdated", createdNode);
+        try {
+            const createdNode = await Node.create({
+                title: title,
+                content: content,
+                ideaWallId: ideaWallId,
+                owner: owner,
+                colorindex: colorindex
+            });
 
-    })
+            // 記錄節點創建
+            try {
+                await logNodeChange({
+                    nodeId: createdNode.id,
+                    changeType: 'create',
+                    changedBy: owner,
+                    projectId: projectId,
+                    description: `創建新節點「${createdNode.title}」`
+                });
+            } catch (logError) {
+                console.warn('記錄節點創建失敗，但不影響主要功能:', logError);
+            }
+
+            if (from_id) {
+                const nodeRelation = await Node_relation.create({
+                    from_id: from_id,
+                    to_id: createdNode.id,
+                    ideaWallId: ideaWallId
+                });
+            }
+
+            await Project.update({
+                id: projectId
+            }, {
+                where: {
+                    id: projectId
+                }
+            });
+
+            // 廣播新節點到所有相關的客戶端
+            io.to(projectId).emit("nodeUpdated", createdNode);
+            console.log("已廣播新節點:", createdNode);
+        } catch (error) {
+            console.error("創建節點時發生錯誤:", error);
+        }
+    });
     //Update nodes
     ensureListener(socket, "nodeUpdate", async (data) => {
-        const { title, content, id, projectId } = data;
-        const createdNode = await Node.update(
-            {
-                title: title,
-                content: content
-            },
-            {
-                where: {
-                    id: id
+        const { title, content, id, projectId, owner } = data;
+        try {
+            // 取得原始資料以比較變更
+            const originalNode = await Node.findByPk(id);
+            
+            const createdNode = await Node.update(
+                {
+                    title: title,
+                    content: content
+                },
+                {
+                    where: {
+                        id: id
+                    }
+                }
+            );
+
+            // 記錄欄位變更
+            if (originalNode) {
+                try {
+                    await logNodeFieldChanges(
+                        originalNode.dataValues, 
+                        { title, content }, 
+                        id, 
+                        owner || originalNode.owner, 
+                        projectId
+                    );
+                } catch (logError) {
+                    console.warn('記錄節點變更失敗，但不影響主要功能:', logError);
                 }
             }
-        );
-        await Project.update({
-            id: projectId
-        }, {
-            where: {
-                id: projectId
-            }
-        });
-        // io.sockets.emit("nodeUpdated", createdNode);
-        io.to(projectId).emit("nodeUpdated", createdNode);
 
+            await Project.update({
+                id: projectId
+            }, {
+                where: {
+                    id: projectId
+                }
+            });
+            // io.sockets.emit("nodeUpdated", createdNode);
+            io.to(projectId).emit("nodeUpdated", createdNode);
+
+        } catch (error) {
+            console.error("更新節點時發生錯誤:", error);
+        }
     })
     //Delete nodes
     ensureListener(socket, "nodeDelete", async (data) => {
-        const { id, projectId } = data;
-        const deleteNode = await Node.destroy(
-            {
-                where: {
-                    id: id
+        const { id, projectId, owner, title } = data;
+        try {
+            // 記錄節點刪除
+            try {
+                await logNodeChange({
+                    nodeId: id,
+                    changeType: 'delete',
+                    changedBy: owner,
+                    projectId: projectId,
+                    description: `刪除節點「${title}」`
+                });
+            } catch (logError) {
+                console.warn('記錄節點刪除失敗，但不影響主要功能:', logError);
+            }
+
+            const deleteNode = await Node.destroy(
+                {
+                    where: {
+                        id: id
+                    }
                 }
-            }
-        );
-        await Project.update({
-            id: projectId
-        }, {
-            where: {
+            );
+            await Project.update({
                 id: projectId
-            }
-        });
-        io.sockets.emit("nodeUpdated", deleteNode);
-        // io.to(projectId).emit("nodeUpdated", deleteNode);
+            }, {
+                where: {
+                    id: projectId
+                }
+            });
+            io.sockets.emit("nodeUpdated", deleteNode);
+            // io.to(projectId).emit("nodeUpdated", deleteNode);
 
-
+        } catch (error) {
+            console.error("刪除節點時發生錯誤:", error);
+        }
     })
     // 廣播公告
     ensureListener(socket, "emitAnnouncement", async (data) => {
@@ -679,6 +836,7 @@ app.use('/api/chatroom', require('./routes/chatroom'))
 app.use('/api/question', require('./routes/question'))
 app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
+app.use('/api/llm', require('./routes/llm'));
 
 //error handling
 app.use((error, req, res, next) => {
@@ -688,12 +846,18 @@ app.use((error, req, res, next) => {
     res.status(status).json({ message: message });
 });
 
+console.log('Models loaded:', Object.keys(sequelize.models));
+
 // sync database
+console.log("syncing database---------------------------------------------------------------------")
 sequelize.sync({ alter: true })  // {force:true} {alter:true}
     .then(result => {
         console.log("Database connected");
         console.log("Database structure synced");
+        console.log("All tables created/recreated successfully");
     })
-    .catch(err => console.log(err));
+    .catch(err => {
+        console.log("Database sync error:", err);
+    });
 
 server.listen(3000);

@@ -15,6 +15,7 @@ import { socket } from '../../utils/socket';
 import FileDownload from 'js-file-download';
 import { AiOutlineCloudDownload } from "react-icons/ai";
 import { GrCircleQuestion } from 'react-icons/gr';
+import { formatTime } from '../../utils/timeUtils';
 // import { motion } from 'framer-motion';
 import { motion, useMotionValue } from "framer-motion";
 
@@ -474,7 +475,16 @@ export default function Reflection() {
                                                                                 </button>
                                                                             </div>
                                                                         )}
-                                                                        <p className='text-base text-customgreen font-bold'>建立日期: {new Date(item.createdAt).toLocaleDateString()}</p>
+                                                                        <div className='flex justify-between items-center'>
+                                                                            <p className='text-base text-customgreen font-bold' title={formatTime(item.createdAt, 'full')}>
+                                                                                建立日期: {formatTime(item.createdAt, 'date')}
+                                                                            </p>
+                                                                            {item.updatedAt && item.updatedAt !== item.createdAt && (
+                                                                                <p className='text-sm text-gray-500' title={formatTime(item.updatedAt, 'full')}>
+                                                                                    更新: {formatTime(item.updatedAt, 'relative')}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
                                                                         <button
                                                                             className="mt-2 bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600 transition-colors duration-300"
                                                                             onClick={() => handleEditClick(item)}
@@ -577,15 +587,28 @@ export default function Reflection() {
                                                                             </div>
                                                                         )}
 
-                                                                        <div className='flex justify-between text-base font-bold'>
-                                                                            <p className='text-customgreen'>建立日期: {new Date(item.createdAt).toLocaleDateString()}</p>
-                                                                            <p className='text-gray-500'>建立者: {item.creator}</p>
-                                                                            <button
-                                                                                className="mt-2 bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600 transition-colors duration-300"
-                                                                                onClick={() => handleEditTeamClick(item)}
-                                                                            >
-                                                                                編輯
-                                                                            </button>
+                                                                        <div className='flex flex-col space-y-2'>
+                                                                            <div className='flex justify-between items-center text-base font-bold'>
+                                                                                <p className='text-customgreen' title={formatTime(item.createdAt, 'full')}>
+                                                                                    建立日期: {formatTime(item.createdAt, 'date')}
+                                                                                </p>
+                                                                                <p className='text-gray-500'>建立者: {item.creator}</p>
+                                                                            </div>
+                                                                            {item.updatedAt && item.updatedAt !== item.createdAt && (
+                                                                                <div className='flex justify-between items-center'>
+                                                                                    <p className='text-sm text-gray-500' title={formatTime(item.updatedAt, 'full')}>
+                                                                                        更新時間: {formatTime(item.updatedAt, 'relative')}
+                                                                                    </p>
+                                                                                </div>
+                                                                            )}
+                                                                            <div className='flex justify-end'>
+                                                                                <button
+                                                                                    className="bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600 transition-colors duration-300"
+                                                                                    onClick={() => handleEditTeamClick(item)}
+                                                                                >
+                                                                                    編輯
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
 

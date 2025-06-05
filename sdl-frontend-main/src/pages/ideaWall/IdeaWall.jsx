@@ -10,11 +10,14 @@ import { useQuery } from 'react-query';
 import { getIdeaWall } from '../../api/ideaWall';
 import { getNodes, getNodeRelation } from '../../api/nodes';
 import { socket } from '../../utils/socket';
+import { getNodeChangeLogs } from '../../api/kanban';
+import { formatTime } from '../../utils/timeUtils';
 import SideBar from '../../components/SideBar';
 import toast, { Toaster } from 'react-hot-toast';
 import Lottie from "lottie-react";
 import Adding_icon from "../../assets/AnimationAddingNode.json";
 import Timer from './components/Timer';
+import Idea_development from './components/Idea_development';
 
 export default function IdeaWall() {
     const container = useRef(null);
@@ -41,6 +44,10 @@ export default function IdeaWall() {
     const colors = [
         "#5BA491", "#26547C", "#F25757", "#AF7A6D", "#183446", "#9395D3", "#FF6542", "#78290F", "#DEA47E", "#9DACFF", "#2F3061", "#FFD166"
     ];
+
+    const [aiDevelopmentModalOpen, setAiDevelopmentModalOpen] = useState(false);
+    const [showNodeChangeHistory, setShowNodeChangeHistory] = useState(false);
+    const [nodeChangeLogs, setNodeChangeLogs] = useState([]);
 
     const ideaWallInfoQuery = useQuery(
         'ideaWallInfo',
@@ -94,23 +101,24 @@ export default function IdeaWall() {
     useEffect(() => {
         function nodeUpdateEvent(data) {
             if (data) {
-                console.log(data);
+                console.log("收到節點更新事件:", data);
+                // 立即重新獲取所有節點和關係數據
                 getNodesQuery.refetch();
                 getNodeRelationQuery.refetch();
-                // setnodes(prevNodes => [...prevNodes, data]); // 假設data是新節點信息
-
             }
         }
+
         socket.connect();
         socket.emit("join_project", projectId);
 
+        // 確保事件監聽器只被添加一次
+        socket.off("nodeUpdated", nodeUpdateEvent);
         socket.on("nodeUpdated", nodeUpdateEvent);
+
         return () => {
             socket.off("nodeUpdated", nodeUpdateEvent);
-
-            // socket.disconnect();
         }
-    }, [socket, projectId])
+    }, [socket, projectId, getNodesQuery, getNodeRelationQuery]);
 
     // vis network
     useEffect(() => {
@@ -209,7 +217,7 @@ export default function IdeaWall() {
         e.preventDefault()
         if (selectNodeInfo.title.trim() !== "" && selectNodeInfo.content.trim() !== "") {
             setUpdateNodeModalOpen(false)
-            socket.emit('nodeUpdate', selectNodeInfo)
+            socket.emit('nodeUpdate', { ...selectNodeInfo, owner: localStorage.getItem("username") })
         } else {
             toast.error("標題及內容請填寫完整!");
         }
@@ -218,8 +226,11 @@ export default function IdeaWall() {
     const handleDelete = (e) => {
         e.preventDefault()
         setUpdateNodeModalOpen(false)
-        socket.emit('nodeDelete', selectNodeInfo)
-
+        socket.emit('nodeDelete', { 
+            ...selectNodeInfo, 
+            owner: localStorage.getItem("username"),
+            title: selectNodeInfo.title
+        })
     }
 
     const handleMouseEnter = () => {
@@ -228,6 +239,15 @@ export default function IdeaWall() {
 
     const handleMouseLeave = () => {
         setHovering(false);
+    };
+
+    const handleAiDevelopment = () => {
+        setAiDevelopmentModalOpen(true);
+    };
+
+    const handleNewNodeFromAI = (nodeData) => {
+        console.log("發送新節點數據:", nodeData);
+        socket.emit('nodeCreate', nodeData);
     };
 
     return (
@@ -302,98 +322,210 @@ export default function IdeaWall() {
             {
                 selectNodeInfo &&
                 <Modal open={updateNodeModalOpen} onClose={() => setUpdateNodeModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                    <div className='flex flex-col p-3'>
-                        <h3 className=' font-bold text-base mb-3'>檢視便利貼</h3>
-                        <p className=' font-bold text-base mb-3'>標題</p>
-                        <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
-                            type="text"
-                            placeholder="標題"
-                            name='title'
-                            value={selectNodeInfo.title}
-                            onChange={handleUpdataChange}
-                            disabled={localStorage.getItem("username") !== selectNodeInfo.owner}
-                        />
-                        <p className=' font-bold text-base mb-3'>內容</p>
-                        <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
-                            rows={5}
-                            placeholder="內容"
-                            name='content'
-                            value={selectNodeInfo.content}
-                            onChange={handleUpdataChange}
-                            disabled={localStorage.getItem("username") !== selectNodeInfo.owner}
-                        />
-                        <p className=' font-bold text-base mt-3'>建立者: {selectNodeInfo.owner}</p>
+                    <div className='flex flex-col w-full'>
+                        {/* 標籤頁導航 */}
+                        <div className='flex border-b border-gray-200 mb-4'>
+                            <button
+                                onClick={() => setShowNodeChangeHistory(false)}
+                                className={`px-4 py-2 font-medium text-sm ${
+                                    !showNodeChangeHistory 
+                                        ? 'text-customgreen border-b-2 border-customgreen' 
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                編輯節點
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShowNodeChangeHistory(true);
+                                    // 取得變更記錄
+                                    getNodeChangeLogs(selectNodeInfo.id).then(setNodeChangeLogs).catch(console.error);
+                                }}
+                                className={`px-4 py-2 font-medium text-sm ${
+                                    showNodeChangeHistory 
+                                        ? 'text-customgreen border-b-2 border-customgreen' 
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                變更歷史
+                            </button>
+                        </div>
+
+                        {/* 編輯節點內容 */}
+                        {!showNodeChangeHistory && (
+                            <div className='flex flex-col p-3'>
+                                <h3 className=' font-bold text-base mb-3'>檢視便利貼</h3>
+                                <p className=' font-bold text-base mb-3'>標題</p>
+                                <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
+                                    type="text"
+                                    placeholder="標題"
+                                    name='title'
+                                    value={selectNodeInfo.title}
+                                    onChange={handleUpdataChange}
+                                    disabled={localStorage.getItem("username") !== selectNodeInfo.owner}
+                                />
+                                <p className=' font-bold text-base mb-3'>內容</p>
+                                <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
+                                    rows={5}
+                                    placeholder="內容"
+                                    name='content'
+                                    value={selectNodeInfo.content}
+                                    onChange={handleUpdataChange}
+                                    disabled={localStorage.getItem("username") !== selectNodeInfo.owner}
+                                />
+                                <div className='flex justify-between items-center mt-3'>
+                                    <p className=' font-bold text-base'>建立者: {selectNodeInfo.owner}</p>
+                                    {selectNodeInfo.createdAt && (
+                                        <p className='text-sm text-gray-500' title={formatTime(selectNodeInfo.createdAt, 'full')}>
+                                            建立時間: {formatTime(selectNodeInfo.createdAt, 'relative')}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 變更歷史 */}
+                        {showNodeChangeHistory && (
+                            <div className='max-h-96 overflow-y-auto p-3'>
+                                <div className='flex items-center mb-4'>
+                                    <h4 className='text-lg font-medium text-gray-700'>變更歷史</h4>
+                                </div>
+                                
+                                {nodeChangeLogs.length === 0 ? (
+                                    <div className='text-center py-8 text-gray-500'>
+                                        <p>尚無變更記錄</p>
+                                    </div>
+                                ) : (
+                                    <div className='space-y-3'>
+                                        {nodeChangeLogs.map((log, index) => (
+                                            <div 
+                                                key={log.id || index} 
+                                                className='bg-gray-50 rounded-lg p-3 border-l-4 border-purple-400'
+                                            >
+                                                <div className='flex items-center justify-between mb-2'>
+                                                    <div className='flex items-center'>
+                                                        <span className='text-sm font-medium text-gray-700'>
+                                                            {log.changedBy}
+                                                        </span>
+                                                    </div>
+                                                    <span className='text-xs text-gray-500'>
+                                                        {formatTime(log.createdAt, 'full')}
+                                                    </span>
+                                                </div>
+                                                
+                                                <p className='text-sm text-gray-600 mb-2'>
+                                                    {log.description}
+                                                </p>
+                                                
+                                                {log.fieldName && (
+                                                    <div className='text-xs text-gray-500'>
+                                                        <span className='font-medium'>欄位：</span>
+                                                        {log.fieldName}
+                                                        {log.oldValue && log.newValue && (
+                                                            <div className='mt-1'>
+                                                                <span className='text-red-600'>舊值：{log.oldValue}</span>
+                                                                <br />
+                                                                <span className='text-green-600'>新值：{log.newValue}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                
+                                                <div className='flex items-center mt-2'>
+                                                    <span className={`
+                                                        px-2 py-1 rounded-full text-xs font-medium
+                                                        ${log.changeType === 'create' ? 'bg-green-100 text-green-700' : ''}
+                                                        ${log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : ''}
+                                                        ${log.changeType === 'delete' ? 'bg-red-100 text-red-700' : ''}
+                                                    `}>
+                                                        {log.changeType === 'create' && '創建'}
+                                                        {log.changeType === 'update' && '更新'}
+                                                        {log.changeType === 'delete' && '刪除'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
-                    {
-                        localStorage.getItem("username") === selectNodeInfo.owner ?
-                            (
-                                <div className='flex flex-row justify-between m-2'>
-                                    <button onClick={handleDelete} className="w-16 h-7 bg-red-500 rounded font-bold text-sm sm:text-bas text-white mr-2" >
-                                        刪除
+                    {/* 按鈕區域 */}
+                    {!showNodeChangeHistory ? (
+                        localStorage.getItem("username") === selectNodeInfo.owner ? (
+                            <div className='flex flex-row justify-between m-2'>
+                                <button onClick={handleDelete} className="w-16 h-7 bg-red-500 rounded font-bold text-sm sm:text-bas text-white mr-2">
+                                    刪除
+                                </button>
+                                <div className='flex'>
+                                    <button
+                                        onClick={handleAiDevelopment}
+                                        className="w-32 h-7 bg-purple-500 rounded font-bold text-sm sm:text-base text-white mr-2"
+                                    >
+                                        AI 輔助發展
                                     </button>
-                                    <div className='flex'>
-                                        <button
-                                            onClick={() => {
-                                                setBuildOnId(selectNodeInfo.id); // 設定要延伸的節點 ID
-                                                setNodeData({}); // 重置 nodeData
-                                                setTitle("");
-                                                setContent("");
-                                                setUpdateNodeModalOpen(false);
-                                                setCreateNodeModalOpen(true); // 開啟建立節點的 modal
-                                            }}
-                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
-                                        >
-                                            延伸想法
-                                        </button>
-                                        <button onClick={() => setUpdateNodeModalOpen(false)} className="w-16 h-7  bg-customgray rounded font-bold text-sm sm:text-bas text-black/60 mr-2" >
-                                            取消
-                                        </button>
-                                        <button onClick={handleUpdateSubmit} className="w-16 h-7 bg-customgreen rounded font-bold text-sm sm:text-bas text-white">
-                                            儲存
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className='flex justify-end m-2'>
-                                    <button onClick={() => setUpdateNodeModalOpen(false)} className="mx-auto w-1/3 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-base text-white mr-2" >
-                                        關閉
+                                    <button
+                                        onClick={() => {
+                                            setBuildOnId(selectNodeInfo.id);
+                                            setNodeData({});
+                                            setTitle("");
+                                            setContent("");
+                                            setUpdateNodeModalOpen(false);
+                                            setCreateNodeModalOpen(true);
+                                        }}
+                                        className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white mr-2"
+                                    >
+                                        延伸想法
                                     </button>
-                                    <div className='flex justify-start'>
-                                        <button
-                                            onClick={() => {
-                                                setBuildOnId(selectNodeInfo.id); // 設定要延伸的節點 ID
-                                                setNodeData({}); // 重置 nodeData
-                                                setTitle("");
-                                                setContent("");
-                                                setUpdateNodeModalOpen(false);
-                                                setCreateNodeModalOpen(true); // 開啟建立節點的 modal
-                                            }}
-                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
-                                        >
-                                            延伸想法
-                                        </button>
-                                    </div>
+                                    <button onClick={() => setUpdateNodeModalOpen(false)} className="w-16 h-7 bg-customgray rounded font-bold text-sm sm:text-bas text-black/60 mr-2">
+                                        取消
+                                    </button>
+                                    <button onClick={handleUpdateSubmit} className="w-16 h-7 bg-customgreen rounded font-bold text-sm sm:text-bas text-white">
+                                        儲存
+                                    </button>
                                 </div>
-                            )
-                    }
-                    {/* 新增 "延伸想法" 按鈕 */}
-                    {/* <div className='flex justify-center m-2'>
-                        <button
-                            onClick={() => {
-                                setBuildOnId(selectNodeInfo.id); // 設定要延伸的節點 ID
-                                setNodeData({}); // 重置 nodeData
-                                setTitle("");
-                                setContent("");
-                                setUpdateNodeModalOpen(false);
-                                setCreateNodeModalOpen(true); // 開啟建立節點的 modal
-                            }}
-                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
-                        >
-                            延伸想法
-                        </button>
-                    </div> */}
+                            </div>
+                        ) : (
+                            <div className='flex justify-end m-2'>
+                                <button onClick={() => setUpdateNodeModalOpen(false)} className="mx-auto w-1/3 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-base text-white mr-2" >
+                                    關閉
+                                </button>
+                                <div className='flex justify-start'>
+                                    <button
+                                        onClick={() => {
+                                            setBuildOnId(selectNodeInfo.id);
+                                            setNodeData({});
+                                            setTitle("");
+                                            setContent("");
+                                            setUpdateNodeModalOpen(false);
+                                            setCreateNodeModalOpen(true);
+                                        }}
+                                        className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
+                                    >
+                                        延伸想法
+                                    </button>
+                                </div>
+                            </div>
+                        )
+                    ) : (
+                        <div className='flex justify-end m-2'>
+                            <button 
+                                onClick={() => setUpdateNodeModalOpen(false)} 
+                                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                            >
+                                關閉
+                            </button>
+                        </div>
+                    )}
                 </Modal>
             }
+            <Modal open={aiDevelopmentModalOpen} onClose={() => setAiDevelopmentModalOpen(false)} opacity={false} position={"justify-center items-center"}>
+                <Idea_development
+                    nodeInfo={selectNodeInfo}
+                    onClose={() => setAiDevelopmentModalOpen(false)}
+                    onNewNode={handleNewNodeFromAI}
+                />
+            </Modal>
             <Timer />
             <button
                 onMouseEnter={handleMouseEnter}

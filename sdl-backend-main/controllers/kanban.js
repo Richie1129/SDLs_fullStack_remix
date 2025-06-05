@@ -2,6 +2,7 @@ const Kanban = require('../models/kanban');
 const Column = require('../models/column');
 const Task = require('../models/task');
 const Project = require('../models/project');
+const TaskChangeLog = require('../models/task_change_log');
 
 exports.getKanban = async ( req, res ) => {
     const projectId = req.params.projectId;
@@ -151,6 +152,49 @@ exports.getKanbanTask = async ( req, res ) =>{
         res.status(500).send({message: 'Something Wrong!'})
     });
 }
+
+// 新增：取得任務變更記錄
+exports.getTaskChangeLogs = async (req, res) => {
+    try {
+        const { taskId } = req.params;
+        
+        const changeLogs = await TaskChangeLog.findAll({
+            where: { taskId },
+            order: [['createdAt', 'DESC']],
+            limit: 50 // 限制最多顯示50筆記錄
+        });
+        
+        res.status(200).json(changeLogs);
+    } catch (error) {
+        console.error('取得變更記錄失敗:', error);
+        res.status(500).json({ message: '取得變更記錄失敗' });
+    }
+};
+
+// 新增：取得專案活動流
+exports.getProjectActivity = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { limit = 20, offset = 0 } = req.query;
+        
+        const activities = await TaskChangeLog.findAll({
+            where: { projectId },
+            include: [{
+                model: Task,
+                attributes: ['id', 'title'],
+                required: false
+            }],
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            offset: parseInt(offset)
+        });
+        
+        res.status(200).json(activities);
+    } catch (error) {
+        console.error('取得專案活動失敗:', error);
+        res.status(500).json({ message: '取得專案活動失敗' });
+    }
+};
 
 exports.createKanban = async ( projectId ) => {
     const kanban = await Kanban.create({

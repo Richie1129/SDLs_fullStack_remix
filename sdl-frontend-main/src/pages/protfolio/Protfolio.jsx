@@ -2,10 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AiTwotoneFolderAdd, AiOutlineCloudDownload, AiOutlineUpload } from "react-icons/ai";
 import { GrFormClose } from "react-icons/gr";
 import { useQuery, useQueryClient } from 'react-query';
-import { getAllSubmit, updateSubmitTask, updateSubmitAttachment } from '../../api/submit';
+import { getAllSubmit, updateSubmitTask, updateSubmitAttachment, getSubmitChangeLogs } from '../../api/submit';
 import { useParams } from 'react-router-dom';
 import Loader from '../../components/Loader';
-import dateFormat from 'dateformat';
 import ProtfoliioIcon from "../../assets/AnimationProtfoliio.json";
 import Lottie from "lottie-react";
 import { socket } from '../../utils/socket';
@@ -13,6 +12,7 @@ import FileDownload from 'js-file-download';
 import { BiSave } from "react-icons/bi";
 import Swal from "sweetalert2";
 import { Context } from '../../context/context';
+import { formatTime } from '../../utils/timeUtils';
 
 export default function Protfolio() {
     const { currentStageIndex } = useContext(Context);
@@ -24,6 +24,8 @@ export default function Protfolio() {
     const [activeItemId, setActiveItemId] = useState(null);
     const [showEmptyMessage, setShowEmptyMessage] = useState(false);
     const [editableContent, setEditableContent] = useState("");
+    const [showSubmitChangeHistory, setShowSubmitChangeHistory] = useState(false);
+    const [submitChangeLogs, setSubmitChangeLogs] = useState([]);
     const queryClient = useQueryClient();
     
     const {
@@ -239,11 +241,19 @@ export default function Protfolio() {
                                                                             ? 'bg-teal-500 text-white shadow-sm'
                                                                             : 'text-gray-600 hover:bg-gray-50 hover:shadow-sm'
                                                                     }`}
+                                                                    title={item.createdAt ? `建立於 ${formatTime(item.createdAt, 'full')}${item.updatedAt && item.updatedAt !== item.createdAt ? `\n更新於 ${formatTime(item.updatedAt, 'full')}` : ''}` : ''}
                                                                 >
                                                                     {activeItemId === item.id && (
                                                                         <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white"></span>
                                                                     )}
-                                                                    {stageDescriptions[item.stage]}
+                                                                    <div className="flex flex-col">
+                                                                        <span>{stageDescriptions[item.stage]}</span>
+                                                                        {item.createdAt && (
+                                                                            <span className={`text-xs mt-1 ${activeItemId === item.id ? 'text-white/80' : 'text-gray-400'}`}>
+                                                                                {formatTime(item.createdAt, 'date')}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </button>
                                                             ))}
                                                     </div>
@@ -256,28 +266,71 @@ export default function Protfolio() {
                                 {/* Content Area */}
                                 <div className="lg:col-span-3">
                                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                                        {activeItemId && (
-                                            <div className="p-6">
-                                                <div className="flex justify-between items-start mb-6">
-                                                    <div>
-                                                        <h2 className="text-xl font-bold text-gray-900">
-                                                            {stageDescriptions[modalData.stage]}
-                                                        </h2>
-                                                        <p className="text-sm text-gray-500 mt-1">
-                                                            階段: {modalData.stage}
+                                                                        {activeItemId && (
+                                    <div className="p-6">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div>
+                                                <h2 className="text-xl font-bold text-gray-900">
+                                                    {stageDescriptions[modalData.stage]}
+                                                </h2>
+                                                <div className="flex flex-col space-y-1 mt-1">
+                                                    <p className="text-sm text-gray-500">
+                                                        階段: {modalData.stage}
+                                                    </p>
+                                                    {modalData.createdAt && (
+                                                        <p className="text-sm text-gray-500" title={formatTime(modalData.createdAt, 'full')}>
+                                                            建立時間: {formatTime(modalData.createdAt, 'date')}
                                                         </p>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => {
-                                                            setFolderModalOpen(false);
-                                                            setActiveItemId(null);
-                                                        }}
-                                                        className="text-gray-400 hover:text-gray-500 transition-colors"
-                                                    >
-                                                        <GrFormClose size={24} />
-                                                    </button>
+                                                    )}
+                                                    {modalData.updatedAt && modalData.updatedAt !== modalData.createdAt && (
+                                                        <p className="text-sm text-gray-500" title={formatTime(modalData.updatedAt, 'full')}>
+                                                            更新時間: {formatTime(modalData.updatedAt, 'relative')}
+                                                        </p>
+                                                    )}
                                                 </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setFolderModalOpen(false);
+                                                    setActiveItemId(null);
+                                                }}
+                                                className="text-gray-400 hover:text-gray-500 transition-colors"
+                                            >
+                                                <GrFormClose size={24} />
+                                            </button>
+                                        </div>
 
+                                        {/* 標籤頁導航 */}
+                                        <div className='flex border-b border-gray-200 mb-4'>
+                                            <button
+                                                onClick={() => setShowSubmitChangeHistory(false)}
+                                                className={`px-4 py-2 font-medium text-sm ${
+                                                    !showSubmitChangeHistory 
+                                                        ? 'text-teal-500 border-b-2 border-teal-500' 
+                                                        : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                編輯內容
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowSubmitChangeHistory(true);
+                                                    // 取得變更記錄
+                                                    getSubmitChangeLogs(modalData.id).then(setSubmitChangeLogs).catch(console.error);
+                                                }}
+                                                className={`px-4 py-2 font-medium text-sm ${
+                                                    showSubmitChangeHistory 
+                                                        ? 'text-teal-500 border-b-2 border-teal-500' 
+                                                        : 'text-gray-500 hover:text-gray-700'
+                                                }`}
+                                            >
+                                                變更歷史
+                                            </button>
+                                        </div>
+
+                                                                                        {/* 編輯內容 */}
+                                        {!showSubmitChangeHistory && (
+                                            <>
                                                 {/* Content Form */}
                                                 <div className="space-y-4">
                                                     {Object.entries(editableContent).map(([key, value], index) => (
@@ -351,6 +404,79 @@ export default function Protfolio() {
                                                         儲存
                                                     </button>
                                                 </div>
+                                            </>
+                                        )}
+
+                                        {/* 變更歷史 */}
+                                        {showSubmitChangeHistory && (
+                                            <div className='max-h-96 overflow-y-auto'>
+                                                <div className='flex items-center mb-4'>
+                                                    <h4 className='text-lg font-medium text-gray-700'>變更歷史</h4>
+                                                </div>
+                                                
+                                                {submitChangeLogs.length === 0 ? (
+                                                    <div className='text-center py-8 text-gray-500'>
+                                                        <p>尚無變更記錄</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className='space-y-3'>
+                                                        {submitChangeLogs.map((log, index) => (
+                                                            <div 
+                                                                key={log.id || index} 
+                                                                className='bg-gray-50 rounded-lg p-3 border-l-4 border-teal-400'
+                                                            >
+                                                                <div className='flex items-center justify-between mb-2'>
+                                                                    <div className='flex items-center'>
+                                                                        <span className='text-sm font-medium text-gray-700'>
+                                                                            {log.changedBy}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className='text-xs text-gray-500'>
+                                                                        {formatTime(log.createdAt, 'full')}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                <p className='text-sm text-gray-600 mb-2'>
+                                                                    {log.description}
+                                                                </p>
+                                                                
+                                                                {log.fieldName && (
+                                                                    <div className='text-xs text-gray-500'>
+                                                                        <span className='font-medium'>欄位：</span>
+                                                                        {log.fieldName}
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                <div className='flex items-center mt-2'>
+                                                                    <span className={`
+                                                                        px-2 py-1 rounded-full text-xs font-medium
+                                                                        ${log.changeType === 'create' ? 'bg-green-100 text-green-700' : ''}
+                                                                        ${log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : ''}
+                                                                        ${log.changeType === 'delete' ? 'bg-red-100 text-red-700' : ''}
+                                                                    `}>
+                                                                        {log.changeType === 'create' && '創建'}
+                                                                        {log.changeType === 'update' && '更新'}
+                                                                        {log.changeType === 'delete' && '刪除'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                
+                                                <div className='flex justify-end mt-4'>
+                                                    <button
+                                                        onClick={() => {
+                                                            setFolderModalOpen(false);
+                                                            setActiveItemId(null);
+                                                        }}
+                                                        className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                                                    >
+                                                        關閉
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                             </div>
                                         )}
                                     </div>

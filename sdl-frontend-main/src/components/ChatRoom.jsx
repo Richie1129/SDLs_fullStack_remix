@@ -5,6 +5,7 @@ import { socket } from '../utils/socket';
 import { TbSend } from "react-icons/tb";
 import { useLocation } from 'react-router-dom';
 import { getChatroomHistory } from '../api/chatroom';  // 引入API函数
+import { formatTime } from '../utils/timeUtils';  // 使用統一的時間格式化函數
 
 export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
     const [currentMessage, setCurrentMessage] = useState("");
@@ -18,26 +19,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
     ];
 
 
-    function formatTime(date) {
-        const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');  // 月份是从0开始的
-        const year = date.getFullYear();
-        let hours = date.getHours();
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-        const ampm = hours >= 12 ? 'PM' : 'AM';
-        hours = hours % 12;
-        hours = hours ? hours.toString().padStart(2, '0') : '12'; // 将0小时转换为12
-        const dateString = `${year}-${month}-${day}`;
-        const timeString = `${hours}:${minutes} ${ampm}`;
-
-        // 假设你有一个方式来确定是否需要显示日期
-        // 比如，你可以比较消息的日期和当前日期，如果不同，则显示日期
-        const today = new Date();
-        const todayString = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
-
-        // return dateString === todayString ? timeString : `${dateString} ${timeString}`;
-        return `${dateString} ${timeString}`;
-    }
+    // 移除本地的 formatTime 函數，使用從 timeUtils 導入的統一函數
     const sendMessage = async () => {
         // 使用trim()方法确保去除了前后空格
         if (currentMessage.trim() !== "") {
@@ -46,7 +28,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                 author: localStorage.getItem("username"),
                 creator: localStorage.getItem("id"),
                 message: currentMessage.trim(),  // 也可以在这里直接发送去除空格后的消息
-                createdAt: formatTime(new Date())  // 使用格式化函数
+                createdAt: formatTime(new Date(), 'full')  // 使用格式化函数
             };
             socket.emit("send_message", messageData);
             setMessageList(prev => [...prev, messageData]);
@@ -62,9 +44,9 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                     const history = await getChatroomHistory(projectId);
                     const formattedHistory = history.map(message => ({
                         ...message,
-                        createdAt: formatTime(new Date(message.createdAt)) // 使用UTC时间转换
+                        createdAt: formatTime(message.createdAt, 'full') // 使用UTC时间转换
                     }));
-                    console.log(formattedHistory[0].createdAt)
+                    console.log(formattedHistory[0]?.createdAt)
                     setMessageList(formattedHistory);
                 } catch (error) {
                     console.error('Failed to fetch chatroom history:', error);

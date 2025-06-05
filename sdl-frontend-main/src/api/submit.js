@@ -39,7 +39,13 @@ export const updateSubmitTask = async (submitId, data) => {
 export const updateSubmitAttachment = async (submitId, formData) => {
     const response = await submitApi.put(`/${submitId}`, formData);
     return response.data;
- };
+};
+
+// 取得提交變更記錄
+export const getSubmitChangeLogs = async (submitId) => {
+    const response = await getsubmitApi.get(`/${submitId}/changes`);
+    return response.data;
+};
 
 // export const getProfolioSubmit = async (submitId,config) => {
 //     const response = await getsubmitApi.get(`/${submitId}/profolio`,config)

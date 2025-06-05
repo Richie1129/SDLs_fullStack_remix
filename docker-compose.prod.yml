@@ -85,6 +85,8 @@ services:
     environment:
       - PGADMIN_DEFAULT_EMAIL=wulab@gmail.com
       - PGADMIN_DEFAULT_PASSWORD=ytwu35415
+      - PGADMIN_CONFIG_CONSOLE_LOG_LEVEL=40
+      - GUNICORN_ACCESS_LOGFILE=/dev/null
     ports:
       - "5555:80"
     networks:

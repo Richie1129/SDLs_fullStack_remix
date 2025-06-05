@@ -16,6 +16,8 @@ import { CircleArrowLeft, CircleArrowRight } from "lucide-react"
 import FileDownload from 'js-file-download';
 import { AiOutlineCloudDownload } from "react-icons/ai";
 import { formatTime } from '../../../utils/timeUtils';
+import { getTaskChangeLogs } from '../../../api/kanban';
+import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -236,6 +238,8 @@ function Carditem({ data, index, columnIndex }) {
   const [open, setOpen] = useState(false);
   const [assignMemberModalopen, setAssignMemberModalOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+  const [showChangeHistory, setShowChangeHistory] = useState(false);
+  const [changeLogs, setChangeLogs] = useState([]);
   const { projectId } = useParams();
   const [cardData, setCardData] = useState({
     id: "",
@@ -270,6 +274,16 @@ function Carditem({ data, index, columnIndex }) {
     onSuccess: setMenberData,
     enabled: !!projectId
   });
+
+  // 取得變更記錄
+  const { data: changeLogsData } = useQuery(
+    ['taskChangeLogs', cardData.id],
+    () => getTaskChangeLogs(cardData.id),
+    {
+      enabled: !!cardData.id && showChangeHistory,
+      onSuccess: setChangeLogs
+    }
+  );
 
   useEffect(() => {
     setCardData({
@@ -364,7 +378,13 @@ function Carditem({ data, index, columnIndex }) {
         files: Array.isArray(cardData.files) ? cardData.files : [],
         images: Array.isArray(cardData.images) ? cardData.images : []
       };
-      socket.emit("cardUpdated", { cardData: updatedCardData, columnIndex, index, projectId });
+      socket.emit("cardUpdated", { 
+        cardData: updatedCardData, 
+        columnIndex, 
+        index, 
+        projectId,
+        user: { username: localStorage.getItem("username") }
+      });
       setOpen(false);
     } else {
       toast.error("請填寫卡片標題!");
@@ -383,7 +403,13 @@ function Carditem({ data, index, columnIndex }) {
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
-        socket.emit("cardDelete", { cardData, columnIndex, index, projectId });
+        socket.emit("cardDelete", { 
+          cardData, 
+          columnIndex, 
+          index, 
+          projectId,
+          user: { username: localStorage.getItem("username") }
+        });
         setOpen(false);
       }
     });
@@ -538,86 +564,195 @@ function Carditem({ data, index, columnIndex }) {
       {open && (
         <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"}>
           <div className='flex flex-col w-full'>
-            <div className='flex justify-between mb-4'>
-              <input
-                className="rounded outline-none ring-2 p-2 ring-customgreen w-full"
-                type="text"
-                placeholder="標題"
-                value={cardData.title}
-                onChange={(e) => setCardData({ ...cardData, title: e.target.value })}
-              />
+            {/* 標籤頁導航 */}
+            <div className='flex border-b border-gray-200 mb-4'>
+              <button
+                onClick={() => setShowChangeHistory(false)}
+                className={`px-4 py-2 font-medium text-sm ${
+                  !showChangeHistory 
+                    ? 'text-customgreen border-b-2 border-customgreen' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                編輯任務
+              </button>
+              <button
+                onClick={() => setShowChangeHistory(true)}
+                className={`px-4 py-2 font-medium text-sm ${
+                  showChangeHistory 
+                    ? 'text-customgreen border-b-2 border-customgreen' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                變更歷史
+              </button>
             </div>
-            <textarea
-              className="rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4"
-              rows={3}
-              placeholder="內容"
-              value={cardData.content}
-              onChange={(e) => setCardData({ ...cardData, content: e.target.value })}
-            />
 
-            {/* 時間資訊 */}
-            {(data.createdAt || data.updatedAt) && (
-              <div className='bg-gray-50 rounded-lg p-3 mb-4'>
-                <h4 className='text-sm font-medium text-gray-700 mb-2'>時間資訊</h4>
-                <div className='space-y-1 text-sm text-gray-600'>
-                  {data.createdAt && (
-                    <div className='flex justify-between'>
-                      <span>建立時間：</span>
-                      <span title={formatTime(data.createdAt, 'full')}>
-                        {formatTime(data.createdAt, 'full')}
-                      </span>
+            {/* 編輯任務內容 */}
+            {!showChangeHistory && (
+              <>
+                <div className='flex justify-between mb-4'>
+                  <input
+                    className="rounded outline-none ring-2 p-2 ring-customgreen w-full"
+                    type="text"
+                    placeholder="標題"
+                    value={cardData.title}
+                    onChange={(e) => setCardData({ ...cardData, title: e.target.value })}
+                  />
+                </div>
+                <textarea
+                  className="rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4"
+                  rows={3}
+                  placeholder="內容"
+                  value={cardData.content}
+                  onChange={(e) => setCardData({ ...cardData, content: e.target.value })}
+                />
+
+                {/* 時間資訊 */}
+                {(data.createdAt || data.updatedAt) && (
+                  <div className='bg-gray-50 rounded-lg p-3 mb-4'>
+                    <h4 className='text-sm font-medium text-gray-700 mb-2'>時間資訊</h4>
+                    <div className='space-y-1 text-sm text-gray-600'>
+                      {data.createdAt && (
+                        <div className='flex justify-between'>
+                          <span>建立時間：</span>
+                          <span title={formatTime(data.createdAt, 'full')}>
+                            {formatTime(data.createdAt, 'full')}
+                          </span>
+                        </div>
+                      )}
+                      {data.updatedAt && data.updatedAt !== data.createdAt && (
+                        <div className='flex justify-between'>
+                          <span>更新時間：</span>
+                          <span title={formatTime(data.updatedAt, 'full')}>
+                            {formatTime(data.updatedAt, 'relative')}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {data.updatedAt && data.updatedAt !== data.createdAt && (
-                    <div className='flex justify-between'>
-                      <span>更新時間：</span>
-                      <span title={formatTime(data.updatedAt, 'full')}>
-                        {formatTime(data.updatedAt, 'relative')}
-                      </span>
-                    </div>
-                  )}
+                  </div>
+                )}
+                
+                <MemberAssignment
+                  cardData={cardData}
+                  setAssignMemberModalOpen={setAssignMemberModalOpen}
+                  owner={data.owner}
+                  personImg={personImg}
+                  Tooltip={Tooltip}
+                />
+                
+                <FileManagementModal
+                  cardData={cardData}
+                  handleFileUpload={handleFileUpload}
+                  handleFileDownload={handleFileDownload}
+                  removeFile={removeFile}
+                  removeImage={removeImage}
+                  openImageModal={openImageModal}
+                  fileInputRef={fileInputRef}
+                />
+
+                <div className='flex justify-end mt-4 space-x-2'>
+                  <button
+                    onClick={cardHandleDelete}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+                  >
+                    刪除
+                  </button>
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={cardHandleSubmit}
+                    className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
+                  >
+                    儲存
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* 變更歷史 */}
+            {showChangeHistory && (
+              <div className='max-h-96 overflow-y-auto'>
+                <div className='flex items-center mb-4'>
+                  <FiClock className='mr-2 text-gray-500' />
+                  <h4 className='text-lg font-medium text-gray-700'>變更歷史</h4>
+                </div>
+                
+                {changeLogs.length === 0 ? (
+                  <div className='text-center py-8 text-gray-500'>
+                    <FiEdit3 className='mx-auto mb-2 text-2xl' />
+                    <p>尚無變更記錄</p>
+                  </div>
+                ) : (
+                  <div className='space-y-3'>
+                    {changeLogs.map((log, index) => (
+                      <div 
+                        key={log.id || index} 
+                        className='bg-gray-50 rounded-lg p-3 border-l-4 border-blue-400'
+                      >
+                        <div className='flex items-center justify-between mb-2'>
+                          <div className='flex items-center'>
+                            <FiUser className='mr-1 text-gray-500' size={14} />
+                            <span className='text-sm font-medium text-gray-700'>
+                              {log.changedBy}
+                            </span>
+                          </div>
+                          <span className='text-xs text-gray-500'>
+                            {formatTime(log.createdAt, 'full')}
+                          </span>
+                        </div>
+                        
+                        <p className='text-sm text-gray-600 mb-2'>
+                          {log.description}
+                        </p>
+                        
+                        {log.fieldName && (
+                          <div className='text-xs text-gray-500'>
+                            <span className='font-medium'>欄位：</span>
+                            {log.fieldName}
+                            {log.oldValue && log.newValue && (
+                              <div className='mt-1'>
+                                <span className='text-red-600'>舊值：{log.oldValue}</span>
+                                <br />
+                                <span className='text-green-600'>新值：{log.newValue}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className='flex items-center mt-2'>
+                          <span className={`
+                            px-2 py-1 rounded-full text-xs font-medium
+                            ${log.changeType === 'create' ? 'bg-green-100 text-green-700' : ''}
+                            ${log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : ''}
+                            ${log.changeType === 'move' ? 'bg-purple-100 text-purple-700' : ''}
+                            ${log.changeType === 'delete' ? 'bg-red-100 text-red-700' : ''}
+                          `}>
+                            {log.changeType === 'create' && '創建'}
+                            {log.changeType === 'update' && '更新'}
+                            {log.changeType === 'move' && '移動'}
+                            {log.changeType === 'delete' && '刪除'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                <div className='flex justify-end mt-4'>
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                  >
+                    關閉
+                  </button>
                 </div>
               </div>
             )}
-            
-            <MemberAssignment
-              cardData={cardData}
-              setAssignMemberModalOpen={setAssignMemberModalOpen}
-              owner={data.owner}
-              personImg={personImg}
-              Tooltip={Tooltip}
-            />
-            
-            <FileManagementModal
-              cardData={cardData}
-              handleFileUpload={handleFileUpload}
-              handleFileDownload={handleFileDownload}
-              removeFile={removeFile}
-              removeImage={removeImage}
-              openImageModal={openImageModal}
-              fileInputRef={fileInputRef}
-            />
-
-            <div className='flex justify-end mt-4 space-x-2'>
-              <button
-                onClick={cardHandleDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
-              >
-                刪除
-              </button>
-              <button
-                onClick={() => setOpen(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
-              >
-                取消
-              </button>
-              <button
-                onClick={cardHandleSubmit}
-                className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
-              >
-                儲存
-              </button>
-            </div>
           </div>
         </Modal> 
       )}
