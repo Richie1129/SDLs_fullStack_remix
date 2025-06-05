@@ -36,7 +36,9 @@ const Task = sequelize.define('task', {
         type: DataTypes.ARRAY(DataTypes.JSONB),
         defaultValue: [],
         allowNull: true,
-    },    
+    }
+}, {
+    timestamps: true // 啟用自動時間戳記
 });
 
 Task.belongsToMany(Tag, {through:"Card_Tag"});

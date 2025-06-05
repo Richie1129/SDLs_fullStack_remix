@@ -15,6 +15,7 @@ import axios from 'axios';
 import { CircleArrowLeft, CircleArrowRight } from "lucide-react"
 import FileDownload from 'js-file-download';
 import { AiOutlineCloudDownload } from "react-icons/ai";
+import { formatTime } from '../../../utils/timeUtils';
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -448,8 +449,8 @@ function Carditem({ data, index, columnIndex }) {
                 </div>
               )}
 
-              {(cardData.files?.length > 0 || cardData.images?.length > 0) && (
-                <div className="flex items-center gap-2 text-xs text-gray-500">
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center gap-2">
                   {cardData.images?.length > 0 && (
                     <span className="flex items-center gap-1">
                       <AiOutlineCloudDownload size={12} />
@@ -463,7 +464,13 @@ function Carditem({ data, index, columnIndex }) {
                     </span>
                   )}
                 </div>
-              )}
+                
+                {data.createdAt && (
+                  <div className="text-xs text-gray-400">
+                    {formatTime(data.createdAt, 'relative')}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -547,6 +554,31 @@ function Carditem({ data, index, columnIndex }) {
               value={cardData.content}
               onChange={(e) => setCardData({ ...cardData, content: e.target.value })}
             />
+
+            {/* 時間資訊 */}
+            {(data.createdAt || data.updatedAt) && (
+              <div className='bg-gray-50 rounded-lg p-3 mb-4'>
+                <h4 className='text-sm font-medium text-gray-700 mb-2'>時間資訊</h4>
+                <div className='space-y-1 text-sm text-gray-600'>
+                  {data.createdAt && (
+                    <div className='flex justify-between'>
+                      <span>建立時間：</span>
+                      <span title={formatTime(data.createdAt, 'full')}>
+                        {formatTime(data.createdAt, 'full')}
+                      </span>
+                    </div>
+                  )}
+                  {data.updatedAt && data.updatedAt !== data.createdAt && (
+                    <div className='flex justify-between'>
+                      <span>更新時間：</span>
+                      <span title={formatTime(data.updatedAt, 'full')}>
+                        {formatTime(data.updatedAt, 'relative')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             
             <MemberAssignment
               cardData={cardData}

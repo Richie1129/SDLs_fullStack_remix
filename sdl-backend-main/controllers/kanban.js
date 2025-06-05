@@ -107,7 +107,7 @@ exports.getKanban = async ( req, res ) => {
     await Promise.all(sortedColumnData.map(async (columnItem, columnIndex) => {
         // 获取当前列的所有任务
         const taskData = await Task.findAll({
-            attributes: ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files'],
+            attributes: ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files', 'createdAt', 'updatedAt'],
             where: {
                 columnId: columnItem.id
             }
@@ -135,7 +135,9 @@ exports.getKanbanTask = async ( req, res ) =>{
             'owner',
             'assignees',
             'images',
-            'files'
+            'files',
+            'createdAt',
+            'updatedAt'
         ],
         where:{
             columnId : columnId
