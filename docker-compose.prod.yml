@@ -41,6 +41,7 @@ services:
       - PG_USER=postgres
       - PG_PASSWORD=postgres
       - PG_NAME=sdls_fullstack_postgres1
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - "./sdl-backend-main/daily_file:/sdl-backend-main/daily_file"
     networks:
