@@ -106,9 +106,14 @@ export default function Protfolio() {
         "3-3": "撰寫研究結果",
         "4-1": "檢視研究進度",
         "4-2": "進行研究討論",
-        "4-3": "撰寫研究結論"
+        "4-3": "撰寫研究結論",
+        "5-1": "封面製作",
+        "5-2": "摘要撰寫",
+        "5-3": "目錄編制",
+        "5-4": "內容撰寫",
+        "5-5": "反思撰寫"
     };
-    const insertTitles = ["定標", "擇策", "監評", "調節"];
+    const insertTitles = ["定標", "擇策", "監評", "調節", "歷程"];
 
     useEffect(() => {
         if (stagePortfolio.length > 0) {
@@ -146,10 +151,17 @@ export default function Protfolio() {
     formData.append('attachFile', file);  // 欄位名稱要跟後端 upload.array 的 key 一致
     try {
       await updateSubmitAttachment(modalData.id, formData);
-      Swal.fire({ icon: 'success', title: '檔案重新上傳成功', confirmButtonColor: '#5BA491' });
-      // 更新列表
-      queryClient.invalidateQueries('protfolioDatas');
-      setFolderModalOpen(false);
+      Swal.fire({ 
+        icon: 'success', 
+        title: '檔案重新上傳成功', 
+        confirmButtonColor: '#5BA491' 
+      }).then(() => {
+        // 更新列表
+        queryClient.invalidateQueries('protfolioDatas');
+        setFolderModalOpen(false);
+        // 刷新頁面
+        window.location.reload();
+      });
     } catch (err) {
       console.error(err);
       Swal.fire({ icon: 'error', title: '重新上傳失敗', text: '請稍後再試', confirmButtonColor: '#d33' });
