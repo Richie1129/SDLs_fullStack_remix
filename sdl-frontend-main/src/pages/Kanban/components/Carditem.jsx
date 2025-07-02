@@ -3,7 +3,7 @@ import Modal from '../../../components/Modal';
 import AssignMember from './AssignMember';
 import { getProjectUser } from '../../../api/users';
 import { useParams } from 'react-router-dom';
-import { useQuery } from 'react-query';
+import { useQuery, useQueryClient } from 'react-query';
 import Swal from 'sweetalert2';
 import { GrFormClose } from "react-icons/gr";
 import { FiEdit } from "react-icons/fi";
@@ -241,6 +241,7 @@ function Carditem({ data, index, columnIndex }) {
   const [showChangeHistory, setShowChangeHistory] = useState(false);
   const [changeLogs, setChangeLogs] = useState([]);
   const { projectId } = useParams();
+  const queryClient = useQueryClient();
   const [cardData, setCardData] = useState({
     id: "",
     title: "",
@@ -293,6 +294,26 @@ function Carditem({ data, index, columnIndex }) {
       owner: data.owner || "",  // 確保 owner 存在
     });
   }, [data]);
+
+  // 監聽任務更新事件，刷新變更記錄
+  useEffect(() => {
+    const handleTaskUpdate = (updateData) => {
+      // 如果更新的是當前任務，刷新變更記錄
+      if (updateData && cardData.id && 
+          (updateData.taskId === cardData.id || updateData.id === cardData.id)) {
+        console.log('任務更新，刷新變更記錄:', cardData.id);
+        queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
+      }
+    };
+
+    socket.on('taskItem', handleTaskUpdate);
+    socket.on('activityUpdate', handleTaskUpdate);
+
+    return () => {
+      socket.off('taskItem', handleTaskUpdate);
+      socket.off('activityUpdate', handleTaskUpdate);
+    };
+  }, [cardData.id, queryClient]);
 
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
@@ -385,6 +406,10 @@ function Carditem({ data, index, columnIndex }) {
         projectId,
         user: { username: localStorage.getItem("username") }
       });
+      
+      // 失效變更記錄的緩存，強制重新獲取
+      queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
+      
       setOpen(false);
     } else {
       toast.error("請填寫卡片標題!");
@@ -577,7 +602,11 @@ function Carditem({ data, index, columnIndex }) {
                 編輯任務
               </button>
               <button
-                onClick={() => setShowChangeHistory(true)}
+                onClick={() => {
+                  setShowChangeHistory(true);
+                  // 強制刷新變更記錄
+                  queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
+                }}
                 className={`px-4 py-2 font-medium text-sm ${
                   showChangeHistory 
                     ? 'text-customgreen border-b-2 border-customgreen' 
