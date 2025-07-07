@@ -11,6 +11,7 @@ const app = express();
 const http = require('http');
 const { Server } = require('socket.io');
 const { upload } = require('./middlewares/uploadMiddleware'); // 引用上傳中介軟體
+const { uploadToMinio } = require('./middlewares/minioUploadMiddleware'); // 引用 MinIO 中介軟體
 const { Socket } = require('dgram');
 const server = http.createServer(app);
 const Task = require('./models/task');
@@ -725,21 +726,26 @@ io.on("connection", (socket) => {
     });    
 });
 
-// 新增檔案上傳路由
-app.post('/api/upload', upload.array('files', 10), (req, res) => {
-    console.log('Uploaded files:', req.files); // 打印文件信息
+// 檔案上傳路由 - 使用 MinIO
+app.post('/api/upload', uploadToMinio('files', 10), (req, res) => {
+    console.log('MinIO uploaded files:', req.uploadedFiles);
     try {
-        if (!req.files || req.files.length === 0) {
+        if (!req.uploadedFiles || req.uploadedFiles.length === 0) {
             return res.status(400).json({ message: 'No files uploaded' });
         }
 
-        const files = req.files.map((file) => ({
-            url: `/daily_file/${file.filename}`,
-            originalName: file.originalname,
-            mimeType: file.mimetype,
+        const files = req.uploadedFiles.map((file) => ({
+            url: file.url,
+            fileName: file.fileName,
+            originalName: file.originalName,
+            mimeType: file.mimeType,
+            size: file.size
         }));
 
-        res.status(200).json({ files });
+        res.status(200).json({ 
+            message: '檔案上傳成功',
+            files 
+        });
     } catch (error) {
         console.error('檔案上傳失敗:', error);
         res.status(500).json({ message: '檔案上傳失敗', error: error.message });
@@ -837,6 +843,7 @@ app.use('/api/question', require('./routes/question'))
 app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/llm', require('./routes/llm'));
+app.use('/api/file', require('./routes/file'));  // MinIO 檔案管理路由
 
 //error handling
 app.use((error, req, res, next) => {

@@ -22,6 +22,31 @@ const Daily_team = sequelize.define('daily_team', {
     creator:{
         type: DataTypes.TEXT,
         allowNull:false,
+    },
+    fileName: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'MinIO 檔案名稱'
+    },
+    originalName: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: '原始檔案名稱'
+    },
+    fileUrl: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        comment: 'MinIO 檔案 URL'
+    },
+    mimeType: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: '檔案 MIME 類型'
+    },
+    fileSize: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: '檔案大小 (bytes)'
     }
 }, {
     tableName: 'daily_teams', // 👈 加上這行

@@ -1,0 +1,29 @@
+{
+  "development": {
+    "database": "sdls_fullstack_postgres1",
+    "username": "postgres",
+    "password": "postgres",
+    "host": "postgres",
+    "port": 5432,
+    "dialect": "postgres",
+    "logging": true
+  },
+  "test": {
+    "database": "sdls_fullstack_postgres1",
+    "username": "postgres",
+    "password": "postgres",
+    "host": "postgres",
+    "port": 5432,
+    "dialect": "postgres",
+    "logging": false
+  },
+  "production": {
+    "database": "sdls_fullstack_postgres1",
+    "username": "postgres",
+    "password": "postgres",
+    "host": "postgres",
+    "port": 5432,
+    "dialect": "postgres",
+    "logging": false
+  }
+} 

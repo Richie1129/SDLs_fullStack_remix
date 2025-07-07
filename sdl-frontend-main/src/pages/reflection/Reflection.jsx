@@ -65,7 +65,8 @@ export default function Reflection() {
         console.log("編輯的日誌:", item); // 檢查這裡是否有正確的 `id`
         setTitle(item.title);
         setContent(item.content);
-        setAttachFile(item.fileData);
+        // 不再設置 fileData，因為我們現在使用 MinIO
+        setAttachFile(null);
         setEditingId(item.id); // 設定正在編輯的日誌ID
         setPersonalDailyModalOpen(true); // 開啟編輯模態框
     };
@@ -205,7 +206,8 @@ export default function Reflection() {
     console.log("編輯的小組日誌:", item); // 確保 `item` 不是 `undefined`
     setTitle(item.title || ""); // 避免 `undefined` 錯誤
     setContent(item.content || "");
-    setAttachFile(item.fileData || null);
+    // 不再設置 fileData，因為我們現在使用 MinIO
+    setAttachFile(null);
     setEditingId(item.id);
     setTeamDailyModalOpen(true);
 };
@@ -459,15 +461,23 @@ export default function Reflection() {
                                                                         <p className='text-gray-700 break-words'>{item.content}</p>
                                                                     </div>
                                                                     <div className='mt-auto'>
-                                                                        {item.fileData && (
+                                                                        {(item.fileName || item.fileData) && (
                                                                             <div className='flex justify-between items-center mb-2'>
-                                                                                <span className="text-base text-gray-500">附加檔案: {item.filename}</span>
+                                                                                <span className="text-base text-gray-500">
+                                                                                    附加檔案: {item.originalName || item.filename || item.fileName}
+                                                                                </span>
                                                                                 <button
                                                                                     className="flex items-center justify-center px-3 py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-300 ease-in-out"
                                                                                     onClick={() => {
-                                                                                        const buffer = new Uint8Array(item.fileData.data);
-                                                                                        const blob = new Blob([buffer], { type: "application/octet-stream" });
-                                                                                        FileDownload(blob, item.filename);
+                                                                                        if (item.fileName && item.fileUrl) {
+                                                                                            // 使用 MinIO 檔案下載 API
+                                                                                            window.open(`http://localhost/api/file/download/${item.fileName}`, '_blank');
+                                                                                        } else if (item.fileData && item.fileData.data) {
+                                                                                            // 向後相容：處理舊的 BLOB 資料
+                                                                                            const buffer = new Uint8Array(item.fileData.data);
+                                                                                            const blob = new Blob([buffer], { type: "application/octet-stream" });
+                                                                                            FileDownload(blob, item.filename || item.originalName || "downloaded-file");
+                                                                                        }
                                                                                     }}
                                                                                 >
                                                                                     <AiOutlineCloudDownload size={32} className="mr-2" />
@@ -570,15 +580,23 @@ export default function Reflection() {
                                                                         <p className='text-gray-700 break-words'>{item.content}</p>
                                                                     </div>
                                                                     <div className='mt-auto'>
-                                                                        {item.fileData && (
+                                                                        {(item.fileName || item.fileData) && (
                                                                             <div className='flex justify-between items-center mb-2'>
-                                                                                <span className="text-base text-gray-500">附加檔案: {item.filename}</span>
+                                                                                <span className="text-base text-gray-500">
+                                                                                    附加檔案: {item.originalName || item.filename || item.fileName}
+                                                                                </span>
                                                                                 <button
                                                                                     className="flex items-center justify-center px-3 py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-300 ease-in-out"
                                                                                     onClick={() => {
-                                                                                        const buffer = new Uint8Array(item.fileData.data);
-                                                                                        const blob = new Blob([buffer], { type: "application/octet-stream" });
-                                                                                        FileDownload(blob, item.filename);
+                                                                                        if (item.fileName && item.fileUrl) {
+                                                                                            // 使用 MinIO 檔案下載 API
+                                                                                            window.open(`http://localhost/api/file/download/${item.fileName}`, '_blank');
+                                                                                        } else if (item.fileData && item.fileData.data) {
+                                                                                            // 向後相容：處理舊的 BLOB 資料
+                                                                                            const buffer = new Uint8Array(item.fileData.data);
+                                                                                            const blob = new Blob([buffer], { type: "application/octet-stream" });
+                                                                                            FileDownload(blob, item.filename || item.originalName || "downloaded-file");
+                                                                                        }
                                                                                     }}
                                                                                 >
                                                                                     <AiOutlineCloudDownload size={32} className="mr-2" />

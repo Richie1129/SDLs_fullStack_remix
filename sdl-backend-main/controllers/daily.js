@@ -27,149 +27,165 @@ exports.getPersonalDaily = async (req, res) => {
     }
 };
 
-
 exports.createPersonalDaily = async (req, res) => {
     const { userId, projectId, title, content } = req.body;
+    
     if (!title) {
-        return res.status(404).send({ message: 'please enter title!' })
+        return res.status(400).send({ message: 'please enter title!' });
     }
-
-    const fs = require('fs').promises; // 使用 Promise 接口
 
     if (!content) {
-        return res.status(404).send({ message: 'please fill in the form !' })
+        return res.status(400).send({ message: 'please fill in the form!' });
     }
-    if (req.files.length > 0) {
-        try {
-            await Promise.all(req.files.map(async (item) => {
-                // const fileData = item.fileData;
-                console.log("CreateItem:", item)
 
-                const fileData = await fs.readFile(item.path);
-
-                req.files.map(item => {
-                    const filename = item.filename
-                    Daily_personal.create({
+    console.log('=== 創建個人日誌 ===');
+    console.log('用戶ID:', userId);
+    console.log('專案ID:', projectId);
+    console.log('標題:', title);
+    console.log('內容:', content);
+    console.log('上傳的檔案:', req.uploadedFiles);
+    
+    try {
+        // 檢查是否有上傳的檔案（來自 MinIO 中介軟體）
+        if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+            console.log(`📁 檢測到 ${req.uploadedFiles.length} 個檔案`);
+            
+            // 有檔案上傳 - 為每個檔案創建一筆記錄
+            const dailyPromises = req.uploadedFiles.map(async (file, index) => {
+                console.log(`處理檔案 ${index + 1}/${req.uploadedFiles.length}:`, {
+                    fileName: file.fileName,
+                    originalName: file.originalName,
+                    url: file.url,
+                    size: file.size
+                });
+                
+                return Daily_personal.create({
                         userId: userId,
                         projectId: projectId,
                         title: title,
                         content: content,
-                        fileData: fileData,
-                        filename: filename
-                    })
-                        .then(() => {
-                            return res.status(200).send({ message: 'create success!' })
-                        })
-                        .catch(err => {
-                            console.log(err)
-                            return res.status(500).send({ message: 'create failed!' });
+                    // 改為儲存 MinIO 相關資訊，而非 BLOB
+                    fileName: file.fileName,        // MinIO 檔案名
+                    originalName: file.originalName, // 原始檔案名
+                    fileUrl: file.url,              // MinIO URL
+                    mimeType: file.mimeType,        // 檔案類型
+                    fileSize: file.size             // 檔案大小
                         });
-                })
-            }));
-        } catch (err) {
-            console.log(err);
-            return res.status(500).send({ message: 'create failed!' });
-        }
+            });
+
+            await Promise.all(dailyPromises);
+            console.log(`✅ 創建個人日誌成功 (${req.uploadedFiles.length} 個檔案)`);
+            
     } else {
+            console.log('📝 無檔案上傳，創建純文字日誌');
+            // 沒有檔案上傳
         await Daily_personal.create({
             userId: userId,
             projectId: projectId,
             title: title,
             content: content,
-        })
-            .then(() => {
-                return res.status(200).send({ message: 'create success!' });
-            })
-            .catch(err => {
-                console.log(err);
-                return res.status(500).send({ message: 'create failed!' });
             });
+            console.log('✅ 創建個人日誌成功 (無檔案)');
+        }
+
+        console.log('==================');
+                return res.status(200).send({ message: 'create success!' });
+        
+    } catch (err) {
+        console.error('❌ 創建個人日誌失敗:', err);
+        return res.status(500).send({ message: 'create failed!', error: err.message });
     }
-}
+};
 
 exports.getTeamDaily = async (req, res) => {
     const { projectId } = req.query;
+    
+    try {
     const teamDaily = await Daily_team.findAll({
         where: {
             projectId: projectId,
         }
-    })
-        .then(result => {
-            console.log(result);
-            res.status(200).json(result)
-        })
-        .catch(err => console.log(err));
+        });
+        
+        console.log('取得團隊日誌成功');
+        res.status(200).json(teamDaily);
+        
+    } catch (err) {
+        console.error('取得團隊日誌失敗:', err);
+        res.status(500).json({ message: '取得團隊日誌失敗', error: err.message });
 }
+};
 
 exports.createTeamDaily = async (req, res) => {
     const { userId, projectId, title, content, creator } = req.body;
+    
     if (!title) {
-        return res.status(404).send({ message: 'please enter title!' })
+        return res.status(400).send({ message: 'please enter title!' });
     }
-    const fs = require('fs').promises; // 使用 Promise 接口
 
-    if (req.files.length > 0) {
-        try {
-            await Promise.all(req.files.map(async (item) => {
-                // const fileData = item.fileData;
-                console.log("CreateItem:", item)
-
-                const fileData = await fs.readFile(item.path);
-
-                req.files.map(item => {
-                    const filename = item.filename
-                    Daily_team.create({
+    console.log('=== 創建團隊日誌 ===');
+    console.log('用戶ID:', userId);
+    console.log('專案ID:', projectId);
+    console.log('創建者:', creator);
+    console.log('標題:', title);
+    console.log('內容:', content);
+    console.log('上傳的檔案:', req.uploadedFiles);
+    
+    try {
+        // 檢查是否有上傳的檔案（來自 MinIO 中介軟體）
+        if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+            console.log(`📁 檢測到 ${req.uploadedFiles.length} 個檔案`);
+            
+            // 有檔案上傳 - 為每個檔案創建一筆記錄
+            const dailyPromises = req.uploadedFiles.map(async (file, index) => {
+                console.log(`處理檔案 ${index + 1}/${req.uploadedFiles.length}:`, {
+                    fileName: file.fileName,
+                    originalName: file.originalName,
+                    url: file.url,
+                    size: file.size
+                });
+                
+                return Daily_team.create({
                         userId: userId,
                         projectId: projectId,
                         title: title,
                         content: content,
                         creator: creator,
-                        fileData: fileData,
-                        filename: filename,
-                        // stage: stage,
-                        // type: type
-                    })
-                        .then(() => {
-                            return res.status(200).send({ message: 'create success!' })
-                        })
-                        .catch(err => {
-                            console.log(err)
-                            return res.status(500).send({ message: 'create failed!' });
+                    // 改為儲存 MinIO 相關資訊
+                    fileName: file.fileName,        // MinIO 檔案名
+                    originalName: file.originalName, // 原始檔案名
+                    fileUrl: file.url,              // MinIO URL
+                    mimeType: file.mimeType,        // 檔案類型
+                    fileSize: file.size             // 檔案大小
                         });
-                })
-            }));
-        } catch (err) {
-            console.log(err);
-            return res.status(500).send({ message: 'create failed!' });
-        }
+            });
+
+            await Promise.all(dailyPromises);
+            console.log(`✅ 創建團隊日誌成功 (${req.uploadedFiles.length} 個檔案)`);
+            
     } else {
+            console.log('📝 無檔案上傳，創建純文字日誌');
+            // 沒有檔案上傳
         await Daily_team.create({
             userId: userId,
             projectId: projectId,
             title: title,
             content: content,
             creator: creator,
-            // stage: stage,
-            // type: type
-        })
-            .then(() => {
-                return res.status(200).send({ message: 'create success!' });
-            })
-            .catch(err => {
-                console.log(err);
-                return res.status(500).send({ message: 'create failed!' });
             });
-    }
+            console.log('✅ 創建團隊日誌成功 (無檔案)');
+        }
 
-}
+        console.log('==================');
+                return res.status(200).send({ message: 'create success!' });
+        
+    } catch (err) {
+        console.error('❌ 創建團隊日誌失敗:', err);
+        return res.status(500).send({ message: 'create failed!', error: err.message });
+    }
+};
+
 exports.updatePersonalDaily = async (req, res) => {
-    console.log("收到的 params:", req.params);
-    console.log("收到的請求:", req.body);
-
-    if (!req.body || Object.keys(req.body).length === 0) {
-        return res.status(400).json({ message: "請求體 (body) 為空，請確認 Content-Type 設定為 JSON" });
-    }
-
     const { id } = req.params;
     const { title, content } = req.body;
 
@@ -179,11 +195,39 @@ exports.updatePersonalDaily = async (req, res) => {
             return res.status(404).json({ message: "日誌未找到" });
         }
 
-        await daily.update({ title, content });
+        console.log('=== 更新個人日誌 ===');
+        console.log('日誌ID:', id);
+        console.log('新標題:', title);
+        console.log('新內容:', content);
+        console.log('上傳的檔案:', req.uploadedFile);
+        
+        let updateData = { title, content };
+        
+        // 如果有新檔案上傳，更新檔案資訊
+        if (req.uploadedFile) {
+            console.log('📁 檢測到新檔案上傳:', {
+                fileName: req.uploadedFile.fileName,
+                originalName: req.uploadedFile.originalName,
+                url: req.uploadedFile.url,
+                size: req.uploadedFile.size
+            });
+            
+            updateData.fileName = req.uploadedFile.fileName;
+            updateData.originalName = req.uploadedFile.originalName;
+            updateData.fileUrl = req.uploadedFile.url;
+            updateData.mimeType = req.uploadedFile.mimeType;
+            updateData.fileSize = req.uploadedFile.size;
+        }
+
+        await daily.update(updateData);
+        console.log(`✅ 更新個人日誌成功: ${id}`);
+        console.log('==================');
+        
         return res.status(200).json({ message: "更新成功", data: daily });
+        
     } catch (error) {
-        console.error("更新錯誤:", error);
-        return res.status(500).json({ message: "更新失敗" });
+        console.error("❌ 更新個人日誌錯誤:", error);
+        return res.status(500).json({ message: "更新失敗", error: error.message });
     }
 };
 
@@ -200,19 +244,38 @@ exports.updateTeamDaily = async (req, res) => {
             return res.status(404).json({ message: "小組日誌未找到" });
         }
 
-        let updatedData = { title, content };
+        console.log('=== 更新團隊日誌 ===');
+        console.log('日誌ID:', id);
+        console.log('新標題:', title);
+        console.log('新內容:', content);
+        console.log('上傳的檔案:', req.uploadedFile);
         
-        if (req.files && req.files.length > 0) {
-            const fs = require('fs').promises;
-            const fileData = await fs.readFile(req.files[0].path);
-            updatedData.fileData = fileData;
-            updatedData.filename = req.files[0].originalname;
+        let updateData = { title, content };
+        
+        // 如果有新檔案上傳，更新檔案資訊
+        if (req.uploadedFile) {
+            console.log('📁 檢測到新檔案上傳:', {
+                fileName: req.uploadedFile.fileName,
+                originalName: req.uploadedFile.originalName,
+                url: req.uploadedFile.url,
+                size: req.uploadedFile.size
+            });
+            
+            updateData.fileName = req.uploadedFile.fileName;
+            updateData.originalName = req.uploadedFile.originalName;
+            updateData.fileUrl = req.uploadedFile.url;
+            updateData.mimeType = req.uploadedFile.mimeType;
+            updateData.fileSize = req.uploadedFile.size;
         }
 
-        await daily.update(updatedData);
+        await daily.update(updateData);
+        console.log(`✅ 更新團隊日誌成功: ${id}`);
+        console.log('==================');
+        
         return res.status(200).json({ message: "更新成功", data: daily });
+        
     } catch (error) {
-        console.error("更新錯誤:", error);
-        return res.status(500).json({ message: "更新失敗" });
+        console.error("❌ 更新團隊日誌錯誤:", error);
+        return res.status(500).json({ message: "更新失敗", error: error.message });
     }
 };

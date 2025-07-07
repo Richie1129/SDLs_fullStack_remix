@@ -287,9 +287,18 @@ function Carditem({ data, index, columnIndex }) {
   );
 
   useEffect(() => {
+    // 處理現有圖片 URL，轉換 MinIO URL 為代理 API
+    const processedImages = (data.images || []).map(imageUrl => {
+      if (imageUrl.includes('sdls-files/')) {
+        const fileName = imageUrl.split('/').pop();
+        return `http://localhost/api/file/image/${fileName}`;
+      }
+      return imageUrl;
+    });
+
     setCardData({
       ...data,
-      images: data.images || [], // 確保 images 為陣列
+      images: processedImages, // 使用處理過的圖片 URL
       files: data.files || [], // 確保 files 為陣列
       owner: data.owner || "",  // 確保 owner 存在
     });
@@ -330,18 +339,28 @@ function Carditem({ data, index, columnIndex }) {
         },
       });
 
-      // For non-image files, keep the complete file objects with full URL
+      // 處理 MinIO 回傳的完整 URL 或本地相對路徑
       const uploadedFiles = response.data.files
         .filter((file) => !file.mimeType.startsWith("image/"))
         .map((file) => ({
-          url: `http://localhost/api${file.url}`,
+          // 如果是完整 URL (MinIO)，直接使用；否則拼接本地路徑
+          url: file.url.startsWith('http') ? file.url : `http://localhost/api${file.url}`,
           originalName: file.originalName,
-          mimeType: file.mimeType
+          mimeType: file.mimeType,
+          fileName: file.fileName // 保存 MinIO 檔名
         }));
       
       const uploadedImages = response.data.files
         .filter((file) => file.mimeType.startsWith("image/"))
-        .map((file) => `http://localhost/api${file.url}`);
+        .map((file) => {
+          // 如果是 MinIO URL，提取檔名並使用代理 API
+          if (file.url.includes('sdls-files/')) {
+            const fileName = file.fileName || file.url.split('/').pop();
+            return `http://localhost/api/file/image/${fileName}`;
+          }
+          // 本地檔案使用原來的邏輯
+          return file.url.startsWith('http') ? file.url : `http://localhost/api${file.url}`;
+        });
 
       setCardData((prev) => ({
         ...prev,
@@ -362,10 +381,18 @@ function Carditem({ data, index, columnIndex }) {
 
   const handleFileDownload = async (file) => {
     try {
-      const response = await axios.get(`http://localhost/api${file.url}`, {
+      // 檢查是否為 MinIO URL (完整 URL)
+      const downloadUrl = file.url.startsWith('http') 
+        ? file.url  // MinIO 完整 URL
+        : `http://localhost/api${file.url}`; // 本地相對路徑
+      
+      console.log('下載檔案 URL:', downloadUrl);
+      
+      const response = await axios.get(downloadUrl, {
         responseType: 'blob'
       });
       FileDownload(response.data, file.originalName);
+      toast.success(`下載成功: ${file.originalName}`);
     } catch (err) {
       console.error('檔案下載失敗:', err);
       toast.error('檔案下載失敗');

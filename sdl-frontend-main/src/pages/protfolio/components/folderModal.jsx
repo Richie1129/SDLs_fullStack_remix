@@ -3,29 +3,30 @@ import { useQuery } from 'react-query';
 import { AiOutlineCloudDownload } from "react-icons/ai";
 import { GrFormClose } from "react-icons/gr";
 import Modal from '../../../components/Modal';
-import FileDownload from 'js-file-download'
 import Loader from '../../../components/Loader';
-import { getSubmitAttachment } from '../../../api/submit';
+import Swal from 'sweetalert2';
 
 export default function FolderModal({folderModalOpen, setFolderModalOpen, modalData}) {
-    const [ queryFetch, setQueryFetch ] = useState(false);
-    const { id, content, filename } = modalData; 
+    const { id, content, filename, fileName, originalName, fileUrl } = modalData; 
 
-    const {
-        isLoading,
-        isError,
-    } = useQuery( "getSubmitAttachment", () => getSubmitAttachment(
-        id,
-        { responseType:"blob"}
-        ),
-        {
-            onSuccess: (data)=>{
-                FileDownload(data, filename)
-                setQueryFetch(prev => !prev);
-            },
-            enabled: !!queryFetch
+    const handleDownload = () => {
+        // 檢查是否有 MinIO 檔案資訊
+        if (fileName && fileUrl) {
+            // 使用 MinIO 檔案下載 API
+            window.open(`http://localhost/api/file/download/${fileName}`, '_blank');
+        } else if (filename) {
+            // 向後相容：使用舊的檔案名稱，嘗試從 MinIO 下載
+            window.open(`http://localhost/api/file/download/${filename}`, '_blank');
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: '無可下載的檔案',
+                text: '此項目沒有附加檔案',
+                confirmButtonColor: '#5BA491'
+            });
         }
-    );
+    };
+
     return (
         <Modal open={folderModalOpen} onClose={() => setFolderModalOpen(false)} opacity={true} position={"justify-center items-center"}> 
             <button onClick={() => setFolderModalOpen(false)} className=' absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
@@ -50,13 +51,10 @@ export default function FolderModal({folderModalOpen, setFolderModalOpen, modalD
                     }
                 </div>
                 {
-                    filename? 
+                    (fileName || filename) ? 
                     <button 
                         className="inline-flex items-center bg-white hover:bg-slate-200/80 text-slate-400 border-2 border-slate-400 font-semibold rounded-md p-1 mt-3 sm:px-4 text-base  min-w-[100px]"
-                        onClick={() => {
-                            setQueryFetch(prev => !prev);
-                            console.log("123");
-                        }}
+                        onClick={handleDownload}
                     >
                         <AiOutlineCloudDownload size={32} className=" text-black mr-1"/> 
                         <span>

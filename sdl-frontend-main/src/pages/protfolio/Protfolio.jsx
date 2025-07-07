@@ -133,13 +133,22 @@ export default function Protfolio() {
     }, [stagePortfolio]);
 
     const downloadFile = () => {
-        if (modalData.fileData && modalData.fileData.data) {
-            // 將 Buffer 轉換為 Uint8Array
+        // 檢查是否有 MinIO 檔案資訊
+        if (modalData.fileName && modalData.fileUrl) {
+            // 使用 MinIO 檔案下載 API
+            window.open(`http://localhost/api/file/download/${modalData.fileName}`, '_blank');
+        } else if (modalData.fileData && modalData.fileData.data) {
+            // 向後相容：處理舊的 BLOB 資料
             const buffer = new Uint8Array(modalData.fileData.data);
-            // 創建 Blob 對象
             const blob = new Blob([buffer], { type: "application/octet-stream" });
-            // 觸發文件下載
-            FileDownload(blob, "downloaded-file.png"); // 請根據實際文件類型調整 MIME 類型和文件名
+            FileDownload(blob, modalData.fileName || "downloaded-file");
+        } else {
+            Swal.fire({
+                icon: 'warning',
+                title: '無可下載的檔案',
+                text: '此項目沒有附加檔案',
+                confirmButtonColor: '#5BA491'
+            });
         }
     };
 
@@ -370,13 +379,17 @@ export default function Protfolio() {
                                                             )}
                                                         </div>
                                                         <div className="flex flex-col sm:flex-row gap-2">
-                                                            {modalData.fileData && (
+                                                            {(modalData.fileName || modalData.fileData) && (
                                                                 <button
                                                                     onClick={() => {
-                                                                        if (modalData.fileData && modalData.fileData.data && modalData.fileName) {
+                                                                        if (modalData.fileName && modalData.fileUrl) {
+                                                                            // 使用 MinIO 檔案下載 API
+                                                                            window.open(`http://localhost/api/file/download/${modalData.fileName}`, '_blank');
+                                                                        } else if (modalData.fileData && modalData.fileData.data) {
+                                                                            // 向後相容：處理舊的 BLOB 資料
                                                                             const buffer = new Uint8Array(modalData.fileData.data);
                                                                             const blob = new Blob([buffer], { type: "application/octet-stream" });
-                                                                            FileDownload(blob, modalData.fileName);
+                                                                            FileDownload(blob, modalData.fileName || modalData.originalName || "downloaded-file");
                                                                         }
                                                                     }}
                                                                     className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-teal-500 hover:bg-teal-600"
