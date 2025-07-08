@@ -373,18 +373,18 @@ const Tooltip = ({ children, content }) => {
         </div>
         {/* 新增公告 Modal */}
         <Modal open={newNotificationModalOpen} onClose={() => setNewNotificationModalOpen(false)}>
-          <div className="p-6 bg-white rounded-lg shadow-lg w-full max-w-md mx-auto">
-            <h3 className="text-2xl font-semibold mb-6 text-center">新增公告</h3>
+          <div className="p-4 sm:p-6 bg-white rounded-lg shadow-lg w-full max-w-sm sm:max-w-md mx-auto">
+            <h3 className="text-lg sm:text-2xl font-semibold mb-4 sm:mb-6 text-center">新增公告</h3>
             <form>
-              <div className="mb-4">
-                <label htmlFor="groupSelect" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-3 sm:mb-4">
+                <label htmlFor="groupSelect" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   選擇組別
                 </label>
                 <select
                   id="groupSelect"
                   value={selectedGroup}
                   onChange={(e) => setSelectedGroup(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-sm"
                 >
                   <option value="all">全部組別</option>
                   {projectList.map((project, index) => (
@@ -394,39 +394,39 @@ const Tooltip = ({ children, content }) => {
                   ))}
                 </select>
               </div>
-              <div className="mb-4">
-                <label htmlFor="newTitle" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-3 sm:mb-4">
+                <label htmlFor="newTitle" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   標題
                 </label>
                 <input
                   type="text"
                   id="newTitle"
                   placeholder="請輸入公告標題"
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-sm"
                 />
               </div>
-              <div className="mb-4">
-                <label htmlFor="newDescription" className="block text-sm font-medium text-gray-700 mb-1">
+              <div className="mb-3 sm:mb-4">
+                <label htmlFor="newDescription" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                   內容
                 </label>
                 <textarea
                   id="newDescription"
                   placeholder="請輸入公告內容"
-                  rows="4"
-                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  rows="3"
+                  className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg text-sm resize-none"
                 ></textarea>
               </div>
-              <div className="flex justify-between">
+              <div className="flex flex-col sm:flex-row justify-between space-y-2 sm:space-y-0 sm:space-x-3">
                 <button
                   type="button"
-                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400"
+                  className="px-3 sm:px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 text-sm"
                   onClick={() => setNewNotificationModalOpen(false)}
                 >
                   取消
                 </button>
                 <button
                   type="button"
-                  className="px-4 py-2 bg-[#5BA491] text-white rounded-lg hover:bg-[#5BA491]"
+                  className="px-3 sm:px-4 py-2 bg-[#5BA491] text-white rounded-lg hover:bg-[#5BA491] text-sm"
                   onClick={() => {
                     const newTitle = document.getElementById("newTitle").value;
                     const newDescription = document.getElementById("newDescription").value;
@@ -444,15 +444,15 @@ const Tooltip = ({ children, content }) => {
   }
 
   return (
-    <div className="fixed z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2">
-      <div className="flex items-center">
-        <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-2xl">
-          <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-14 w-auto" />
+    <div className="fixed z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2">
+      <div className="flex items-center min-w-0 flex-1">
+        <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-lg sm:text-2xl">
+          <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-10 sm:h-14 w-auto" />
         </Link>
-        <p className="font-bold text-xl text-teal-900">{projectInfo.name || "專案名稱"}</p>
+        <p className="font-bold text-sm sm:text-xl text-teal-900 truncate">{projectInfo.name || "專案名稱"}</p>
       </div>
       {/* 右側功能 */}
-      <div className="flex items-center">
+      <div className="flex items-center flex-shrink-0">
         <ul className="flex items-center justify-center space-x-1">
           {getProjectUserQuery.isLoading || projectId === undefined ? <></> :
             getProjectUserQuery.isError ? <p className='font-bold text-2xl'>Error</p> :
@@ -475,7 +475,7 @@ const Tooltip = ({ children, content }) => {
           </li>
         </ul>
         
-        <h3 className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3">
+        <h3 className="font-bold cursor-pointer p-1 mr-1 sm:mr-2 rounded-lg mx-1 sm:mx-3 text-sm sm:text-base hidden sm:block">
           {localStorage.getItem("username")}
         </h3>
         <TbBell
@@ -485,15 +485,9 @@ const Tooltip = ({ children, content }) => {
         />
         {showNotifications && (
           <div
+            className="absolute right-2 sm:right-4 top-12 w-72 sm:w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50"
             style={{
-              position: "absolute",
-              right: "10px",
-              top: "50px",
-              width: "300px",
-              background: "#fff",
-              borderRadius: "8px",
-              boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-              overflow: "hidden",
+              maxWidth: "calc(100vw - 2rem)",
             }}
           >
             <div className="p-4">
@@ -534,13 +528,14 @@ const Tooltip = ({ children, content }) => {
           </div>
         )}
         <button
-          className="ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-2 font-semibold"
+          className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-1 sm:p-2 font-semibold text-xs sm:text-sm"
           onClick={() => {
             localStorage.clear();
             navigate("/");
           }}
         >
-          登出
+          <span className="hidden sm:inline">登出</span>
+          <span className="sm:hidden">出</span>
         </button>
       </div>
       <Modal open={referralCodeModalOpen} onClose={() => setReferralCodeModalOpen(false)} opacity={true} position={"justify-center items-center"}>

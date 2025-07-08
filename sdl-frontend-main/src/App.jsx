@@ -21,6 +21,8 @@ import NotFound from "./pages/notFound/NotFound";
 import Rag from './pages/Rag/Rag';
 import ManageStudent from './pages/manageStudent/ManageStudents';
 import OverView from './pages/manageStudent/OverView';
+import StudentDashboard from './pages/manageStudent/StudentDashboard';
+import TeacherDashboard from './pages/manageStudent/TeacherDashboard';
 
 export default function App() {
   const router = createBrowserRouter(
@@ -45,6 +47,8 @@ export default function App() {
             <Route path="ideaWall" element={<IdeaWall />} />
             <Route path="rag" element={<Rag />} />
             <Route path="manageStudent" element={<ManageStudent />} />
+            <Route path="studentDashboard" element={<StudentDashboard />} />
+            <Route path="teacherDashboard" element={<TeacherDashboard />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />}></Route>

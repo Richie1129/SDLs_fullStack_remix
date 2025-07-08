@@ -103,16 +103,17 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
-            className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-80 bg-white shadow-xl border-l border-gray-200 z-50 overflow-hidden"
+            className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-50 overflow-hidden"
         >
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-                    <FiActivity className="mr-2" />
-                    專案活動
+            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center">
+                    <FiActivity className="mr-2 text-sm sm:text-base" />
+                    <span className="hidden sm:inline">專案活動</span>
+                    <span className="sm:hidden">活動</span>
                 </h3>
                 <button
                     onClick={onClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-gray-400 hover:text-gray-600 transition-colors text-lg sm:text-xl"
                 >
                     ✕
                 </button>
@@ -122,12 +123,12 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                 {activities.length === 0 ? (
                     <div className="flex items-center justify-center h-40 text-gray-500">
                         <div className="text-center">
-                            <FiActivity className="mx-auto mb-2 text-2xl" />
-                            <p>尚無活動記錄</p>
+                            <FiActivity className="mx-auto mb-2 text-xl sm:text-2xl" />
+                            <p className="text-sm sm:text-base">尚無活動記錄</p>
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-3 p-4">
+                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
                         <AnimatePresence>
                             {activities.map((activity, index) => {
                                 const isNew = newActivity && 
@@ -149,28 +150,28 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                             scale: { duration: 0.6 }
                                         }}
                                         className={`
-                                            p-3 rounded-lg border-l-4 transition-all duration-300
+                                            p-2 sm:p-3 rounded-lg border-l-4 transition-all duration-300
                                             ${getActivityColor(activity.changeType)}
                                             ${isNew ? 'ring-2 ring-blue-300 shadow-lg' : 'hover:shadow-md'}
                                         `}
                                     >
-                                        <div className="flex items-start space-x-3">
+                                        <div className="flex items-start space-x-2 sm:space-x-3">
                                             <div className="flex-shrink-0 mt-0.5">
                                                 {getActivityIcon(activity.changeType)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-gray-800 font-medium">
+                                                <p className="text-xs sm:text-sm text-gray-800 font-medium break-words">
                                                     {activity.changedBy}
                                                 </p>
-                                                <p className="text-sm text-gray-600 mt-1">
+                                                <p className="text-xs sm:text-sm text-gray-600 mt-1 break-words">
                                                     {activity.description}
                                                 </p>
-                                                <div className="flex items-center justify-between mt-2">
+                                                <div className="flex items-center justify-between mt-1 sm:mt-2">
                                                     <span className="text-xs text-gray-400">
                                                         {formatTime(activity.createdAt, 'relative')}
                                                     </span>
                                                     {activity.task && (
-                                                        <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
+                                                        <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded">
                                                             #{activity.task.id}
                                                         </span>
                                                     )}

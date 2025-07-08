@@ -126,17 +126,17 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
 
 
     return (
-        <div className={`absolute right-0 bottom-0 mb-28 rounded-lg mr-40 transform transition-all duration-500 ease-in-out ${animationClass} shadow-2xl dialog-box`}>
-            <div className="bg-slate-100 p-4 rounded-lg font-bold">
-                <p>{displayedContent}</p>
+        <div className={`absolute right-2 sm:right-4 lg:right-40 bottom-0 mb-16 sm:mb-20 lg:mb-28 rounded-lg transform transition-all duration-500 ease-in-out ${animationClass} shadow-2xl dialog-box max-w-xs sm:max-w-sm lg:max-w-md`}>
+            <div className="bg-slate-100 p-3 sm:p-4 rounded-lg font-bold">
+                <p className="text-xs sm:text-sm lg:text-base">{displayedContent}</p>
                 {showOptions && (
                     <>
-                        <button onClick={() => handleOptionSelect('option1')} className="bg-[#5BA491] text-white w-full rounded-lg my-3">階段目標說明</button>
-                        <button onClick={() => handleOptionSelect('option2')} className="bg-[#5BA491] text-white w-full rounded-lg">階段如何進行</button>
+                        <button onClick={() => handleOptionSelect('option1')} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-xs sm:text-sm">階段目標說明</button>
+                        <button onClick={() => handleOptionSelect('option2')} className="bg-[#5BA491] text-white w-full rounded-lg py-1 sm:py-2 text-xs sm:text-sm">階段如何進行</button>
                     </>
                 )}
                 {!showOptions && (
-                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-3">我了解了!</button>
+                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-xs sm:text-sm">我了解了!</button>
                 )}
             </div>
         </div>
@@ -282,25 +282,30 @@ export default function SubStageComponent() {
     }, [isDialogOpen]); // 依賴於 isDialogOpen 的變化來重新添加/移除事件監聽器
 
     return (
-        <div style={{ width: 'calc(100% - 4rem)' }} className="w-full max-w-screen bg-[#F5F5F5] absolute bottom-0 right-0 h-16 duration-500 border-r-2 pb-20 px-40">
-            <div className="flex justify-evenly items-center p-4" ref={dialogRef}>
-                {stages.map((subStage, index) => (
-                    <React.Fragment key={index}>
-                        <div style={{ backgroundColor: getStageColor(index + 1) }} className={`px-4 py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner`}>
-                            {subStage}
-                        </div>
-                        {index < stages.length - 1 && (
-                            // 添加水平虚线分隔符，但不在最后一个元素之后添加
-                            <div className="border-b border-dashed border-gray-400 h-0.5 flex-grow mx-2"></div>
-                        )}
-                    </React.Fragment>
-                ))}
+        <div style={{ width: 'calc(100% - 1rem)' }} className="w-full max-w-screen bg-[#F5F5F5] absolute bottom-0 right-0 h-12 sm:h-14 lg:h-16 duration-500 border-r-2 pb-12 sm:pb-16 lg:pb-20 px-2 sm:px-8 lg:px-40">
+            <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-2 lg:p-4 overflow-x-auto" ref={dialogRef}>
+                <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 min-w-0 flex-1">
+                    {stages.map((subStage, index) => (
+                        <React.Fragment key={index}>
+                            <div 
+                                style={{ backgroundColor: getStageColor(index + 1) }} 
+                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner text-xs sm:text-sm lg:text-base whitespace-nowrap`}
+                            >
+                                {subStage}
+                            </div>
+                            {index < stages.length - 1 && (
+                                // 添加水平虚线分隔符，但不在最后一个元素之后添加
+                                <div className="border-b border-dashed border-gray-400 h-0.5 flex-grow mx-1 sm:mx-2 min-w-[10px] hidden sm:block"></div>
+                            )}
+                        </React.Fragment>
+                    ))}
+                </div>
                 <span onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                     onClick={handleRobotClick}
-                    className=" ml-36 cursor-pointer "
-                    style={{ width: '48px', height: '48px' }}>
-                    <img src={imageSrc} alt="Robot" className={`transition-all duration-300 ease-in-out ${isHovered ? 'scale-110 ' : 'scale-100'}`} />
+                    className="ml-2 sm:ml-4 lg:ml-36 cursor-pointer flex-shrink-0"
+                    style={{ width: '32px', height: '32px' }}>
+                    <img src={imageSrc} alt="Robot" className={`w-full h-full transition-all duration-300 ease-in-out ${isHovered ? 'scale-110 ' : 'scale-100'}`} />
                 </span>
                 <DialogBox
                     isOpen={isDialogOpen}
