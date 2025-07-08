@@ -470,8 +470,8 @@ export default function Reflection() {
                                                                                     className="flex items-center justify-center px-3 py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-300 ease-in-out"
                                                                                     onClick={() => {
                                                                                         if (item.fileName && item.fileUrl) {
-                                                                                            // 使用 MinIO 檔案下載 API
-                                                                                            window.open(`http://localhost/api/file/download/${item.fileName}`, '_blank');
+                                                                                            // 使用 MinIO 直接下載 API
+                                                                                            window.open(`http://localhost/api/file/direct/${item.fileName}`, '_blank');
                                                                                         } else if (item.fileData && item.fileData.data) {
                                                                                             // 向後相容：處理舊的 BLOB 資料
                                                                                             const buffer = new Uint8Array(item.fileData.data);
@@ -589,8 +589,8 @@ export default function Reflection() {
                                                                                     className="flex items-center justify-center px-3 py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-300 ease-in-out"
                                                                                     onClick={() => {
                                                                                         if (item.fileName && item.fileUrl) {
-                                                                                            // 使用 MinIO 檔案下載 API
-                                                                                            window.open(`http://localhost/api/file/download/${item.fileName}`, '_blank');
+                                                                                            // 使用 MinIO 直接下載 API
+                                                                                            window.open(`http://localhost/api/file/direct/${item.fileName}`, '_blank');
                                                                                         } else if (item.fileData && item.fileData.data) {
                                                                                             // 向後相容：處理舊的 BLOB 資料
                                                                                             const buffer = new Uint8Array(item.fileData.data);

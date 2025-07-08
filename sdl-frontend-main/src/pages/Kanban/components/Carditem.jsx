@@ -399,22 +399,95 @@ function Carditem({ data, index, columnIndex }) {
     }
   };
 
-  const removeFile = (index) => {
-    setCardData((prev) => {
-      const newFiles = [...prev.files];
-      newFiles.splice(index, 1);
-      return { ...prev, files: newFiles };
-    });
+  const removeFile = async (index) => {
+    const fileToRemove = cardData.files[index];
+    if (!fileToRemove) return;
+
+    try {
+      // 提取 MinIO 檔案名稱
+      let fileName = null;
+      if (fileToRemove.fileName) {
+        fileName = fileToRemove.fileName;
+      } else if (fileToRemove.url && fileToRemove.url.includes('sdl-files/')) {
+        fileName = fileToRemove.url.split('/').pop();
+      }
+
+      // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
+      if (fileName) {
+        await axios.delete(`http://localhost/api/file/${fileName}`);
+        console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
+      }
+
+      // 從前端狀態移除
+      setCardData((prev) => {
+        const newFiles = [...prev.files];
+        newFiles.splice(index, 1);
+        return { ...prev, files: newFiles };
+      });
+
+      toast.success(`檔案移除成功: ${fileToRemove.originalName || fileName}`);
+    } catch (error) {
+      console.error('檔案刪除失敗:', error);
+      if (error.response?.status === 404) {
+        // 檔案在 MinIO 中不存在，只從前端移除
+        setCardData((prev) => {
+          const newFiles = [...prev.files];
+          newFiles.splice(index, 1);
+          return { ...prev, files: newFiles };
+        });
+        toast.success('檔案已移除');
+      } else {
+        toast.error('檔案刪除失敗');
+      }
+    }
   };
 
-  const removeImage = (index) => {
-    setCardData((prev) => {
-      const newImages = [...prev.images];
-      newImages.splice(index, 1);
-      return { ...prev, images: newImages };
-    });
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const removeImage = async (index) => {
+    const imageToRemove = cardData.images[index];
+    if (!imageToRemove) return;
+
+    try {
+      // 提取 MinIO 檔案名稱
+      let fileName = null;
+      if (imageToRemove.includes('api/file/image/')) {
+        // 從代理 API URL 中提取檔案名
+        fileName = imageToRemove.split('/').pop();
+      } else if (imageToRemove.includes('sdl-files/')) {
+        // 從直接 MinIO URL 中提取檔案名
+        fileName = imageToRemove.split('/').pop();
+      }
+
+      // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
+      if (fileName) {
+        await axios.delete(`http://localhost/api/file/${fileName}`);
+        console.log(`✅ MinIO 圖片刪除成功: ${fileName}`);
+      }
+
+      // 從前端狀態移除
+      setCardData((prev) => {
+        const newImages = [...prev.images];
+        newImages.splice(index, 1);
+        return { ...prev, images: newImages };
+      });
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
+      toast.success('圖片移除成功');
+    } catch (error) {
+      console.error('圖片刪除失敗:', error);
+      if (error.response?.status === 404) {
+        // 檔案在 MinIO 中不存在，只從前端移除
+        setCardData((prev) => {
+          const newImages = [...prev.images];
+          newImages.splice(index, 1);
+          return { ...prev, images: newImages };
+        });
+        toast.success('圖片已移除');
+      } else {
+        toast.error('圖片刪除失敗');
+      }
     }
   };
 

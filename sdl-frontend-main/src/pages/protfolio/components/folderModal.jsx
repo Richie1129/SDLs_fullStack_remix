@@ -12,11 +12,11 @@ export default function FolderModal({folderModalOpen, setFolderModalOpen, modalD
     const handleDownload = () => {
         // 檢查是否有 MinIO 檔案資訊
         if (fileName && fileUrl) {
-            // 使用 MinIO 檔案下載 API
-            window.open(`http://localhost/api/file/download/${fileName}`, '_blank');
+            // 使用 MinIO 直接下載 API
+            window.open(`http://localhost/api/file/direct/${fileName}`, '_blank');
         } else if (filename) {
             // 向後相容：使用舊的檔案名稱，嘗試從 MinIO 下載
-            window.open(`http://localhost/api/file/download/${filename}`, '_blank');
+            window.open(`http://localhost/api/file/direct/${filename}`, '_blank');
         } else {
             Swal.fire({
                 icon: 'warning',

@@ -3,6 +3,10 @@ const Project = require('../models/project')
 const User = require('../models/user')
 const Kanban = require('../models/kanban');
 const Column = require('../models/column');
+const Task = require('../models/task');
+const Daily_personal = require('../models/daily_personal');
+const Daily_team = require('../models/daily_team');
+const Submit = require('../models/submit');
 const shortid = require('shortid')
 const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
@@ -476,11 +480,83 @@ exports.deleteProject = async (req, res) => {
             return res.status(404).json({ message: "專案不存在！" });
         }
 
-        // 刪除相關數據，如 user_project 連結
+        console.log(`🗑️ 開始刪除專案 ${projectId} 及其所有相關檔案...`);
+
+        // 導入 MinIO 清理工具
+        const { 
+            batchDeleteMinioFiles, 
+            extractTaskFileNames, 
+            extractDailyFileNames, 
+            extractSubmitFileNames 
+        } = require('../utils/minioFileHelper');
+
+        // 收集所有需要刪除的檔案名稱
+        const allFileNames = [];
+
+        try {
+            // 1. 收集任務相關檔案
+            const kanban = await Kanban.findOne({ where: { projectId } });
+            if (kanban && kanban.column) {
+                for (const columnId of kanban.column) {
+                    const column = await Column.findByPk(columnId);
+                    if (column && column.task) {
+                        for (const taskId of column.task) {
+                            const task = await Task.findByPk(taskId);
+                            if (task) {
+                                const taskFileNames = extractTaskFileNames(task);
+                                allFileNames.push(...taskFileNames);
+                                console.log(`📋 任務 ${taskId} 發現 ${taskFileNames.length} 個檔案`);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 2. 收集個人日誌檔案
+            const personalDailies = await Daily_personal.findAll({ where: { projectId } });
+            for (const daily of personalDailies) {
+                const dailyFileNames = extractDailyFileNames(daily);
+                allFileNames.push(...dailyFileNames);
+                console.log(`📝 個人日誌 ${daily.id} 發現 ${dailyFileNames.length} 個檔案`);
+            }
+
+            // 3. 收集團隊日誌檔案
+            const teamDailies = await Daily_team.findAll({ where: { projectId } });
+            for (const daily of teamDailies) {
+                const dailyFileNames = extractDailyFileNames(daily);
+                allFileNames.push(...dailyFileNames);
+                console.log(`👥 團隊日誌 ${daily.id} 發現 ${dailyFileNames.length} 個檔案`);
+            }
+
+            // 4. 收集提交記錄檔案
+            const submits = await Submit.findAll({ where: { projectId } });
+            for (const submit of submits) {
+                const submitFileNames = extractSubmitFileNames(submit);
+                allFileNames.push(...submitFileNames);
+                console.log(`📤 提交記錄 ${submit.id} 發現 ${submitFileNames.length} 個檔案`);
+            }
+
+            // 移除重複的檔案名
+            const uniqueFileNames = [...new Set(allFileNames)];
+            console.log(`🗂️ 總共發現 ${uniqueFileNames.length} 個唯一檔案需要刪除`);
+
+            // 批量刪除 MinIO 檔案
+            if (uniqueFileNames.length > 0) {
+                const deleteResult = await batchDeleteMinioFiles(uniqueFileNames);
+                console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
+            }
+
+        } catch (fileCleanupError) {
+            console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除專案:', fileCleanupError.message);
+        }
+
+        // 刪除相關數據庫記錄
+        console.log('🗄️ 開始清理資料庫記錄...');
         await User_project.destroy({ where: { projectId } });
         await Kanban.destroy({ where: { projectId } });
         await Project.destroy({ where: { id: projectId } });
 
+        console.log(`✅ 專案 ${projectId} 刪除完成`);
         return res.status(200).json({ message: "專案刪除成功！" });
     } catch (error) {
         console.error("刪除專案錯誤:", error);

@@ -11,5 +11,7 @@ router.post('/', uploadToMinio('attachFile'), controller.createPersonalDaily);
 router.post('/team', uploadToMinio('attachFile'), controller.createTeamDaily);
 router.put('/personal/:id', uploadSingleToMinio('attachFile'), controller.updatePersonalDaily);
 router.put('/team/:id', uploadSingleToMinio('attachFile'), controller.updateTeamDaily);
+router.delete('/personal/:id', controller.deletePersonalDaily);
+router.delete('/team/:id', controller.deleteTeamDaily);
 
 module.exports = router;

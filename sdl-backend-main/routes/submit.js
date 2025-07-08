@@ -8,6 +8,7 @@ router.post('/', uploadToMinio('attachFile'), controller.createSubmit);
 router.get('/', controller.getAllSubmit);
 router.get('/:submitId', controller.getSubmit);
 router.put('/:submitId', uploadSingleToMinio('attachFile'), controller.updateSubmit);
+router.delete('/:submitId', controller.deleteSubmit);
 router.get('/:submitId/changes', controller.getSubmitChangeLogs);
 
 module.exports = router;

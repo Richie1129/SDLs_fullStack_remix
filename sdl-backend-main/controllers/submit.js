@@ -310,3 +310,59 @@ exports.getSubmitChangeLogs = async (req, res) => {
         res.status(500).json({ message: '取得變更記錄失敗', error: error.message });
     }
 };
+
+exports.deleteSubmit = async (req, res) => {
+    const { submitId } = req.params;
+    
+    try {
+        const submit = await Submit.findByPk(submitId);
+        if (!submit) {
+            return res.status(404).json({ message: "提交記錄未找到" });
+        }
+
+        console.log('=== 刪除提交記錄 ===');
+        console.log('提交ID:', submitId);
+        console.log('階段:', submit.stage);
+        console.log('專案ID:', submit.projectId);
+        
+        // 先清理 MinIO 檔案
+        try {
+            const { extractSubmitFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
+            const fileNames = extractSubmitFileNames(submit);
+            
+            if (fileNames.length > 0) {
+                console.log(`📁 提交記錄 ${submitId} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);
+                const deleteResult = await batchDeleteMinioFiles(fileNames);
+                console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
+            } else {
+                console.log(`📁 提交記錄 ${submitId} 沒有發現需要清理的檔案`);
+            }
+        } catch (fileCleanupError) {
+            console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除提交記錄:', fileCleanupError.message);
+        }
+
+        // 記錄刪除操作
+        try {
+            await logSubmitChange({
+                submitId: submit.id,
+                changeType: 'delete',
+                changedBy: '使用者',
+                projectId: submit.projectId,
+                description: `刪除提交記錄 (階段: ${submit.stage})`
+            });
+        } catch (logError) {
+            console.warn('記錄提交刪除失敗，但不影響主要功能:', logError);
+        }
+
+        // 刪除提交記錄
+        await Submit.destroy({ where: { id: submitId } });
+        console.log(`✅ 提交記錄 ${submitId} 刪除完成`);
+        console.log('==================');
+        
+        return res.status(200).json({ message: "提交記錄刪除成功" });
+        
+    } catch (error) {
+        console.error("❌ 刪除提交記錄錯誤:", error);
+        return res.status(500).json({ message: "刪除失敗", error: error.message });
+    }
+};

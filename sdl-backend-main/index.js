@@ -303,6 +303,26 @@ io.on("connection", (socket) => {
             });
 
             if (column) {
+                console.log(`🗑️ 開始刪除任務 ${cardData.id} 及其相關檔案...`);
+                
+                // 先清理 MinIO 檔案
+                try {
+                    const { extractTaskFileNames, batchDeleteMinioFiles } = require('./utils/minioFileHelper');
+                    
+                    // 從前端傳來的 cardData 中提取檔案名稱
+                    const fileNames = extractTaskFileNames(cardData);
+                    
+                    if (fileNames.length > 0) {
+                        console.log(`📁 任務 ${cardData.id} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);
+                        const deleteResult = await batchDeleteMinioFiles(fileNames);
+                        console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
+                    } else {
+                        console.log(`📁 任務 ${cardData.id} 沒有發現需要清理的檔案`);
+                    }
+                } catch (fileCleanupError) {
+                    console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除任務:', fileCleanupError.message);
+                }
+
                 // 記錄任務刪除
                 const changedBy = user?.username || cardData.owner || "未知";
                 await logTaskChange({
@@ -332,6 +352,8 @@ io.on("connection", (socket) => {
                         id: projectId
                     }
                 });
+                
+                console.log(`✅ 任務 ${cardData.id} 刪除完成`);
                 
                 // 廣播任務刪除事件與活動更新
                 io.to(projectId).emit("taskItem", updateTask);
@@ -509,6 +531,32 @@ io.on("connection", (socket) => {
                 try {
                     // 首先從 columnData.task 中提取所有任務的 ID
                     const taskIds = columnData.task.map(task => task.id);
+                    console.log(`🗑️ 開始刪除欄位 ${columnData.name} 中的 ${taskIds.length} 個任務及其檔案...`);
+
+                    // 批量清理 MinIO 檔案
+                    try {
+                        const { extractTaskFileNames, batchDeleteMinioFiles } = require('./utils/minioFileHelper');
+                        const allFileNames = [];
+
+                        // 從前端傳來的 columnData.task 中提取所有檔案名稱
+                        for (const task of columnData.task) {
+                            const taskFileNames = extractTaskFileNames(task);
+                            allFileNames.push(...taskFileNames);
+                        }
+
+                        // 移除重複的檔案名
+                        const uniqueFileNames = [...new Set(allFileNames)];
+                        
+                        if (uniqueFileNames.length > 0) {
+                            console.log(`📁 欄位 ${columnData.name} 發現 ${uniqueFileNames.length} 個檔案需要刪除:`, uniqueFileNames);
+                            const deleteResult = await batchDeleteMinioFiles(uniqueFileNames);
+                            console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
+                        } else {
+                            console.log(`📁 欄位 ${columnData.name} 沒有發現需要清理的檔案`);
+                        }
+                    } catch (fileCleanupError) {
+                        console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除任務:', fileCleanupError.message);
+                    }
 
                     // 然后使用這些 ID 来删除 Task 表中的相關紀錄
                     const deleteTasks = await Task.destroy({
@@ -519,7 +567,7 @@ io.on("connection", (socket) => {
                         }
                     });
 
-                    console.log("已成功删除任務，任務ID:", taskIds);
+                    console.log(`✅ 已成功删除任務，任務ID:`, taskIds);
                 } catch (error) {
                     console.error("删除任務時發生錯誤:", error);
                 }

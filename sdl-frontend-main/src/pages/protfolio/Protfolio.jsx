@@ -135,8 +135,8 @@ export default function Protfolio() {
     const downloadFile = () => {
         // 檢查是否有 MinIO 檔案資訊
         if (modalData.fileName && modalData.fileUrl) {
-            // 使用 MinIO 檔案下載 API
-            window.open(`http://localhost/api/file/download/${modalData.fileName}`, '_blank');
+            // 使用 MinIO 直接下載 API
+            window.open(`http://localhost/api/file/direct/${modalData.fileName}`, '_blank');
         } else if (modalData.fileData && modalData.fileData.data) {
             // 向後相容：處理舊的 BLOB 資料
             const buffer = new Uint8Array(modalData.fileData.data);
@@ -383,8 +383,8 @@ export default function Protfolio() {
                                                                 <button
                                                                     onClick={() => {
                                                                         if (modalData.fileName && modalData.fileUrl) {
-                                                                            // 使用 MinIO 檔案下載 API
-                                                                            window.open(`http://localhost/api/file/download/${modalData.fileName}`, '_blank');
+                                                                            // 使用 MinIO 直接下載 API
+                                                                            window.open(`http://localhost/api/file/direct/${modalData.fileName}`, '_blank');
                                                                         } else if (modalData.fileData && modalData.fileData.data) {
                                                                             // 向後相容：處理舊的 BLOB 資料
                                                                             const buffer = new Uint8Array(modalData.fileData.data);

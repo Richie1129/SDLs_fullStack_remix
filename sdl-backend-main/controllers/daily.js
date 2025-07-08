@@ -279,3 +279,88 @@ exports.updateTeamDaily = async (req, res) => {
         return res.status(500).json({ message: "更新失敗", error: error.message });
     }
 };
+
+exports.deletePersonalDaily = async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const daily = await Daily_personal.findOne({ where: { id } });
+        if (!daily) {
+            return res.status(404).json({ message: "個人日誌未找到" });
+        }
+
+        console.log('=== 刪除個人日誌 ===');
+        console.log('日誌ID:', id);
+        console.log('標題:', daily.title);
+        
+        // 先清理 MinIO 檔案
+        try {
+            const { extractDailyFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
+            const fileNames = extractDailyFileNames(daily);
+            
+            if (fileNames.length > 0) {
+                console.log(`📁 個人日誌 ${id} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);
+                const deleteResult = await batchDeleteMinioFiles(fileNames);
+                console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
+            } else {
+                console.log(`📁 個人日誌 ${id} 沒有發現需要清理的檔案`);
+            }
+        } catch (fileCleanupError) {
+            console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除日誌:', fileCleanupError.message);
+        }
+
+        // 刪除日誌記錄
+        await Daily_personal.destroy({ where: { id } });
+        console.log(`✅ 個人日誌 ${id} 刪除完成`);
+        console.log('==================');
+        
+        return res.status(200).json({ message: "個人日誌刪除成功" });
+        
+    } catch (error) {
+        console.error("❌ 刪除個人日誌錯誤:", error);
+        return res.status(500).json({ message: "刪除失敗", error: error.message });
+    }
+};
+
+exports.deleteTeamDaily = async (req, res) => {
+    const { id } = req.params;
+    
+    try {
+        const daily = await Daily_team.findOne({ where: { id } });
+        if (!daily) {
+            return res.status(404).json({ message: "團隊日誌未找到" });
+        }
+
+        console.log('=== 刪除團隊日誌 ===');
+        console.log('日誌ID:', id);
+        console.log('標題:', daily.title);
+        console.log('創建者:', daily.creator);
+        
+        // 先清理 MinIO 檔案
+        try {
+            const { extractDailyFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
+            const fileNames = extractDailyFileNames(daily);
+            
+            if (fileNames.length > 0) {
+                console.log(`📁 團隊日誌 ${id} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);
+                const deleteResult = await batchDeleteMinioFiles(fileNames);
+                console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
+            } else {
+                console.log(`📁 團隊日誌 ${id} 沒有發現需要清理的檔案`);
+            }
+        } catch (fileCleanupError) {
+            console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除日誌:', fileCleanupError.message);
+        }
+
+        // 刪除日誌記錄
+        await Daily_team.destroy({ where: { id } });
+        console.log(`✅ 團隊日誌 ${id} 刪除完成`);
+        console.log('==================');
+        
+        return res.status(200).json({ message: "團隊日誌刪除成功" });
+        
+    } catch (error) {
+        console.error("❌ 刪除團隊日誌錯誤:", error);
+        return res.status(500).json({ message: "刪除失敗", error: error.message });
+    }
+};
