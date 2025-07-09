@@ -23,6 +23,8 @@ import ManageStudent from './pages/manageStudent/ManageStudents';
 import OverView from './pages/manageStudent/OverView';
 import StudentDashboard from './pages/manageStudent/StudentDashboard';
 import TeacherDashboard from './pages/manageStudent/TeacherDashboard';
+import StudentOverview from './pages/overview/StudentOverview';
+import TeacherOverview from './pages/overview/TeacherOverview';
 
 export default function App() {
   const router = createBrowserRouter(
@@ -37,6 +39,8 @@ export default function App() {
           <Route path="bulletin" element={<Bulletin />} />
           <Route path="List" element={<List />} />
           <Route path="overView" element={<OverView />} />
+          <Route path="student-overview" element={<StudentOverview />} />
+          <Route path="teacher-overview" element={<TeacherOverview />} />
           <Route path="project/:projectId" element={<ProjectLayout />}>
             <Route path="kanban" element={<Kanban />} />
             <Route path="submitTask" element={<SubmitTask />} />

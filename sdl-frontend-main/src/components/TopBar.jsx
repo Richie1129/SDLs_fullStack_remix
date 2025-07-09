@@ -4,6 +4,7 @@ import { BsChevronDown, BsPlusCircleDotted } from "react-icons/bs";
 import { TbBell } from "react-icons/tb"; // 引入鈴鐺圖示
 import { AiOutlineDashboard } from "react-icons/ai"; // 引入專案總覽圖示(原)
 import { LuLayoutDashboard } from "react-icons/lu";
+import { RiDashboardLine } from "react-icons/ri"; // 添加儀表板圖示
 import { getProjectUser } from '../api/users';
 import { getProject, getProjectsByMentor } from '../api/project';
 import { getAnnouncements, createAnnouncement } from '../api/announcement';
@@ -22,6 +23,9 @@ export default function TopBar() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // 檢查是否為overview頁面
+  const isOverviewPage = location.pathname === '/student-overview' || location.pathname === '/teacher-overview';
   const [selectedGroup, setSelectedGroup] = useState('all');
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null); // 用於存儲當前選中的公告
   const [projectList, setProjectList] = useState([]);
@@ -320,14 +324,13 @@ const Tooltip = ({ children, content }) => {
             {localStorage.getItem("username")}
           </h3>
           <div className="relative flex items-center">
-          {/* {role === "teacher" && (
           <button
-            className="flex items-center justify-center mr-4 cursor-pointer"
-            onClick={() => navigate("/overView")}
+            className="flex items-center justify-center mr-2 p-1 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
+            title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
           >
-            <LuLayoutDashboard size={24} />
+            <RiDashboardLine size={20} />
           </button>
-          )} */}
           </div>
           <div className="relative">
             <TbBell size={24} className="ml-2 cursor-pointer" onClick={() => setShowNotifications(!showNotifications)} />
@@ -449,10 +452,13 @@ const Tooltip = ({ children, content }) => {
         <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-lg sm:text-2xl">
           <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-10 sm:h-14 w-auto" />
         </Link>
+        {!isOverviewPage && (
         <p className="font-bold text-sm sm:text-xl text-teal-900 truncate">{projectInfo.name || "專案名稱"}</p>
+        )}
       </div>
       {/* 右側功能 */}
       <div className="flex items-center flex-shrink-0">
+        {!isOverviewPage && (
         <ul className="flex items-center justify-center space-x-1">
           {getProjectUserQuery.isLoading || projectId === undefined ? <></> :
             getProjectUserQuery.isError ? <p className='font-bold text-2xl'>Error</p> :
@@ -474,10 +480,21 @@ const Tooltip = ({ children, content }) => {
             </button>
           </li>
         </ul>
+        )}
         
+        <div className="flex items-center">
         <h3 className="font-bold cursor-pointer p-1 mr-1 sm:mr-2 rounded-lg mx-1 sm:mx-3 text-sm sm:text-base hidden sm:block">
           {localStorage.getItem("username")}
         </h3>
+          {/* 全局儀表板按鈕 */}
+          <button
+            className="flex items-center justify-center mr-2 p-1 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+            onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
+            title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
+          >
+            <RiDashboardLine size={20} />
+          </button>
+        </div>
         <TbBell
           size={24}
           className="ml-2 cursor-pointer"
