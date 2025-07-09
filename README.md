@@ -33,6 +33,3 @@ SDLs Full Stack Remix 是一個以教育研究為核心的自主學習平台，�
 - `sdl-backend-main/MINIO_SETUP.md` – MinIO 設定與使用方式。
 
 本倉庫提供以 Docker 為核心的全端範例，適合需要快速部署自主學習平台或參考微服務架構的開發者。
-
-123
-
