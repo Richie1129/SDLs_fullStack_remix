@@ -29,8 +29,8 @@ export const createPersonalDaily = async (data) => {
 
 // 修改個人日報
 export const updatePersonalDaily = async (id, data) => {
-    console.log(`發送請求: PUT http://localhost/api/daily/${id}`, data);
-    const response = await dailyApi.put(`/${id}`, data, {
+    console.log(`發送請求: PUT http://localhost/api/daily/personal/${id}`, data);
+    const response = await dailyApi.put(`/personal/${id}`, data, {
         headers: { "Content-Type": "application/json" }, // 確保是 JSON
     });
     return response.data;

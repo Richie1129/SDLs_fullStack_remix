@@ -129,10 +129,27 @@ exports.getAllSubmit = async(req, res) => {
     try {
         const allSubmit = await Submit.findAll({
             where: { projectId: projectId },
-            order: [['createdAt', 'DESC']]
+            order: [['createdAt', 'ASC']]
         });
 
         console.log(`找到 ${allSubmit.length} 筆提交記錄`);
+
+        // 在 JavaScript 中按階段排序
+        allSubmit.sort((a, b) => {
+            const [aStage, aSubStage] = a.stage.split('-').map(Number);
+            const [bStage, bSubStage] = b.stage.split('-').map(Number);
+            
+            // 先按主階段排序
+            if (aStage !== bStage) {
+                return aStage - bStage;
+            }
+            // 再按子階段排序
+            if (aSubStage !== bSubStage) {
+                return aSubStage - bSubStage;
+            }
+            // 最後按創建時間排序
+            return new Date(a.createdAt) - new Date(b.createdAt);
+        });
 
         // 由於不再使用 BLOB，直接返回資料
         const submitsWithFileInfo = allSubmit.map(submit => {
