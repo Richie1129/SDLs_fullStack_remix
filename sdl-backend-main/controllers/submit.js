@@ -220,7 +220,7 @@ exports.getSubmit = async(req, res) => {
 
 exports.updateSubmit = async (req, res) => {
     const submitId = req.params.submitId;
-    const { content } = req.body;
+    const { content, changedBy } = req.body;
 
     try {
         const submit = await Submit.findByPk(submitId);
@@ -231,6 +231,8 @@ exports.updateSubmit = async (req, res) => {
         console.log('=== 更新提交 ===');
         console.log('提交ID:', submitId);
         console.log('新內容:', content);
+        console.log('變更者:', changedBy);
+        console.log('完整 req.body:', req.body);
         console.log('上傳的檔案:', req.uploadedFile);
   
         // 保存原始資料用於變更記錄
@@ -266,7 +268,7 @@ exports.updateSubmit = async (req, res) => {
             fieldName: 'file',
                     oldValue: originalData.fileName || '無檔案',
                     newValue: file.fileName,
-                    changedBy: '使用者',
+                    changedBy: changedBy || '未知用戶',
             projectId: submit.projectId,
                     description: `檔案從「${originalData.fileName || '無檔案'}」更新為「${file.originalName}」`
           });
@@ -285,7 +287,7 @@ exports.updateSubmit = async (req, res) => {
             originalData,
             { content },
             submit.id,
-                    '使用者',
+                    changedBy || '未知用戶',
             submit.projectId
           );
         } catch (logError) {
@@ -363,7 +365,7 @@ exports.deleteSubmit = async (req, res) => {
             await logSubmitChange({
                 submitId: submit.id,
                 changeType: 'delete',
-                changedBy: '使用者',
+                changedBy: req.body.changedBy || '未知用戶',
                 projectId: submit.projectId,
                 description: `刪除提交記錄 (階段: ${submit.stage})`
             });

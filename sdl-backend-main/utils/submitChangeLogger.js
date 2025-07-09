@@ -15,6 +15,15 @@ async function logSubmitChange({
     description = null
 }) {
     try {
+        console.log('🔧 logSubmitChange 收到的參數:', {
+            submitId,
+            changeType,
+            fieldName,
+            changedBy,
+            projectId,
+            description
+        });
+        
         const changeLog = await SubmitChangeLog.create({
             submitId,
             changeType,
@@ -27,6 +36,7 @@ async function logSubmitChange({
         });
         
         console.log(`✅ 提交變更記錄已儲存: ${changeType} - Submit ${submitId} by ${changedBy}`);
+        console.log('🔧 實際儲存的變更記錄:', changeLog.toJSON());
         return changeLog;
     } catch (error) {
         console.error('❌ 儲存提交變更記錄失敗:', error);
