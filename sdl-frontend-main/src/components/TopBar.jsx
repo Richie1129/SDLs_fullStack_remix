@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { IoIosNotificationsOutline } from "react-icons/io";
 import { BsChevronDown, BsPlusCircleDotted } from "react-icons/bs";
 import { TbBell } from "react-icons/tb"; // 引入鈴鐺圖示
+import { FiActivity } from "react-icons/fi"; // 引入活動圖示
 import { AiOutlineDashboard } from "react-icons/ai"; // 引入專案總覽圖示(原)
 import { LuLayoutDashboard } from "react-icons/lu";
 import { RiDashboardLine } from "react-icons/ri"; // 添加儀表板圖示
@@ -16,7 +17,7 @@ import Swal from 'sweetalert2';
 import { socket } from '../utils/socket';
 import { Context } from '../context/context';
 
-export default function TopBar() {
+export default function TopBar({ showActivityStream, setShowActivityStream }) {
   const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
   const [projectInfo, setProjectInfo] = useState({});
   const [referralCodeModalOpen, setReferralCodeModalOpen] = useState(false);
@@ -494,6 +495,23 @@ const Tooltip = ({ children, content }) => {
           >
             <RiDashboardLine size={20} />
           </button>
+          
+          {/* 專案活動按鈕 - 只在專案頁面顯示 */}
+          {!isOverviewPage && projectId && setShowActivityStream && (
+            <button
+              onClick={() => setShowActivityStream(!showActivityStream)}
+              className={`
+                flex items-center justify-center mr-2 p-1 rounded-md transition-colors
+                ${showActivityStream 
+                  ? 'bg-customgreen text-white' 
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                }
+              `}
+              title="專案活動"
+            >
+              <FiActivity size={20} />
+            </button>
+          )}
         </div>
         <TbBell
           size={24}

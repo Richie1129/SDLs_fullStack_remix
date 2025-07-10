@@ -3,11 +3,13 @@ import TopBar from '../components/TopBar';
 import SideBar from '../components/SideBar';
 import { Outlet, useLocation, useParams } from 'react-router-dom';
 import SubStageComponent from '../components/SubStageBar';
+import ActivityStream from '../components/ActivityStream';
 
 export default function ProjectLayout() {
     const location = useLocation();
     const { projectId } = useParams();
     const [inKanBan, setinKanBan] = useState(false);
+    const [showActivityStream, setShowActivityStream] = useState(false);
 
     useEffect(() => {
         setinKanBan(location.pathname === `/project/${projectId}/kanban`);
@@ -17,8 +19,18 @@ export default function ProjectLayout() {
         <div className='min-w-full min-h-screen h-screen overflow-hidden overflow-x-scroll'>
             {inKanBan && <SubStageComponent />}  
             <SideBar />  
-            <TopBar />   
+            <TopBar 
+                showActivityStream={showActivityStream}
+                setShowActivityStream={setShowActivityStream}
+            />   
             <Outlet />
+            
+            {/* 專案活動流組件 */}
+            <ActivityStream 
+                projectId={projectId}
+                isOpen={showActivityStream}
+                onClose={() => setShowActivityStream(false)}
+            />
         </div>
     )
 }

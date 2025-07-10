@@ -16,8 +16,8 @@ import { getKanbanColumns, getKanbanTasks, addCardItem } from '../../api/kanban'
 import { getSubStage } from '../../api/stage';
 import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
-import ActivityStream from '../../components/ActivityStream';
-import { FiActivity } from 'react-icons/fi';
+
+
 
 export default function Kanban() {
   const [kanbanData, setKanbanData] = useState([]);
@@ -32,7 +32,7 @@ export default function Kanban() {
   const [newGroupName, setNewGroupName] = useState('');
   const [currentStage, setCurrentStage] = useState(() => localStorage.getItem("currentStage"));
   const [currentSubStage, setCurrentSubStage] = useState(() => localStorage.getItem("currentSubStage"));
-  const [showActivityStream, setShowActivityStream] = useState(false);
+
 
   const {
     isLoading: kanbanIsLoading,
@@ -223,21 +223,8 @@ export default function Kanban() {
       <DraggableImage/>
       <div className="card p-8 w-full px-20">
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="header mb-4 flex justify-between items-center">
+          <div className="header mb-4">
             <h1 className="text-2xl text-gray">Kanban</h1>
-            <button
-              onClick={() => setShowActivityStream(!showActivityStream)}
-              className={`
-                flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200
-                ${showActivityStream 
-                  ? 'bg-customgreen text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }
-              `}
-            >
-              <FiActivity />
-              <span>專案活動</span>
-            </button>
           </div>
 
           <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
@@ -391,14 +378,6 @@ export default function Kanban() {
           </Droppable>
         </DragDropContext >
       </div>
-      
-      {/* 活動流組件 */}
-      <ActivityStream 
-        projectId={projectId}
-        isOpen={showActivityStream}
-        onClose={() => setShowActivityStream(false)}
-      />
-
     </div >
   )
 }
