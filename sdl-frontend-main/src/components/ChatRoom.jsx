@@ -77,8 +77,8 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
     }, [socket, chatRoomOpen, projectId]);
 
     return (
-        <div className={`z-50 w-72 sm:w-80 lg:w-96 h-80 sm:h-96 lg:h-[460px] fixed left-2 sm:left-4 bottom-2 sm:bottom-4 border-2 p-0 rounded-lg shadow-xl bg-slate-100 transform transition-all duration-500 ${chatRoomOpen ? "translate-x-0 translate-y-0 visible" : "-translate-x-full translate-y-full invisible"}`}>
-            <div className='h-8 sm:h-9 lg:h-[31px] w-full flex justify-between text-sm sm:text-base font-semibold p-1 rounded-t-lg bg-slate-300 text-slate-600'>
+        <div className={`z-50 w-72 sm:w-80 lg:w-96 h-80 sm:h-96 lg:h-[460px] fixed left-2 sm:left-4 bottom-2 sm:bottom-4 border-2 p-0 rounded-lg shadow-xl bg-slate-100 transform transition-all duration-500 ${chatRoomOpen ? "translate-x-0 translate-y-0 visible" : "-translate-x-full translate-y-full invisible"} flex flex-col`}>
+            <div className='h-8 sm:h-9 lg:h-[31px] w-full flex justify-between text-sm sm:text-base font-semibold p-1 rounded-t-lg bg-slate-300 text-slate-600 shrink-0'>
                 <span className='pl-2 text-xs sm:text-sm lg:text-base'>小組討論區</span>
                 <button onClick={() => { setChatRoomOpen(false) }} className='cursor-pointer rounded-lg hover:bg-gray-200 '>
                     <GrFormClose size={16} className="sm:w-5 sm:h-5 lg:w-5 lg:h-5" />
@@ -112,7 +112,18 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                     })
                 } */}
                 {messageList.reduce((acc, messages, index) => {
-                    const currentDate = new Date(messages.createdAt);
+                    if (!messages.createdAt || typeof messages.createdAt !== 'string') {
+                        return acc;
+                    }
+                    const parts = messages.createdAt.split(' ');
+                    const datePart = parts[0];
+                    const timePart = parts.slice(1).join(' ');
+                    const currentDate = new Date(datePart);
+
+                    if (isNaN(currentDate.getTime())) {
+                        return acc;
+                    }
+
                     const dateString = `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月${currentDate.getDate()}日`;
 
                     const today = new Date();
@@ -142,7 +153,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                                         {messages.message}
                                     </div>
                                     <div className='text-xs mt-1 text-gray-500 truncate max-w-[180px] sm:max-w-[240px]'>
-                                        {messages.createdAt.split(' ')[1] + ' ' + messages.createdAt.split(' ')[2]} | {messages.author}
+                                        {timePart} | {messages.author}
                                     </div>
                                 </div>
                             </div>
@@ -153,7 +164,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
 
                 <div ref={bottomRef} />
             </div>
-            <div className='h-8 sm:h-9 lg:h-[35px] w-full flex justify-between text-sm sm:text-base p-0 border-t-2 bg-slate-50'>
+            <div className='h-8 sm:h-9 lg:h-[35px] w-full flex justify-between text-sm sm:text-base p-0 border-t-2 bg-slate-50 shrink-0'>
                 <input
                     type="text"
                     value={currentMessage} // 确保绑定了currentMessage状态
