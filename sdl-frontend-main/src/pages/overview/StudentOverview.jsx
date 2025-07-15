@@ -2,6 +2,11 @@ import React, { useState, useEffect } from "react";
 import { getAllProject } from "../../api/project";
 import { getProjectUser } from "../../api/users";
 import { getAllPersonalDaily } from "../../api/reflection";
+import { getChatroomHistory } from "../../api/chatroom";
+import { getRagMessageHistory } from "../../api/rag";
+import { getKanbanColumns, getProjectActivity } from "../../api/kanban";
+import { getNodes } from "../../api/nodes";
+import { getIdeaWall } from "../../api/ideaWall";
 import { useQuery } from "react-query";
 import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
@@ -16,6 +21,11 @@ const StudentOverview = () => {
   const [allProjects, setAllProjects] = useState([]);
   const [allReflections, setAllReflections] = useState([]);
   const [projectMembers, setProjectMembers] = useState({});
+  const [chatHistory, setChatHistory] = useState([]);
+  const [aiInteractions, setAiInteractions] = useState([]);
+  const [projectActivities, setProjectActivities] = useState([]);
+  const [ideaNodes, setIdeaNodes] = useState([]);
+  const [kanbanTasks, setKanbanTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // 獲取學生的所有專案
@@ -29,7 +39,7 @@ const StudentOverview = () => {
     }
   );
 
-  // 獲取所有反思記錄
+  // 獲取所有相關資料
   useEffect(() => {
     const fetchAllData = async () => {
       try {
@@ -37,43 +47,115 @@ const StudentOverview = () => {
         
         if (!allProjects.length) return;
 
-        // 獲取所有專案的反思記錄
-        const reflectionPromises = allProjects.map(async (project) => {
+        // 獲取所有專案的各種資料
+        const dataPromises = allProjects.map(async (project) => {
+          const projectData = { projectId: project.id, projectName: project.name };
+          
           try {
-            const reflections = await getAllPersonalDaily({ 
-              projectId: project.id, 
-              isTeacher: false 
-            });
-            return reflections?.map(r => ({ ...r, projectId: project.id, projectName: project.name })) || [];
+            const [
+              reflections,
+              members,
+              chatHistory,
+              projectActivity,
+              kanbanData,
+              ideaWallData
+            ] = await Promise.allSettled([
+              // 反思記錄
+              getAllPersonalDaily({ 
+                projectId: project.id, 
+                userId: userId,
+                isTeacher: false 
+              }),
+              // 團隊成員
+              getProjectUser(project.id),
+              // 聊天記錄
+              getChatroomHistory(project.id),
+              // 專案活動
+              getProjectActivity(project.id),
+              // Kanban 任務
+              getKanbanColumns(project.id),
+              // 想法牆
+              getIdeaWall(project.id, "1-1")
+            ]);
+
+            const results = {
+              reflections: reflections.status === 'fulfilled' ? 
+                (reflections.value || []).map(r => ({ ...r, ...projectData })) : [],
+              members: members.status === 'fulfilled' ? 
+                { [project.id]: members.value || [] } : { [project.id]: [] },
+              chatHistory: chatHistory.status === 'fulfilled' ? 
+                (chatHistory.value || []).map(c => ({ ...c, ...projectData })) : [],
+              projectActivity: projectActivity.status === 'fulfilled' ? 
+                (projectActivity.value || []).map(a => ({ ...a, ...projectData })) : [],
+              kanbanTasks: [],
+              ideaNodes: []
+            };
+
+            // 處理 Kanban 任務
+            if (kanbanData.status === 'fulfilled' && kanbanData.value) {
+              kanbanData.value.forEach(column => {
+                if (column.task && Array.isArray(column.task)) {
+                  column.task.forEach(task => {
+                    results.kanbanTasks.push({
+                      ...task,
+                      ...projectData,
+                      columnName: column.name
+                    });
+                  });
+                }
+              });
+            }
+
+            // 處理想法節點
+            if (ideaWallData.status === 'fulfilled' && ideaWallData.value && ideaWallData.value.id) {
+              try {
+                const nodes = await getNodes(ideaWallData.value.id);
+                results.ideaNodes = (nodes || []).map(n => ({ ...n, ...projectData }));
+              } catch (error) {
+                console.error(`獲取專案 ${project.id} 想法節點失敗:`, error);
+              }
+            }
+
+            return results;
           } catch (error) {
-            console.error(`獲取專案 ${project.id} 反思失敗:`, error);
-            return [];
+            console.error(`獲取專案 ${project.id} 資料失敗:`, error);
+            return {
+              reflections: [],
+              members: { [project.id]: [] },
+              chatHistory: [],
+              projectActivity: [],
+              kanbanTasks: [],
+              ideaNodes: []
+            };
           }
         });
 
-        // 獲取所有專案的成員資料
-        const memberPromises = allProjects.map(async (project) => {
-          try {
-            const members = await getProjectUser(project.id);
-            return { [project.id]: members || [] };
-          } catch (error) {
-            console.error(`獲取專案 ${project.id} 成員失敗:`, error);
-            return { [project.id]: [] };
-          }
+        // 獲取 AI 互動記錄
+        const aiInteractionsPromise = getRagMessageHistory(userId).catch(error => {
+          console.error("獲取 AI 互動失敗:", error);
+          return [];
         });
 
-        const [reflectionResults, memberResults] = await Promise.all([
-          Promise.all(reflectionPromises),
-          Promise.all(memberPromises)
+        const [projectResults, aiData] = await Promise.all([
+          Promise.all(dataPromises),
+          aiInteractionsPromise
         ]);
 
-        // 合併反思資料
-        const allReflectionsData = reflectionResults.flat();
-        setAllReflections(allReflectionsData);
+        // 合併所有資料
+        const allReflectionsData = projectResults.flatMap(r => r.reflections);
+        const allMembersData = projectResults.reduce((acc, r) => ({ ...acc, ...r.members }), {});
+        const allChatData = projectResults.flatMap(r => r.chatHistory);
+        const allActivityData = projectResults.flatMap(r => r.projectActivity);
+        const allTasksData = projectResults.flatMap(r => r.kanbanTasks);
+        const allNodesData = projectResults.flatMap(r => r.ideaNodes);
 
-        // 合併成員資料
-        const membersData = memberResults.reduce((acc, curr) => ({ ...acc, ...curr }), {});
-        setProjectMembers(membersData);
+        setAllReflections(allReflectionsData);
+        setProjectMembers(allMembersData);
+        setChatHistory(allChatData);
+        setAiInteractions(aiData || []);
+        setProjectActivities(allActivityData);
+        setKanbanTasks(allTasksData);
+        setIdeaNodes(allNodesData);
 
       } catch (error) {
         console.error("獲取資料失敗:", error);
@@ -85,7 +167,7 @@ const StudentOverview = () => {
     if (allProjects.length > 0) {
       fetchAllData();
     }
-  }, [allProjects]);
+  }, [allProjects, userId]);
 
   // 計算進度百分比的函數
   const calculateProgress = (stage, subStage) => {
@@ -119,7 +201,7 @@ const StudentOverview = () => {
     return `${diffInDays}天前`;
   };
 
-  // 計算個人統計
+  // 計算個人統計（增強版）
   const personalStats = React.useMemo(() => {
     const totalProjects = allProjects.length;
     const completedProjects = allProjects.filter(p => p.ProjectEnd).length;
@@ -137,17 +219,47 @@ const StudentOverview = () => {
       return new Date(r.createdAt) > oneWeekAgo;
     }).length;
 
+    // 新增的統計
+    const totalChatMessages = chatHistory.filter(chat => chat.author === userName).length;
+    const totalAiInteractions = aiInteractions.length;
+    const totalIdeaNodes = ideaNodes.length;
+    
+    // 動態任務統計 - 基於真實的Kanban列表
+    const tasksByStatus = {};
+    const allColumnNames = [...new Set(kanbanTasks.map(task => task.columnName))].filter(Boolean);
+    
+    // 為每個列表統計任務數量
+    allColumnNames.forEach(columnName => {
+      tasksByStatus[columnName] = kanbanTasks.filter(task => task.columnName === columnName);
+    });
+
+    const totalTasks = kanbanTasks.length;
+    // 嘗試識別完成狀態的任務（支援多種命名方式）
+    const completedTasks = kanbanTasks.filter(task => {
+      const status = task.columnName?.toLowerCase() || '';
+      return status.includes('完成') || status.includes('done') || 
+             status.includes('完畢') || status.includes('finished') ||
+             status.includes('completed') || status === '完成';
+    }).length;
+
     return {
       totalProjects,
       completedProjects,
       inProgressProjects,
       averageProgress,
       totalReflections,
-      thisWeekReflections
+      thisWeekReflections,
+      totalChatMessages,
+      totalAiInteractions,
+      totalIdeaNodes,
+      completedTasks,
+      totalTasks,
+      tasksByStatus,
+      allColumnNames // 新增：所有列表名稱
     };
-  }, [allProjects, allReflections]);
+  }, [allProjects, allReflections, chatHistory, aiInteractions, ideaNodes, kanbanTasks, userName]);
 
-  // 最近學習活動
+  // 最近學習活動（增強版）
   const recentActivities = React.useMemo(() => {
     const activities = [];
     
@@ -158,9 +270,64 @@ const StudentOverview = () => {
         title: `提交學習反思`,
         description: `在 ${reflection.projectName} 中記錄學習心得`,
         time: formatRelativeTime(reflection.createdAt),
-        projectName: reflection.projectName
+        projectName: reflection.projectName,
+        createdAt: reflection.createdAt
       });
     });
+
+    // 添加聊天活動
+    chatHistory
+      .filter(chat => chat.author === userName)
+      .slice(0, 5)
+      .forEach(chat => {
+        activities.push({
+          type: "chat",
+          title: `參與團隊討論`,
+          description: `在 ${chat.projectName} 中發表看法`,
+          time: formatRelativeTime(chat.createdAt),
+          projectName: chat.projectName,
+          createdAt: chat.createdAt
+        });
+      });
+
+    // 添加 AI 互動活動
+    aiInteractions.slice(0, 5).forEach(interaction => {
+      activities.push({
+        type: "ai",
+        title: `使用AI助手`,
+        description: `諮詢學習相關問題`,
+        time: formatRelativeTime(interaction.createdAt),
+        projectName: "AI學習助手",
+        createdAt: interaction.createdAt
+      });
+    });
+
+    // 添加想法節點活動
+    ideaNodes.slice(0, 5).forEach(node => {
+      activities.push({
+        type: "idea",
+        title: `創建想法節點`,
+        description: `在 ${node.projectName} 中發布新想法：${node.title}`,
+        time: formatRelativeTime(node.createdAt),
+        projectName: node.projectName,
+        createdAt: node.createdAt
+      });
+    });
+
+    // 添加任務活動
+    kanbanTasks
+      .filter(task => task.owner === userName || task.assignees?.includes(userName))
+      .slice(0, 3)
+      .forEach(task => {
+        activities.push({
+          type: "task",
+          title: `更新任務`,
+          description: `在 ${task.projectName} 中處理任務：${task.title}`,
+          time: formatRelativeTime(task.updatedAt || task.createdAt),
+          projectName: task.projectName,
+          createdAt: task.updatedAt || task.createdAt
+        });
+      });
 
     // 添加專案進度更新
     allProjects.forEach(project => {
@@ -169,20 +336,74 @@ const StudentOverview = () => {
         title: `專案進度更新`,
         description: `${project.name} - 第${project.currentStage}階段`,
         time: formatRelativeTime(project.updatedAt),
-        projectName: project.name
+        projectName: project.name,
+        createdAt: project.updatedAt
       });
     });
 
+    // 按時間排序並取前8個
     return activities
-      .sort((a, b) => new Date(b.createdAt || b.updatedAt) - new Date(a.createdAt || a.updatedAt))
+      .filter(activity => activity.createdAt) // 只保留有時間戳的活動
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 8);
-  }, [allProjects, allReflections, formatRelativeTime]);
+  }, [allProjects, allReflections, chatHistory, aiInteractions, ideaNodes, kanbanTasks, userName]);
+
+  // 獲取活動類型圖標
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'reflection': return '📝';
+      case 'chat': return '💬';
+      case 'ai': return '🤖';
+      case 'idea': return '💡';
+      case 'task': return '✅';
+      case 'progress': return '📈';
+      default: return '📋';
+    }
+  };
 
   // 獲取狀態顏色
   const getStatusColor = (progress) => {
     if (progress >= 80) return "bg-green-100 text-green-800";
     if (progress >= 50) return "bg-yellow-100 text-yellow-800";
     return "bg-red-100 text-red-800";
+  };
+
+  // 為列表名稱分配顏色和圖標
+  const getColumnStyle = (columnName) => {
+    const name = columnName.toLowerCase();
+    
+    // 待處理類型
+    if (name.includes('待處理') || name.includes('待辦') || name.includes('to do') || 
+        name.includes('todo') || name.includes('backlog')) {
+      return { color: 'text-orange-600', icon: '⏳' };
+    }
+    
+    // 進行中類型
+    if (name.includes('進行中') || name.includes('in progress') || name.includes('doing') ||
+        name.includes('進展') || name.includes('工作中') || name.includes('處理中')) {
+      return { color: 'text-blue-600', icon: '🔄' };
+    }
+    
+    // 完成類型
+    if (name.includes('完成') || name.includes('done') || name.includes('finished') ||
+        name.includes('completed') || name.includes('完畢')) {
+      return { color: 'text-green-600', icon: '✅' };
+    }
+    
+    // 審核/檢查類型
+    if (name.includes('審核') || name.includes('review') || name.includes('檢查') ||
+        name.includes('驗證') || name.includes('測試')) {
+      return { color: 'text-purple-600', icon: '👀' };
+    }
+    
+    // 暫停/擱置類型
+    if (name.includes('暫停') || name.includes('擱置') || name.includes('on hold') ||
+        name.includes('blocked') || name.includes('延期')) {
+      return { color: 'text-gray-600', icon: '⏸️' };
+    }
+    
+    // 默認類型
+    return { color: 'text-gray-800', icon: '📋' };
   };
 
   if (projectsLoading || loading) {
@@ -220,7 +441,7 @@ const StudentOverview = () => {
               </div>
             </div>
 
-            {/* 統計卡片區域 */}
+            {/* 統計卡片區域（增強版） */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6 mb-6 sm:mb-8">
               <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 sm:p-6 rounded-xl text-white">
                 <div className="flex items-center justify-between">
@@ -245,40 +466,40 @@ const StudentOverview = () => {
               <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 sm:p-6 rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-green-100 text-xs sm:text-sm">已完成</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.completedProjects}</p>
+                    <p className="text-green-100 text-xs sm:text-sm">總任務數</p>
+                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalTasks}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">✅</div>
+                  <div className="text-3xl sm:text-4xl">📋</div>
                 </div>
               </div>
 
               <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 sm:p-6 rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-orange-100 text-xs sm:text-sm">進行中</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.inProgressProjects}</p>
+                    <p className="text-orange-100 text-xs sm:text-sm">聊天互動</p>
+                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalChatMessages}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">🔄</div>
+                  <div className="text-3xl sm:text-4xl">💬</div>
                 </div>
               </div>
 
               <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 sm:p-6 rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-purple-100 text-xs sm:text-sm">總反思</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalReflections}</p>
+                    <p className="text-purple-100 text-xs sm:text-sm">想法節點</p>
+                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalIdeaNodes}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">📝</div>
+                  <div className="text-3xl sm:text-4xl">💡</div>
                 </div>
               </div>
 
               <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-4 sm:p-6 rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-pink-100 text-xs sm:text-sm">本週反思</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.thisWeekReflections}</p>
+                    <p className="text-pink-100 text-xs sm:text-sm">AI互動</p>
+                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalAiInteractions}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">🎯</div>
+                  <div className="text-3xl sm:text-4xl">🤖</div>
                 </div>
               </div>
             </div>
@@ -392,7 +613,7 @@ const StudentOverview = () => {
                 </div>
               </div>
 
-              {/* 右側 - 最近活動 */}
+              {/* 右側 - 最近活動（增強版） */}
               <div className="space-y-6 sm:space-y-8">
                 {/* 最近學習活動 */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
@@ -401,11 +622,16 @@ const StudentOverview = () => {
                     {recentActivities.length > 0 ? (
                       recentActivities.map((activity, index) => (
                         <div key={index} className="border-l-4 border-teal-500 pl-4 py-2">
-                          <h4 className="font-medium text-gray-800 text-sm">{activity.title}</h4>
-                          <p className="text-xs text-gray-600 mt-1">{activity.description}</p>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-xs text-teal-600 font-medium">{activity.projectName}</span>
-                            <span className="text-xs text-gray-400">{activity.time}</span>
+                          <div className="flex items-start space-x-2">
+                            <span className="text-lg flex-shrink-0">{getActivityIcon(activity.type)}</span>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-gray-800 text-sm">{activity.title}</h4>
+                              <p className="text-xs text-gray-600 mt-1 break-words">{activity.description}</p>
+                              <div className="flex justify-between items-center mt-2">
+                                <span className="text-xs text-teal-600 font-medium truncate">{activity.projectName}</span>
+                                <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{activity.time}</span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       ))
@@ -441,27 +667,58 @@ const StudentOverview = () => {
                   </div>
                 </div>
 
-                {/* 學習統計 */}
+                {/* 學習統計（增強版） */}
                 <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
                   <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">學習統計</h2>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">總學習時數</span>
-                      <span className="font-semibold text-gray-800">{personalStats.totalProjects * 20}小時</span>
+                      <span className="text-gray-600">總反思數</span>
+                      <span className="font-semibold text-gray-800">{personalStats.totalReflections}篇</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">平均專案進度</span>
                       <span className="font-semibold text-gray-800">{personalStats.averageProgress}%</span>
                     </div>
+                    
+                    {/* 任務狀況詳細分解 */}
+                    <div className="border-t pt-3">
+                      <h3 className="text-sm font-medium text-gray-700 mb-3">任務狀況分布</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">📋 總任務</span>
+                          <span className="font-semibold text-gray-800">{personalStats.totalTasks}</span>
+                        </div>
+                        {personalStats.allColumnNames.map(columnName => {
+                          const style = getColumnStyle(columnName);
+                          return (
+                            <div key={columnName} className="flex justify-between items-center">
+                              <span className="text-gray-600 text-sm">
+                                {style.icon} {columnName}
+                              </span>
+                              <span className={`font-semibold ${style.color}`}>
+                                {personalStats.tasksByStatus[columnName].length}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">反思頻率</span>
-                      <span className="font-semibold text-gray-800">
-                        {personalStats.totalProjects > 0 ? 
-                          Math.round(personalStats.totalReflections / personalStats.totalProjects) : 0}篇/專案
-                      </span>
+                      <span className="text-gray-600">團隊互動</span>
+                      <span className="font-semibold text-gray-800">{personalStats.totalChatMessages}次</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600">學習活躍度</span>
+                      <span className="text-gray-600">創意想法</span>
+                      <span className="font-semibold text-gray-800">{personalStats.totalIdeaNodes}個</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">AI諮詢</span>
+                      <span className="font-semibold text-gray-800">{personalStats.totalAiInteractions}次</span>
+                    </div>
+                    <hr className="my-2" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-700 font-medium">學習活躍度</span>
                       <span className="font-semibold text-green-600">
                         {personalStats.thisWeekReflections > 0 ? "高" : "待提升"}
                       </span>
@@ -477,4 +734,4 @@ const StudentOverview = () => {
   );
 };
 
-export default StudentOverview; 
+export default StudentOverview;
