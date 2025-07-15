@@ -9,10 +9,22 @@ const announcementApi = axios.create({
 });
 
 // 獲取公告列表
-export const getAnnouncements = async () => {
+export const getAnnouncements = async (projectId) => {
     try {
-        console.log("正在請求所有公告...");
-        const response = await announcementApi.get('/');
+        const userId = localStorage.getItem('id'); // 獲取當前用戶ID
+        let query = '';
+        
+        if (projectId) {
+            query = `/?projectId=${projectId}`;
+            if (userId) {
+                query += `&userId=${userId}`;
+            }
+        } else if (userId) {
+            query = `/?userId=${userId}`;
+        }
+        
+        console.log(`正在請求公告列表，projectId: ${projectId || 'all'}, userId: ${userId}`);
+        const response = await announcementApi.get(query);
         console.log("公告列表獲取成功:", response.data);
         return response.data.announcements;
     } catch (error) {
@@ -20,18 +32,6 @@ export const getAnnouncements = async () => {
         throw error;
     }
 };
-
-// export const getAnnouncements = async (projectId) => {
-//     try {
-//         console.log("正在請求公告列表，projectId:", projectId);
-//         const response = await announcementApi.get(`/?projectId=${projectId}`);
-//         console.log("公告列表獲取成功:", response.data);
-//         return response.data.announcements;
-//     } catch (error) {
-//         console.error("無法獲取公告列表:", error);
-//         throw error;
-//     }
-// };
 
 // 發佈公告
 export const createAnnouncement = async (announcementData) => {
