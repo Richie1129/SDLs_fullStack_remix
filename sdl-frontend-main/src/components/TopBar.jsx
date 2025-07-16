@@ -221,18 +221,14 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
           <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-14 w-auto" />
         </Link>
         <div className="flex items-center">
-          <h3 className="font-bold p-1 mr-2 rounded-lg mx-3">
-            {localStorage.getItem("username")}
-          </h3>
-          <div className="relative flex items-center">
-          <button
-            className="flex items-center justify-center mr-2 p-1 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          <h3 
+            className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3 hover:bg-gray-100 transition-colors"
             onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
             title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
           >
-            <RiDashboardLine size={20} />
-          </button>
-          </div>
+            {localStorage.getItem("username")}
+          </h3>
+          {/* 移除 dashboard icon 按鈕 */}
           <Announcement projectId={projectId || 'all'} role={role} projectList={projectList} />
           <button onClick={handleLogout} className="ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-2 font-semibold">
             登出
@@ -279,34 +275,28 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
         )}
         
         <div className="flex items-center">
-        <h3 className="font-bold cursor-pointer p-1 mr-1 sm:mr-2 rounded-lg mx-1 sm:mx-3 text-sm sm:text-base hidden sm:block">
+        <h3
+          className="font-bold cursor-pointer p-1 mr-1 sm:mr-2 rounded-lg mx-1 sm:mx-3 text-sm sm:text-base hidden sm:block hover:bg-gray-100 transition-colors"
+          onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
+          title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
+        >
           {localStorage.getItem("username")}
         </h3>
-          {/* 全局儀表板按鈕 */}
+        {/* 將 dashboard icon 按鈕移除 */}
+        {/* 專案活動按鈕 - 只在專案頁面顯示 */}
+        {!isOverviewPage && projectId && setShowActivityStream && (
           <button
-            className="flex items-center justify-center mr-2 p-1 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
-            title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
+            onClick={() => setShowActivityStream(!showActivityStream)}
+            className={
+              `flex items-center justify-center mr-2 p-1 rounded-md transition-colors ${showActivityStream 
+                ? 'bg-customgreen text-white' 
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`
+            }
+            title="專案活動"
           >
-            <RiDashboardLine size={20} />
+            <FiActivity size={20} />
           </button>
-          
-          {/* 專案活動按鈕 - 只在專案頁面顯示 */}
-          {!isOverviewPage && projectId && setShowActivityStream && (
-            <button
-              onClick={() => setShowActivityStream(!showActivityStream)}
-              className={`
-                flex items-center justify-center mr-2 p-1 rounded-md transition-colors
-                ${showActivityStream 
-                  ? 'bg-customgreen text-white' 
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                }
-              `}
-              title="專案活動"
-            >
-              <FiActivity size={20} />
-            </button>
-          )}
+        )}
         </div>
         <Announcement projectId={projectId} role={role} projectList={projectList} />
         <button
