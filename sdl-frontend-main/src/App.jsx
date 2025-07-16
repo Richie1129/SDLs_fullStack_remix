@@ -19,10 +19,9 @@ import ManageIdeaWall from "./pages/manageIdeaWall/ManageIdeaWall";
 import IdeaWall from "./pages/ideaWall/IdeaWall";
 import NotFound from "./pages/notFound/NotFound";
 import Rag from './pages/Rag/Rag';
-import ManageStudent from './pages/manageStudent/ManageStudents';
+import TeacherManagementDashboard from './pages/manageStudent/TeacherManagementDashboard';
 import OverView from './pages/manageStudent/OverView';
 import StudentDashboard from './pages/manageStudent/StudentDashboard';
-import TeacherDashboard from './pages/manageStudent/TeacherDashboard';
 import StudentOverview from './pages/overview/StudentOverview';
 import TeacherOverview from './pages/overview/TeacherOverview';
 
@@ -50,9 +49,9 @@ export default function App() {
             <Route path="manageIdeaWall" element={<ManageIdeaWall />} />
             <Route path="ideaWall" element={<IdeaWall />} />
             <Route path="rag" element={<Rag />} />
-            <Route path="manageStudent" element={<ManageStudent />} />
+            <Route path="manageStudent" element={<TeacherManagementDashboard />} />
             <Route path="studentDashboard" element={<StudentDashboard />} />
-            <Route path="teacherDashboard" element={<TeacherDashboard />} />
+            <Route path="teacherDashboard" element={<TeacherManagementDashboard />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />}></Route>

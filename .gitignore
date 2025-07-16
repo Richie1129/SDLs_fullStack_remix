@@ -131,3 +131,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 daily_file/
+
+#file
+suggestion.md
