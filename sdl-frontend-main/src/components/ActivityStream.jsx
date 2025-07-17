@@ -103,7 +103,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
             initial={{ x: 300, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 300, opacity: 0 }}
-            className="fixed right-0 top-16 h-[calc(100vh-4rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-50 overflow-hidden"
+            className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-8rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-50 overflow-hidden"
         >
             <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center">
@@ -119,7 +119,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                 </button>
             </div>
 
-            <div className="overflow-y-auto h-full pb-4">
+            <div className="overflow-y-auto h-full pb-16 sm:pb-20 lg:pb-24">
                 {activities.length === 0 ? (
                     <div className="flex items-center justify-center h-40 text-gray-500">
                         <div className="text-center">
@@ -128,7 +128,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
+                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 pb-16 sm:pb-20 lg:pb-24">
                         <AnimatePresence>
                             {activities.map((activity, index) => {
                                 const isNew = newActivity && 
