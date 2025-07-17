@@ -78,6 +78,7 @@ export default function Kanban() {
 
     socket.on("taskItems", KanbanUpdateEvent);
     socket.on("taskItem", KanbanUpdateEvent);
+    socket.on("taskItemCreated", KanbanUpdateEvent); // 監聽 taskItemCreated 事件
     socket.on("dragtaskItem", kanbanDragEvent);
     socket.on("columnOrderUpdated", kanbanDragEvent);
     socket.on("ColumnCreatedSuccess", KanbanUpdateEvent);
@@ -85,6 +86,7 @@ export default function Kanban() {
     return () => {
       socket.off('taskItems', KanbanUpdateEvent);
       socket.off('taskItem', KanbanUpdateEvent);
+      socket.off("taskItemCreated", KanbanUpdateEvent); // 組件卸載時移除監聽
       socket.off("dragtaskItem", kanbanDragEvent);
       socket.off("columnOrderUpdated", kanbanDragEvent);
       socket.off('ColumnCreatedSuccess', KanbanUpdateEvent);
@@ -170,7 +172,8 @@ export default function Kanban() {
   };
 
   // 新增列表
-  const handleAddGroup = () => {
+  const handleAddGroup = (e) => {
+    e.preventDefault();
     if (newGroupName.trim() !== '') {
       socket.emit("ColumnCreated", {
         projectId,
@@ -246,7 +249,7 @@ export default function Kanban() {
 
                 )}
                 {showAddGroupInput && (
-                  <div className="group-container">
+                  <form onSubmit={handleAddGroup} className="group-container">
                     <div className="flex flex-col store-container  w-60 h-24 bg-slate-100 px-4 py-3 rounded-lg mb-2">
                       <input
                         type="text"
@@ -257,7 +260,7 @@ export default function Kanban() {
                       />
                       <div className='flex justify-start items-center'>
                         <button
-                          onClick={handleAddGroup}
+                          type="submit"
                           className="bg-[#5BA491] hover:bg-[#5BA491]/80 p-2 text-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
                         >
                           新增列表
@@ -271,7 +274,7 @@ export default function Kanban() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </form>
                 )}
                 {
                   kanbanIsLoading ? <Loader /> :
@@ -330,29 +333,31 @@ export default function Kanban() {
                               }
                               {
                                 showForm && selectedcolumn === columnIndex ? (
-                                  <div className='flex flex-col store-container rounded-lg mb-2 px-4 pt-1'>
+                                  <form onSubmit={handleSubmit} className='flex flex-col store-container rounded-lg mb-2 px-4 pt-1'>
                                     <input
                                       className='text-sm border border-gray-300 p-2 w-52 rounded-md mb-2'
                                       rows={3}
                                       placeholder="輸入卡片標題..."
                                       onChange={handleChange}
+                                      value={newCard}
                                     />
                                     <div className='flex justify-start items-center'>
                                       <button
+                                        type="submit"
                                         style={{ backgroundColor: "#5BA491" }}
                                         className='p-2 text-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300'
-                                        onClick={handleSubmit}
                                       >
                                         新增
                                       </button>
                                       <button
+                                        type="button"
                                         className="flex-center p-2 py-1"
                                         onClick={() => { setShowForm(false); }}
                                       >
                                         <RxCross2 />
                                       </button>
                                     </div>
-                                  </div>
+                                  </form>
 
                                 ) : (
                                   <div className="flex justify-start px-4 pt-1">
