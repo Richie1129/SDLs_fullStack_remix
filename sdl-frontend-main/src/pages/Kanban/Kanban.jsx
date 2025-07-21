@@ -235,13 +235,13 @@ export default function Kanban() {
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="flex space-x-4 overflow-x-auto h-[calc(100vh-12rem)] scrollbar-none overflow-y-hidden" // 添加 overflow-x-auto 以啟用水平滾動
-                style={{ display: 'inline-flex', flexDirection: 'row', paddingBottom: '1rem' }} // 確保列是水平排列的，並且底部有足夠空間
+                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 overflow-y-auto md:overflow-x-auto md:overflow-y-hidden h-[calc(100vh-12rem)] scrollbar-none" // 在小螢幕上垂直排列，中等螢幕以上水平排列
+                style={{ display: 'inline-flex', paddingBottom: '1rem' }} // 移除固定的 flexDirection
               >
                 {!showAddGroupInput && (
-                  <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-60 h-24 flex flex-row items-center rounded-lg border-none p-7" onClick={toggleAddGroupInput}>
-                    <FaPlus className="text-white m-3" />
-                    <b className="text-base text-white">
+                  <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7 mb-4 md:mb-0" onClick={toggleAddGroupInput}>
+                    <FaPlus className="text-white mr-2 md:m-3" />
+                    <b className="text-sm md:text-base text-white">
                       新增列表
                     </b>
                   </button>
@@ -249,14 +249,14 @@ export default function Kanban() {
 
                 )}
                 {showAddGroupInput && (
-                  <form onSubmit={handleAddGroup} className="group-container">
-                    <div className="flex flex-col store-container  w-60 h-24 bg-slate-100 px-4 py-3 rounded-lg mb-2">
+                  <form onSubmit={handleAddGroup} className="group-container w-full md:w-60 mb-4 md:mb-0">
+                    <div className="flex flex-col store-container w-full md:w-60 h-auto md:h-24 bg-slate-100 px-4 py-3 rounded-lg mb-2">
                       <input
                         type="text"
                         placeholder="輸入列表標題..."
                         value={newGroupName}
                         onChange={(e) => setNewGroupName(e.target.value)}
-                        className="text-sm border border-gray-300 p-2 w-52 rounded-md mb-2"
+                        className="text-sm border border-gray-300 p-2 w-full md:w-52 rounded-md mb-2"
                       />
                       <div className='flex justify-start items-center'>
                         <button

@@ -409,18 +409,18 @@ export default function Reflection() {
 
     return (
         <div className='min-w-full min-h-screen h-screen'>
-            <div className='flex flex-row my-5 pl-20 pr-5 py-16 w-full h-screen justify-between items-between'>
-                <div className='flex flex-col w-[45vw]'>
-                    <div className='flex justify-start gap-6 items-center pl-3'>
-                        <h3 className='text-xl font-bold'>個人日誌</h3>
+            <div className='flex flex-col lg:flex-row my-5 pl-16 sm:pl-20 md:pl-24 lg:pl-20 xl:pl-24 pr-4 sm:pr-6 md:pr-8 lg:pr-16 xl:pr-20 py-8 sm:py-12 lg:py-16 w-full min-h-screen gap-6 lg:gap-8 pb-20 sm:pb-24 lg:pb-28'>
+                <div className='flex flex-col w-full lg:w-1/2'>
+                    <div className='flex justify-start gap-4 sm:gap-6 items-center pl-0 sm:pl-3 mb-4'>
+                        <h3 className='text-lg sm:text-xl font-bold'>個人日誌</h3>
                         <button onClick={() => {
                             setTitle("")
                             setContent("")
                             setAttachFile(null)
                             setPersonalDailyModalOpen(true)
-                        }} className="flex items-center bg-customgreen hover:bg-customgreen/80 text-white font-semibold rounded-lg p-1 mr-1 sm:px-4 text-base min-w-[70px]">
-                            <FaPlus />
-                            <p className="ml-2">新增</p>
+                        }} className="flex items-center bg-customgreen hover:bg-customgreen/80 text-white font-semibold rounded-lg px-2 py-1 sm:px-4 sm:py-2 text-sm sm:text-base min-w-[70px]">
+                            <FaPlus className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <p className="ml-1 sm:ml-2">新增</p>
                         </button>
                     </div>
                     <div className='flex flex-wrap justify-center items-center mb-5'>
@@ -430,12 +430,12 @@ export default function Reflection() {
                                     isError ? <p className='text-base font-bold'>{error.message}</p> :
                                         personalDaily.length === 0 ? (
                                             showEmptyMessage && (
-                                                <div className="flex flex-col items-center justify-center mx-80">
-                                                    <Lottie className="w-64" animationData={personalDailyIcon} />
-                                                    <p className=' font-bold text-zinc-600 text-lg'>還沒新增過個人日誌 ! 趕快新增你的第一個【個人日誌】吧 ~</p>
+                                                <div className="flex flex-col items-center justify-center px-4 sm:px-8 lg:px-16">
+                                                    <Lottie className="w-48 sm:w-56 md:w-64 max-w-full h-auto" animationData={personalDailyIcon} />
+                                                    <p className='font-bold text-zinc-600 text-sm sm:text-base lg:text-lg text-center leading-relaxed'>還沒新增過個人日誌 ! 趕快新增你的第一個【個人日誌】吧 ~</p>
                                                 </div>
                                             )) : (
-                                            <div className="relative overflow-hidden w-[45vw] py-8">
+                                            <div className="relative overflow-hidden w-full py-4 sm:py-6 lg:py-8">
 
                                                 <motion.div
                                                     drag="x"
@@ -455,8 +455,8 @@ export default function Reflection() {
                                                                 transition={SPRING_OPTIONS}
                                                                 className="aspect-video w-full shrink-0 rounded-xl object-cover"
                                                             >
-                                                                <div className='bg-white rounded-lg shadow-lg p-4 px-8 m-2 w-[40vw] h-full flex flex-col' key={index}>
-                                                                    <h5 className='text-xl font-bold text-customgreen py-2'>{item.title}</h5>
+                                                                <div className='bg-white rounded-lg shadow-lg p-3 sm:p-4 lg:p-6 m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]' key={index}>
+                                                                    <h5 className='text-lg sm:text-xl font-bold text-customgreen py-2'>{item.title}</h5>
                                                                     <div className='flex-grow overflow-auto mb-4'>
                                                                         <p className='text-gray-700 break-words'>{item.content}</p>
                                                                     </div>
@@ -485,18 +485,18 @@ export default function Reflection() {
                                                                                 </button>
                                                                             </div>
                                                                         )}
-                                                                        <div className='flex justify-between items-center'>
-                                                                            <p className='text-base text-customgreen font-bold' title={formatTime(item.createdAt, 'full')}>
+                                                                        <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3'>
+                                                                            <p className='text-sm sm:text-base text-customgreen font-bold' title={formatTime(item.createdAt, 'full')}>
                                                                                 建立日期: {formatTime(item.createdAt, 'date')}
                                                                             </p>
                                                                             {item.updatedAt && item.updatedAt !== item.createdAt && (
-                                                                                <p className='text-sm text-gray-500' title={formatTime(item.updatedAt, 'full')}>
+                                                                                <p className='text-xs sm:text-sm text-gray-500' title={formatTime(item.updatedAt, 'full')}>
                                                                                     更新: {formatTime(item.updatedAt, 'relative')}
                                                                                 </p>
                                                                             )}
                                                                         </div>
                                                                         <button
-                                                                            className="mt-2 bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600 transition-colors duration-300"
+                                                                            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-300 text-sm sm:text-base"
                                                                             onClick={() => handleEditClick(item)}
                                                                         >
                                                                             編輯
@@ -525,9 +525,9 @@ export default function Reflection() {
                     </div>
                 </div>
 
-                <div className='flex flex-col w-[45vw]'>
-                    <div className='flex justify-start gap-6 items-center w-full pl-3'>
-                        <h3 className='text-xl font-bold'>小組日誌</h3>
+                <div className='flex flex-col w-full lg:w-1/2'>
+                    <div className='flex justify-start gap-4 sm:gap-6 items-center w-full pl-0 sm:pl-3 mb-4'>
+                        <h3 className='text-lg sm:text-xl font-bold'>小組日誌</h3>
                         <button onClick={() => {
                             setTitle("")
                             setContent("")
@@ -537,9 +537,9 @@ export default function Reflection() {
                                 ...prev,
                                 type: "discuss"
                             }))
-                        }} className="flex items-center bg-customgreen hover:bg-customgreen/80 text-white font-semibold rounded-lg p-1 mr-1 sm:px-4 text-base min-w-[70px]">
-                            <FaPlus />
-                            <p className="ml-2">新增</p>
+                        }} className="flex items-center bg-customgreen hover:bg-customgreen/80 text-white font-semibold rounded-lg px-2 py-1 sm:px-4 sm:py-2 text-sm sm:text-base min-w-[70px]">
+                            <FaPlus className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <p className="ml-1 sm:ml-2">新增</p>
                         </button>
                     </div>
                     <div className='  flex flex-wrap justify-center items-center w-full mb-5'>
@@ -550,12 +550,12 @@ export default function Reflection() {
 
                                         teamDaily.length === 0 ? (
                                             showEmptyMessage && (
-                                                <div className="flex flex-col items-center justify-center mx-80">
-                                                    <Lottie className=" w-72" animationData={personalDailyIcon} />
-                                                    <p className=' font-bold text-zinc-600 text-lg'>還沒新增過小組日誌 ! 趕快新增你的第一個【小組日誌】吧 ~</p>
+                                                <div className="flex flex-col items-center justify-center px-4 sm:px-8 lg:px-16">
+                                                    <Lottie className="w-48 sm:w-56 md:w-64 lg:w-72 max-w-full h-auto" animationData={personalDailyIcon} />
+                                                    <p className='font-bold text-zinc-600 text-sm sm:text-base lg:text-lg text-center leading-relaxed'>還沒新增過小組日誌 ! 趕快新增你的第一個【小組日誌】吧 ~</p>
                                                 </div>
                                             )) : (
-                                            < div className="relative overflow-hidden w-[45vw] py-8">
+                                            < div className="relative overflow-hidden w-full py-4 sm:py-6 lg:py-8">
                                                 <motion.div
                                                     drag="x"
                                                     dragConstraints={{ left: 0, right: 0,}}
@@ -574,19 +574,19 @@ export default function Reflection() {
                                                                 transition={SPRING_OPTIONS}
                                                                 className="aspect-video w-full shrink-0 rounded-xl object-cover"
                                                             >
-                                                                <div className='bg-white rounded-lg shadow-lg p-4 px-8 m-2 w-[40vw] h-full flex flex-col' key={index}>
-                                                                    <h5 className='text-xl font-bold text-customgreen py-2'>{item.title}</h5>
-                                                                    <div className='flex-grow overflow-auto mb-4'>
-                                                                        <p className='text-gray-700 break-words'>{item.content}</p>
+                                                                <div className='bg-white rounded-lg shadow-lg p-3 sm:p-4 lg:p-6 m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]' key={index}>
+                                                                    <h5 className='text-lg sm:text-xl font-bold text-customgreen py-2'>{item.title}</h5>
+                                                                    <div className='flex-grow overflow-auto mb-4 px-2 sm:px-4'>
+                                                                        <p className='text-gray-700 break-words text-sm sm:text-base leading-relaxed'>{item.content}</p>
                                                                     </div>
-                                                                    <div className='mt-auto'>
+                                                                    <div className='mt-auto px-2 sm:px-4'>
                                                                         {(item.fileName || item.fileData) && (
-                                                                            <div className='flex justify-between items-center mb-2'>
-                                                                                <span className="text-base text-gray-500">
+                                                                            <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center mb-3 gap-2'>
+                                                                                <span className="text-sm sm:text-base text-gray-500 break-all">
                                                                                     附加檔案: {item.originalName || item.filename || item.fileName}
                                                                                 </span>
                                                                                 <button
-                                                                                    className="flex items-center justify-center px-3 py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-300 ease-in-out"
+                                                                                    className="flex items-center justify-center px-2 py-1 sm:px-3 sm:py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-300 ease-in-out text-xs sm:text-sm w-full sm:w-auto"
                                                                                     onClick={() => {
                                                                                         if (item.fileName && item.fileUrl) {
                                                                                             // 使用 MinIO 直接下載 API
@@ -599,29 +599,29 @@ export default function Reflection() {
                                                                                         }
                                                                                     }}
                                                                                 >
-                                                                                    <AiOutlineCloudDownload size={32} className="mr-2" />
+                                                                                    <AiOutlineCloudDownload size={24} className="mr-1 sm:mr-2" />
                                                                                     下載
                                                                                 </button>
                                                                             </div>
                                                                         )}
 
                                                                         <div className='flex flex-col space-y-2'>
-                                                                            <div className='flex justify-between items-center text-base font-bold'>
-                                                                                <p className='text-customgreen' title={formatTime(item.createdAt, 'full')}>
+                                                                            <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2'>
+                                                                                <p className='text-sm sm:text-base text-customgreen font-bold' title={formatTime(item.createdAt, 'full')}>
                                                                                     建立日期: {formatTime(item.createdAt, 'date')}
                                                                                 </p>
-                                                                                <p className='text-gray-500'>建立者: {item.creator}</p>
+                                                                                <p className='text-xs sm:text-sm text-gray-500'>建立者: {item.creator}</p>
                                                                             </div>
                                                                             {item.updatedAt && item.updatedAt !== item.createdAt && (
                                                                                 <div className='flex justify-between items-center'>
-                                                                                    <p className='text-sm text-gray-500' title={formatTime(item.updatedAt, 'full')}>
+                                                                                    <p className='text-xs sm:text-sm text-gray-500' title={formatTime(item.updatedAt, 'full')}>
                                                                                         更新時間: {formatTime(item.updatedAt, 'relative')}
                                                                                     </p>
                                                                                 </div>
                                                                             )}
                                                                             <div className='flex justify-end'>
                                                                                 <button
-                                                                                    className="bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600 transition-colors duration-300"
+                                                                                    className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-300 text-sm sm:text-base"
                                                                                     onClick={() => handleEditTeamClick(item)}
                                                                                 >
                                                                                     編輯
@@ -661,10 +661,10 @@ export default function Reflection() {
                 <button onClick={() => setPersonalDailyModalOpen(false)} className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
                     <GrFormClose className='w-6 h-6' />
                 </button>
-                <div className='flex flex-col px-1'>
-                    <h3 className='font-bold text-lg mb-3 text-center'>個人反思日誌</h3>
+                <div className='flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4'>
+                    <h3 className='font-bold text-base sm:text-lg mb-3 text-center'>個人反思日誌</h3>
                     <div className='flex items-center mb-3'>
-                        <p className='font-bold text-base'>日誌內容</p>
+                        <p className='font-bold text-sm sm:text-base'>日誌內容</p>
                         <button
                             onClick={toggleTooltip}
                             className='ml-2 p-1'>
@@ -736,10 +736,10 @@ export default function Reflection() {
                 <button onClick={() => setTeamDailyModalOpen(false)} className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
                     <GrFormClose className='w-6 h-6' />
                 </button>
-                <div className='flex flex-col px-1'>
-                    <h3 className='font-bold text-lg mb-3 text-center'>小組反思日誌</h3>
+                <div className='flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4'>
+                    <h3 className='font-bold text-base sm:text-lg mb-3 text-center'>小組反思日誌</h3>
                     <div className='flex items-center mb-3'>
-                        <p className='font-bold text-base'>日誌內容</p>
+                        <p className='font-bold text-sm sm:text-base'>日誌內容</p>
                         <button
                             onClick={toggleTooltip}
                             className='ml-2 p-1 '>

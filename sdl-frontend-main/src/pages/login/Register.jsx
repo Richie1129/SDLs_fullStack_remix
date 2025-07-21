@@ -175,10 +175,10 @@ export default function Register() {
                         wrapper="span"
                         cursor={true}
                         repeat={Infinity}
-                        className="mx-auto font-press-start font-semibold text-4xl  mb-20"
+                        className="mx-auto font-press-start font-semibold text-2xl md:text-3xl lg:text-4xl mb-10 md:mb-20 text-center px-4"
                     />
                     {/* <img src='images/login.png' width={'600px'} alt='I am B' /> */}
-                    <Lottie className="w-96" animationData={Login_icon} />
+                    <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
 
                 </div>
             </div>

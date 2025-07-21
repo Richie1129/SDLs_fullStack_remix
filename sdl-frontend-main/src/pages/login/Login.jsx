@@ -69,9 +69,9 @@ export default function Login() {
                   wrapper="span"
                   cursor={true}
                   repeat={Infinity}
-                  className="mx-auto font-press-start font-semibold text-4xl  mb-20"
+                  className="mx-auto font-press-start font-semibold text-2xl md:text-3xl lg:text-4xl mb-10 md:mb-20 text-center px-4"
                 />
-          <Lottie className="w-96" animationData={Login_icon} />
+          <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
         </div>
       </div>
       <div className="bg-white w-full md:max-w-md lg:max-w-full md:mx-auto md:w-1/2 xl:w-1/2 h-screen lg:px-36 xl:px-40 flex items-center justify-center">
