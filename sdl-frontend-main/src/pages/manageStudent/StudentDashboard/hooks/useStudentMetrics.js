@@ -228,7 +228,7 @@ export const useStudentMetrics = (data, userName, projectId, userId) => {
             }),
             action: `創建想法節點`,
             detail: `「${node.title || '無標題'}」 - ${contentPreview}`,
-            author: node.author || node.creator || '匿名',
+            author: node.owner || node.username || node.user_name || '匿名',
             type: 'idea',
             createdAt: node.createdAt
           });
