@@ -13,11 +13,16 @@ import teamDailyIcon from "../../assets/AnimationTeamDaily.json";
 import Lottie from "lottie-react";
 import { socket } from '../../utils/socket';
 import FileDownload from 'js-file-download';
-import { AiOutlineCloudDownload } from "react-icons/ai";
+import { AiOutlineCloudDownload, AiOutlineRobot } from "react-icons/ai";
 import { GrCircleQuestion } from 'react-icons/gr';
 import { formatTime } from '../../utils/timeUtils';
 // import { motion } from 'framer-motion';
 import { motion, useMotionValue } from "framer-motion";
+// 5Rs 相關導入
+import FiveRsReflectionForm from '@/components/FiveRsReflectionForm.jsx';
+import FiveRsReflectionDisplay from '@/components/FiveRsReflectionDisplay.jsx';
+import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.js';
+import { analyze5RsReflection } from '@/api/llm5Rs.js';
 
 const imgs = [
     "/imgs/nature/1.jpg",
@@ -53,6 +58,13 @@ export default function Reflection() {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [editingId, setEditingId] = useState(null); // 用來追蹤正在編輯的日誌ID
+
+    // 5Rs 相關狀態
+    const [reflectionMode, setReflectionMode] = useState('traditional'); // 'traditional' 或 '5Rs'
+    const [is5RsModalOpen, setIs5RsModalOpen] = useState(false);
+    const [editingReflectionData, setEditingReflectionData] = useState({});
+    const [selectedReflectionForView, setSelectedReflectionForView] = useState(null);
+    const [viewReflectionModalOpen, setViewReflectionModalOpen] = useState(false);
 
     const [imgIndex, setImgIndex] = useState(0);
     const [TeamImgIndex, setTeamImgIndex] = useState(0);
@@ -348,6 +360,153 @@ export default function Reflection() {
     //     }));
     // }
 
+    // 5Rs 反思相關處理函式
+    const handle5RsSave = (data) => {
+        console.log('儲存 5Rs 反思:', data);
+        
+        if (editingId) {
+            // 更新現有的 5Rs 反思
+            const updatedData = {
+                id: Number(editingId),
+                title: data.title,
+                content: data.content
+            };
+            
+            updateDaily(updatedData, {
+                onSuccess: () => {
+                    setEditingId(null);
+                    setIs5RsModalOpen(false);
+                    setEditingReflectionData({});
+                    sucesssNotify("5Rs 反思更新成功");
+                },
+                onError: (error) => {
+                    console.log(error);
+                    errorNotify("5Rs 反思更新失敗");
+                }
+            });
+        } else {
+            // 創建新的 5Rs 反思
+            const formData = new FormData();
+            formData.append('projectId', projectId);
+            formData.append('title', data.title);
+            formData.append('content', data.content);
+            formData.append('userId', localStorage.getItem("id"));
+            
+            mutate(formData, {
+                onSuccess: () => {
+                    setIs5RsModalOpen(false);
+                    setEditingReflectionData({});
+                },
+                onError: (error) => {
+                    console.log(error);
+                    errorNotify("5Rs 反思創建失敗");
+                }
+            });
+        }
+    };
+
+    const handle5RsCancel = () => {
+        setIs5RsModalOpen(false);
+        setEditingId(null);
+        setEditingReflectionData({});
+        setTitle("");
+    };
+
+    const handleEdit5Rs = (item) => {
+        console.log("編輯 5Rs 反思:", item);
+        
+        const parsedContent = parse5RsContent(item.content);
+        if (parsedContent) {
+            setEditingReflectionData(parsedContent.data);
+        } else {
+            setEditingReflectionData({});
+        }
+        
+        setTitle(item.title);
+        setEditingId(item.id);
+        setIs5RsModalOpen(true);
+    };
+
+    const handleView5Rs = (item) => {
+        setSelectedReflectionForView(item);
+        setViewReflectionModalOpen(true);
+    };
+
+    // 為現有的 5Rs 反思請求 AI 分析
+    const handleRequestAIAnalysis = async (item) => {
+        console.log('=== 前端 AI 分析請求開始 ===');
+        console.log('選中的日誌項目:', item);
+        
+        const parsedContent = parse5RsContent(item.content);
+        console.log('解析後的內容:', parsedContent);
+        
+        if (!parsedContent || !parsedContent.data) {
+            console.error('解析 5Rs 內容失敗');
+            toast.error("無法解析 5Rs 反思內容");
+            return;
+        }
+
+        // 檢查是否已有 AI 反饋
+        if (parsedContent.feedback && (parsedContent.feedback.overall || parsedContent.feedback.suggestions?.length > 0)) {
+            console.log('已有 AI 反饋，跳過分析');
+            toast.info("此反思已有 AI 分析結果");
+            return;
+        }
+
+        console.log('準備發送的反思資料:', parsedContent.data);
+
+        try {
+            toast.loading("正在請求 AI 分析...", { id: 'ai-analysis' });
+            
+            console.log('呼叫 AI 分析 API...');
+            const result = await analyze5RsReflection(parsedContent.data, 'auto');
+            console.log('AI 分析 API 回應:', result);
+            
+            if (result.success) {
+                console.log('AI 分析成功，提供者:', result.provider);
+                console.log('AI 回饋內容:', result.feedback);
+                
+                // 將 AI 反饋整合到現有內容中
+                const updatedContent = JSON.parse(item.content);
+                updatedContent.feedback = {
+                    ...result.feedback,
+                    provider: result.provider,
+                    analysisDate: result.analysisDate || new Date().toISOString()
+                };
+
+                console.log('更新後的內容:', updatedContent);
+
+                // 更新日記內容
+                const updatedData = {
+                    id: Number(item.id),
+                    title: item.title,
+                    content: JSON.stringify(updatedContent, null, 2)
+                };
+
+                console.log('準備更新的資料:', updatedData);
+
+                updateDaily(updatedData, {
+                    onSuccess: () => {
+                        console.log('AI 分析結果保存成功');
+                        toast.success(`AI 分析完成！使用 ${result.provider}`, { id: 'ai-analysis' });
+                    },
+                    onError: (error) => {
+                        console.error('儲存 AI 分析結果失敗:', error);
+                        toast.error("儲存 AI 分析結果失敗", { id: 'ai-analysis' });
+                    }
+                });
+            } else {
+                console.error('AI 分析失敗:', result);
+                toast.error('AI 分析失敗', { id: 'ai-analysis' });
+            }
+        } catch (error) {
+            console.error('AI 分析過程發生錯誤:', error);
+            toast.error('AI 分析過程中發生錯誤', { id: 'ai-analysis' });
+        }
+        
+        console.log('=== 前端 AI 分析請求結束 ===');
+    };
+
     const Tooltip = ({ children, content }) => {
         return (
             <div className='relative group'>
@@ -413,15 +572,28 @@ export default function Reflection() {
                 <div className='flex flex-col w-full lg:w-1/2'>
                     <div className='flex justify-start gap-4 sm:gap-6 items-center pl-0 sm:pl-3 mb-4'>
                         <h3 className='text-lg sm:text-xl font-bold'>個人日誌</h3>
-                        <button onClick={() => {
-                            setTitle("")
-                            setContent("")
-                            setAttachFile(null)
-                            setPersonalDailyModalOpen(true)
-                        }} className="flex items-center bg-customgreen hover:bg-customgreen/80 text-white font-semibold rounded-lg px-2 py-1 sm:px-4 sm:py-2 text-sm sm:text-base min-w-[70px]">
-                            <FaPlus className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <p className="ml-1 sm:ml-2">新增</p>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => {
+                                setTitle("")
+                                setContent("")
+                                setAttachFile(null)
+                                setReflectionMode('traditional')
+                                setEditingId(null)
+                                setPersonalDailyModalOpen(true)
+                            }} className="flex items-center bg-customgreen hover:bg-customgreen/80 text-white font-semibold rounded-lg px-2 py-1 sm:px-4 sm:py-2 text-sm sm:text-base min-w-[70px]">
+                                <FaPlus className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <p className="ml-1 sm:ml-2">傳統日誌</p>
+                            </button>
+                            <button onClick={() => {
+                                setTitle("")
+                                setEditingReflectionData({})
+                                setEditingId(null)
+                                setIs5RsModalOpen(true)
+                            }} className="flex items-center bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg px-2 py-1 sm:px-4 sm:py-2 text-sm sm:text-base min-w-[70px]">
+                                <FaPlus className="w-3 h-3 sm:w-4 sm:h-4" />
+                                <p className="ml-1 sm:ml-2">5Rs 反思</p>
+                            </button>
+                        </div>
                     </div>
                     <div className='flex flex-wrap justify-center items-center mb-5'>
                         <div className='flex py-2  scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full'>
@@ -456,9 +628,47 @@ export default function Reflection() {
                                                                 className="aspect-video w-full shrink-0 rounded-xl object-cover"
                                                             >
                                                                 <div className='bg-white rounded-lg shadow-lg p-3 sm:p-4 lg:p-6 m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]' key={index}>
-                                                                    <h5 className='text-lg sm:text-xl font-bold text-customgreen py-2'>{item.title}</h5>
+                                                                    <div className="flex items-center justify-between mb-2">
+                                                                        <h5 className='text-lg sm:text-xl font-bold text-customgreen py-2'>{item.title}</h5>
+                                                                        {is5RsFormat(item.content) && (
+                                                                            <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
+                                                                                5Rs 反思
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                     <div className='flex-grow overflow-auto mb-4'>
-                                                                        <p className='text-gray-700 break-words'>{item.content}</p>
+                                                                        {is5RsFormat(item.content) ? (
+                                                                            <div className="space-y-2">
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <p className='text-gray-600 text-sm mb-2'>5Rs 結構化反思內容</p>
+                                                                                    {(() => {
+                                                                                        const parsed = parse5RsContent(item.content);
+                                                                                        const hasAIFeedback = parsed?.feedback && (parsed.feedback.overall || parsed.feedback.suggestions?.length > 0);
+                                                                                        return hasAIFeedback ? (
+                                                                                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full flex items-center">
+                                                                                                <AiOutlineRobot className="w-3 h-3 mr-1" />
+                                                                                                已分析
+                                                                                            </span>
+                                                                                        ) : (
+                                                                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                                                                                                未分析
+                                                                                            </span>
+                                                                                        );
+                                                                                    })()}
+                                                                                </div>
+                                                                                <div className="text-gray-700 line-clamp-6">
+                                                                                    {extract5RsText(item.content)}
+                                                                                </div>
+                                                                                <button
+                                                                                    onClick={() => handleView5Rs(item)}
+                                                                                    className="text-teal-600 hover:text-teal-800 text-sm font-medium"
+                                                                                >
+                                                                                    查看完整 5Rs 反思 →
+                                                                                </button>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <p className='text-gray-700 break-words'>{item.content}</p>
+                                                                        )}
                                                                     </div>
                                                                     <div className='mt-auto'>
                                                                         {(item.fileName || item.fileData) && (
@@ -495,11 +705,37 @@ export default function Reflection() {
                                                                                 </p>
                                                                             )}
                                                                         </div>
+                                                                        {/* 5Rs 反思的 AI 分析按鈕 */}
+                                                                        {is5RsFormat(item.content) && (() => {
+                                                                            const parsed = parse5RsContent(item.content);
+                                                                            const hasAIFeedback = parsed?.feedback && (parsed.feedback.overall || parsed.feedback.suggestions?.length > 0);
+                                                                            
+                                                                            if (!hasAIFeedback) {
+                                                                                return (
+                                                                                    <div className="mb-2">
+                                                                                        <button
+                                                                                            onClick={() => handleRequestAIAnalysis(item)}
+                                                                                            className="w-full bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition-colors duration-300 text-sm sm:text-base mb-2 flex items-center justify-center"
+                                                                                        >
+                                                                                            <AiOutlineRobot className="w-4 h-4 mr-2" />
+                                                                                            請求 AI 分析
+                                                                                        </button>
+                                                                                    </div>
+                                                                                );
+                                                                            }
+                                                                            return null;
+                                                                        })()}
                                                                         <button
                                                                             className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-300 text-sm sm:text-base"
-                                                                            onClick={() => handleEditClick(item)}
+                                                                            onClick={() => {
+                                                                                if (is5RsFormat(item.content)) {
+                                                                                    handleEdit5Rs(item);
+                                                                                } else {
+                                                                                    handleEditClick(item);
+                                                                                }
+                                                                            }}
                                                                         >
-                                                                            編輯
+                                                                            編輯 {is5RsFormat(item.content) ? '5Rs 反思' : '傳統日誌'}
                                                                         </button>
                                                                     </div>
                                                                 </div>
@@ -855,6 +1091,45 @@ export default function Reflection() {
                     </div>
                 </Modal>
             } */}
+
+            {/* 5Rs 反思編輯 Modal */}
+            <Modal open={is5RsModalOpen} onClose={() => handle5RsCancel()} opacity={true} position={"justify-center items-center"}>
+                <div className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <FiveRsReflectionForm
+                        initialData={editingReflectionData}
+                        onSave={handle5RsSave}
+                        onCancel={handle5RsCancel}
+                        isEditing={!!editingId}
+                        title={title}
+                        onTitleChange={setTitle}
+                    />
+                </div>
+            </Modal>
+
+            {/* 5Rs 反思檢視 Modal */}
+            <Modal open={viewReflectionModalOpen} onClose={() => setViewReflectionModalOpen(false)} opacity={true} position={"justify-center items-center"}>
+                <div className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <div className="flex justify-between items-center mb-4 p-4 border-b">
+                        <h2 className="text-2xl font-bold text-gray-800">
+                            {selectedReflectionForView?.title || '5Rs 反思檢視'}
+                        </h2>
+                        <button
+                            onClick={() => setViewReflectionModalOpen(false)}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <GrFormClose size={24} />
+                        </button>
+                    </div>
+                    {selectedReflectionForView && (
+                        <FiveRsReflectionDisplay
+                            content={selectedReflectionForView.content}
+                            showFeedback={true}
+                            isTeacher={userRole === "teacher"}
+                        />
+                    )}
+                </div>
+            </Modal>
+
             <Toaster />
         </div >
 
