@@ -43,7 +43,30 @@ export default function Kanban() {
     ['kanbanDatas', projectId],
     () => getKanbanColumns(projectId),
     {
-      onSuccess: setKanbanData
+      onSuccess: (data) => {
+        setKanbanData(data);
+        // 印出列表名稱和其擁有的卡片
+        console.log('=== Kanban 列表資料 ===');
+        data.forEach((column, index) => {
+          console.log(`列表 ${index + 1}: ${column.name}`);
+          console.log(`列表 ID: ${column.id}`);
+          if (Array.isArray(column.task) && column.task.length > 0) {
+            console.log(`卡片數量: ${column.task.length}`);
+            column.task.forEach((task, taskIndex) => {
+              console.log(`  卡片 ${taskIndex + 1}:`);
+              console.log(`    ID: ${task.id}`);
+              console.log(`    標題: ${task.title}`);
+              console.log(`    內容: ${task.content || '無內容'}`);
+              console.log(`    標籤: ${task.labels ? JSON.stringify(task.labels) : '無標籤'}`);
+              console.log(`    指派人員: ${task.assignees ? JSON.stringify(task.assignees) : '無指派人員'}`);
+            });
+          } else {
+            console.log('  此列表沒有卡片');
+          }
+          console.log('---');
+        });
+        console.log('=== 結束 ===');
+      }
     }
   );
   // 在Kanban组件中
@@ -70,7 +93,26 @@ export default function Kanban() {
     function kanbanDragEvent(data) {
       if (data) {
         console.log(data);
-        setKanbanData(data)
+        setKanbanData(data);
+        // 印出拖拽後的列表資料
+        console.log('=== 拖拽後的 Kanban 列表資料 ===');
+        data.forEach((column, index) => {
+          console.log(`列表 ${index + 1}: ${column.name}`);
+          console.log(`列表 ID: ${column.id}`);
+          if (Array.isArray(column.task) && column.task.length > 0) {
+            console.log(`卡片數量: ${column.task.length}`);
+            column.task.forEach((task, taskIndex) => {
+              console.log(`  卡片 ${taskIndex + 1}:`);
+              console.log(`    ID: ${task.id}`);
+              console.log(`    標題: ${task.title}`);
+              console.log(`    內容: ${task.content || '無內容'}`);
+            });
+          } else {
+            console.log('  此列表沒有卡片');
+          }
+          console.log('---');
+        });
+        console.log('=== 結束 ===');
       }
     }
     socket.connect();
