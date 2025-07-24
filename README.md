@@ -9,7 +9,7 @@ SDL (Self-Directed Learning) Fullstack Remix 是一個專為教育研究設計�
 ### 🎯 核心學習工具
 - **專案階段式引導系統**：基於科學探究方法論的五階段學習框架（定標→擇策→監評→調節→學習歷程）
 - **智慧看板管理**：支援拖拽式任務管理，即時協作同步的 Kanban 系統
-- **學習反思日誌**：結構化的個人與團隊反思記錄，促進深度學習
+- **學習反思日誌**：結構化的個人與團隊反思記錄，促進深度學習，支援 5Rs 反思框架與 AI 智能分析
 - **數位作品集**：階段性學習成果展示與管理平台
 - **AI 學習助手**：基於 RAG 技術的個人化學習支援系統
 
@@ -44,7 +44,7 @@ SDL (Self-Directed Learning) Fullstack Remix 是一個專為教育研究設計�
 - **身份驗證**：JWT + Bcrypt
 - **即時通訊**：Socket.io
 - **檔案處理**：Multer + MinIO 對象儲存
-- **AI 整合**：OpenAI API + RAGFlow
+- **AI 整合**：OpenAI API + Gemini API + RAGFlow + 5Rs 智能分析
 
 #### 基礎架構
 - **容器化**：Docker + Docker Compose
@@ -84,7 +84,11 @@ SDLs_fullStack_remix/
 ├── sdl-frontend-main/          # 前端 React 應用
 │   ├── src/
 │   │   ├── components/         # 可重用元件
+│   │   │   ├── FiveRsReflectionForm.jsx      # 5Rs 反思表單組件
+│   │   │   └── FiveRsReflectionDisplay.jsx   # 5Rs 反思顯示組件
 │   │   ├── pages/             # 頁面元件
+│   │   │   ├── reflection/    # 反思相關頁面
+│   │   │   │   └── Reflection.jsx            # 反思日誌主頁面 (支援 5Rs)
 │   │   │   ├── manageStudent/ # 學生管理相關頁面
 │   │   │   │   ├── StudentDashboard/  # 學生儀表板 (模組化架構)
 │   │   │   │   │   ├── index.jsx             # 主組件
@@ -119,20 +123,30 @@ SDLs_fullStack_remix/
 │   │   ├── layouts/           # 版面配置
 │   │   ├── context/           # 狀態管理
 │   │   ├── api/               # API 呼叫層
+│   │   │   └── llm5Rs.js                     # 5Rs AI 分析 API
 │   │   └── utils/             # 工具函數
+│   │       └── 5RsUtils.js                   # 5Rs 工具函式
 │   ├── package.json
 │   └── vite.config.js
 ├── sdl-backend-main/           # 後端 Express API
 │   ├── controllers/           # 控制器層
+│   │   └── llm_5R.js                         # 5Rs AI 分析控制器
 │   ├── models/               # 資料模型
 │   ├── routes/               # API 路由
+│   │   └── llm.js                            # LLM/AI 相關路由 (包含 5Rs)
 │   ├── middlewares/          # 中介軟體
 │   ├── config/               # 設定檔案
 │   ├── migrations/           # 資料庫遷移
+│   ├── temp/                 # 暫存目錄 (Python 腳本使用)
 │   └── daily_file/           # 檔案儲存目錄
 ├── docker-compose.yml         # 開發環境容器配置
 ├── docker-compose.prod.yml    # 生產環境容器配置
 ├── nginx.conf                # Nginx 設定檔
+├── install_5rs_dependencies.sh  # 5Rs Python 依賴安裝腳本
+├── 5Rs_使用說明.md            # 5Rs 功能使用說明
+├── 5Rs_實作完成報告.md        # 5Rs 功能實作報告
+├── AI_分析功能實作報告.md     # AI 分析功能實作報告
+├── AI_分析日誌輸出說明.md     # AI 分析詳細日誌說明
 └── README.md                 # 專案說明文件
 ```
 
@@ -142,7 +156,22 @@ SDLs_fullStack_remix/
 
 - Docker 20.10+ 和 Docker Compose 2.0+
 - Node.js 18+ (本地開發)
+- Python 3.9+ (5Rs 分析功能)
 - Git
+
+#### Python 依賴套件
+
+5Rs 反思分析功能需要以下 Python 套件：
+
+```bash
+pip install gemini-generative-ai openai
+```
+
+或使用提供的安裝腳本：
+
+```bash
+./install_5rs_dependencies.sh
+```
 
 ### 1. 複製專案
 
@@ -190,7 +219,21 @@ NODE_ENV=production
 - 建議使用至少 32 字元的隨機字串作為 JWT_SECRET
 - MinIO 帳號密碼應包含大小寫字母、數字和特殊符號
 
-### 3. 啟動服務
+### 3. 安裝 5Rs 分析功能
+
+安裝 Python 依賴套件：
+
+```bash
+./install_5rs_dependencies.sh
+```
+
+或手動安裝：
+
+```bash
+pip install gemini-generative-ai openai
+```
+
+### 4. 啟動服務
 
 #### 開發環境
 
@@ -212,7 +255,7 @@ docker compose logs -f
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### 4. 服務訪問
+### 5. 服務訪問
 
 啟動成功後，可以通過以下地址訪問各服務：
 
@@ -354,16 +397,96 @@ TeacherManagementDashboard/
 
 ### 學習反思系統
 
-#### 功能特色
+#### 🎯 核心功能
+- **雙格式支援**：傳統自由格式反思 + 結構化 5Rs 反思框架
 - **個人反思**：每日學習心得與成長記錄
 - **團隊反思**：團隊協作經驗與問題討論
 - **檔案附件**：支援反思相關的檔案上傳
 - **進度追蹤**：與專案階段關聯的反思記錄
 
-#### 教育價值
-- 促進學生深度思考和自我評估
-- 建立完整的學習歷程檔案
-- 協助教師了解學生學習狀況
+#### 🧠 5Rs 反思框架 (新功能)
+
+基於教育理論的五層次反思模型，引導學生進行深度學習反思：
+
+**五個反思層次**：
+1. **Reporting (報告)**：描述性地敘述一個情境、事件或問題
+2. **Responding (回應)**：表達對情境的情感或個人反應
+3. **Relating (關聯)**：將當前理解與過去經驗或理論建立關聯
+4. **Reasoning (推論)**：對情境進行探索、質疑或解釋
+5. **Reconstructing (重建)**：基於理性理解，制定未來行動計劃
+
+**技術特色**：
+- **智能格式識別**：自動區分傳統格式與 5Rs 結構化格式
+- **引導性問題**：每個 R 提供專業的引導問題協助思考
+- **進度追蹤**：即時顯示反思完成度和品質指標
+- **向下相容**：完全不影響現有傳統反思功能
+
+#### 🤖 AI 智能分析功能
+
+整合 GPT-4 和 Gemini 雙 AI 引擎，為 5Rs 反思提供專業分析：
+
+**雙引擎支援**：
+- **GPT-4o-mini**：OpenAI 的教育專用模型
+- **Gemini-2.0-Flash**：Google 的高效能分析引擎
+- **自動容錯**：一個 API 失敗時自動切換到另一個
+
+**AI 分析內容**：
+- **針對性回饋**：對每個 R 提供具體的改進建議
+- **整體評估**：綜合分析反思的深度和品質
+- **學習指導**：基於教育理論的個人化學習建議
+- **改進方向**：3-5 個具體的提升建議
+
+**使用體驗**：
+- **一鍵分析**：在日誌列表中直接請求 AI 分析
+- **即時回饋**：分析結果永久保存在反思記錄中
+- **智能標識**：清楚顯示哪些反思已進行 AI 分析
+- **狀態管理**：已分析的反思不會重複分析
+
+**資料格式**：
+```json
+{
+  "type": "5Rs_reflection",
+  "version": "1.0",
+  "data": {
+    "reporting": "學生的情境描述...",
+    "responding": "學生的情感回應...",
+    "relating": "學生的關聯建立...",
+    "reasoning": "學生的邏輯推論...",
+    "reconstructing": "學生的行動計劃..."
+  },
+  "feedback": {
+    "reporting": "AI 針對報告部分的專業回饋",
+    "responding": "AI 針對回應部分的專業回饋",
+    "relating": "AI 針對關聯部分的專業回饋",
+    "reasoning": "AI 針對推論部分的專業回饋",
+    "reconstructing": "AI 針對重建部分的專業回饋",
+    "overall": "AI 整體評估和建議",
+    "suggestions": ["具體改進建議1", "具體改進建議2"],
+    "provider": "使用的AI引擎",
+    "analysisDate": "分析時間"
+  }
+}
+```
+
+#### 💡 教育價值
+- **深度思考**：5Rs 框架引導學生進行結構化反思
+- **個人化指導**：AI 分析提供即時的專業回饋
+- **學習歷程**：建立完整的反思學習檔案
+- **教師洞察**：協助教師了解學生學習狀況和思考品質
+- **自主學習**：培養學生獨立思考和自我評估能力
+
+#### 🔧 技術架構
+- **零資料庫修改**：使用 JSON 格式在現有欄位儲存結構化資料
+- **向下相容性**：完全保持與傳統反思格式的相容性
+- **模組化設計**：獨立的組件和 API，易於維護和擴展
+- **容錯機制**：雙 AI 引擎確保服務的高可用性
+
+#### 📊 API 端點
+```
+POST /api/llm/analyze-5rs     # AI 分析 5Rs 反思內容
+GET  /api/llm/5rs-framework   # 獲取 5Rs 框架資訊
+POST /api/llm/validate-5rs    # 驗證 5Rs 格式
+```
 
 ### AI 學習助手
 
