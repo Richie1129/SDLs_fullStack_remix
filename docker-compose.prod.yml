@@ -42,6 +42,7 @@ services:
       - PG_PASSWORD=postgres
       - PG_NAME=sdls_fullstack_postgres1
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       # MinIO 環境變數
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
