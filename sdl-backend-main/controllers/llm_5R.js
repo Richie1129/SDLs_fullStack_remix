@@ -1,5 +1,7 @@
-const axios = require('axios');
-require('dotenv').config();
+// 引入必要的套件
+const axios = require('axios'); // 用於 GPT API 呼叫
+const { GoogleGenerativeAI } = require('@google/generative-ai'); // 用於 Gemini API 呼叫
+require('dotenv').config(); // 載入環境變數
 
 // 5Rs 反思框架的詳細定義
 const FIVE_R_FRAMEWORK = {
@@ -108,13 +110,13 @@ ${studentContent.reconstructing || '未填寫'}
 }`;
 }
 
-// GPT API 呼叫
+// GPT API 呼叫函數
 async function callGPTAPI(prompt) {
   try {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini', // 使用 gpt-4o-mini 模型
         messages: [
           {
             role: 'system',
@@ -125,12 +127,12 @@ async function callGPTAPI(prompt) {
             content: prompt
           }
         ],
-        temperature: 0.7,
-        max_tokens: 2000
+        temperature: 0.7, // 設定生成溫度
+        max_tokens: 2000 // 設定最大輸出 token 數
       },
       {
         headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // 從環境變數獲取 API Key
           'Content-Type': 'application/json'
         }
       }
@@ -139,7 +141,7 @@ async function callGPTAPI(prompt) {
     return {
       success: true,
       provider: 'gpt-4o-mini',
-      content: response.data.choices[0].message.content
+      content: response.data.choices[0].message.content // 返回 AI 生成的內容
     };
   } catch (error) {
     console.error('GPT API 呼叫失敗:', error.response?.data || error.message);
@@ -147,120 +149,51 @@ async function callGPTAPI(prompt) {
   }
 }
 
-// Gemini API 呼叫 (使用 Python 腳本)
+// Gemini API 呼叫函數 (已更新為直接使用 Node.js SDK)
 async function callGeminiAPI(prompt) {
   try {
-    // 創建 Python 腳本來呼叫 Gemini API
-    const pythonScript = `
-import os
-import json
-import sys
-import google.generativeai as genai
-from dotenv import load_dotenv
-
-# 載入環境變數
-load_dotenv()
-
-# 檢查並設定 API Key
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    print(json.dumps({"success": False, "error": "GEMINI_API_KEY not found in environment variables"}))
-    sys.exit(1)
-
-genai.configure(api_key=api_key)
-
-# 獲取 prompt
-prompt_text = """${prompt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}"""
-
-try:
-    # 設定模型和生成配置
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
-    generation_config = {
-        "temperature": 0.7,
-        "top_p": 1,
-        "top_k": 1,
-        "max_output_tokens": 2048,
+    const apiKey = process.env.GEMINI_API_KEY; // 從環境變數獲取 API Key
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY not found in environment variables");
     }
-    safety_settings = [
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-    ]
 
-    # 呼叫 API
-    response = model.generate_content(
-        prompt_text,
-        generation_config=generation_config,
-        safety_settings=safety_settings
-    )
-    
-    # 處理回應
-    result = {
-        "success": True,
-        "provider": "gemini-1.5-flash-latest",
-        "content": response.text
-    }
-    print(json.dumps(result, ensure_ascii=False))
+    // 初始化 GoogleGenerativeAI 客戶端
+    const genAI = new GoogleGenerativeAI(apiKey);
 
-except Exception as e:
-    error_result = {
-        "success": False,
-        "error": str(e)
-    }
-    print(json.dumps(error_result, ensure_ascii=False))
-`;
+    // 獲取 Gemini 模型實例
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
 
-    // 寫入暫時的 Python 檔案
-    const fs = require('fs');
-    const path = require('path');
-    const tempDir = path.join(__dirname, '../temp');
-    
-    // 確保 temp 目錄存在
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-    
-    const tempFile = path.join(tempDir, `gemini_${Date.now()}.py`);
-    fs.writeFileSync(tempFile, pythonScript);
+    // 設定生成配置
+    const generationConfig = {
+      temperature: 0.7,
+      topP: 1,
+      topK: 1,
+      maxOutputTokens: 2048,
+    };
 
-    // 執行 Python 腳本
-    const { spawn } = require('child_process');
-    
-    return new Promise((resolve, reject) => {
-      const python = spawn('python3', [tempFile]);
-      let output = '';
-      let errorOutput = '';
+    // 設定安全設定
+    const safetySettings = [
+      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+    ];
 
-      python.stdout.on('data', (data) => {
-        output += data.toString();
-      });
-
-      python.stderr.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-
-      python.on('close', (code) => {
-        // 清理暫時檔案
-        fs.unlinkSync(tempFile);
-        
-        if (code !== 0) {
-          reject(new Error(`Python script failed with code ${code}: ${errorOutput}`));
-          return;
-        }
-
-        try {
-          const result = JSON.parse(output);
-          if (result.success) {
-            resolve(result);
-          } else {
-            reject(new Error(result.error));
-          }
-        } catch (e) {
-          reject(new Error(`Failed to parse Python output: ${output}. Error: ${e.message}`));
-        }
-      });
+    // 呼叫 Gemini API
+    const result = await model.generateContent({
+      contents: [{ parts: [{ text: prompt }] }], // 將 prompt 作為內容傳遞
+      generationConfig,
+      safetySettings,
     });
+
+    const response = await result.response; // 獲取 API 回應
+    const text = response.text(); // 提取回應中的文字內容
+
+    return {
+      success: true,
+      provider: "gemini-1.5-flash-latest",
+      content: text, // 返回 AI 生成的內容
+    };
 
   } catch (error) {
     console.error('Gemini API 呼叫失敗:', error.message);
@@ -268,7 +201,7 @@ except Exception as e:
   }
 }
 
-// 主要的 5Rs 分析功能
+// 主要的 5Rs 分析功能 (作為 Express.js 路由處理器)
 exports.analyze5RsReflection = async (req, res) => {
   try {
     const { studentContent, preferredProvider = 'auto' } = req.body;
@@ -291,9 +224,9 @@ exports.analyze5RsReflection = async (req, res) => {
     console.log('=== 生成的 Prompt ===');
     console.log(analysisPrompt);
     console.log('========================');
-    
+
     let result;
-    
+
     // 根據偏好選擇 API 提供者
     if (preferredProvider === 'gpt' || preferredProvider === 'auto') {
       try {
@@ -306,7 +239,7 @@ exports.analyze5RsReflection = async (req, res) => {
           result = await callGeminiAPI(analysisPrompt);
           console.log('Gemini API 成功，使用模型:', result.provider);
         } else {
-          throw error;
+          throw error; // 如果明確指定 GPT 但失敗，則拋出錯誤
         }
       }
     } else if (preferredProvider === 'gemini') {
@@ -335,6 +268,7 @@ exports.analyze5RsReflection = async (req, res) => {
     let feedback;
     try {
       // 嘗試解析 JSON 回應
+      // 使用正則表達式來提取 JSON 字符串，即使回應中包含額外的文字
       const jsonMatch = result.content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         feedback = JSON.parse(jsonMatch[0]);
@@ -354,6 +288,7 @@ exports.analyze5RsReflection = async (req, res) => {
       }
     } catch (parseError) {
       console.error('解析 AI 回應失敗:', parseError);
+      // 如果解析失敗，也建立預設結構，將原始內容放入 overall
       feedback = {
         overall: result.content,
         reporting: "",
@@ -400,19 +335,19 @@ exports.get5RsFramework = (req, res) => {
 // 驗證 5Rs 內容格式
 exports.validate5RsContent = (req, res) => {
   const { content } = req.body;
-  
+
   try {
     // 嘗試解析 JSON
     const parsed = JSON.parse(content);
-    
+
     // 檢查是否為 5Rs 格式
     const is5Rs = parsed.type === "5Rs_reflection" && parsed.data;
-    
+
     if (is5Rs) {
       // 檢查每個 R 的完整性
       const requiredFields = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
       const missingFields = requiredFields.filter(field => !parsed.data[field]);
-      
+
       res.status(200).json({
         success: true,
         is5RsFormat: true,
