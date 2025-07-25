@@ -186,7 +186,18 @@ export default function Reflection() {
         }
     })
 
-    const { mutate: updateDaily } = useMutation(({ id, ...data }) => updatePersonalDaily(id, data), {
+    const { mutate: updateDaily } = useMutation((data) => {
+        // 檢查 data 是否為 FormData 且包含 id
+        if (data instanceof FormData) {
+            const id = data.get('id');
+            data.delete('id'); // 從 FormData 中移除 id，因為它應該在 URL 中
+            return updatePersonalDaily(id, data);
+        } else {
+            // 傳統的物件格式
+            const { id, ...restData } = data;
+            return updatePersonalDaily(id, restData);
+        }
+    }, {
         onSuccess: () => {
             queryClient.invalidateQueries("personalDaily");
             sucesssNotify("更新成功");
@@ -366,17 +377,24 @@ export default function Reflection() {
         
         if (editingId) {
             // 更新現有的 5Rs 反思
-            const updatedData = {
-                id: Number(editingId),
-                title: data.title,
-                content: data.content
-            };
+            const formData = new FormData();
+            formData.append('id', Number(editingId));
+            formData.append('title', data.title);
+            formData.append('content', data.content);
             
-            updateDaily(updatedData, {
+            // 如果有附加檔案，添加到 FormData
+            if (data.attachFile && data.attachFile.length > 0) {
+                for (let i = 0; i < data.attachFile.length; i++) {
+                    formData.append("attachFile", data.attachFile[i]);
+                }
+            }
+            
+            updateDaily(formData, {
                 onSuccess: () => {
                     setEditingId(null);
                     setIs5RsModalOpen(false);
                     setEditingReflectionData({});
+                    setAttachFile(null);
                     sucesssNotify("5Rs 反思更新成功");
                 },
                 onError: (error) => {
@@ -392,10 +410,18 @@ export default function Reflection() {
             formData.append('content', data.content);
             formData.append('userId', localStorage.getItem("id"));
             
+            // 如果有附加檔案，添加到 FormData
+            if (data.attachFile && data.attachFile.length > 0) {
+                for (let i = 0; i < data.attachFile.length; i++) {
+                    formData.append("attachFile", data.attachFile[i]);
+                }
+            }
+            
             mutate(formData, {
                 onSuccess: () => {
                     setIs5RsModalOpen(false);
                     setEditingReflectionData({});
+                    setAttachFile(null);
                 },
                 onError: (error) => {
                     console.log(error);
@@ -410,6 +436,7 @@ export default function Reflection() {
         setEditingId(null);
         setEditingReflectionData({});
         setTitle("");
+        setAttachFile(null);
     };
 
     const handleEdit5Rs = (item) => {
@@ -1102,6 +1129,8 @@ export default function Reflection() {
                         isEditing={!!editingId}
                         title={title}
                         onTitleChange={setTitle}
+                        attachFile={attachFile}
+                        onFileChange={handleAddFileChange}
                     />
                 </div>
             </Modal>

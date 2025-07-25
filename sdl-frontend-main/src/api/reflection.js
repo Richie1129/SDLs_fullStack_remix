@@ -30,8 +30,14 @@ export const createPersonalDaily = async (data) => {
 // 修改個人日報
 export const updatePersonalDaily = async (id, data) => {
     console.log(`發送請求: PUT http://localhost/api/daily/personal/${id}`, data);
+    
+    // 檢查 data 是否為 FormData（有檔案上傳）
+    const isFormData = data instanceof FormData;
+    
     const response = await dailyApi.put(`/personal/${id}`, data, {
-        headers: { "Content-Type": "application/json" }, // 確保是 JSON
+        headers: isFormData 
+            ? { "Content-Type": "multipart/form-data" } 
+            : { "Content-Type": "application/json" }
     });
     return response.data;
 };

@@ -12,7 +12,9 @@ const FiveRsReflectionForm = ({
   onCancel, 
   isEditing = false,
   title = "",
-  onTitleChange 
+  onTitleChange,
+  attachFile = null,
+  onFileChange 
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [expandedSections, setExpandedSections] = useState({ 0: true });
@@ -77,7 +79,8 @@ const FiveRsReflectionForm = ({
     const content = build5RsContent(data, feedback);
     onSave({
       title,
-      content
+      content,
+      attachFile // 將檔案資訊傳遞給父組件
     });
   };
 
@@ -174,6 +177,32 @@ const FiveRsReflectionForm = ({
             transition={{ duration: 0.5 }}
           />
         </div>
+      </div>
+
+      {/* 檔案上傳區域 */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          附件檔案 (可選)
+        </label>
+        <input
+          type="file"
+          multiple
+          onChange={onFileChange}
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+          accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+        />
+        {attachFile && attachFile.length > 0 && (
+          <div className="mt-2">
+            <p className="text-sm text-gray-600">已選擇 {attachFile.length} 個檔案：</p>
+            <ul className="text-sm text-gray-500 ml-4">
+              {Array.from(attachFile).map((file, index) => (
+                <li key={index} className="list-disc">
+                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
 
       {/* 5Rs 步驟 */}
@@ -296,7 +325,7 @@ const FiveRsReflectionForm = ({
                 className="text-xs border border-purple-300 rounded px-2 py-1"
               >
                 <option value="auto">自動選擇</option>
-                <option value="gpt">GPT-4</option>
+                <option value="gpt">GPT-4o-mini</option>
                 <option value="gemini">Gemini</option>
               </select>
               <button

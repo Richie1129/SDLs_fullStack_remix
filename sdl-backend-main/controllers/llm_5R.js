@@ -155,40 +155,54 @@ async function callGeminiAPI(prompt) {
 import os
 import json
 import sys
+import google.generativeai as genai
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
 # 載入環境變數
 load_dotenv()
 
-# 檢查 API Key
-if not os.getenv("GEMINI_API_KEY"):
-    print(json.dumps({"success": False, "error": "GEMINI_API_KEY not found"}))
+# 檢查並設定 API Key
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    print(json.dumps({"success": False, "error": "GEMINI_API_KEY not found in environment variables"}))
     sys.exit(1)
 
-# 初始化 Gemini 客戶端
-client = genai.Client()
+genai.configure(api_key=api_key)
 
 # 獲取 prompt
-prompt = """${prompt.replace(/"/g, '\\"')}"""
+prompt_text = """${prompt.replace(/`/g, '\\`').replace(/\$/g, '\\$')}"""
 
 try:
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-exp",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(thinking_budget=0)  # 停用思考功能
-        ),
+    # 設定模型和生成配置
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    generation_config = {
+        "temperature": 0.7,
+        "top_p": 1,
+        "top_k": 1,
+        "max_output_tokens": 2048,
+    }
+    safety_settings = [
+        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+    ]
+
+    # 呼叫 API
+    response = model.generate_content(
+        prompt_text,
+        generation_config=generation_config,
+        safety_settings=safety_settings
     )
     
+    # 處理回應
     result = {
         "success": True,
-        "provider": "Gemini-2.0-Flash",
+        "provider": "gemini-1.5-flash-latest",
         "content": response.text
     }
     print(json.dumps(result, ensure_ascii=False))
-    
+
 except Exception as e:
     error_result = {
         "success": False,
@@ -231,7 +245,7 @@ except Exception as e:
         fs.unlinkSync(tempFile);
         
         if (code !== 0) {
-          reject(new Error(`Python script failed: ${errorOutput}`));
+          reject(new Error(`Python script failed with code ${code}: ${errorOutput}`));
           return;
         }
 
@@ -243,7 +257,7 @@ except Exception as e:
             reject(new Error(result.error));
           }
         } catch (e) {
-          reject(new Error(`Failed to parse Python output: ${output}`));
+          reject(new Error(`Failed to parse Python output: ${output}. Error: ${e.message}`));
         }
       });
     });

@@ -199,28 +199,63 @@ exports.updatePersonalDaily = async (req, res) => {
         console.log('日誌ID:', id);
         console.log('新標題:', title);
         console.log('新內容:', content);
-        console.log('上傳的檔案:', req.uploadedFile);
+        console.log('上傳的檔案:', req.uploadedFiles);
         
-        let updateData = { title, content };
-        
-        // 如果有新檔案上傳，更新檔案資訊
-        if (req.uploadedFile) {
-            console.log('📁 檢測到新檔案上傳:', {
-                fileName: req.uploadedFile.fileName,
-                originalName: req.uploadedFile.originalName,
-                url: req.uploadedFile.url,
-                size: req.uploadedFile.size
-            });
+        // 如果有多個檔案上傳，需要處理多個日誌記錄
+        if (req.uploadedFiles && req.uploadedFiles.length > 0) {
+            console.log(`📁 檢測到 ${req.uploadedFiles.length} 個檔案上傳`);
             
-            updateData.fileName = req.uploadedFile.fileName;
-            updateData.originalName = req.uploadedFile.originalName;
-            updateData.fileUrl = req.uploadedFile.url;
-            updateData.mimeType = req.uploadedFile.mimeType;
-            updateData.fileSize = req.uploadedFile.size;
+            // 如果有多個檔案，我們需要決定如何處理
+            // 選項1: 只更新第一個檔案到原有記錄
+            // 選項2: 刪除舊記錄並創建新的多個記錄
+            
+            // 這裡採用選項1，只更新第一個檔案
+            const firstFile = req.uploadedFiles[0];
+            
+            let updateData = { 
+                title, 
+                content,
+                fileName: firstFile.fileName,
+                originalName: firstFile.originalName,
+                fileUrl: firstFile.url,
+                mimeType: firstFile.mimeType,
+                fileSize: firstFile.size
+            };
+            
+            await daily.update(updateData);
+            console.log(`✅ 更新個人日誌成功: ${id} (包含檔案: ${firstFile.originalName})`);
+            
+            // 如果有其他檔案，創建新的記錄
+            if (req.uploadedFiles.length > 1) {
+                const additionalFiles = req.uploadedFiles.slice(1);
+                console.log(`📎 創建額外的 ${additionalFiles.length} 個檔案記錄`);
+                
+                const additionalPromises = additionalFiles.map((file, index) => {
+                    return Daily_personal.create({
+                        userId: daily.userId,
+                        projectId: daily.projectId,
+                        title: `${title} (附件 ${index + 2})`,
+                        content: content,
+                        fileName: file.fileName,
+                        originalName: file.originalName,
+                        fileUrl: file.url,
+                        mimeType: file.mimeType,
+                        fileSize: file.size
+                    });
+                });
+                
+                await Promise.all(additionalPromises);
+                console.log(`✅ 創建額外檔案記錄成功`);
+            }
+        } else {
+            // 沒有檔案上傳，只更新文字內容
+            console.log('📝 無檔案上傳，僅更新文字內容');
+            let updateData = { title, content };
+            
+            await daily.update(updateData);
+            console.log(`✅ 更新個人日誌成功: ${id}`);
         }
-
-        await daily.update(updateData);
-        console.log(`✅ 更新個人日誌成功: ${id}`);
+        
         console.log('==================');
         
         return res.status(200).json({ message: "更新成功", data: daily });
