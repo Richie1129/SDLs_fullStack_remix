@@ -5,6 +5,7 @@ import { AiOutlineRobot } from 'react-icons/ai';
 import { FIVE_R_FRAMEWORK, build5RsContent, validate5RsData } from '@/utils/5RsUtils.js';
 import { analyze5RsReflection } from '@/api/llm5Rs.js';
 import toast from 'react-hot-toast';
+import Swal from 'sweetalert2';
 
 const FiveRsReflectionForm = ({ 
   initialData = {}, 
@@ -68,6 +69,79 @@ const FiveRsReflectionForm = ({
     return steps.filter(step => isStepCompleted(step)).length;
   };
 
+  // 格式化 AI 分析結果為 HTML
+  const formatAnalysisResult = (feedback, provider) => {
+    let htmlContent = `
+      <div style="text-align: left; max-height: 400px; overflow-y: auto;">
+        <div style="margin-bottom: 16px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
+          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: bold;">🤖 AI 分析報告</h3>
+          <p style="margin: 0; font-size: 14px; opacity: 0.9;">使用模型：${provider || 'AI'}</p>
+        </div>
+    `;
+
+    // 整體評估
+    if (feedback.overall_assessment) {
+      htmlContent += `
+        <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px;">
+          <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 16px;">📊 整體評估</h4>
+          <p style="margin: 0; color: #374151; line-height: 1.5;">${feedback.overall_assessment}</p>
+        </div>
+      `;
+    }
+
+    // 建議列表
+    if (feedback.suggestions && feedback.suggestions.length > 0) {
+      htmlContent += `
+        <div style="margin-bottom: 16px; padding: 12px; background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px;">
+          <h4 style="margin: 0 0 12px 0; color: #15803d; font-size: 16px;">💡 個人化建議</h4>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+      `;
+      feedback.suggestions.forEach(suggestion => {
+        htmlContent += `<li style="margin-bottom: 8px; line-height: 1.5;">${suggestion}</li>`;
+      });
+      htmlContent += `</ul></div>`;
+    }
+
+    // 強項
+    if (feedback.strengths && feedback.strengths.length > 0) {
+      htmlContent += `
+        <div style="margin-bottom: 16px; padding: 12px; background: #fefce8; border-left: 4px solid #eab308; border-radius: 4px;">
+          <h4 style="margin: 0 0 12px 0; color: #a16207; font-size: 16px;">⭐ 發現的強項</h4>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+      `;
+      feedback.strengths.forEach(strength => {
+        htmlContent += `<li style="margin-bottom: 8px; line-height: 1.5;">${strength}</li>`;
+      });
+      htmlContent += `</ul></div>`;
+    }
+
+    // 改進建議
+    if (feedback.improvements && feedback.improvements.length > 0) {
+      htmlContent += `
+        <div style="margin-bottom: 16px; padding: 12px; background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px;">
+          <h4 style="margin: 0 0 12px 0; color: #dc2626; font-size: 16px;">🎯 改進方向</h4>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+      `;
+      feedback.improvements.forEach(improvement => {
+        htmlContent += `<li style="margin-bottom: 8px; line-height: 1.5;">${improvement}</li>`;
+      });
+      htmlContent += `</ul></div>`;
+    }
+
+    // 分析時間
+    if (feedback.analysisDate) {
+      const date = new Date(feedback.analysisDate);
+      htmlContent += `
+        <div style="margin-top: 16px; padding: 8px; background: #f9fafb; border-radius: 4px; text-align: center;">
+          <small style="color: #6b7280;">分析時間：${date.toLocaleString('zh-TW')}</small>
+        </div>
+      `;
+    }
+
+    htmlContent += `</div>`;
+    return htmlContent;
+  };
+
   const handleSave = () => {
     const validation = validate5RsData(data);
     if (!validation.isValid) {
@@ -120,14 +194,31 @@ const FiveRsReflectionForm = ({
         console.log('保存的回饋資料:', feedbackData);
         setFeedback(feedbackData);
         
-        toast.success(`AI 分析完成！使用 ${result.provider}`);
+        // 使用 SweetAlert2 顯示分析結果
+        Swal.fire({
+          title: '🎉 AI 分析完成！',
+          html: formatAnalysisResult(result.feedback, result.provider),
+          icon: 'success',
+          width: '800px',
+          padding: '20px',
+          showCloseButton: true,
+          showConfirmButton: true,
+          confirmButtonText: '我知道了',
+          confirmButtonColor: '#10b981',
+          customClass: {
+            container: 'custom-swal-container',
+            popup: 'custom-swal-popup',
+            content: 'custom-swal-content'
+          },
+          backdrop: `
+            rgba(0,0,0,0.4)
+            left top
+            no-repeat
+          `
+        });
         
-        // 顯示 AI 建議
-        if (result.feedback.suggestions && result.feedback.suggestions.length > 0) {
-          const suggestions = result.feedback.suggestions.slice(0, 2).join('\n• ');
-          console.log('顯示的建議:', suggestions);
-          toast.success(`AI 建議：\n• ${suggestions}`, { duration: 8000 });
-        }
+        // 簡化的 toast 通知
+        toast.success(`AI 分析完成！使用 ${result.provider}`);
       } else {
         console.error('AI 分析失敗:', result);
         toast.error('AI 分析失敗');
@@ -144,7 +235,39 @@ const FiveRsReflectionForm = ({
   const progressPercentage = (getCompletedSteps() / steps.length) * 100;
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg">
+    <>
+      <style>
+        {`
+          .custom-swal-container .swal2-popup {
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          }
+          .custom-swal-content {
+            padding: 0 !important;
+          }
+          .custom-swal-popup .swal2-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 16px;
+          }
+          .custom-swal-popup .swal2-html-container {
+            margin: 0;
+            padding: 0;
+          }
+          .custom-swal-popup .swal2-confirm {
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            transition: all 0.2s;
+          }
+          .custom-swal-popup .swal2-confirm:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+          }
+        `}
+      </style>
+      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg">
       {/* 標題輸入 */}
       <div className="mb-6">
         <label className="block text-lg font-semibold text-gray-700 mb-2">
@@ -327,6 +450,7 @@ const FiveRsReflectionForm = ({
                 <option value="auto">自動選擇</option>
                 <option value="gpt">gpt-4o-mini</option>
                 <option value="gemini">gemini-2.0-flash</option>
+                {/* <option value="gpt-nano">gpt-4.1-nano</option> */}
               </select>
               <button
                 onClick={handleAIAnalysis}
@@ -370,6 +494,7 @@ const FiveRsReflectionForm = ({
         </button>
       </div>
     </div>
+    </>
   );
 };
 

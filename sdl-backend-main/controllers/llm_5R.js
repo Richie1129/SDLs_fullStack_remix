@@ -149,6 +149,45 @@ async function callGPTAPI(prompt) {
   }
 }
 
+// GPT-4.1-Nano API 呼叫函數
+async function callGPTNanoAPI(prompt) {
+  try {
+    const response = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4.1-nano', // 使用 gpt-4.1-nano 模型
+        messages: [
+          {
+            role: 'system',
+            content: '你是一位專業的教育輔導員，擅長使用 5Rs 反思框架指導學生進行深度反思。請提供專業、建設性且溫暖的回饋。'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7, // 設定生成溫度
+        max_tokens: 2000 // 設定最大輸出 token 數
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // 從環境變數獲取 API Key
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return {
+      success: true,
+      provider: 'gpt-4.1-nano',
+      content: response.data.choices[0].message.content // 返回 AI 生成的內容
+    };
+  } catch (error) {
+    console.error('GPT-4.1-Nano API 呼叫失敗:', error.response?.data || error.message);
+    throw new Error(`GPT-4.1-Nano API 呼叫失敗: ${error.response?.data?.error?.message || error.message}`);
+  }
+}
+
 // Gemini API 呼叫函數 (已更新為直接使用 Node.js SDK)
 async function callGeminiAPI(prompt) {
   try {
@@ -228,19 +267,41 @@ exports.analyze5RsReflection = async (req, res) => {
     let result;
 
     // 根據偏好選擇 API 提供者
-    if (preferredProvider === 'gpt' || preferredProvider === 'auto') {
+    if (preferredProvider === 'auto') {
       try {
-        console.log('嘗試使用 GPT API...');
-        result = await callGPTAPI(analysisPrompt);
-        console.log('GPT API 成功，使用模型:', result.provider);
+        console.log('自動模式：嘗試使用 GPT-4.1-Nano API...');
+        result = await callGPTNanoAPI(analysisPrompt);
+        console.log('GPT-4.1-Nano API 成功，使用模型:', result.provider);
       } catch (error) {
-        console.log('GPT API 失敗，嘗試使用 Gemini API...');
-        if (preferredProvider === 'auto') {
+        console.log('GPT-4.1-Nano API 失敗，嘗試使用 Gemini API...');
+        try {
           result = await callGeminiAPI(analysisPrompt);
           console.log('Gemini API 成功，使用模型:', result.provider);
-        } else {
-          throw error; // 如果明確指定 GPT 但失敗，則拋出錯誤
+        } catch (geminiError) {
+          console.log('Gemini API 也失敗，嘗試使用 GPT-4o-mini API...');
+          result = await callGPTAPI(analysisPrompt);
+          console.log('GPT-4o-mini API 成功，使用模型:', result.provider);
         }
+      }
+    } else if (preferredProvider === 'gpt') {
+      try {
+        console.log('嘗試使用 GPT-4o-mini API...');
+        result = await callGPTAPI(analysisPrompt);
+        console.log('GPT-4o-mini API 成功，使用模型:', result.provider);
+      } catch (error) {
+        console.log('GPT-4o-mini API 失敗，嘗試使用 Gemini API...');
+        result = await callGeminiAPI(analysisPrompt);
+        console.log('Gemini API 成功，使用模型:', result.provider);
+      }
+    } else if (preferredProvider === 'gpt-nano') {
+      try {
+        console.log('嘗試使用 GPT-4.1-Nano API...');
+        result = await callGPTNanoAPI(analysisPrompt);
+        console.log('GPT-4.1-Nano API 成功，使用模型:', result.provider);
+      } catch (error) {
+        console.log('GPT-4.1-Nano API 失敗，嘗試使用 GPT-4o-mini API...');
+        result = await callGPTAPI(analysisPrompt);
+        console.log('GPT-4o-mini API 成功，使用模型:', result.provider);
       }
     } else if (preferredProvider === 'gemini') {
       try {
@@ -248,14 +309,14 @@ exports.analyze5RsReflection = async (req, res) => {
         result = await callGeminiAPI(analysisPrompt);
         console.log('Gemini API 成功，使用模型:', result.provider);
       } catch (error) {
-        console.log('Gemini API 失敗，嘗試使用 GPT API...');
-        result = await callGPTAPI(analysisPrompt);
-        console.log('GPT API 成功，使用模型:', result.provider);
+        console.log('Gemini API 失敗，嘗試使用 GPT-4.1-Nano API...');
+        result = await callGPTNanoAPI(analysisPrompt);
+        console.log('GPT-4.1-Nano API 成功，使用模型:', result.provider);
       }
     } else {
       return res.status(400).json({
         success: false,
-        message: '不支援的 API 提供者。請使用 "gpt", "gemini", 或 "auto"'
+        message: '不支援的 API 提供者。請使用 "gpt", "gpt-nano", "gemini", 或 "auto"'
       });
     }
 
