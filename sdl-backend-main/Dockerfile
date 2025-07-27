@@ -4,7 +4,9 @@ WORKDIR /sdl-backend-main
 
 COPY package*.json ./
 
-COPY . /sdl-backend-main
+# COPY . /sdl-backend-main
+
+COPY . .
 
 RUN npm install
 
