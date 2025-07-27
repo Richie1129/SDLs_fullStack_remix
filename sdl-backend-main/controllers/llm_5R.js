@@ -191,7 +191,7 @@ async function callGeminiAPI(prompt) {
 
     return {
       success: true,
-      provider: "gemini-1.5-flash-latest",
+      provider: "gemini-2.0-flash",
       content: text, // 返回 AI 生成的內容
     };
 

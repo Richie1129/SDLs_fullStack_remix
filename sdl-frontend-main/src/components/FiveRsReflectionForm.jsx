@@ -325,8 +325,8 @@ const FiveRsReflectionForm = ({
                 className="text-xs border border-purple-300 rounded px-2 py-1"
               >
                 <option value="auto">自動選擇</option>
-                <option value="gpt">GPT-4o-mini</option>
-                <option value="gemini">Gemini</option>
+                <option value="gpt">gpt-4o-mini</option>
+                <option value="gemini">gemini-2.0-flash</option>
               </select>
               <button
                 onClick={handleAIAnalysis}

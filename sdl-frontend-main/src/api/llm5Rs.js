@@ -3,7 +3,7 @@ import axios from 'axios';
 const API_BASE_URL = 'http://localhost/api/llm';
 
 // 分析 5Rs 反思內容
-export const analyze5RsReflection = async (studentContent, preferredProvider = 'auto') => {
+export const analyze5RsReflection = async (studentContent, preferredProvider ) => {
   try {
     console.log('=== API 呼叫開始 ===');
     console.log('API URL:', `${API_BASE_URL}/analyze-5rs`);
