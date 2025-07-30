@@ -132,5 +132,7 @@ dist
 .pnp.*
 daily_file/
 
-#file
-suggestion.md
+# files
+*.md
+*.txt
+*.sh
