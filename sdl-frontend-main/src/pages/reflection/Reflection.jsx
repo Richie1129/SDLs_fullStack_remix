@@ -28,6 +28,7 @@ import { motion, useMotionValue } from "framer-motion";
 // 5Rs 相關導入
 import FiveRsReflectionForm from "@/components/FiveRsReflectionForm.jsx";
 import FiveRsReflectionDisplay from "@/components/FiveRsReflectionDisplay.jsx";
+import ContextualHelp from "../../components/ContextualHelp";
 import {
 	is5RsFormat,
 	parse5RsContent,
@@ -1344,6 +1345,7 @@ export default function Reflection() {
 			</Modal>
 
 			<Toaster />
+			<ContextualHelp currentPage="reflection" />
 		</div>
 	);
 }
