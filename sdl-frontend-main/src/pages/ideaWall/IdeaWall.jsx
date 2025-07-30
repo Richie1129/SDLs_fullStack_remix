@@ -251,8 +251,8 @@ export default function IdeaWall() {
     };
 
     return (
-        <div>
-            <div ref={container} className=' h-screen w-full pl-[70px] pt-[70px]' />
+        <div className="h-full w-full relative">
+            <div ref={container} className="h-full w-full" />
             {/* create option */}
             <Modal open={createOptionModalOpen} onClose={() => setCreateOptionModalOpen(false)} opacity={false} modalCoordinate={canvasPosition} custom={"w-25 h-12"}>
                 <div>
@@ -538,7 +538,7 @@ export default function IdeaWall() {
                     setCreateNodeModalOpen(true);
                 }}
                 aria-label="新增節點"
-                className={`fixed bottom-5 right-5 flex items-center justify-center text-2xl transition duration-300 ${hovering ?"scale-110" : "scale-100" } `}
+                className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-2xl transition duration-300 z-50 ${hovering ?"scale-110" : "scale-100" } `}
             >
                 <Lottie
                     className="w-28"

@@ -34,22 +34,22 @@ const AnimatedHamburgerButton = () => {
             >
                 <motion.span
                     variants={VARIANTS.top}
-                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"  // 維持1單位的高度
+                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"
                     style={{ y: "-50%", left: "50%", x: "-50%", top: "25%" }}
                 />
                 <motion.span
                     variants={VARIANTS.middle}
-                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"  // 維持1单位的高度
+                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"
                     style={{ left: "50%", x: "-50%", top: "50%", y: "-50%" }}
                 />
                 <motion.span
                     variants={VARIANTS.bottom}
-                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"  // 維持1单位的高度
+                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"
                     style={{
                         x: "-50%",
                         y: "50%",
                         bottom: "25%",
-                        left: "50%",  // 將left修改為50%，確保與中間線條對齊
+                        left: "50%",
                     }}
                 />
             </motion.button>
@@ -82,12 +82,12 @@ const VARIANTS = {
         open: {
             rotate: ["0deg", "0deg", "45deg"],
             bottom: ["25%", "50%", "50%"],
-            left: "50%",  // 在打開狀態下對齊
+            left: "50%",
         },
         closed: {
             rotate: ["45deg", "0deg", "0deg"],
             bottom: ["50%", "50%", "25%"],
-            left: "50%",  // 確保在關閉狀態下與其他線條完美對齊
+            left: "50%",
         },
     },
 };
@@ -96,53 +96,27 @@ const VARIANTS = {
 
 
 export default function SideBar() {
-    const location = useLocation();  // 從 react-router-dom 獲取當前位置
+    const location = useLocation();
     const [open, setOpen] = useState(false);
     const [chatRoomOpen, setChatRoomOpen] = useState(false);
     const { projectId } = useParams();
     const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context)
-    const role = localStorage.getItem("role"); // Get user role from localStorage
-
-    // const menus = [
-    //     { name: "進度看板", link: `/project/${projectId}/kanban`, icon: MdOutlineViewKanban },
-    //     { name: "想法延伸", link: `/project/${projectId}/ideaWall`, icon: FaRegLightbulb },
-    //     { name: "反思日誌", link: `/project/${projectId}/reflection`, icon: CgNotes },
-    //     // { name: "成果紀錄", link: `/project/${projectId}/submitTask`, icon: BiTask },
-    //     { name: "歷程檔案", link: `/project/${projectId}/protfolio`, icon: TiFolderOpen },
-    //     { name: "提問專區", link: `/project/${projectId}/askQuestion`, icon: TbMessageQuestion }
-    // ];
-
-    // if (role === "student") {
-    //     menus.push({ name: "成果紀錄", link: `/project/${projectId}/submitTask`, icon: BiTask });
-    // }
-    // if (role === "teacher") {
-    //     menus.push({ name: "學習儀錶板", link: `/project/${projectId}/manageIdeaWall`, icon: LuLayoutDashboard });
-    // }
-
-    // if (role === "teacher") {
-    //     menus.push({ name: "學生管理", link: `/project/${projectId}/manageStudent`, icon: LuLayoutDashboard });
-    // }
-
-    // if (role === "student") {
-    //     menus.push({ name: "探究幫手", link: `/project/${projectId}/rag`, icon: TbZoomQuestion });
-    // }
+    const role = localStorage.getItem("role");
 
     const baseMenus = [
         { name: "進度看板", link: `/project/${projectId}/kanban`, icon: MdOutlineViewKanban },
         { name: "想法延伸", link: `/project/${projectId}/ideaWall`, icon: FaRegLightbulb },
-        { name: "成果紀錄", link: `/project/${projectId}/submitTask`, icon: BiTask }, // Student only
+        { name: "成果紀錄", link: `/project/${projectId}/submitTask`, icon: BiTask },
         { name: "歷程檔案", link: `/project/${projectId}/protfolio`, icon: TiFolderOpen },
         { name: "反思日誌", link: `/project/${projectId}/reflection`, icon: CgNotes },
         { name: "提問專區", link: `/project/${projectId}/askQuestion`, icon: TbMessageQuestion },
-        { name: "學習概覽", link: `/project/${projectId}/studentDashboard`, icon: RiDashboardLine }, // Student only
-        { name: "教師儀錶板", link: `/project/${projectId}/teacherDashboard`, icon: LuLayoutDashboard }, // Teacher only
+        { name: "學習概覽", link: `/project/${projectId}/studentDashboard`, icon: RiDashboardLine },
+        { name: "教師儀錶板", link: `/project/${projectId}/teacherDashboard`, icon: LuLayoutDashboard },
     ];
     
-    // 定義 Student 和 Teacher 的排序順序
     const studentOrder = ["進度看板", "想法延伸", "成果紀錄", "歷程檔案", "反思日誌", "提問專區", "學習概覽"];
     const teacherOrder = ["進度看板", "想法延伸", "成果紀錄", "歷程檔案", "反思日誌", "提問專區", "教師儀錶板"];
     
-    // 根據 `role` 過濾 `menus`，並依照對應的順序排序
     const menus = baseMenus
         .filter(menu => (role === "student" ? studentOrder.includes(menu.name) : teacherOrder.includes(menu.name)))
         .sort((a, b) => {
@@ -160,7 +134,6 @@ export default function SideBar() {
         setOpenStage(openStage === index ? null : index);
     };
 
-    // 定義階段名稱和它們對應的索引
     const stages = [
         { name: "定標", index: 1 },
         { name: "擇策", index: 2 },
@@ -169,7 +142,6 @@ export default function SideBar() {
         { name: "歷程", index: 5 }
     ];
     
-    // 定義對應的子階段
     const subStages = {
         1: ["提出研究主題", "提出研究目的", "提出研究問題"],
         2: ["訂定研究構想表", "設計研究記錄表格", "規劃研究排程"],
@@ -182,40 +154,42 @@ export default function SideBar() {
     
     const getStageColor = (stageIndex) => {
         if (parseInt(currentStageIndex) === stageIndex) {
-            return '#5BA491'; // 當前階段
+            return '#5BA491';
         } else if (stageIndex < parseInt(currentStageIndex)) {
-            return '#7C968F'; // 小於當前階段的階段
+            return '#7C968F';
         } else {
-            return '#BEBEBE'; // 其他階段
+            return '#BEBEBE';
         }
     };
+    
     const getTextColor = (stageIndex) => {
         if (parseInt(currentStage) === stageIndex) {
-            return 'text-white'; // 當前階段
+            return 'text-white';
         } else if (stageIndex < parseInt(currentStage)) {
-            return 'text-slate-200'; // 小於當前階段的階段
+            return 'text-slate-200';
         } else {
-            return 'text-slate-700'; // 其他階段
+            return 'text-slate-700';
         }
     };
+    
     useEffect(() => {
         const findMenuIndex = menus.findIndex(menu => location.pathname.includes(menu.link));
         if (findMenuIndex !== -1) {
             setSelected(findMenuIndex);
         } else {
-            setSelected(0);  // 如果沒有匹配的路徑，可以設置為首個菜單項或任何其他預設值
+            setSelected(0);
         }
     }, [location]);
+    
     const NavItem = ({ children, selected, id, setSelected }) => {
-
         return (
             <motion.button
-                className="hover:bg-slate-200 transition-colors relative"
+                className="hover:bg-slate-200 transition-colors relative w-full"
                 onClick={() => setSelected(id)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
             >
-                <span className="block relative z-10">{children}</span>
+                <span className="block relative z-10 w-full">{children}</span>
                 <AnimatePresence>
                     {selected && (
                         <motion.span
@@ -230,53 +204,69 @@ export default function SideBar() {
         );
     };
 
+    // 動態計算 sidebar 寬度的 class
+    const sidebarWidthClass = open 
+        ? "w-40 sm:w-48 md:w-52 lg:w-56" 
+        : "w-14 sm:w-14 md:w-16 lg:w-18";
 
     return (
         <>
-            <div className={` z-10 bg-[#FFF] absolute inset-y-0 pt-16 left-0 min-h-screen duration-500 border-r-2 ${open ? "w-40 sm:w-48 md:w-52" : "w-12 sm:w-14 md:w-16"}`}>
-                <div className='flex flex-col justify-between h-full'>
-                    <div>
-                        <div className={`my-2  flex ${open ? "justify-end mr-2" : "justify-center"}`} onClick={() => setOpen(!open)}>
-                            <AnimatedHamburgerButton size={26} className='cursor-pointer ml-1' />
+            <div className={`z-10 bg-white flex flex-col flex-shrink-0 duration-500 border-r-2 ${sidebarWidthClass} min-h-screen relative`}>
+                <div className='flex flex-col justify-between h-full overflow-y-auto overflow-x-hidden'>
+                    <div className="flex flex-col">
+                        {/* Hamburger Button */}
+                        <div className={`my-2 flex ${open ? "justify-end pr-2" : "justify-center"}`} onClick={() => setOpen(!open)}>
+                            <AnimatedHamburgerButton size={26} className='cursor-pointer' />
                         </div>
-                        <div className=' flex flex-col  relative'>
-
-                            {
-                                projectId === undefined ? <></> :
-                                    menus?.map((menu, i) => (
-                                        <NavItem key={i} selected={selected === i} id={i} setSelected={setSelected}>
-
-                                            <Link to={menu?.link} key={i} className={` group flex items-center text-sm gap-3.5 font-medium p-3  rounded-sm ml-1`}>
-                                                <div>{React.createElement(menu?.icon, { size: "26" })}</div>
-                                                <h2 style={{ transitionDelay: `${i + 1}00ms`, }} className={`whitespace-pre duration-500 ${!open && "opacity-0 translate-x-28 overflow-hidden"}`}>
-                                                    {menu?.name}
-                                                </h2>
-                                                <h2 className={`${open && 'hidden'} absolute left-14 bg-white font-semibold whitespace-pre text-gray-900 rounded-md drop-shadow-lg p-0 w-0  overflow-hidden group-hover:p-1  group-hover:w-fit`}>
+                        
+                        {/* Menu Items */}
+                        <nav className='flex flex-col relative'>
+                            {projectId === undefined ? <></> :
+                                menus?.map((menu, i) => (
+                                    <div key={i} className="relative group">
+                                        <NavItem selected={selected === i} id={i} setSelected={setSelected}>
+                                            <Link 
+                                                to={menu?.link} 
+                                                className="flex items-center text-sm gap-3.5 font-medium p-3 rounded-sm ml-1 w-full"
+                                            >
+                                                <div className="flex-shrink-0">
+                                                    {React.createElement(menu?.icon, { size: "26" })}
+                                                </div>
+                                                <h2 
+                                                    style={{ transitionDelay: `${i + 1}00ms` }} 
+                                                    className={`whitespace-pre duration-500 ${!open && "opacity-0 scale-0 overflow-hidden"}`}
+                                                >
                                                     {menu?.name}
                                                 </h2>
                                             </Link>
                                         </NavItem>
-
-                                    ))
+                                        
+                                        {/* Tooltip - 移到外層避免 overflow 問題 */}
+                                        {!open && (
+                                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-lg text-sm font-semibold text-gray-900 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                                                {menu?.name}
+                                                {/* Arrow */}
+                                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-white"></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
                             }
 
-                            {
-                                projectId && (
-                                    <div className={`mt-auto mb-4 transition-all duration-500 w-full overflow-hidden pt-4`}>
-                                        <div className={`flex flex-col space-y-2`}>
+                            {/* Stage Progress */}
+                            {projectId && (
+                                <div className="mt-auto mb-4 transition-all duration-500 w-full pt-4">
+                                    <div className="flex flex-col space-y-2 px-1">
                                         {stages.map((stage) => (
                                             <div key={stage.index} className="w-full">
-                                                {/* 點擊展開/收起 */}
                                                 <div
                                                     onClick={() => toggleStage(stage.index)}
-                                                    style={{ backgroundColor: `${getStageColor(stage.index)}` }}
-                                                    className={`h-8 w-full flex items-center justify-center cursor-pointer ${getTextColor(stage.index)}`}
+                                                    style={{ backgroundColor: getStageColor(stage.index) }}
+                                                    className={`h-8 w-full flex items-center justify-center cursor-pointer ${getTextColor(stage.index)} rounded-sm`}
                                                 >
                                                     <span className="text-sm font-bold">{stage.name}</span>
-                                                    {/* <span className="ml-1">{openStage === stage.index ? "▲" : "▼"}</span> */}
                                                 </div>
 
-                                                {/* 展開的子階段 */}
                                                 {openStage === stage.index && (
                                                     <div className="bg-gray-100 text-gray-900 text-sm rounded-md p-2 border border-gray-300 mt-1">
                                                         {subStages[stage.index].map((sub, i) => (
@@ -286,27 +276,36 @@ export default function SideBar() {
                                                 )}
                                             </div>
                                         ))}
-                                        </div>
                                     </div>
-                                )
-                            }
-                        </div>
-                    </div>
-                    {
-                        projectId === undefined ? <></> :
-                            <span onClick={() => setChatRoomOpen(true)} className="group flex items-center text-base gap-3.5 font-medium p-3  rounded-xl cursor-pointer bg-zinc-800 ">
-                                <div className='ml-1'>
-                                    <BsChatDots size={"26"} className={"text-white"} />
                                 </div>
-                                <h2 className={`whitespace-pre text-sm  ${!open && "opacity-0 translate-x-28 overflow-hidden"} text-white `}>
+                            )}
+                        </nav>
+                    </div>
+                    
+                    {/* Chat Room Button */}
+                    {projectId !== undefined && (
+                        <div className="relative group">
+                            <div 
+                                onClick={() => setChatRoomOpen(true)} 
+                                className="flex items-center text-base gap-3.5 font-medium p-3 rounded-xl cursor-pointer bg-zinc-800 mx-1 mb-2"
+                            >
+                                <div className="flex-shrink-0">
+                                    <BsChatDots size={"26"} className="text-white" />
+                                </div>
+                                <h2 className={`whitespace-pre text-sm text-white flex-1 duration-500 ${!open && "opacity-0 scale-0 overflow-hidden"}`}>
                                     聊天室
                                 </h2>
-                                <h2 className={`${open && 'hidden'} absolute left-14 bg-white font-semibold text-sm whitespace-pre rounded-md drop-shadow-lg p-0 w-0  overflow-hidden `}>
+                            </div>
+                            
+                            {/* Chat Tooltip */}
+                            {!open && (
+                                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-lg text-sm font-semibold text-gray-900 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
                                     聊天室
-                                </h2>
-                            </span>
-                    }
-
+                                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-white"></div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
             <ChatRoom chatRoomOpen={chatRoomOpen} setChatRoomOpen={setChatRoomOpen} />

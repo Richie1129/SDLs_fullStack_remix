@@ -621,10 +621,10 @@ export default function Reflection() {
 	}, [socket]);
 
 	return (
-		<div className="min-w-full min-h-screen h-screen">
-			<div className="flex flex-col lg:flex-row my-5 pl-16 sm:pl-20 md:pl-24 lg:pl-20 xl:pl-24 pr-4 sm:pr-6 md:pr-8 lg:pr-16 xl:pr-20 py-8 sm:py-12 lg:py-16 w-full min-h-screen gap-6 lg:gap-8 pb-20 sm:pb-24 lg:pb-28">
-				<div className="flex flex-col w-full lg:w-1/2">
-					<div className="flex justify-start gap-4 sm:gap-6 items-center pl-0 sm:pl-3 mb-4">
+		<div className="h-full w-full">
+			<div className="flex flex-col lg:flex-row h-full p-4 sm:p-6 lg:p-8 gap-4 sm:gap-6 lg:gap-8 overflow-y-auto pb-16 sm:pb-20 lg:pb-24">
+				<div className="flex flex-col w-full lg:w-1/2 min-h-0">
+					<div className="flex justify-start gap-4 sm:gap-6 items-center mb-4">
 						<h3 className="text-lg sm:text-xl font-bold">個人日誌</h3>
 						<div className="flex items-center gap-2">
 							<button
@@ -884,8 +884,8 @@ export default function Reflection() {
 					</div>
 				</div>
 
-				<div className="flex flex-col w-full lg:w-1/2">
-					<div className="flex justify-start gap-4 sm:gap-6 items-center w-full pl-0 sm:pl-3 mb-4">
+				<div className="flex flex-col w-full lg:w-1/2 min-h-0">
+					<div className="flex justify-start gap-4 sm:gap-6 items-center w-full mb-4">
 						<h3 className="text-lg sm:text-xl font-bold">小組日誌</h3>
 						<button
 							onClick={() => {

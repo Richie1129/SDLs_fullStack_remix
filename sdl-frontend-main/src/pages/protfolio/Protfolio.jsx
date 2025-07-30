@@ -204,16 +204,17 @@ export default function Protfolio() {
     }, [socket])
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-                    <h1 className="text-xl font-semibold text-gray-800">歷程檔案</h1>
+        <div className="h-full w-full bg-gray-100 flex flex-col">
+            {/* Header */}
+            <div className="flex-shrink-0 bg-white shadow-sm border-b border-gray-200">
+                <div className="px-4 sm:px-6 lg:px-8 py-4">
+                    <h1 className="text-xl sm:text-2xl font-semibold text-gray-800">歷程檔案</h1>
                 </div>
             </div>
 
-            <div className="pt-16 pl-16 h-screen overflow-hidden">
-                <div className="h-full overflow-y-auto">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Main Content */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="px-4 sm:px-6 lg:px-8 py-6">
                         {isLoading ? (
                             <div className="flex justify-center items-center h-64">
                                 <Loader />
@@ -232,10 +233,10 @@ export default function Protfolio() {
                                 </div>
                             )
                         ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 h-full">
                                 {/* Timeline Navigation */}
                                 <div className="lg:col-span-1">
-                                    <div className="bg-white rounded-lg shadow-sm p-5 sticky top-24 border border-gray-200">
+                                    <div className="bg-white rounded-lg shadow-sm p-4 sm:p-5 lg:sticky lg:top-6 border border-gray-200 h-fit">
                                         <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
                                             <span className="h-6 w-1.5 bg-teal-500 rounded-full mr-3"></span>
                                             階段導航
@@ -262,7 +263,7 @@ export default function Protfolio() {
                                                         <div className="absolute left-2 top-4 w-[1px] h-full bg-gray-200"></div>
                                                     )}
                                                     
-                                                    <div className="pl-7 space-y-2">
+                                                    <div className="pl-6 sm:pl-7 space-y-2">
                                                         {stagePortfolio
                                                             .filter(item => Math.floor(item.stage.split('-')[0]) === index + 1)
                                                             .map(item => (
@@ -273,7 +274,7 @@ export default function Protfolio() {
                                                                         setFolderModalOpen(true);
                                                                         setModalData(item);
                                                                     }}
-                                                                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors relative ${
+                                                                    className={`w-full text-left px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm transition-colors relative ${
                                                                         activeItemId === item.id
                                                                             ? 'bg-teal-500 text-white shadow-sm'
                                                                             : 'text-gray-600 hover:bg-gray-50 hover:shadow-sm'
@@ -301,13 +302,13 @@ export default function Protfolio() {
                                 </div>
 
                                 {/* Content Area */}
-                                <div className="lg:col-span-3">
-                                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                                <div className="lg:col-span-3 min-h-0">
+                                    <div className="bg-white rounded-lg shadow-sm overflow-hidden h-full">
                                                                         {activeItemId && (
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div>
-                                                <h2 className="text-xl font-bold text-gray-900">
+                                                                            <div className="p-4 sm:p-6">
+                                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+                                            <div className="flex-1">
+                                                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                                                     {stageDescriptions[modalData.stage]}
                                                 </h2>
                                                 <div className="flex flex-col space-y-1 mt-1">
@@ -331,9 +332,9 @@ export default function Protfolio() {
                                                     setFolderModalOpen(false);
                                                     setActiveItemId(null);
                                                 }}
-                                                className="text-gray-400 hover:text-gray-500 transition-colors"
+                                                className="text-gray-400 hover:text-gray-500 transition-colors flex-shrink-0 p-1"
                                             >
-                                                <GrFormClose size={24} />
+                                                <GrFormClose size={20} className="sm:w-6 sm:h-6" />
                                             </button>
                                         </div>
 
@@ -369,15 +370,15 @@ export default function Protfolio() {
                                         {!showSubmitChangeHistory && (
                                             <>
                                                 {/* Content Form */}
-                                                <div className="space-y-4">
+                                                <div className="space-y-4 sm:space-y-6">
                                                     {Object.entries(editableContent).map(([key, value], index) => (
                                                         <div key={index} className="space-y-2">
-                                                            <label className="block text-sm font-medium text-gray-700">
+                                                            <label className="block text-sm sm:text-base font-medium text-gray-700">
                                                                 {key}
                                                             </label>
                                                             <textarea
-                                                                className="w-full rounded-md border-2 border-gray-400 bg-white text-base p-3 shadow-md transition-all focus:border-teal-500 focus:ring-2 focus:ring-teal-500 hover:border-teal-400"
-                                                                rows={4}
+                                                                className="w-full rounded-md border-2 border-gray-400 bg-white text-sm sm:text-base p-2 sm:p-3 shadow-md transition-all focus:border-teal-500 focus:ring-2 focus:ring-teal-500 hover:border-teal-400 resize-none"
+                                                                rows={3}
                                                                 value={value}
                                                                 onChange={(e) => handleChange(key, e.target.value)}
                                                             />
@@ -386,15 +387,15 @@ export default function Protfolio() {
                                                 </div>
 
                                                 {/* File Section */}
-                                                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                                <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg">
+                                                    <div className="flex flex-col gap-3 sm:gap-4">
                                                         <div>
-                                                            <h3 className="text-sm font-medium text-gray-700">附加檔案</h3>
+                                                            <h3 className="text-sm sm:text-base font-medium text-gray-700">附加檔案</h3>
                                                             {modalData.fileName && (
-                                                                <p className="text-sm text-gray-500 mt-1">{modalData.fileName}</p>
+                                                                <p className="text-xs sm:text-sm text-gray-500 mt-1 break-all">{modalData.fileName}</p>
                                                             )}
                                                         </div>
-                                                        <div className="flex flex-col sm:flex-row gap-2">
+                                                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                                                             {(modalData.fileName || modalData.fileData) && (
                                                                 <button
                                                                     onClick={() => {
@@ -408,15 +409,15 @@ export default function Protfolio() {
                                                                             FileDownload(blob, modalData.fileName || modalData.originalName || "downloaded-file");
                                                                         }
                                                                     }}
-                                                                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-teal-500 hover:bg-teal-600"
+                                                                    className="inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-teal-500 hover:bg-teal-600 transition-colors"
                                                                 >
-                                                                    <AiOutlineCloudDownload className="mr-2" />
+                                                                    <AiOutlineCloudDownload className="mr-1 sm:mr-2 w-4 h-4" />
                                                                     下載
                                                                 </button>
                                                             )}
-                                                            <label className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-teal-500 hover:bg-teal-600 cursor-pointer">
-                                                                <AiOutlineUpload className="mr-2" />
-                                                                {modalData.fileData ? "重新上傳" : "上傳檔案"}
+                                                            <label className="inline-flex items-center justify-center px-2 sm:px-3 py-2 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-teal-500 hover:bg-teal-600 cursor-pointer transition-colors">
+                                                                <AiOutlineUpload className="mr-1 sm:mr-2 w-4 h-4" />
+                                                                <span className="truncate">{modalData.fileData ? "重新上傳" : "上傳檔案"}</span>
                                                                 <input
                                                                     type="file"
                                                                     className="hidden"
@@ -428,19 +429,19 @@ export default function Protfolio() {
                                                 </div>
 
                                                 {/* Action Buttons */}
-                                                <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
+                                                <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                                                     <button
                                                         onClick={() => {
                                                             setFolderModalOpen(false);
                                                             setActiveItemId(null);
                                                         }}
-                                                        className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                        className="w-full sm:w-auto px-3 sm:px-4 py-2 border border-gray-300 rounded-md text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                                                     >
                                                         取消
                                                     </button>
                                                     <button
                                                         onClick={handleSave}
-                                                        className="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-500 hover:bg-teal-600"
+                                                        className="w-full sm:w-auto px-3 sm:px-4 py-2 border border-transparent rounded-md shadow-sm text-xs sm:text-sm font-medium text-white bg-teal-500 hover:bg-teal-600 transition-colors"
                                                     >
                                                         儲存
                                                     </button>
@@ -564,7 +565,7 @@ export default function Protfolio() {
                                                             setFolderModalOpen(false);
                                                             setActiveItemId(null);
                                                         }}
-                                                        className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                                                        className="px-3 sm:px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200 text-xs sm:text-sm"
                                                     >
                                                         關閉
                                                     </button>
@@ -580,6 +581,5 @@ export default function Protfolio() {
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
 }

@@ -264,21 +264,17 @@ export default function Kanban() {
   }
 
   return (
-    <div style={{ display: 'inline-flex' }} className="layout__wrapper min-w-full h-full bg-white" >
+    <div className="h-full w-full bg-white flex flex-col">
       <DraggableImage/>
-      <div className="card p-8 w-full px-20">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-hidden">
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="header mb-4">
-            <h1 className="text-2xl text-gray">Kanban</h1>
-          </div>
-
+          
           <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
             {(provided) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 overflow-y-auto md:overflow-x-auto md:overflow-y-hidden h-[calc(100vh-12rem)] scrollbar-none" // 在小螢幕上垂直排列，中等螢幕以上水平排列
-                style={{ display: 'inline-flex', paddingBottom: '1rem' }} // 移除固定的 flexDirection
+                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 overflow-y-auto md:overflow-x-auto md:overflow-y-hidden h-full scrollbar-none"
               >
                 {!showAddGroupInput && (
                   <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7 mb-4 md:mb-0" onClick={toggleAddGroupInput}>
@@ -350,7 +346,7 @@ export default function Kanban() {
                                 <Droppable droppableId={columnIndex.toString()} type='CARD'>
                                   {(provided,snapshot) => (
                                     <div {...provided.droppableProps} ref={provided.innerRef}  >
-                                      <div className={`flex flex-col px-4 pb-1 overflow-y-auto max-h-[calc(100vh-21rem)] roun scrollbar-thin ${snapshot.isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50'}`}>
+                                      <div className={`flex flex-col px-4 pb-1 overflow-y-auto max-h-96 sm:max-h-[28rem] lg:max-h-[32rem] scrollbar-thin ${snapshot.isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50'}`}>
 
                                         <div className="items-container">
                                         {Array.isArray(column.task) && column.task.length > 0 &&
