@@ -11,14 +11,132 @@ import { BsChatDots } from "react-icons/bs";
 import { TbMessageQuestion, TbZoomQuestion } from "react-icons/tb";
 import { RiDashboardLine } from "react-icons/ri";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
-// import { socket } from '../utils/Socket';
 import { Context } from '../context/context'
 import ChatRoom from './ChatRoom';
 
+// Move NavItem outside to prevent re-declaration on each render
+const NavItem = ({ children, selected, id, setSelected }) => {
+    return (
+        <motion.button
+            className="hover:bg-slate-200 transition-colors relative w-full"
+            onClick={() => setSelected(id)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+        >
+            <span className="block relative z-10 w-full">{children}</span>
+            <AnimatePresence>
+                {selected && (
+                    <motion.span
+                        className="absolute inset-0 rounded-md bg-[#5BA491]/30 z-0"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                    ></motion.span>
+                )}
+            </AnimatePresence>
+        </motion.button>
+    );
+};
 
-const AnimatedHamburgerButton = () => {
-    const [active, setActive] = useState(false);
+// Floating Tooltip Component for Stage Definitions
+const FloatingTooltip = ({ isVisible, position, content, onClose }) => {
+    if (!isVisible) return null;
 
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="fixed z-50 bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-4 max-w-xs"
+                style={{
+                    left: position.x + 10,
+                    top: position.y - 10,
+                }}
+            >
+                {/* Close button */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+                >
+                    <span className="text-gray-500 text-sm">×</span>
+                </button>
+                
+                {/* Content */}
+                <div className="pr-8">
+                    <h3 className="font-bold text-[#5BA491] mb-2">{content.title}</h3>
+                    <ul className="text-sm text-gray-700 space-y-1">
+                        {content.items.map((item, index) => (
+                            <li key={index} className="flex items-start">
+                                <span className="text-[#5BA491] mr-2">•</span>
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+
+// Hover Tooltip Component for Navigation Items
+const HoverTooltip = ({ children, text, show = true }) => {
+    if (!show || !text) return children;
+
+    return (
+        <div className="relative group">
+            {children}
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-lg text-sm font-semibold text-gray-900 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                {text}
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-white"></div>
+            </div>
+        </div>
+    );
+};
+
+// Stage Progress Item with Perfect Centering
+const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick, subStages }) => {
+    const getStageColor = (stageIndex) => {
+        if (parseInt(currentStageIndex) === stageIndex) {
+            return '#5BA491';
+        } else if (stageIndex < parseInt(currentStageIndex)) {
+            return '#7C968F';
+        } else {
+            return '#BEBEBE';
+        }
+    };
+
+    if (!isOpen) {
+        // Collapsed state: show as perfectly centered numbered dot
+        return (
+            <motion.div
+                onClick={onClick}
+                style={{ backgroundColor: getStageColor(stage.index) }}
+                className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-md mx-auto"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+            >
+                <span className="text-sm font-bold text-white">{stage.index}</span>
+            </motion.div>
+        );
+    }
+
+    // Expanded state: show full stage button
+    return (
+        <motion.div
+            onClick={onClick}
+            style={{ backgroundColor: getStageColor(stage.index) }}
+            className="h-10 w-full flex items-center justify-center cursor-pointer rounded-lg transition-all duration-200 hover:shadow-md"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+        >
+            <span className="text-sm font-bold text-white">{stage.name}</span>
+        </motion.div>
+    );
+};
+
+// Fixed AnimatedHamburgerButton that accepts external state
+const AnimatedHamburgerButton = ({ isOpen, onClick }) => {
     return (
         <MotionConfig
             transition={{
@@ -28,9 +146,9 @@ const AnimatedHamburgerButton = () => {
         >
             <motion.button
                 initial={false}
-                animate={active ? "open" : "closed"}
-                onClick={() => setActive((pv) => !pv)}
-                className="relative h-8 w-8 transition-colors hover:bg-white/20"
+                animate={isOpen ? "open" : "closed"}
+                onClick={onClick}
+                className="relative h-10 w-10 flex items-center justify-center transition-colors hover:bg-gray-100 rounded-md"
             >
                 <motion.span
                     variants={VARIANTS.top}
@@ -56,8 +174,6 @@ const AnimatedHamburgerButton = () => {
         </MotionConfig>
     );
 };
-
-
 
 const VARIANTS = {
     top: {
@@ -92,16 +208,20 @@ const VARIANTS = {
     },
 };
 
-
-
-
 export default function SideBar() {
     const location = useLocation();
     const [open, setOpen] = useState(false);
     const [chatRoomOpen, setChatRoomOpen] = useState(false);
     const { projectId } = useParams();
-    const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context)
+    const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context);
     const role = localStorage.getItem("role");
+
+    // Floating tooltip state
+    const [floatingTooltip, setFloatingTooltip] = useState({
+        isVisible: false,
+        position: { x: 0, y: 0 },
+        content: { title: '', items: [] }
+    });
 
     const baseMenus = [
         { name: "進度看板", link: `/project/${projectId}/kanban`, icon: MdOutlineViewKanban },
@@ -124,16 +244,6 @@ export default function SideBar() {
             return order.indexOf(a.name) - order.indexOf(b.name);
         });
 
-    const [stageInfo, setStageInfo] = useState({ name: "", description: "" });
-    const currentStage = localStorage.getItem("currentStage");
-    const currentSubStage = localStorage.getItem("currentSubStage");
-
-    const [openStage, setOpenStage] = useState(null);
-
-    const toggleStage = (index) => {
-        setOpenStage(openStage === index ? null : index);
-    };
-
     const stages = [
         { name: "定標", index: 1 },
         { name: "擇策", index: 2 },
@@ -152,26 +262,6 @@ export default function SideBar() {
     
     const [selected, setSelected] = useState(0);
     
-    const getStageColor = (stageIndex) => {
-        if (parseInt(currentStageIndex) === stageIndex) {
-            return '#5BA491';
-        } else if (stageIndex < parseInt(currentStageIndex)) {
-            return '#7C968F';
-        } else {
-            return '#BEBEBE';
-        }
-    };
-    
-    const getTextColor = (stageIndex) => {
-        if (parseInt(currentStage) === stageIndex) {
-            return 'text-white';
-        } else if (stageIndex < parseInt(currentStage)) {
-            return 'text-slate-200';
-        } else {
-            return 'text-slate-700';
-        }
-    };
-    
     useEffect(() => {
         const findMenuIndex = menus.findIndex(menu => location.pathname.includes(menu.link));
         if (findMenuIndex !== -1) {
@@ -179,136 +269,170 @@ export default function SideBar() {
         } else {
             setSelected(0);
         }
-    }, [location]);
-    
-    const NavItem = ({ children, selected, id, setSelected }) => {
-        return (
-            <motion.button
-                className="hover:bg-slate-200 transition-colors relative w-full"
-                onClick={() => setSelected(id)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-            >
-                <span className="block relative z-10 w-full">{children}</span>
-                <AnimatePresence>
-                    {selected && (
-                        <motion.span
-                            className="absolute inset-0 rounded-md bg-[#5BA491]/30 z-0"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            exit={{ scale: 0 }}
-                        ></motion.span>
-                    )}
-                </AnimatePresence>
-            </motion.button>
-        );
+    }, [location, menus]);
+
+    // Handle stage click for collapsed state
+    const handleStageClick = (stage, event) => {
+        if (!open) {
+            // Get click position for tooltip
+            const rect = event.currentTarget.getBoundingClientRect();
+            setFloatingTooltip({
+                isVisible: true,
+                position: {
+                    x: rect.right,
+                    y: rect.top
+                },
+                content: {
+                    title: stage.name,
+                    items: subStages[stage.index]
+                }
+            });
+        }
     };
 
-    // 動態計算 sidebar 寬度的 class
+    // Close floating tooltip
+    const closeFloatingTooltip = () => {
+        setFloatingTooltip({
+            ...floatingTooltip,
+            isVisible: false
+        });
+    };
+
+    // Dynamic sidebar width classes with better responsive sizing
     const sidebarWidthClass = open 
-        ? "w-40 sm:w-48 md:w-52 lg:w-56" 
-        : "w-14 sm:w-14 md:w-16 lg:w-18";
+        ? "w-56 sm:w-60 md:w-64 lg:w-68" 
+        : "w-16 sm:w-18 md:w-20 lg:w-20";
 
     return (
         <>
-            <div className={`z-10 bg-white flex flex-col flex-shrink-0 duration-500 border-r-2 ${sidebarWidthClass} min-h-screen relative`}>
-                <div className='flex flex-col justify-between h-full overflow-y-auto overflow-x-hidden'>
-                    <div className="flex flex-col">
-                        {/* Hamburger Button */}
-                        <div className={`my-2 flex ${open ? "justify-end pr-2" : "justify-center"}`} onClick={() => setOpen(!open)}>
-                            <AnimatedHamburgerButton size={26} className='cursor-pointer' />
-                        </div>
-                        
-                        {/* Menu Items */}
-                        <nav className='flex flex-col relative'>
-                            {projectId === undefined ? <></> :
-                                menus?.map((menu, i) => (
-                                    <div key={i} className="relative group">
+            <motion.div 
+                className={`z-10 bg-white flex flex-col flex-shrink-0 border-r-2 border-gray-200 h-full ${sidebarWidthClass}`}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+                {/* Header with Hamburger Button */}
+                <div className="flex-shrink-0 p-3 border-b border-gray-100">
+                    <div className={`flex ${open ? "justify-end" : "justify-center"}`}>
+                        <AnimatedHamburgerButton 
+                            isOpen={open} 
+                            onClick={() => setOpen(!open)} 
+                        />
+                    </div>
+                </div>
+
+                {/* Main Navigation Area - Scrollable */}
+                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden">
+                    <nav className="flex-1 py-4">
+                        {projectId === undefined ? null :
+                            menus?.map((menu, i) => (
+                                <div key={i} className="px-2 mb-1">
+                                    <HoverTooltip text={!open ? menu.name : ""} show={!open}>
                                         <NavItem selected={selected === i} id={i} setSelected={setSelected}>
                                             <Link 
                                                 to={menu?.link} 
-                                                className="flex items-center text-sm gap-3.5 font-medium p-3 rounded-sm ml-1 w-full"
+                                                className={`flex items-center text-sm font-medium p-3 rounded-lg w-full transition-all duration-200 ${
+                                                    open ? 'gap-3' : 'justify-center'
+                                                }`}
                                             >
-                                                <div className="flex-shrink-0">
-                                                    {React.createElement(menu?.icon, { size: "26" })}
+                                                <div className="flex-shrink-0 flex items-center justify-center">
+                                                    {React.createElement(menu?.icon, { size: "24" })}
                                                 </div>
-                                                <h2 
-                                                    style={{ transitionDelay: `${i + 1}00ms` }} 
-                                                    className={`whitespace-pre duration-500 ${!open && "opacity-0 scale-0 overflow-hidden"}`}
+                                                <motion.h2 
+                                                    className="whitespace-pre text-gray-700"
+                                                    animate={{
+                                                        opacity: open ? 1 : 0,
+                                                        width: open ? "auto" : 0,
+                                                        marginLeft: open ? "0.75rem" : "0"
+                                                    }}
+                                                    transition={{ 
+                                                        duration: 0.3, 
+                                                        delay: open ? i * 0.03 : 0 
+                                                    }}
                                                 >
                                                     {menu?.name}
-                                                </h2>
+                                                </motion.h2>
                                             </Link>
                                         </NavItem>
-                                        
-                                        {/* Tooltip - 移到外層避免 overflow 問題 */}
-                                        {!open && (
-                                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-lg text-sm font-semibold text-gray-900 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-                                                {menu?.name}
-                                                {/* Arrow */}
-                                                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-white"></div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))
-                            }
-
-                            {/* Stage Progress */}
-                            {projectId && (
-                                <div className="mt-auto mb-4 transition-all duration-500 w-full pt-4">
-                                    <div className="flex flex-col space-y-2 px-1">
-                                        {stages.map((stage) => (
-                                            <div key={stage.index} className="w-full">
-                                                <div
-                                                    onClick={() => toggleStage(stage.index)}
-                                                    style={{ backgroundColor: getStageColor(stage.index) }}
-                                                    className={`h-8 w-full flex items-center justify-center cursor-pointer ${getTextColor(stage.index)} rounded-sm`}
-                                                >
-                                                    <span className="text-sm font-bold">{stage.name}</span>
-                                                </div>
-
-                                                {openStage === stage.index && (
-                                                    <div className="bg-gray-100 text-gray-900 text-sm rounded-md p-2 border border-gray-300 mt-1">
-                                                        {subStages[stage.index].map((sub, i) => (
-                                                            <div key={i} className="py-1 pl-4">{sub}</div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    </HoverTooltip>
                                 </div>
+                            ))
+                        }
+                    </nav>
+                </div>
+
+                {/* Fixed Footer Area */}
+                <div className="flex-shrink-0 border-t border-gray-100 bg-white">
+                    {/* Stage Progress Section */}
+                    {projectId && (
+                        <div className="p-3">
+                            {/* Section Title for expanded state */}
+                            {open && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 mb-3"
+                                >
+                                    學習階段
+                                </motion.div>
                             )}
-                        </nav>
-                    </div>
+                            
+                            <div className={`${open ? 'space-y-2' : 'flex flex-col items-center space-y-3'}`}>
+                                {stages.map((stage) => (
+                                    <StageProgressItem
+                                        key={stage.index}
+                                        stage={stage}
+                                        isOpen={open}
+                                        currentStageIndex={currentStageIndex}
+                                        onClick={(e) => handleStageClick(stage, e)}
+                                        subStages={subStages}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                     
                     {/* Chat Room Button */}
                     {projectId !== undefined && (
-                        <div className="relative group">
-                            <div 
-                                onClick={() => setChatRoomOpen(true)} 
-                                className="flex items-center text-base gap-3.5 font-medium p-3 rounded-xl cursor-pointer bg-zinc-800 mx-1 mb-2"
-                            >
-                                <div className="flex-shrink-0">
-                                    <BsChatDots size={"26"} className="text-white" />
-                                </div>
-                                <h2 className={`whitespace-pre text-sm text-white flex-1 duration-500 ${!open && "opacity-0 scale-0 overflow-hidden"}`}>
-                                    聊天室
-                                </h2>
-                            </div>
-                            
-                            {/* Chat Tooltip */}
-                            {!open && (
-                                <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-lg text-sm font-semibold text-gray-900 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-                                    聊天室
-                                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-white"></div>
-                                </div>
-                            )}
+                        <div className="p-3 border-t border-gray-100">
+                            <HoverTooltip text={!open ? "聊天室" : ""} show={!open}>
+                                <motion.div 
+                                    onClick={() => setChatRoomOpen(true)} 
+                                    className={`flex items-center font-medium p-3 rounded-lg cursor-pointer bg-zinc-800 hover:bg-zinc-700 transition-all duration-200 hover:shadow-md ${
+                                        open ? 'gap-3' : 'justify-center'
+                                    }`}
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    <div className="flex-shrink-0 flex items-center justify-center">
+                                        <BsChatDots size="24" className="text-white" />
+                                    </div>
+                                    <motion.h2 
+                                        className="whitespace-pre text-sm text-white"
+                                        animate={{
+                                            opacity: open ? 1 : 0,
+                                            width: open ? "auto" : 0,
+                                            marginLeft: open ? "0.75rem" : "0"
+                                        }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        聊天室
+                                    </motion.h2>
+                                </motion.div>
+                            </HoverTooltip>
                         </div>
                     )}
                 </div>
-            </div>
+            </motion.div>
+
+            {/* Floating Tooltip */}
+            <FloatingTooltip
+                isVisible={floatingTooltip.isVisible}
+                position={floatingTooltip.position}
+                content={floatingTooltip.content}
+                onClose={closeFloatingTooltip}
+            />
+
             <ChatRoom chatRoomOpen={chatRoomOpen} setChatRoomOpen={setChatRoomOpen} />
         </>
-    )
-};
+    );
+}

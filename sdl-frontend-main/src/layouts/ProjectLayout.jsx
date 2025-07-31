@@ -22,7 +22,7 @@ export default function ProjectLayout() {
         setShowActivityStream={setShowActivityStream}
       />
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <SideBar />
         <main className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto">
