@@ -19,6 +19,20 @@ import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
 
 
 
+/**
+ * Kanban Component with Optimistic Updates
+ * 
+ * This component implements optimistic updates to solve the race condition issue
+ * that occurs when users interact with the board before socket room subscription is complete.
+ * 
+ * How it works:
+ * 1. User actions (add column/card) immediately update the local UI state
+ * 2. Socket events are emitted to the server for persistence and real-time sync
+ * 3. Server responses replace temporary IDs with real IDs and ensure data consistency
+ * 4. Error scenarios trigger rollback by refreshing data from server
+ * 
+ * This ensures immediate UI feedback regardless of socket connection timing.
+ */
 export default function Kanban() {
   const [kanbanData, setKanbanData] = useState([]);
   const [newCard, setNewCard] = useState("");
@@ -43,8 +57,17 @@ export default function Kanban() {
     ['kanbanDatas', projectId],
     () => getKanbanColumns(projectId),
     {
+      enabled: !!projectId, // Only run query if projectId exists
+      staleTime: 0, // Consider data stale immediately to ensure fresh data
+      cacheTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
+      refetchOnWindowFocus: true, // Refetch when window regains focus
+      refetchOnMount: true, // Always refetch on mount
+      retry: 3, // Retry failed requests 3 times
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
       onSuccess: (data) => {
+        console.log('✅ Kanban data loaded successfully:', data.length, 'columns');
         setKanbanData(data);
+        
         // 印出列表名稱和其擁有的卡片
         console.log('=== Kanban 列表資料 ===');
         data.forEach((column, index) => {
@@ -66,6 +89,9 @@ export default function Kanban() {
           console.log('---');
         });
         console.log('=== 結束 ===');
+      },
+      onError: (error) => {
+        console.error('❌ Failed to load Kanban data:', error);
       }
     }
   );
@@ -86,14 +112,21 @@ export default function Kanban() {
   useEffect(() => {
     function KanbanUpdateEvent(data) {
       if (data) {
-        console.log("KanbanUpdateEvent:",data);
-        queryClient.invalidateQueries(['kanbanDatas', projectId]);
+        console.log("KanbanUpdateEvent:", data);
+        // Force immediate data refresh with error handling
+        queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(error => {
+          console.error("Failed to invalidate kanban queries:", error);
+        });
       }
     }
+    
     function kanbanDragEvent(data) {
       if (data) {
-        console.log(data);
+        console.log("Drag event data:", data);
         setKanbanData(data);
+        // Update React Query cache immediately to prevent stale data
+        queryClient.setQueryData(['kanbanDatas', projectId], data);
+        
         // 印出拖拽後的列表資料
         console.log('=== 拖拽後的 Kanban 列表資料 ===');
         data.forEach((column, index) => {
@@ -115,27 +148,86 @@ export default function Kanban() {
         console.log('=== 結束 ===');
       }
     }
-    socket.connect();
-    socket.emit("join_project", projectId);
 
+    // Enhanced socket event handler for column creation
+    function handleColumnCreated(serverData) {
+      console.log("🔄 Server confirmed column creation:", serverData);
+      
+      // The optimistic update has already been applied
+      // Server response will sync the real ID and ensure consistency across users
+      // Only refresh if we detect inconsistency or need to replace temp IDs
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
+        console.log("✅ Column creation confirmed by server, data synchronized");
+      }).catch(error => {
+        console.error("❌ Failed to sync column creation:", error);
+        // If sync fails, the optimistic update will remain until next refresh
+      });
+    }
+
+    // Enhanced socket event handler for task creation
+    function handleTaskItemCreated(serverData) {
+      console.log("🔄 Server confirmed task creation:", serverData);
+      
+      // The optimistic update has already been applied
+      // Server response ensures consistency and provides real IDs
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
+        console.log("✅ Task creation confirmed by server, data synchronized");
+      }).catch(error => {
+        console.error("❌ Failed to sync task creation:", error);
+        // If sync fails, the optimistic update will remain until next refresh
+      });
+    }
+
+    // Handler for creation failures (rollback optimistic updates)
+    function handleCreationError(errorData) {
+      console.error("❌ Server creation failed:", errorData);
+      
+      // Rollback by refreshing data from server
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
+        console.log("🔄 Rolled back optimistic update due to server error");
+      }).catch(error => {
+        console.error("❌ Failed to rollback optimistic update:", error);
+      });
+    }
+
+    // Ensure socket is connected before setting up listeners
+    if (!socket.connected) {
+      socket.connect();
+    }
+    
+    // Join project room
+    socket.emit("join_project", projectId);
+    console.log(`Joined project room: ${projectId}`);
+
+    // Set up socket event listeners with specific handlers
     socket.on("taskItems", KanbanUpdateEvent);
     socket.on("taskItem", KanbanUpdateEvent);
-    socket.on("taskItemCreated", KanbanUpdateEvent); // 監聽 taskItemCreated 事件
+    socket.on("taskItemCreated", handleTaskItemCreated); // Use specific handler
     socket.on("dragtaskItem", kanbanDragEvent);
     socket.on("columnOrderUpdated", kanbanDragEvent);
-    socket.on("ColumnCreatedSuccess", KanbanUpdateEvent);
+    socket.on("ColumnCreatedSuccess", handleColumnCreated); // Use specific handler
     socket.on("columnDeleted", KanbanUpdateEvent);
+    
+    // Error handling listeners for rollback scenarios
+    socket.on("ColumnCreatedError", handleCreationError);
+    socket.on("taskItemCreatedError", handleCreationError);
+    socket.on("error", handleCreationError);
+
+    // Enhanced cleanup function
     return () => {
       socket.off('taskItems', KanbanUpdateEvent);
       socket.off('taskItem', KanbanUpdateEvent);
-      socket.off("taskItemCreated", KanbanUpdateEvent); // 組件卸載時移除監聽
+      socket.off("taskItemCreated", handleTaskItemCreated);
       socket.off("dragtaskItem", kanbanDragEvent);
       socket.off("columnOrderUpdated", kanbanDragEvent);
-      socket.off('ColumnCreatedSuccess', KanbanUpdateEvent);
+      socket.off('ColumnCreatedSuccess', handleColumnCreated);
       socket.off('columnDeleted', KanbanUpdateEvent);
-
+      socket.off("ColumnCreatedError", handleCreationError);
+      socket.off("taskItemCreatedError", handleCreationError);
+      socket.off("error", handleCreationError);
+      console.log("Socket listeners cleaned up");
     };
-  }, [socket, projectId]);
+  }, [socket, projectId, queryClient]);
 
   // useEffect(() => {
   //   if (!currentStage || !currentSubStage) {
@@ -184,57 +276,97 @@ export default function Kanban() {
     e.preventDefault();
     if (newCard.length === 0) {
       setShowForm(false);
+      return;
     }
-    else {
-      const item = {
-        title: newCard,
+
+    const username = localStorage.getItem("username");
+    console.log("🚀 Optimistically creating new task:", newCard, "in column:", selectedcolumn);
+
+    // 1. Create optimistic task data
+    const optimisticTask = {
+      id: `temp-${Date.now()}`, // Temporary ID until server responds
+      title: newCard.trim(),
+      content: "",
+      labels: [],
+      assignees: [],
+      createdAt: new Date().toISOString(),
+      createdBy: username
+    };
+
+    // 2. Optimistically update UI immediately
+    const updatedKanbanData = kanbanData.map((column, index) => {
+      if (index === selectedcolumn) {
+        return {
+          ...column,
+          task: [...(column.task || []), optimisticTask]
+        };
+      }
+      return column;
+    });
+
+    // 3. Update local state
+    setKanbanData(updatedKanbanData);
+    
+    // 4. Update React Query cache optimistically
+    queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
+
+    // 5. Send to server (will broadcast to other users)
+    socket.emit("taskItemCreated", {
+      selectedcolumn,
+      item: {
+        title: newCard.trim(),
         content: "",
         labels: [],
         assignees: []
-      }
+      },
+      kanbanData: updatedKanbanData, // Send updated data
+      projectId,
+      user: { username }
+    });
 
-      const username = localStorage.getItem("username"); // ✅ 取得 localStorage 裡的 username
-      console.log("🟢 Sending taskItemCreated with user:", username);
-
-      socket.emit("taskItemCreated", {
-        selectedcolumn,
-        item,
-        kanbanData,
-        projectId,
-        user: { username } // ✅ 確保 `user` 被傳遞
-      });
-      setShowForm(false);
-      setNewCard("");
-    }
-
+    // 6. Clear form immediately
+    setShowForm(false);
+    setNewCard("");
+    
+    console.log("✅ Task added optimistically, server sync in progress...");
   }
 
   const toggleAddGroupInput = () => {
     setShowAddGroupInput(!showAddGroupInput); // 切換輸入框的顯示狀態
   };
 
-  // 新增列表
+  // 新增列表 - With Optimistic Updates
   const handleAddGroup = (e) => {
     e.preventDefault();
     if (newGroupName.trim() !== '') {
+      console.log(`🚀 Optimistically creating new column: ${newGroupName}`);
+      
+      // 1. Create optimistic column data
+      const optimisticColumn = {
+        id: `temp-${Date.now()}`, // Temporary ID until server responds
+        name: newGroupName.trim(),
+        task: [], // Empty task array for new column
+        order: kanbanData.length // Place at the end
+      };
+
+      // 2. Optimistically update UI immediately
+      const updatedKanbanData = [...kanbanData, optimisticColumn];
+      setKanbanData(updatedKanbanData);
+      
+      // 3. Update React Query cache optimistically
+      queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
+
+      // 4. Send to server (will broadcast to other users)
       socket.emit("ColumnCreated", {
         projectId,
-        newGroupName
-      });
-      socket.on("ColumnCreatedSuccess", async () => {
-        // 使與看板資料相關的查詢失效，以觸發重新獲取
-        try {
-          const updatedKanbanData = await getKanbanColumns(projectId);
-          console.log("updatedKanbanData:", updatedKanbanData)
-          setKanbanData(updatedKanbanData); // 使用最新數據更新狀態
-        } catch (error) {
-          console.error("獲取看板列數據失敗：", error);
-        }
-        // 清空輸入框並隱藏新增群組的輸入框
-        setNewGroupName('');
-        setShowAddGroupInput(false);
+        newGroupName: newGroupName.trim()
       });
 
+      // 5. Clear form immediately
+      setNewGroupName('');
+      setShowAddGroupInput(false);
+      
+      console.log("✅ Column added optimistically, server sync in progress...");
     }
   };
   const handleDeleteColumn = (columnData) => {
@@ -264,21 +396,17 @@ export default function Kanban() {
   }
 
   return (
-    <div style={{ display: 'inline-flex' }} className="layout__wrapper min-w-full h-full bg-white" >
+    <div className="h-full w-full bg-white flex flex-col">
       <DraggableImage/>
-      <div className="card p-8 w-full px-20">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-hidden">
         <DragDropContext onDragEnd={onDragEnd}>
-          <div className="header mb-4">
-            <h1 className="text-2xl text-gray">Kanban</h1>
-          </div>
-
+          
           <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
             {(provided) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 overflow-y-auto md:overflow-x-auto md:overflow-y-hidden h-[calc(100vh-12rem)] scrollbar-none" // 在小螢幕上垂直排列，中等螢幕以上水平排列
-                style={{ display: 'inline-flex', paddingBottom: '1rem' }} // 移除固定的 flexDirection
+                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 overflow-y-auto md:overflow-x-auto md:overflow-y-hidden h-full scrollbar-none"
               >
                 {!showAddGroupInput && (
                   <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7 mb-4 md:mb-0" onClick={toggleAddGroupInput}>
@@ -322,9 +450,9 @@ export default function Kanban() {
                   kanbanIsLoading ? <Loader /> :
                     kanbansIsError ? <p className=' font-bold text-2xl'>{kanbansIsError.message}</p> :
                       kanbanData.map((column, columnIndex) => (
-                        <Draggable draggableId={`column-${column.id}`}
+                        <Draggable draggableId={`column-${column.id.toString()}`}
                           index={columnIndex}
-                          key={column.id}>
+                          key={column.id.toString()}>
                           {(provided) => (
                             <div
                               {...provided.draggableProps}
@@ -350,7 +478,7 @@ export default function Kanban() {
                                 <Droppable droppableId={columnIndex.toString()} type='CARD'>
                                   {(provided,snapshot) => (
                                     <div {...provided.droppableProps} ref={provided.innerRef}  >
-                                      <div className={`flex flex-col px-4 pb-1 overflow-y-auto max-h-[calc(100vh-21rem)] roun scrollbar-thin ${snapshot.isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50'}`}>
+                                      <div className={`flex flex-col px-4 pb-1 overflow-y-auto max-h-96 sm:max-h-[28rem] lg:max-h-[32rem] scrollbar-thin ${snapshot.isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50'}`}>
 
                                         <div className="items-container">
                                         {Array.isArray(column.task) && column.task.length > 0 &&
@@ -358,9 +486,13 @@ export default function Kanban() {
                                             .filter(item => item && item.id) // 過濾掉 null 或 undefined
                                             .map((item, index) => (
                                               <Carditem
-                                                key={item.id}
+                                                key={item.id.toString()} // Ensure key is string for both temp and real IDs
                                                 index={index}
-                                                data={item}
+                                                data={{
+                                                  ...item,
+                                                  // Add indicator for optimistic updates
+                                                  isOptimistic: item.id.toString().startsWith('temp-')
+                                                }}
                                                 columnIndex={column.id}
                                               />
                                             ))

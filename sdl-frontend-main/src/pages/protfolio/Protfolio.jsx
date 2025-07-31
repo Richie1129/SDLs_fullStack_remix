@@ -171,8 +171,7 @@ export default function Protfolio() {
     formData.append('attachFile', file);  // 欄位名稱要跟後端 upload.array 的 key 一致
     formData.append('changedBy', localStorage.getItem("username")); // 添加用戶名稱
     try {
-      await updateSubmitAttachment(modalData.id, formData);
-      
+      await updateSubmitAttachment(modalData.id, formData);      
       // 刷新變更記錄
       queryClient.invalidateQueries(['submitChangeLogs', modalData.id]);
       
@@ -204,380 +203,437 @@ export default function Protfolio() {
     }, [socket])
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <div className="fixed top-0 left-0 right-0 h-16 bg-white shadow-sm z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-                    <h1 className="text-xl font-semibold text-gray-800">歷程檔案</h1>
-                </div>
-            </div>
-
-            <div className="pt-16 pl-16 h-screen overflow-hidden">
-                <div className="h-full overflow-y-auto">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="h-full w-full bg-gray-50">
+            {/* Two-Column Layout Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 h-full">
+                
+                {/* Left Column - Stage Navigation (Sticky) */}
+                <div className="lg:col-span-1 flex flex-col bg-white lg:border-r border-gray-200">
+                    {/* Header Section */}
+                    
+                    
+                    {/* Navigation Content */}
+                    <div className="flex-1 overflow-y-auto">
                         {isLoading ? (
-                            <div className="flex justify-center items-center h-64">
+                            <div className="flex justify-center items-center py-16">
                                 <Loader />
                             </div>
                         ) : isError ? (
-                            <div className="text-center py-12">
+                            <div className="text-center py-12 px-4">
                                 <p className="text-red-500 font-medium">{isError.message}</p>
                             </div>
                         ) : portfolioItemsWithTitles.length === 0 ? (
                             showEmptyMessage && (
-                                <div className="flex flex-col items-center justify-center py-12">
-                                    <Lottie className="w-64 sm:w-96" animationData={ProtfoliioIcon} />
-                                    <p className="mt-6 text-lg text-gray-600 text-center max-w-md">
+                                <div className="h-full flex flex-col items-center justify-center py-12 px-4">
+                                    <Lottie className="w-32 sm:w-48" animationData={ProtfoliioIcon} />
+                                    <p className="mt-4 text-sm sm:text-base text-gray-600 text-center">
                                         目前還未新增歷程檔案，快和小組成員互相討論並記錄討論結果吧！
                                     </p>
                                 </div>
                             )
                         ) : (
-                            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                                {/* Timeline Navigation */}
-                                <div className="lg:col-span-1">
-                                    <div className="bg-white rounded-lg shadow-sm p-5 sticky top-24 border border-gray-200">
-                                        <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                                            <span className="h-6 w-1.5 bg-teal-500 rounded-full mr-3"></span>
-                                            階段導航
-                                        </h2>
-                                        <nav className="space-y-5">
-                                            {insertTitles.map((title, index) => (
-                                                <div key={index} className="relative">
-                                                    <div className="flex items-center mb-3">
-                                                        <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
-                                                            index < parseInt(currentStageIndex) - 1 ? 'bg-green-500' : 
-                                                            index === parseInt(currentStageIndex) - 1 ? 'bg-teal-500' : 
-                                                            'bg-gray-200'
-                                                        }`}>
-                                                            {index < parseInt(currentStageIndex) - 1 && 
-                                                                <span className="text-white text-xs">✓</span>
-                                                            }
-                                                        </div>
-                                                        <h3 className={`ml-2 font-medium ${
-                                                            index < parseInt(currentStageIndex) ? 'text-gray-900' : 'text-gray-500'
-                                                        }`}>{title}</h3>
-                                                    </div>
-                                                    
-                                                    {index < insertTitles.length - 1 && (
-                                                        <div className="absolute left-2 top-4 w-[1px] h-full bg-gray-200"></div>
-                                                    )}
-                                                    
-                                                    <div className="pl-7 space-y-2">
-                                                        {stagePortfolio
-                                                            .filter(item => Math.floor(item.stage.split('-')[0]) === index + 1)
-                                                            .map(item => (
-                                                                <button
-                                                                    key={item.id}
-                                                                    onClick={() => {
-                                                                        setActiveItemId(item.id);
-                                                                        setFolderModalOpen(true);
-                                                                        setModalData(item);
-                                                                    }}
-                                                                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors relative ${
-                                                                        activeItemId === item.id
-                                                                            ? 'bg-teal-500 text-white shadow-sm'
-                                                                            : 'text-gray-600 hover:bg-gray-50 hover:shadow-sm'
-                                                                    }`}
-                                                                    title={item.createdAt ? `建立於 ${formatTime(item.createdAt, 'full')}${item.updatedAt && item.updatedAt !== item.createdAt ? `\n更新於 ${formatTime(item.updatedAt, 'full')}` : ''}` : ''}
-                                                                >
-                                                                    {activeItemId === item.id && (
-                                                                        <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white"></span>
-                                                                    )}
-                                                                    <div className="flex flex-col">
-                                                                        <span>{stageDescriptions[item.stage]}</span>
-                                                                        {item.createdAt && (
-                                                                            <span className={`text-xs mt-1 ${activeItemId === item.id ? 'text-white/80' : 'text-gray-400'}`}>
-                                                                                {formatTime(item.createdAt, 'date')}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </button>
-                                                            ))}
-                                                    </div>
+                            <div className="p-4 sm:p-6">
+                                <nav className="space-y-6">
+                                    {insertTitles.map((title, index) => (
+                                        <div key={index} className="relative">
+                                            {/* Stage Header */}
+                                            <div className="flex items-center mb-4">
+                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                                                    index < parseInt(currentStageIndex) - 1 ? 'bg-[#5BA491]' : 
+                                                    index === parseInt(currentStageIndex) - 1 ? 'bg-[#5BA491]' : 
+                                                    'bg-gray-300'
+                                                }`}>
+                                                    {index < parseInt(currentStageIndex) - 1 ? '✓' : index + 1}
                                                 </div>
-                                            ))}
-                                        </nav>
-                                    </div>
-                                </div>
-
-                                {/* Content Area */}
-                                <div className="lg:col-span-3">
-                                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                                                                        {activeItemId && (
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div>
-                                                <h2 className="text-xl font-bold text-gray-900">
-                                                    {stageDescriptions[modalData.stage]}
-                                                </h2>
-                                                <div className="flex flex-col space-y-1 mt-1">
-                                                    <p className="text-sm text-gray-500">
-                                                        階段: {modalData.stage}
-                                                    </p>
-                                                    {modalData.createdAt && (
-                                                        <p className="text-sm text-gray-500" title={formatTime(modalData.createdAt, 'full')}>
-                                                            建立時間: {formatTime(modalData.createdAt, 'date')}
-                                                        </p>
-                                                    )}
-                                                    {modalData.updatedAt && modalData.updatedAt !== modalData.createdAt && (
-                                                        <p className="text-sm text-gray-500" title={formatTime(modalData.updatedAt, 'full')}>
-                                                            更新時間: {formatTime(modalData.updatedAt, 'relative')}
-                                                        </p>
-                                                    )}
-                                                </div>
+                                                <h3 className={`ml-3 font-semibold text-lg ${
+                                                    index < parseInt(currentStageIndex) ? 'text-gray-900' : 'text-gray-500'
+                                                }`}>
+                                                    {title}
+                                                </h3>
                                             </div>
-                                            <button
-                                                onClick={() => {
-                                                    setFolderModalOpen(false);
-                                                    setActiveItemId(null);
-                                                }}
-                                                className="text-gray-400 hover:text-gray-500 transition-colors"
-                                            >
-                                                <GrFormClose size={24} />
-                                            </button>
-                                        </div>
-
-                                        {/* 標籤頁導航 */}
-                                        <div className='flex border-b border-gray-200 mb-4'>
-                                            <button
-                                                onClick={() => setShowSubmitChangeHistory(false)}
-                                                className={`px-4 py-2 font-medium text-sm ${
-                                                    !showSubmitChangeHistory 
-                                                        ? 'text-teal-500 border-b-2 border-teal-500' 
-                                                        : 'text-gray-500 hover:text-gray-700'
-                                                }`}
-                                            >
-                                                編輯內容
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setShowSubmitChangeHistory(true);
-                                                    // 取得變更記錄
-                                                    getSubmitChangeLogs(modalData.id).then(setSubmitChangeLogs).catch(console.error);
-                                                }}
-                                                className={`px-4 py-2 font-medium text-sm ${
-                                                    showSubmitChangeHistory 
-                                                        ? 'text-teal-500 border-b-2 border-teal-500' 
-                                                        : 'text-gray-500 hover:text-gray-700'
-                                                }`}
-                                            >
-                                                變更歷史
-                                            </button>
-                                        </div>
-
-                                                                                        {/* 編輯內容 */}
-                                        {!showSubmitChangeHistory && (
-                                            <>
-                                                {/* Content Form */}
-                                                <div className="space-y-4">
-                                                    {Object.entries(editableContent).map(([key, value], index) => (
-                                                        <div key={index} className="space-y-2">
-                                                            <label className="block text-sm font-medium text-gray-700">
-                                                                {key}
-                                                            </label>
-                                                            <textarea
-                                                                className="w-full rounded-md border-2 border-gray-400 bg-white text-base p-3 shadow-md transition-all focus:border-teal-500 focus:ring-2 focus:ring-teal-500 hover:border-teal-400"
-                                                                rows={4}
-                                                                value={value}
-                                                                onChange={(e) => handleChange(key, e.target.value)}
-                                                            />
-                                                        </div>
+                                            
+                                            {/* Connecting Line */}
+                                            {index < insertTitles.length - 1 && (
+                                                <div className="absolute left-2.5 top-8 w-[1px] h-6 bg-gray-200"></div>
+                                            )}
+                                            
+                                            {/* Stage Items */}
+                                            <div className="ml-8 space-y-2">
+                                                {stagePortfolio
+                                                    .filter(item => Math.floor(item.stage.split('-')[0]) === index + 1)
+                                                    .map(item => (
+                                                        <button
+                                                            key={item.id}
+                                                            onClick={() => {
+                                                                setActiveItemId(item.id);
+                                                                setFolderModalOpen(true);
+                                                                setModalData(item);
+                                                            }}
+                                                            className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 relative group ${
+                                                                activeItemId === item.id
+                                                                    ? 'bg-[#5BA491] text-white shadow-lg scale-[1.02]'
+                                                                    : 'text-gray-700 hover:bg-[#5BA491]/10 hover:shadow-md border border-gray-100'
+                                                            }`}
+                                                            title={item.createdAt ? `建立於 ${formatTime(item.createdAt, 'full')}${item.updatedAt && item.updatedAt !== item.createdAt ? `\n更新於 ${formatTime(item.updatedAt, 'full')}` : ''}` : ''}
+                                                        >
+                                                            {/* Active Indicator */}
+                                                            {activeItemId === item.id && (
+                                                                <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-full"></div>
+                                                            )}
+                                                            
+                                                            <div className="flex flex-col space-y-1">
+                                                                <span className="font-medium leading-tight">
+                                                                    {stageDescriptions[item.stage]}
+                                                                </span>
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                                                        activeItemId === item.id 
+                                                                            ? 'bg-white/20 text-white' 
+                                                                            : 'bg-[#5BA491]/10 text-[#5BA491]'
+                                                                    }`}>
+                                                                        {item.stage}
+                                                                    </span>
+                                                                    {item.createdAt && (
+                                                                        <span className={`text-xs ${
+                                                                            activeItemId === item.id ? 'text-white/80' : 'text-gray-500'
+                                                                        }`}>
+                                                                            {formatTime(item.createdAt, 'date')}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </button>
                                                     ))}
-                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </nav>
+                            </div>
+                        )}
+                    </div>
+                </div>
 
-                                                {/* File Section */}
-                                                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                                        <div>
-                                                            <h3 className="text-sm font-medium text-gray-700">附加檔案</h3>
-                                                            {modalData.fileName && (
-                                                                <p className="text-sm text-gray-500 mt-1">{modalData.fileName}</p>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex flex-col sm:flex-row gap-2">
-                                                            {(modalData.fileName || modalData.fileData) && (
-                                                                <button
-                                                                    onClick={() => {
-                                                                        if (modalData.fileName && modalData.fileUrl) {
-                                                                            // 使用 MinIO 直接下載 API
-                                                                            window.open(`http://localhost/api/file/direct/${modalData.fileName}`, '_blank');
-                                                                        } else if (modalData.fileData && modalData.fileData.data) {
-                                                                            // 向後相容：處理舊的 BLOB 資料
-                                                                            const buffer = new Uint8Array(modalData.fileData.data);
-                                                                            const blob = new Blob([buffer], { type: "application/octet-stream" });
-                                                                            FileDownload(blob, modalData.fileName || modalData.originalName || "downloaded-file");
-                                                                        }
-                                                                    }}
-                                                                    className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-teal-500 hover:bg-teal-600"
-                                                                >
-                                                                    <AiOutlineCloudDownload className="mr-2" />
-                                                                    下載
-                                                                </button>
-                                                            )}
-                                                            <label className="inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-teal-500 hover:bg-teal-600 cursor-pointer">
-                                                                <AiOutlineUpload className="mr-2" />
-                                                                {modalData.fileData ? "重新上傳" : "上傳檔案"}
-                                                                <input
-                                                                    type="file"
-                                                                    className="hidden"
-                                                                    onChange={handleFileChange}
-                                                                />
-                                                            </label>
-                                                        </div>
+                {/* Right Column - Content Display */}
+                <div className="lg:col-span-2 flex flex-col bg-white border-t lg:border-t-0 border-gray-200">
+                    {!activeItemId ? (
+                        // Empty State - No item selected
+                        <div className="flex-1 flex-col flex items-center justify-center p-8">
+                            <div className="text-center max-w-md">
+                                <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#5BA491]/10 to-[#5BA491]/5 rounded-full flex items-center justify-center">
+                                    <svg className="w-12 h-12 text-[#5BA491]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                                    選擇階段項目
+                                </h3>
+                                <p className="text-gray-600 leading-relaxed">
+                                    從左側的階段導航中選擇一個項目來查看和編輯其內容、管理檔案並追蹤變更。
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        // Content Display - Item selected
+                        <div className="flex-1 flex flex-col overflow-hidden">
+                            {/* Header */}
+                            <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-[#5BA491]/10">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
+                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                                            {stageDescriptions[modalData.stage]}
+                                        </h2>
+                                        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                            <span className="flex items-center">
+                                                <span className="w-2 h-2 bg-[#5BA491] rounded-full mr-2"></span>
+                                                階段: {modalData.stage}
+                                            </span>
+                                            {modalData.createdAt && (
+                                                <span className="flex items-center" title={formatTime(modalData.createdAt, 'full')}>
+                                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                    建立於: {formatTime(modalData.createdAt, 'date')}
+                                                </span>
+                                            )}
+                                            {modalData.updatedAt && modalData.updatedAt !== modalData.createdAt && (
+                                                <span className="flex items-center" title={formatTime(modalData.updatedAt, 'full')}>
+                                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                    </svg>
+                                                    更新於: {formatTime(modalData.updatedAt, 'relative')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setFolderModalOpen(false);
+                                            setActiveItemId(null);
+                                        }}
+                                        className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                    >
+                                        <GrFormClose size={20} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Tabs Navigation */}
+                            <div className="flex-shrink-0 border-b border-gray-200 bg-white">
+                                <div className="px-4 sm:px-6">
+                                    <nav className="flex space-x-8">
+                                        <button
+                                            onClick={() => setShowSubmitChangeHistory(false)}
+                                            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                                !showSubmitChangeHistory 
+                                                    ? 'border-[#5BA491] text-[#5BA491]' 
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <span className="flex items-center">
+                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                </svg>
+                                                編輯內容
+                                            </span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowSubmitChangeHistory(true);
+                                                getSubmitChangeLogs(modalData.id).then(setSubmitChangeLogs).catch(console.error);
+                                            }}
+                                            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                                showSubmitChangeHistory 
+                                                    ? 'border-[#5BA491] text-[#5BA491]' 
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                            }`}
+                                        >
+                                            <span className="flex items-center">
+                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                變更歷史
+                                            </span>
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+
+                            {/* Content Area */}
+                            <div className="flex-1 overflow-y-auto">
+                                <div className="p-4 sm:p-6">
+                                    {!showSubmitChangeHistory ? (
+                                        // Edit Content Tab
+                                        <div className="space-y-6">
+                                            {/* Content Form */}
+                                            <div className="space-y-6">
+                                                {Object.entries(editableContent).map(([key, value], index) => (
+                                                    <div key={index} className="space-y-2">
+                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                            {key}
+                                                        </label>
+                                                        <textarea
+                                                            className="w-full rounded-lg border-2 border-gray-200 bg-white text-sm p-4 shadow-sm transition-all duration-200 focus:border-[#5BA491] focus:ring-4 focus:ring-[#5BA491]/20 hover:border-gray-300 resize-none min-h-[100px]"
+                                                            rows={4}
+                                                            value={value}
+                                                            onChange={(e) => handleChange(key, e.target.value)}
+                                                            placeholder={`輸入 ${key} 內容...`}
+                                                        />
                                                     </div>
-                                                </div>
+                                                ))}
+                                            </div>
 
-                                                {/* Action Buttons */}
-                                                <div className="mt-6 flex flex-col sm:flex-row justify-end gap-3">
-                                                    <button
-                                                        onClick={() => {
-                                                            setFolderModalOpen(false);
-                                                            setActiveItemId(null);
-                                                        }}
-                                                        className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                                    >
-                                                        取消
-                                                    </button>
-                                                    <button
-                                                        onClick={handleSave}
-                                                        className="w-full sm:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-500 hover:bg-teal-600"
-                                                    >
-                                                        儲存
-                                                    </button>
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {/* 變更歷史 */}
-                                        {showSubmitChangeHistory && (
-                                            <div className='max-h-96 overflow-y-auto'>
-                                                <div className='flex items-center mb-4'>
-                                                    <h4 className='text-lg font-medium text-gray-700'>變更歷史</h4>
+                                            {/* File Section */}
+                                            <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                                                            附加檔案
+                                                        </h3>
+                                                        {modalData.fileName ? (
+                                                            <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded border inline-block">
+                                                                {modalData.fileName}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-500">無附加檔案</p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 
-                                                {submitChangeLogs.length === 0 ? (
-                                                    <div className='text-center py-8 text-gray-500'>
-                                                        <p>尚無變更記錄</p>
+                                                <div className="flex flex-wrap gap-3">
+                                                    {(modalData.fileName || modalData.fileData) && (
+                                                        <button
+                                                            onClick={() => {
+                                                                if (modalData.fileName && modalData.fileUrl) {
+                                                                    window.open(`http://localhost/api/file/direct/${modalData.fileName}`, '_blank');
+                                                                } else if (modalData.fileData && modalData.fileData.data) {
+                                                                    const buffer = new Uint8Array(modalData.fileData.data);
+                                                                    const blob = new Blob([buffer], { type: "application/octet-stream" });
+                                                                    FileDownload(blob, modalData.fileName || modalData.originalName || "downloaded-file");
+                                                                }
+                                                            }}
+                                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors shadow-sm"
+                                                        >
+                                                            <AiOutlineCloudDownload className="mr-2 w-4 h-4" />
+                                                            下載
+                                                        </button>
+                                                    )}
+                                                    <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 cursor-pointer transition-colors shadow-sm">
+                                                        <AiOutlineUpload className="mr-2 w-4 h-4" />
+                                                        {modalData.fileData ? "重新上傳" : "上傳檔案"}
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            onChange={handleFileChange}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
+                                                <button
+                                                    onClick={() => {
+                                                        setFolderModalOpen(false);
+                                                        setActiveItemId(null);
+                                                    }}
+                                                    className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                                                >
+                                                    取消
+                                                </button>
+                                                <button
+                                                    onClick={handleSave}
+                                                    className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
+                                                >
+                                                    儲存變更
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        // Change History Tab
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-lg font-semibold text-gray-800">變更歷史</h3>
+                                                <span className="text-sm text-gray-500">
+                                                    {submitChangeLogs.length} 個變更
+                                                </span>
+                                            </div>
+                                            
+                                            {submitChangeLogs.length === 0 ? (
+                                                <div className="text-center py-16">
+                                                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                                                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
                                                     </div>
-                                                ) : (
-                                                    <div className='space-y-3'>
-                                                        {submitChangeLogs.map((log, index) => (
-                                                            <div 
-                                                                key={log.id || index} 
-                                                                className='bg-gray-50 rounded-lg p-4 border-l-4 border-teal-400'
-                                                            >
-                                                                <div className='flex items-center justify-between mb-3'>
-                                                                    <div className='flex items-center gap-2'>
-                                                                        <span className='text-sm font-medium text-gray-700'>
-                                                                            {log.changedBy || '未知用戶'}
+                                                    <p className="text-gray-500">無變更歷史記錄</p>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                                                    {submitChangeLogs.map((log, index) => (
+                                                        <div 
+                                                            key={log.id || index} 
+                                                            className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                                                        >
+                                                            <div className="flex items-center justify-between mb-4">
+                                                                <div className="flex items-center space-x-3">
+                                                                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                                                                        <span className="text-xs font-medium text-gray-600">
+                                                                            {(log.changedBy || 'U')[0].toUpperCase()}
                                                                         </span>
-                                                                        <span className={`
-                                                                            px-2 py-1 rounded-full text-xs font-medium
-                                                                            ${log.changeType === 'create' ? 'bg-green-100 text-green-700' : ''}
-                                                                            ${log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : ''}
-                                                                            ${log.changeType === 'delete' ? 'bg-red-100 text-red-700' : ''}
-                                                                        `}>
-                                                                            {log.changeType === 'create' && '創建'}
+                                                                    </div>
+                                                                    <div>
+                                                                        <span className="font-medium text-gray-900">
+                                                                            {log.changedBy || '未知使用者'}
+                                                                        </span>
+                                                                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                                                                            log.changeType === 'create' ? 'bg-green-100 text-green-700' : 
+                                                                            log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : 
+                                                                            'bg-red-100 text-red-700'
+                                                                        }`}>
+                                                                            {log.changeType === 'create' && '建立'}
                                                                             {log.changeType === 'update' && '更新'}
                                                                             {log.changeType === 'delete' && '刪除'}
                                                                         </span>
                                                                     </div>
-                                                                    <span className='text-xs text-gray-500'>
-                                                                        {formatTime(log.createdAt, 'full')}
+                                                                </div>
+                                                                <span className="text-xs text-gray-500">
+                                                                    {formatTime(log.createdAt, 'full')}
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            <p className="text-gray-700 mb-4">
+                                                                {log.description}
+                                                            </p>
+                                                            
+                                                            {log.fieldName && (
+                                                                <div className="mb-4">
+                                                                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                                                                        欄位: {log.fieldName}
                                                                     </span>
                                                                 </div>
-                                                                
-                                                                <p className='text-sm text-gray-600 mb-3'>
-                                                                    {log.description}
-                                                                </p>
-                                                                
-                                                                {log.fieldName && (
-                                                                    <div className='mb-3'>
-                                                                        <span className='text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded'>
-                                                                            欄位：{log.fieldName}
-                                                                        </span>
-                                                                    </div>
-                                                                )}
-                                                                
-                                                                {/* 顯示變更內容對比 */}
-                                                                {(log.oldValue || log.newValue) && (
-                                                                    <div className='space-y-2'>
-                                                                        {log.oldValue && (
-                                                                            <div className='bg-red-50 border border-red-200 rounded p-2'>
-                                                                                <div className='text-xs font-medium text-red-700 mb-1'>舊值：</div>
-                                                                                <div className='text-sm text-red-800 whitespace-pre-wrap'>
-                                                                                    {log.fieldName === 'content' ? (
-                                                                                        // 如果是 JSON 格式的內容，美化顯示
-                                                                                        (() => {
-                                                                                            try {
-                                                                                                const content = JSON.parse(log.oldValue);
-                                                                                                return Object.entries(content).map(([key, value]) => (
-                                                                                                    <div key={key} className='mb-1'>
-                                                                                                        <span className='font-medium'>{key}:</span> {value}
-                                                                                                    </div>
-                                                                                                ));
-                                                                                            } catch (e) {
-                                                                                                return log.oldValue;
-                                                                                            }
-                                                                                        })()
-                                                                                    ) : (
-                                                                                        log.oldValue
-                                                                                    )}
-                                                                                </div>
+                                                            )}
+                                                            
+                                                            {(log.oldValue || log.newValue) && (
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    {log.oldValue && (
+                                                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                                                            <div className="text-xs font-semibold text-red-700 mb-2 uppercase tracking-wide">原始值</div>
+                                                                            <div className="text-sm text-red-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                                                                {log.fieldName === 'content' ? (
+                                                                                    (() => {
+                                                                                        try {
+                                                                                            const content = JSON.parse(log.oldValue);
+                                                                                            return Object.entries(content).map(([key, value]) => (
+                                                                                                <div key={key} className="mb-2 last:mb-0">
+                                                                                                    <span className="font-medium">{key}:</span> {value}
+                                                                                                </div>
+                                                                                            ));
+                                                                                        } catch (e) {
+                                                                                            return log.oldValue;
+                                                                                        }
+                                                                                    })()
+                                                                                ) : (
+                                                                                    log.oldValue
+                                                                                )}
                                                                             </div>
-                                                                        )}
-                                                                        
-                                                                        {log.newValue && (
-                                                                            <div className='bg-green-50 border border-green-200 rounded p-2'>
-                                                                                <div className='text-xs font-medium text-green-700 mb-1'>新值：</div>
-                                                                                <div className='text-sm text-green-800 whitespace-pre-wrap'>
-                                                                                    {log.fieldName === 'content' ? (
-                                                                                        // 如果是 JSON 格式的內容，美化顯示
-                                                                                        (() => {
-                                                                                            try {
-                                                                                                const content = JSON.parse(log.newValue);
-                                                                                                return Object.entries(content).map(([key, value]) => (
-                                                                                                    <div key={key} className='mb-1'>
-                                                                                                        <span className='font-medium'>{key}:</span> {value}
-                                                                                                    </div>
-                                                                                                ));
-                                                                                            } catch (e) {
-                                                                                                return log.newValue;
-                                                                                            }
-                                                                                        })()
-                                                                                    ) : (
-                                                                                        log.newValue
-                                                                                    )}
-                                                                                </div>
+                                                                        </div>
+                                                                    )}
+                                                                    
+                                                                    {log.newValue && (
+                                                                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                                                            <div className="text-xs font-semibold text-green-700 mb-2 uppercase tracking-wide">新值</div>
+                                                                            <div className="text-sm text-green-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                                                                {log.fieldName === 'content' ? (
+                                                                                    (() => {
+                                                                                        try {
+                                                                                            const content = JSON.parse(log.newValue);
+                                                                                            return Object.entries(content).map(([key, value]) => (
+                                                                                                <div key={key} className="mb-2 last:mb-0">
+                                                                                                    <span className="font-medium">{key}:</span> {value}
+                                                                                                </div>
+                                                                                            ));
+                                                                                        } catch (e) {
+                                                                                            return log.newValue;
+                                                                                        }
+                                                                                    })()
+                                                                                ) : (
+                                                                                    log.newValue
+                                                                                )}
                                                                             </div>
-                                                                        )}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                
-                                                <div className='flex justify-end mt-4'>
-                                                    <button
-                                                        onClick={() => {
-                                                            setFolderModalOpen(false);
-                                                            setActiveItemId(null);
-                                                        }}
-                                                        className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
-                                                    >
-                                                        關閉
-                                                    </button>
+                                                            )}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            </div>
-                                        )}
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

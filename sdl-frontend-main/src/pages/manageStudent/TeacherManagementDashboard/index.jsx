@@ -33,7 +33,7 @@ const TeacherManagementDashboard = () => {
   // 載入狀態
   if (realData.loading) {
     return (
-      <div className="h-screen w-full bg-gray-50 pt-16 pl-16 overflow-hidden">
+      <div className="h-full w-full bg-gray-50 overflow-hidden">
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600 mx-auto"></div>
@@ -100,7 +100,7 @@ const TeacherManagementDashboard = () => {
   };
 
   return (
-    <div className="h-screen w-full bg-gray-50 pt-16 pl-16 overflow-hidden">
+    <div className="h-full w-full bg-gray-50 overflow-hidden">
       <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100 hover:scrollbar-thumb-customgreen/80" 
            style={{ scrollBehavior: 'smooth' }}>
         <div className="p-3 sm:p-6">

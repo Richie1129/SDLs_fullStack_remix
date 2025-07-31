@@ -216,7 +216,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
 
   if (location.pathname === "/homepage") {
     return (
-      <div className="fixed z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2">
+      <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2 flex-shrink-0">
         <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-2xl">
           <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-14 w-auto" />
         </Link>
@@ -239,7 +239,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
   }
 
   return (
-    <div className="fixed z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2">
+    <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
         <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-lg sm:text-2xl">
           <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-10 sm:h-14 w-auto" />

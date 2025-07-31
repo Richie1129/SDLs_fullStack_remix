@@ -40,7 +40,7 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="w-full h-screen bg-gray-50 overflow-y-auto pt-16 pl-16">
+    <div className="w-full h-full bg-gray-50 overflow-y-auto">
       <div className="p-3 sm:p-6">
         <div className="max-w-7xl mx-auto pb-6">
           {/* 頁面標題 */}
