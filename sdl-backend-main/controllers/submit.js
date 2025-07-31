@@ -109,6 +109,26 @@ exports.createSubmit = async(req, res) => {
                     title: `${nextStage[0].sub_stage[0]}`,
                     type: "project"
             });
+            } else {
+                // 所有階段已完成，標記專案為完成狀態
+                console.log('🎉 所有階段已完成，更新專案狀態為完成');
+                await Project.update({
+                    ProjectEnd: true
+                }, {
+                    where: { id: projectId }
+                });
+
+                await Idea_wall.create({
+                    userId: req.body.userId,
+                    projectId: projectId,
+                    stage: "completed",
+                    title: "專案已完成",
+                    type: "project"
+                });
+
+                console.log('==================');
+                console.log('✅ 專案完成處理成功');
+                return res.status(200).send({ message: 'done' });
             }
         }
 

@@ -27,6 +27,11 @@ export default function SubmitTask() {
             if (res.message === "done") {
                 sucesssNotify("全部階段已完成")
                 localStorage.setItem('stageEnd', "true")
+                // 專案完成時，直接刷新當前頁面以顯示完成狀態
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+                return; // 不執行後續的導航邏輯
             }
             sucesssNotify(res.message)
             localStorage.removeItem("currentStage");

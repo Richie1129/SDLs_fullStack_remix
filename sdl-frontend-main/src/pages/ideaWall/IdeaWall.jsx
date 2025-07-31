@@ -458,12 +458,12 @@ export default function IdeaWall() {
                                     刪除
                                 </button>
                                 <div className='flex'>
-                                    <button
+                                    {/* <button
                                         onClick={handleAiDevelopment}
                                         className="w-32 h-7 bg-purple-500 rounded font-bold text-sm sm:text-base text-white mr-2"
                                     >
                                         AI 輔助發展
-                                    </button>
+                                    </button> */}
                                     <button
                                         onClick={() => {
                                             setBuildOnId(selectNodeInfo.id);

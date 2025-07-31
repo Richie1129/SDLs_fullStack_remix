@@ -22,6 +22,7 @@ import teamDailyIcon from "../../assets/AnimationTeamDaily.json";
 import FiveRsReflectionForm from "@/components/FiveRsReflectionForm.jsx";
 import FiveRsReflectionDisplay from "@/components/FiveRsReflectionDisplay.jsx";
 import { is5RsFormat, parse5RsContent } from "@/utils/5RsUtils.js";
+
 import { analyze5RsReflection } from "@/api/llm5Rs.js";
 // 新的組件導入
 import LogSection from "../../components/reflection/LogSection";
@@ -992,7 +993,6 @@ export default function Reflection() {
                 </Modal>
             } */}
 
-      {/* 5Rs 反思編輯 Modal */}
       <Modal
         open={is5RsModalOpen}
         onClose={() => handle5RsCancel()}
@@ -1047,4 +1047,6 @@ export default function Reflection() {
       <Toaster />
     </div>
   );
+			
+
 }

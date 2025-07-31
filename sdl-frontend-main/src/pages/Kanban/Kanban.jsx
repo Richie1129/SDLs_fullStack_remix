@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Carditem from './components/Carditem';
 import TaskHint from './components/TaskHint';
 import Loader from '../../components/Loader';
+import ContextualHelp from '../../components/ContextualHelp';
 import { FaPlus } from "react-icons/fa";
 import { RxCross2 } from "react-icons/rx";
 import { DragDropContext, Draggable } from 'react-beautiful-dnd';
@@ -556,6 +557,7 @@ export default function Kanban() {
             }
           </Droppable>
         </DragDropContext >
+        <ContextualHelp currentPage="kanban" />
       </div>
     </div >
   )
