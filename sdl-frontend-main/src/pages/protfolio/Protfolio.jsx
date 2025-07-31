@@ -171,8 +171,7 @@ export default function Protfolio() {
     formData.append('attachFile', file);  // 欄位名稱要跟後端 upload.array 的 key 一致
     formData.append('changedBy', localStorage.getItem("username")); // 添加用戶名稱
     try {
-      await updateSubmitAttachment(modalData.id, formData);
-      
+      await updateSubmitAttachment(modalData.id, formData);      
       // 刷新變更記錄
       queryClient.invalidateQueries(['submitChangeLogs', modalData.id]);
       
