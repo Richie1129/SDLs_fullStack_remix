@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import TopBar from '../../components/TopBar';
 import SideBar from '../../components/SideBar';
 import Modal from '../../components/Modal';
-import OnboardingTour from '../../components/OnboardingTour';
-import ContextualHelp from '../../components/ContextualHelp';
 import toast, { Toaster } from 'react-hot-toast';
 import { GrFormClose } from "react-icons/gr";
 import { FaSortDown } from "react-icons/fa";
@@ -489,63 +487,7 @@ const handleDeleteProject = (projectId) => {
       <div className='min-w-full min-h-screen bg-gray-100 overflow-auto scrollbar-hidden' data-tour="student-dashboard">
         <TopBar />
         <div className='flex flex-col my-10 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 2xl:px-40 py-10 w-full items-center'>
-          {/* 新手歡迎提示 */}
-          {!localStorage.getItem(`hasSeenTour_${role}_${userName}`) && (
-            <div className="w-full mb-6 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-blue-800">
-                    歡迎來到自主學習平台！
-                  </h3>
-                  <div className="mt-1 text-sm text-blue-700">
-                    <p>第一次使用嗎？點擊右下角的幫助按鈕獲取引導，或查看下方的快速開始指南。</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
           <div className='flex flex-col w-full '>
-            {/* 為新手添加快速開始卡片 */}
-            {!localStorage.getItem(`hasSeenTour_${role}_${userName}`) && (
-              <div className="mb-6 bg-white rounded-lg shadow-sm border p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                  快速開始指南
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-xl">1️⃣</span>
-                    </div>
-                    <h3 className="font-medium text-gray-900 mb-2">加入活動</h3>
-                    <p className="text-sm text-gray-600">使用老師提供的邀請碼加入學習活動</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-xl">2️⃣</span>
-                    </div>
-                    <h3 className="font-medium text-gray-900 mb-2">查看任務</h3>
-                    <p className="text-sm text-gray-600">點擊活動卡片查看學習任務和進度</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-purple-100 rounded-full flex items-center justify-center">
-                      <span className="text-xl">3️⃣</span>
-                    </div>
-                    <h3 className="font-medium text-gray-900 mb-2">開始學習</h3>
-                    <p className="text-sm text-gray-600">完成任務並記錄學習反思</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
             <Accordion
               index={0}
               title="進行中活動"
@@ -845,16 +787,6 @@ const handleDeleteProject = (projectId) => {
           </div>
         </Modal>
         <Toaster />
-        
-        {/* 添加導覽和幫助組件 */}
-        <ContextualHelp currentPage="home" />
-        {showOnboarding && (
-          <OnboardingTour 
-            isOpen={showOnboarding}
-            onClose={handleTourComplete}
-            userRole={role}
-          />
-        )}
       </div>
     )
   } else if (role == "teacher") {
@@ -871,63 +803,7 @@ const handleDeleteProject = (projectId) => {
       <div className='min-w-full min-h-screen bg-gray-100 overflow-auto scrollbar-hidden' data-tour="teacher-dashboard">
         <TopBar />
         <div className='flex flex-col my-10 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 2xl:px-40 py-10 w-full items-center'>
-          {/* 新手歡迎提示 */}
-          {!localStorage.getItem(`hasSeenTour_${role}_${userName}`) && (
-            <div className="w-full mb-6 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-4 shadow-sm">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-purple-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-purple-800">
-                    歡迎來到教師管理平台！
-                  </h3>
-                  <div className="mt-1 text-sm text-purple-700">
-                    <p>您可以在這裡創建和管理學習活動，監控學生進度。點擊幫助按鈕獲取詳細指導。</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          
           <div className='flex flex-col w-full '>
-            {/* 為新手教師添加快速開始卡片 */}
-            {!localStorage.getItem(`hasSeenTour_${role}_${userName}`) && (
-              <div className="mb-6 bg-white rounded-lg shadow-sm border p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                  教師快速開始指南
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-xl">🎯</span>
-                    </div>
-                    <h3 className="font-medium text-gray-900 mb-2">建立活動</h3>
-                    <p className="text-sm text-gray-600">點擊"建立活動"按鈕創建新的學習專案</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-xl">👥</span>
-                    </div>
-                    <h3 className="font-medium text-gray-900 mb-2">邀請學生</h3>
-                    <p className="text-sm text-gray-600">分享活動邀請碼給學生加入</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-purple-100 rounded-full flex items-center justify-center">
-                      <span className="text-xl">📊</span>
-                    </div>
-                    <h3 className="font-medium text-gray-900 mb-2">監控進度</h3>
-                    <p className="text-sm text-gray-600">追蹤學生學習進度和反思內容</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            
             <Accordion
               index={0}
               title="進行中活動"
@@ -1214,16 +1090,6 @@ const handleDeleteProject = (projectId) => {
           </div>
         </Modal>
         <Toaster />
-        
-        {/* 添加導覽和幫助組件 */}
-        <ContextualHelp currentPage="home" />
-        {showOnboarding && (
-          <OnboardingTour 
-            isOpen={showOnboarding}
-            onClose={handleTourComplete}
-            userRole={role}
-          />
-        )}
       </div>
     )
   }
