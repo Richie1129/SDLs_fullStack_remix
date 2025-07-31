@@ -397,7 +397,7 @@ export default function Kanban() {
 
   return (
     <div className="h-full w-full bg-white flex flex-col">
-      {/* <DraggableImage/> */}
+      <DraggableImage/>
       <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-hidden">
         <DragDropContext onDragEnd={onDragEnd}>
           
