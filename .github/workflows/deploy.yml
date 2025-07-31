@@ -51,13 +51,13 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: 🚀 Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
           script_stop: true
-          command_timeout: 600s  # ✅ 修正：時間需加單位
+          command_timeout: 300s  # ✅ 修正：時間需加單位
           script: |
             cd /home/hsueh/SDLs_fullStack_remix_v3 || { echo "❌ 專案目錄不存在"; exit 1; }
 
