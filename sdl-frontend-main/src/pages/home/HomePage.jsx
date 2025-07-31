@@ -383,10 +383,17 @@ useEffect(() => {
   const { mutate: deleteMutate } = useMutation(deleteProject, {
     onSuccess: (res) => {
         queryClient.invalidateQueries("projectDatas");
+        // 如果是教師角色，也要刷新教師專案數據
+        if (role === "teacher") {
+            queryClient.invalidateQueries("TeacherProjectDatas");
+        }
         Swal.fire({
             icon: "success",
             title: "成功",
             text: res.message,
+        }).then(() => {
+            // 刷新頁面以確保數據完全更新
+            window.location.reload();
         });
     },
     onError: (error) => {

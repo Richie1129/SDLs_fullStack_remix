@@ -21,7 +21,7 @@ const ContextualHelp = ({ currentPage, userProgress = {}, userRole = 'student' }
           {
             icon: '➕',
             title: '加入新專案',
-            content: '使用邀請碼加入老師建立的學習專案',
+            content: '使用邀請碼加入活動或是建立一個新的活動',
             action: '點擊"加入專案"按鈕'
           },
           {
@@ -191,7 +191,7 @@ const ContextualHelp = ({ currentPage, userProgress = {}, userRole = 'student' }
     if (shouldShowHelp()) {
       const timer = setTimeout(() => {
         setIsVisible(true);
-      }, 2000); // 2秒後顯示幫助提示
+      }, 10000); // 10 秒後顯示幫助提示
 
       return () => clearTimeout(timer);
     }
