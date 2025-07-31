@@ -43,14 +43,14 @@ const API_KEY = "ragflow-U0ZTc4MzdlZTJjYjExZWZiMzcyMDI0Mm"; // 從前端程式�
 
 const io = new Server(server, {
     cors: {
-        origin: ['http://localhost'],
+        origin: ['https://science.sdlswuret.com'],
         methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
         credentials: true
     },
 }); 
 
 app.use(cors({
-    origin: ['http://localhost'],
+    origin: ['https://science.sdlswuret.com'],
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true
 }));

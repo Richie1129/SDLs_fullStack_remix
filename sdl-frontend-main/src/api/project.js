@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const projectApi = axios.create({
-    baseURL: "http://localhost/api/projects",
+    baseURL: "https://science.sdlswuret.com/api/projects",
     headers:{
         "Content-Type":" application/json",
     },

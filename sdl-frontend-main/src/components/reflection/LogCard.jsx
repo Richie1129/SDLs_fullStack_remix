@@ -21,7 +21,7 @@ const LogCard = ({
   const handleDownload = () => {
     if (item.fileName && item.fileUrl) {
       window.open(
-        `http://localhost/api/file/direct/${item.fileName}`,
+        `https://science.sdlswuret.com/api/file/direct/${item.fileName}`,
         "_blank"
       );
     } else if (item.fileData && item.fileData.data) {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost/api/llm';
+const API_BASE_URL = 'https://science.sdlswuret.com/api/llm';
 
 // 分析 5Rs 反思內容
 export const analyze5RsReflection = async (studentContent, preferredProvider = 'auto') => {
