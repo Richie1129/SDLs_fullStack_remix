@@ -905,14 +905,14 @@ console.log('Models loaded:', Object.keys(sequelize.models));
 
 // sync database
 console.log("syncing database---------------------------------------------------------------------")
-// sequelize.sync({ alter: true })  // {force:true} {alter:true}
-//     .then(result => {
-//         console.log("Database connected");
-//         console.log("Database structure synced");
-//         console.log("All tables created/recreated successfully");
-//     })
-//     .catch(err => {
-//         console.log("Database sync error:", err);
-//     });
+sequelize.sync({ alter: true })  // {force:true} {alter:true}
+    .then(result => {
+        console.log("Database connected");
+        console.log("Database structure synced");
+        console.log("All tables created/recreated successfully");
+    })
+    .catch(err => {
+        console.log("Database sync error:", err);
+    });
 
 server.listen(3000);
