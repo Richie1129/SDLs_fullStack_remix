@@ -9,7 +9,7 @@ import { FaPlus } from "react-icons/fa";
 import { RxCross2 } from "react-icons/rx";
 import { DragDropContext, Draggable } from 'react-beautiful-dnd';
 import { StrictModeDroppable as Droppable } from '../../utils/StrictModeDroppable';
-import SubStageComponent from '../../components/SubStageBar';
+// import SubStageComponent from '../../components/SubStageBar';
 import Swal from 'sweetalert2';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { getKanbanColumns, getKanbanTasks, addCardItem } from '../../api/kanban';
