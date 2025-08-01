@@ -8,7 +8,7 @@ const Idea_development = ({ nodeInfo, onClose, onNewNode }) => {
     const generateIdea = async () => {
         try {
             setIsLoading(true);
-            const response = await axios.post('https://science.sdlswuret.comsdlswuret.comsdlswuret.comsdlswuret.com/api/llm/generate-idea', {
+            const response = await axios.post('https://sdlswuret.com/api/llm/generate-idea', {
                 title: nodeInfo.title,
                 content: nodeInfo.content
             }, {
