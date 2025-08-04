@@ -9,7 +9,7 @@ import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
 
 export default function Register() {
-    const [userData, setUserData] = useState({ role: "student" });
+    const [userData, setUserData] = useState({ role: "student", class: "", seatNumber: "" });
     const [userContext, setUserContext] = useContext(AuthContext);
     const [error, setError] = useState("");
     const navigate = useNavigate();
@@ -103,11 +103,19 @@ export default function Register() {
             localStorage.setItem("accessToken", res.data.accessToken);
             localStorage.setItem("account", res.data.account);
             localStorage.setItem("id", res.data.id);
+            if (res.data.class) {
+                localStorage.setItem("class", res.data.class);
+            }
+            if (res.data.seatNumber) {
+                localStorage.setItem("seatNumber", res.data.seatNumber);
+            }
             setUserContext(prev => ({
                 ...prev,
                 account: res.data.account,
                 id: res.data.id,
                 accessToken: res.data.accessToken,
+                class: res.data.class,
+                seatNumber: res.data.seatNumber,
             }));
             navigate("/");
             // 成功註冊時彈出 SweetAlert 提示
@@ -202,6 +210,14 @@ export default function Register() {
                             <label className="block text-gray-700 text-base">確認密碼</label>
                             <input type="password" name="confirmPassword" placeholder="請輸入確認密碼" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
                             {error && <span className=' text-xs text-red-600'>{error}</span>}
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 text-base">班級</label>
+                            <input type="text" name="class" placeholder="請輸入班級（如：資工三甲）" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 text-base">座號</label>
+                            <input type="text" name="seatNumber" placeholder="請輸入座號" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" />
                         </div>
                         <div className="mt-4">
                             <label className="block text-gray-700 text-base">職位</label>

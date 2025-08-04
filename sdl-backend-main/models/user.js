@@ -24,7 +24,15 @@ const User = sequelize.define('user', {
     role: {
         type: DataTypes.TEXT,
         allowNull:false
-    },  
+    },
+    class: {
+        type: DataTypes.TEXT,
+        allowNull:true
+    },
+    seatNumber: {
+        type: DataTypes.TEXT,
+        allowNull:true
+    }
 });
 
 

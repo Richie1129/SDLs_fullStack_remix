@@ -29,6 +29,12 @@ export default function Login() {
         localStorage.setItem("id", res.data.id);
         localStorage.setItem("username", res.data.username);
         localStorage.setItem("role", res.data.role);
+        if (res.data.class) {
+          localStorage.setItem("class", res.data.class);
+        }
+        if (res.data.seatNumber) {
+          localStorage.setItem("seatNumber", res.data.seatNumber);
+        }
 
         setUserContext( prev =>{
           return{ ...prev, 
@@ -37,6 +43,8 @@ export default function Login() {
               accessToken : res.data.accessToken,
               username : res.data.username,
               role : res.data.role,
+              class : res.data.class,
+              seatNumber : res.data.seatNumber,
           }
         })
         navigate("/homepage")
