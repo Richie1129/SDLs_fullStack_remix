@@ -9,19 +9,20 @@ import { formatRelativeTime } from "../utils";
  * @param {string} userId - 用戶ID
  * @returns {object} 包含所有計算後的指標
  */
-export const useStudentMetrics = (data, userName, projectId, userId) => {
+export function useStudentMetrics(data, userName, projectId, userId) {
+  // 為數據提供默認值，防止 undefined 錯誤
   const {
-    teamAiInteractions,
-    ideaNodes,
-    kanbanTasks,
-    personalReflections,
-    teamReflections,
-    teamMembers,
-    chatHistory,
-    aiInteractions,
-    projectActivities,
-    projectInfo
-  } = data;
+    teamAiInteractions = [],
+    ideaNodes = [],
+    kanbanTasks = [],
+    personalReflections = [],
+    teamReflections = [],
+    teamMembers = [],
+    chatHistory = [],
+    aiInteractions = [],
+    projectActivities = [],
+    projectInfo = null
+  } = data || {};
 
   // 計算小組統計數據
   const teamStats = useMemo(() => {
@@ -599,4 +600,4 @@ export const useStudentMetrics = (data, userName, projectId, userId) => {
     learningGoals,
     achievements
   };
-};
+}

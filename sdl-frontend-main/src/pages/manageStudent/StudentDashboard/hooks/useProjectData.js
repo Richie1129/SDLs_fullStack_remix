@@ -14,7 +14,26 @@ import { getProject } from "../../../../api/project";
  * @param {string} userId - 用戶ID
  * @returns {object} 包含所有專案數據和載入狀態
  */
-export const useProjectData = (projectId, userId) => {
+export function useProjectData(projectId, userId) {
+  // 基本驗證
+  if (!projectId || !userId) {
+    console.warn("useProjectData: projectId or userId is missing");
+    return {
+      projectInfo: null,
+      teamMembers: [],
+      allReflections: [],
+      teamReflections: [],
+      teamAiInteractions: [],
+      personalReflections: [],
+      chatHistory: [],
+      aiInteractions: [],
+      projectActivities: [],
+      ideaNodes: [],
+      kanbanTasks: [],
+      loading: false
+    };
+  }
+
   // 狀態管理
   const [projectInfo, setProjectInfo] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -31,6 +50,12 @@ export const useProjectData = (projectId, userId) => {
 
   // 獲取所有專案資料
   useEffect(() => {
+    if (!projectId || !userId) {
+      console.warn("useProjectData useEffect: Missing required parameters");
+      setLoading(false);
+      return;
+    }
+
     const fetchProjectData = async () => {
       try {
         setLoading(true);
@@ -142,14 +167,24 @@ export const useProjectData = (projectId, userId) => {
 
       } catch (error) {
         console.error("獲取專案資料失敗:", error);
+        // 設置默認值以防止 undefined 錯誤
+        setProjectInfo(null);
+        setTeamMembers([]);
+        setAllReflections([]);
+        setTeamReflections([]);
+        setTeamAiInteractions([]);
+        setPersonalReflections([]);
+        setChatHistory([]);
+        setAiInteractions([]);
+        setProjectActivities([]);
+        setIdeaNodes([]);
+        setKanbanTasks([]);
       } finally {
         setLoading(false);
       }
     };
 
-    if (projectId) {
-      fetchProjectData();
-    }
+    fetchProjectData();
   }, [projectId, userId]);
 
   return {

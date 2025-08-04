@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { useParams } from "react-router-dom";
 
 // 自定義 Hooks
@@ -14,10 +14,32 @@ import TeammatesList from "./components/TeammatesList";
 import Achievements from "./components/Achievements";
 import QuickStats from "./components/QuickStats";
 
+// 載入組件
+const LoadingComponent = () => (
+  <div className="min-h-screen bg-gray-50 p-3 sm:p-6 flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+      <p className="text-gray-600">載入學習資料中...</p>
+    </div>
+  </div>
+);
+
 const StudentDashboard = () => {
+  // 確保參數正確獲取
   const { projectId } = useParams();
   const userId = localStorage.getItem("id");
   const userName = localStorage.getItem("username");
+  
+  // 添加防護性檢查
+  if (!projectId || !userId) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-3 sm:p-6 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">缺少必要參數，請重新載入頁面</p>
+        </div>
+      </div>
+    );
+  }
   
   // 獲取專案數據
   const projectData = useProjectData(projectId, userId);
@@ -29,14 +51,7 @@ const StudentDashboard = () => {
 
   // 載入狀態
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-3 sm:p-6 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">載入學習資料中...</p>
-        </div>
-      </div>
-    );
+    return <LoadingComponent />;
   }
 
   return (
