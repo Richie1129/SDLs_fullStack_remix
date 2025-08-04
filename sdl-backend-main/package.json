@@ -29,7 +29,9 @@
     "test-minio": "node test-minio.js",
     "install-minio": "./install-minio.sh",
     "enable-minio": "node enable-minio.js",
-    "quick-install": "node quick-install-minio.js"
+    "quick-install": "node quick-install-minio.js",
+    "migrate": "npx sequelize-cli db:migrate",
+    "migrate:undo": "npx sequelize-cli db:migrate:undo"
   },
   "author": "",
   "license": "ISC",
