@@ -34,7 +34,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./sdl-backend-main
-          dockerfile: ./sdl-backend-main/Dockerfile.prod
+          file: ./sdl-backend-main/Dockerfile.prod
           push: true
           tags: stone881129/sdl-api:sdls-v3
           cache-from: type=gha
@@ -44,7 +44,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./sdl-frontend-main
-          dockerfile: ./sdl-frontend-main/Dockerfile.prod
+          file: ./sdl-frontend-main/Dockerfile.prod
           push: true
           tags: stone881129/sdl-front:sdls-v3
           cache-from: type=gha
@@ -56,7 +56,6 @@ jobs:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
-          script_stop: true
           command_timeout: 300s  # ✅ 修正：時間需加單位
           script: |
             cd /home/hsueh/SDLs_fullStack_remix_v3 || { echo "❌ 專案目錄不存在"; exit 1; }
