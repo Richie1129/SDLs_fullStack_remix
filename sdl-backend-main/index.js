@@ -377,8 +377,16 @@ io.on("connection", (socket) => {
     //drag card
     ensureListener(socket, "cardItemDragged", async (data) => {
         const { destination, source, kanbanData, projectId, user } = data;
+        
+        // 檢查源任務是否存在
+        const sourceTask = kanbanData[source.droppableId]?.task?.[source.index];
+        if (!sourceTask || !sourceTask.id) {
+            console.error("Invalid source task for drag operation");
+            return;
+        }
+        
         const dragItem = {
-            ...kanbanData[source.droppableId].task[source.index],
+            ...sourceTask,
         };
         
         // 記錄移動操作
@@ -409,8 +417,12 @@ io.on("connection", (socket) => {
         // io.sockets.emit("dragtaskItem", kanbanData);
         io.to(projectId).emit("dragtaskItem", kanbanData);
 
-        const sourceColumn = kanbanData[source.droppableId].task.map(item => item.id);
-        const destinationColumn = kanbanData[destination.droppableId].task.map(item => item.id);
+        const sourceColumn = kanbanData[source.droppableId].task
+            .filter(item => item && item.id) // 過濾掉無效的任務
+            .map(item => item.id);
+        const destinationColumn = kanbanData[destination.droppableId].task
+            .filter(item => item && item.id) // 過濾掉無效的任務
+            .map(item => item.id);
         await Project.update({
             id: projectId
         }, {

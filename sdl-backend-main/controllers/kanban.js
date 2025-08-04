@@ -4,6 +4,37 @@ const Task = require('../models/task');
 const Project = require('../models/project');
 const TaskChangeLog = require('../models/task_change_log');
 
+// 清理函數：移除 Column 中不存在的任務 ID
+const cleanupColumnTasks = async (columnItem) => {
+    if (!columnItem.task || !Array.isArray(columnItem.task)) {
+        return [];
+    }
+
+    // 獲取所有存在的任務
+    const existingTasks = await Task.findAll({
+        attributes: ['id'],
+        where: {
+            columnId: columnItem.id
+        }
+    });
+
+    const existingTaskIds = new Set(existingTasks.map(task => task.id));
+    
+    // 過濾掉不存在的任務 ID
+    const cleanedTaskIds = columnItem.task.filter(taskId => existingTaskIds.has(taskId));
+    
+    // 如果有變化，更新資料庫
+    if (cleanedTaskIds.length !== columnItem.task.length) {
+        console.log(`清理 Column ${columnItem.id}: 移除了 ${columnItem.task.length - cleanedTaskIds.length} 個無效的任務 ID`);
+        await Column.update(
+            { task: cleanedTaskIds },
+            { where: { id: columnItem.id } }
+        );
+    }
+
+    return cleanedTaskIds;
+};
+
 exports.getKanban = async ( req, res ) => {
     const projectId = req.params.projectId;
     //kanban
@@ -104,9 +135,13 @@ exports.getKanban = async ( req, res ) => {
     // sortedColumnData[2].task = sortTaskData3;
     const sortedColumnData = column.map(columnId => columnData.find(item => item.id === columnId));
 
-    // 对于每个排序后的列，获取并排序其任务
+    // 對於每個排序後的列，取得並排序其任務
     await Promise.all(sortedColumnData.map(async (columnItem, columnIndex) => {
-        // 获取当前列的所有任务
+        // 清理無效的任務 ID
+        const cleanedTaskIds = await cleanupColumnTasks(columnItem);
+        columnItem.task = cleanedTaskIds;
+
+        // 取得目前列的所有任務
         const taskData = await Task.findAll({
             attributes: ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files', 'createdAt', 'updatedAt'],
             where: {
@@ -114,10 +149,12 @@ exports.getKanban = async ( req, res ) => {
             }
         });
     
-        // 根据列中的任务顺序排序这些任务
-        const sortedTaskData = columnItem.task.map(taskId => taskData.find(task => task.id === taskId));
+        // 根據列中的任務順序排序這些任務，並過濾掉不存在的任務
+        const sortedTaskData = columnItem.task
+            .map(taskId => taskData.find(task => task.id === taskId))
+            .filter(task => task !== undefined); // 過濾掉 undefined 的任務
     
-        // 更新当前列的任务数据
+        // 更新目前列的任務數據
         sortedColumnData[columnIndex].task = sortedTaskData;
     }));
 
@@ -193,6 +230,62 @@ exports.getProjectActivity = async (req, res) => {
     } catch (error) {
         console.error('取得專案活動失敗:', error);
         res.status(500).json({ message: '取得專案活動失敗' });
+    }
+};
+
+// 新增：手動清理數據的端點
+exports.cleanupKanbanData = async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        
+        console.log(`開始清理專案 ${projectId} 的 Kanban 數據...`);
+        
+        // 獲取專案的 Kanban
+        const kanbanData = await Kanban.findAll({
+            attributes: ['id', 'column'],
+            where: { projectId: projectId }
+        });
+
+        if (!kanbanData || kanbanData.length === 0) {
+            return res.status(404).json({ message: '找不到 Kanban 數據' });
+        }
+
+        const { id: kanbanId, column } = kanbanData[0];
+        
+        // 獲取所有列
+        const columns = await Column.findAll({
+            attributes: ['id', 'name', 'task'],
+            where: { kanbanId: kanbanId }
+        });
+
+        let totalCleaned = 0;
+        
+        // 清理每個列的任務
+        for (const columnItem of columns) {
+            const originalCount = columnItem.task ? columnItem.task.length : 0;
+            await cleanupColumnTasks(columnItem);
+            
+            // 重新獲取更新後的數據
+            const updatedColumn = await Column.findByPk(columnItem.id);
+            const newCount = updatedColumn.task ? updatedColumn.task.length : 0;
+            const cleaned = originalCount - newCount;
+            totalCleaned += cleaned;
+            
+            if (cleaned > 0) {
+                console.log(`列 "${columnItem.name}" 清理了 ${cleaned} 個無效任務 ID`);
+            }
+        }
+
+        res.status(200).json({
+            message: '數據清理完成',
+            projectId: projectId,
+            totalCleaned: totalCleaned,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('清理 Kanban 數據失敗:', error);
+        res.status(500).json({ message: '清理數據時發生錯誤', error: error.message });
     }
 };
 

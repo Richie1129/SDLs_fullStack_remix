@@ -76,12 +76,17 @@ export default function Kanban() {
           if (Array.isArray(column.task) && column.task.length > 0) {
             console.log(`卡片數量: ${column.task.length}`);
             column.task.forEach((task, taskIndex) => {
-              console.log(`  卡片 ${taskIndex + 1}:`);
-              console.log(`    ID: ${task.id}`);
-              console.log(`    標題: ${task.title}`);
-              console.log(`    內容: ${task.content || '無內容'}`);
-              console.log(`    標籤: ${task.labels ? JSON.stringify(task.labels) : '無標籤'}`);
-              console.log(`    指派人員: ${task.assignees ? JSON.stringify(task.assignees) : '無指派人員'}`);
+              // 檢查 task 是否存在且不為 null
+              if (task && task.id) {
+                console.log(`  卡片 ${taskIndex + 1}:`);
+                console.log(`    ID: ${task.id}`);
+                console.log(`    標題: ${task.title}`);
+                console.log(`    內容: ${task.content || '無內容'}`);
+                console.log(`    標籤: ${task.labels ? JSON.stringify(task.labels) : '無標籤'}`);
+                console.log(`    指派人員: ${task.assignees ? JSON.stringify(task.assignees) : '無指派人員'}`);
+              } else {
+                console.log(`  卡片 ${taskIndex + 1}: 無效的任務資料`);
+              }
             });
           } else {
             console.log('  此列表沒有卡片');
@@ -135,10 +140,15 @@ export default function Kanban() {
           if (Array.isArray(column.task) && column.task.length > 0) {
             console.log(`卡片數量: ${column.task.length}`);
             column.task.forEach((task, taskIndex) => {
-              console.log(`  卡片 ${taskIndex + 1}:`);
-              console.log(`    ID: ${task.id}`);
-              console.log(`    標題: ${task.title}`);
-              console.log(`    內容: ${task.content || '無內容'}`);
+              // 檢查 task 是否存在且不為 null
+              if (task && task.id) {
+                console.log(`  卡片 ${taskIndex + 1}:`);
+                console.log(`    ID: ${task.id}`);
+                console.log(`    標題: ${task.title}`);
+                console.log(`    內容: ${task.content || '無內容'}`);
+              } else {
+                console.log(`  卡片 ${taskIndex + 1}: 無效的任務資料`);
+              }
             });
           } else {
             console.log('  此列表沒有卡片');
