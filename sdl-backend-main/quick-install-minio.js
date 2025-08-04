@@ -55,7 +55,7 @@ try {
         console.log('\n📖 完整設置指南:');
         console.log('1. 安裝依賴項 (上述命令之一)');
         console.log('2. 啟動 MinIO: docker run -d --name minio-dev -p 9000:9000 -p 9001:9001 -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" minio/minio server /data --console-address ":9001"');
-        console.log('3. 訪問 https://science.sdlswuret.com:9001 創建 sdl-files bucket');
+        console.log('3. 訪問 http://localhost:9001 創建 sdl-files bucket');
         console.log('4. 重啟應用程式: npm run dev');
         
         process.exit(1);
@@ -79,7 +79,7 @@ try {
     console.log('     -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" \\');
     console.log('     minio/minio server /data --console-address ":9001"');
     console.log('');
-    console.log('2. 訪問 MinIO Console: https://science.sdlswuret.com:9001');
+    console.log('2. 訪問 MinIO Console: http://localhost:9001');
     console.log('   使用 minioadmin/minioadmin 登入');
     console.log('');
     console.log('3. 創建名為 "sdl-files" 的 bucket');

@@ -3,7 +3,7 @@ import axios from "axios";
 
 axios.defaults.withCredentials = true; 
 const dailyApi = axios.create({
-    baseURL: "https://science.sdlswuret.com/api/daily",
+    baseURL: "http://localhost/api/daily",
     headers:{
         "Content-Type": "multipart/form-data"
     },
@@ -29,7 +29,7 @@ export const createPersonalDaily = async (data) => {
 
 // 修改個人日報
 export const updatePersonalDaily = async (id, data) => {
-    console.log(`發送請求: PUT https://science.sdlswuret.com/api/daily/personal/${id}`, data);
+    console.log(`發送請求: PUT http://localhost/api/daily/personal/${id}`, data);
     
     // 檢查 data 是否為 FormData（有檔案上傳）
     const isFormData = data instanceof FormData;

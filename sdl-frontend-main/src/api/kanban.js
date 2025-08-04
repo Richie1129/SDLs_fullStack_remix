@@ -2,7 +2,7 @@ import axios from "axios";
 
 axios.defaults.withCredentials = true; 
 const kanbanApi = axios.create({
-    baseURL: "https://science.sdlswuret.com/api/kanbans",
+    baseURL: "http://localhost/api/kanbans",
     headers:{
         "Content-Type":" application/json"
     },
@@ -25,7 +25,7 @@ export const getTaskChangeLogs = async (taskId) => {
 
 // 取得節點變更記錄
 export const getNodeChangeLogs = async (nodeId) => {
-    const response = await axios.get(`https://science.sdlswuret.com/api/node/changes/${nodeId}`);
+    const response = await axios.get(`http://localhost/api/node/changes/${nodeId}`);
     return response.data;
 };
 

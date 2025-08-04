@@ -291,7 +291,7 @@ function Carditem({ data, index, columnIndex }) {
     const processedImages = (data.images || []).map(imageUrl => {
       if (imageUrl.includes('sdls-files/')) {
         const fileName = imageUrl.split('/').pop();
-        return `https://science.sdlswuret.com/api/file/image/${fileName}`;
+        return `http://localhost/api/file/image/${fileName}`;
       }
       return imageUrl;
     });
@@ -333,7 +333,7 @@ function Carditem({ data, index, columnIndex }) {
     });
 
     try {
-      const response = await axios.post('https://science.sdlswuret.com/api/upload', formData, {
+      const response = await axios.post('http://localhost/api/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -344,7 +344,7 @@ function Carditem({ data, index, columnIndex }) {
         .filter((file) => !file.mimeType.startsWith("image/"))
         .map((file) => ({
           // 如果是完整 URL (MinIO)，直接使用；否則拼接本地路徑
-          url: file.url.startsWith('http') ? file.url : `https://science.sdlswuret.com/api${file.url}`,
+          url: file.url.startsWith('http') ? file.url : `http://localhost/api${file.url}`,
           originalName: file.originalName,
           mimeType: file.mimeType,
           fileName: file.fileName // 保存 MinIO 檔名
@@ -356,10 +356,10 @@ function Carditem({ data, index, columnIndex }) {
           // 如果是 MinIO URL，提取檔名並使用代理 API
           if (file.url.includes('sdls-files/')) {
             const fileName = file.fileName || file.url.split('/').pop();
-            return `https://science.sdlswuret.com/api/file/image/${fileName}`;
+            return `http://localhost/api/file/image/${fileName}`;
           }
           // 本地檔案使用原來的邏輯
-          return file.url.startsWith('http') ? file.url : `https://science.sdlswuret.com/api${file.url}`;
+          return file.url.startsWith('http') ? file.url : `http://localhost/api${file.url}`;
         });
 
       setCardData((prev) => ({
@@ -384,7 +384,7 @@ function Carditem({ data, index, columnIndex }) {
       // 檢查是否為 MinIO URL (完整 URL)
       const downloadUrl = file.url.startsWith('http') 
         ? file.url  // MinIO 完整 URL
-        : `https://science.sdlswuret.com/api${file.url}`; // 本地相對路徑
+        : `http://localhost/api${file.url}`; // 本地相對路徑
       
       console.log('下載檔案 URL:', downloadUrl);
       
@@ -414,7 +414,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(`https://science.sdlswuret.com/api/file/${fileName}`);
+        await axios.delete(`http://localhost/api/file/${fileName}`);
         console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
       }
 
@@ -459,7 +459,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(`https://science.sdlswuret.com/api/file/${fileName}`);
+        await axios.delete(`http://localhost/api/file/${fileName}`);
         console.log(`✅ MinIO 圖片刪除成功: ${fileName}`);
       }
 

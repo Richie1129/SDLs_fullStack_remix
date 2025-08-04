@@ -3,7 +3,7 @@ import axios from "axios";
 axios.defaults.withCredentials = true; 
 //login & register
 const usersApi = axios.create({
-    baseURL: "https://science.sdlswuret.com/api/users",
+    baseURL: "http://localhost/api/users",
     headers:{
         "Content-Type":" application/json"
     },

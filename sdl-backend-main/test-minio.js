@@ -5,7 +5,7 @@ const { s3Client, uploadFileToMinio, checkFileExists, BUCKET_NAME } = require('.
 async function testMinIOConnection() {
     console.log('🔄 開始測試 MinIO 連線...');
     console.log(`📊 配置資訊:
-    - Endpoint: ${process.env.MINIO_ENDPOINT || "https://science.sdlswuret.com:9000"}
+    - Endpoint: ${process.env.MINIO_ENDPOINT || "http://localhost:9000"}
     - Access Key: ${process.env.MINIO_ACCESS_KEY || "minioadmin"}
     - Bucket: ${BUCKET_NAME}
     `);
@@ -28,7 +28,7 @@ async function testMinIOConnection() {
         console.log('\n📋 接下來的步驟:');
         console.log('1. 啟動你的應用程式: npm run dev');
         console.log('2. 測試檔案上傳 API: POST /api/upload');
-        console.log('3. 查看 MinIO Console: https://science.sdlswuret.com:9001');
+        console.log('3. 查看 MinIO Console: http://localhost:9001');
 
     } catch (error) {
         console.error('❌ MinIO 測試失敗:', error.message);
