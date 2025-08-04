@@ -1332,7 +1332,7 @@ const DraggableImage = () => {
       )}
 
       {/* 添加 CSS 動畫和 RWD 樣式 */}
-      <style jsx>{`
+      <style jsx={true}>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }

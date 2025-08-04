@@ -47,6 +47,16 @@ export default function Kanban() {
   const [currentStage, setCurrentStage] = useState(() => localStorage.getItem("currentStage"));
   const [currentSubStage, setCurrentSubStage] = useState(() => localStorage.getItem("currentSubStage"));
 
+  // Helper function to determine if scrolling should be enabled for card lists
+  const getCardListStyle = (isDraggingOver, hasOverflow = false) => {
+    const baseClasses = "flex flex-col px-4 pb-1";
+    const heightClasses = "max-h-96 sm:max-h-[28rem] lg:max-h-[32rem]";
+    const backgroundClasses = isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50';
+    const scrollClasses = hasOverflow ? 'overflow-y-auto scrollbar-thin' : '';
+    
+    return `${baseClasses} ${heightClasses} ${backgroundClasses} ${scrollClasses}`.trim();
+  };
+
 
   const {
     isLoading: kanbanIsLoading,
@@ -408,7 +418,7 @@ export default function Kanban() {
   return (
     <div className="h-full w-full bg-white flex flex-col">
       <DraggableImage/>
-      <div className="flex-1 p-4 sm:p-6 lg:p-8 overflow-hidden">
+      <div className="flex-1 p-4 sm:p-6 lg:p-8">
         <DragDropContext onDragEnd={onDragEnd}>
           
           <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
@@ -416,7 +426,7 @@ export default function Kanban() {
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 overflow-y-auto md:overflow-x-auto md:overflow-y-hidden h-full scrollbar-none"
+                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 h-full overflow-y-auto md:overflow-y-hidden md:overflow-x-auto scrollbar-none"
               >
                 {!showAddGroupInput && (
                   <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7 mb-4 md:mb-0" onClick={toggleAddGroupInput}>
@@ -486,10 +496,16 @@ export default function Kanban() {
                               </div>
                               {
                                 <Droppable droppableId={columnIndex.toString()} type='CARD'>
-                                  {(provided,snapshot) => (
-                                    <div {...provided.droppableProps} ref={provided.innerRef}  >
-                                      <div className={`flex flex-col px-4 pb-1 overflow-y-auto max-h-96 sm:max-h-[28rem] lg:max-h-[32rem] scrollbar-thin ${snapshot.isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50'}`}>
-
+                                  {(provided,snapshot) => {
+                                    const taskCount = column.task?.length || 0;
+                                    const needsScrolling = taskCount > 5; // Enable scrolling if more than 5 tasks
+                                    
+                                    return (
+                                      <div 
+                                        {...provided.droppableProps} 
+                                        ref={provided.innerRef}
+                                        className={getCardListStyle(snapshot.isDraggingOver, needsScrolling)}
+                                      >
                                         <div className="items-container">
                                         {Array.isArray(column.task) && column.task.length > 0 &&
                                           column.task
@@ -510,8 +526,8 @@ export default function Kanban() {
                                           {provided.placeholder}
                                         </div>
                                       </div>
-                                    </div>
-                                  )}
+                                    );
+                                  }}
                                 </Droppable>
 
                               }
