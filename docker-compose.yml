@@ -38,7 +38,7 @@ services:
       - PG_PORT=5432
       - PG_USER=postgres
       - PG_PASSWORD=postgres
-      - PG_NAME=sdls_fullstack_postgres1
+      - PG_NAME=postgres
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       # MinIO 環境變數
