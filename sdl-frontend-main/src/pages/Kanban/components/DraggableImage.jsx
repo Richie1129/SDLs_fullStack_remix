@@ -1228,6 +1228,8 @@ const DraggableImage = () => {
                               components={{
                                 code: ({ node, className, children, ...props }) => {
                                   const match = /language-(\w+)/.exec(className || '');
+                                  // 移除不應該傳遞給 DOM 的屬性
+                                  const { jsx, ...domProps } = props;
                                   return match ? (
                                     <pre style={{ 
                                       backgroundColor: "#f8f9fa", 
@@ -1242,7 +1244,7 @@ const DraggableImage = () => {
                                         color: "#495057", 
                                         fontSize: "12px",
                                         fontFamily: "Monaco, Consolas, 'Courier New', monospace"
-                                      }} {...props}>
+                                      }} {...domProps}>
                                         {children}
                                       </code>
                                     </pre>
@@ -1254,7 +1256,7 @@ const DraggableImage = () => {
                                       borderRadius: "4px", 
                                       fontSize: "12px",
                                       fontFamily: "Monaco, Consolas, 'Courier New', monospace"
-                                    }} {...props}>
+                                    }} {...domProps}>
                                       {children}
                                     </code>
                                   );
