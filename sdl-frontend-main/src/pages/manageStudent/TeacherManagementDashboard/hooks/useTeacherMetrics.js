@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { calculateProgress } from "../utils";
 
 export const useTeacherMetrics = (realData, allProjectMembers) => {
