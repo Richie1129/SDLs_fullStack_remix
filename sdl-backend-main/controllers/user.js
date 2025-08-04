@@ -60,12 +60,14 @@ exports.loginUser = (req, res) => {
                         const account = result[0].account;
                         const username = result[0].username;
                         const id = result[0].id;
+                        const classField = result[0].class;
+                        const seatNumber = result[0].seatNumber;
                         const accessToken = sign(
                                 {account: account, id:id}, 
                                 "importantsecret"
                         );
                         const role =  result[0].role;
-                        res.json({accessToken, account, username, id, role});
+                        res.json({accessToken, account, username, id, role, class: classField, seatNumber});
                     }else{
                         res.status(404).json({message: 'Wrong account or Password!'});
                         console.log(err);
@@ -85,10 +87,14 @@ exports.registerUser = (req, res) => {
     const account = req.body.account;
     const password = req.body.password;
     const role = req.body.role;
-    console.log("Received account:", username);
+    const classField = req.body.class;
+    const seatNumber = req.body.seatNumber;
+    console.log("Received username:", username);
     console.log("Received account:", account);
     console.log("Received password:", password);
     console.log("Received role:", role);
+    console.log("Received class:", classField);
+    console.log("Received seatNumber:", seatNumber);
 
     // 檢查用戶是否已經存在
     User.findOne({
@@ -111,7 +117,9 @@ exports.registerUser = (req, res) => {
                         username: username,
                         account: account,
                         password: hash,
-                        role: role
+                        role: role,
+                        class: classField,
+                        seatNumber: seatNumber
                     })
                     .then(result => {
                         const account = result.account;
