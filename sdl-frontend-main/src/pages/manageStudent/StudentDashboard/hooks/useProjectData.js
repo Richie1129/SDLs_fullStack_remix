@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { getKanbanColumns, getProjectActivity } from "../../../../api/kanban";
 import { getNodes } from "../../../../api/nodes";
 import { getIdeaWall } from "../../../../api/ideaWall";
