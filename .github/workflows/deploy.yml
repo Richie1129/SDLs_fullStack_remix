@@ -3,8 +3,11 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - deploy
-      - rwd-layout-test
+      - rwd-layout-clean
+
+  pull_request:
+    types: [closed]
+    branches:
       - rwd-layout-clean
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
