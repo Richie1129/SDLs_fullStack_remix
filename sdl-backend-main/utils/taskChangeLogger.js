@@ -103,13 +103,58 @@ function getFieldChangeDescription(fieldName, oldValue, newValue) {
         case 'title':
             return `標題從「${oldValue}」改為「${newValue}」`;
         case 'content':
-            return '內容已更新';
+            if (!oldValue && newValue) {
+                // 新增內容時，顯示內容摘要
+                const contentPreview = newValue.length > 50 ? 
+                    newValue.substring(0, 50) + '...' : newValue;
+                return `新增了任務內容: "${contentPreview}"`;
+            } else if (oldValue && !newValue) {
+                return '清空了任務內容';
+            } else if (oldValue && newValue) {
+                // 更新內容時，顯示新內容的預覽
+                const newContentPreview = newValue.length > 50 ? 
+                    newValue.substring(0, 50) + '...' : newValue;
+                return `更新了任務內容為: "${newContentPreview}"`;
+            }
+            return '更新了任務內容';
         case 'assignees':
-            const oldAssignees = Array.isArray(oldValue) ? oldValue.map(a => a.username).join(', ') : '';
-            const newAssignees = Array.isArray(newValue) ? newValue.map(a => a.username).join(', ') : '';
-            return `指派成員從「${oldAssignees}」改為「${newAssignees}」`;
+            try {
+                const oldAssignees = Array.isArray(oldValue) ? oldValue : (oldValue ? JSON.parse(oldValue) : []);
+                const newAssignees = Array.isArray(newValue) ? newValue : (newValue ? JSON.parse(newValue) : []);
+                
+                const oldNames = oldAssignees.map(a => a.username || a.userId || a).filter(name => name).join(', ');
+                const newNames = newAssignees.map(a => a.username || a.userId || a).filter(name => name).join(', ');
+                
+                if (!oldNames && newNames) {
+                    return `指派給: ${newNames}`;
+                } else if (oldNames && !newNames) {
+                    return `取消指派: ${oldNames}`;
+                } else if (oldNames !== newNames) {
+                    return `指派成員從「${oldNames}」改為「${newNames}」`;
+                } else {
+                    return '更新了指派成員';
+                }
+            } catch (error) {
+                return '更新了指派成員';
+            }
         case 'labels':
-            return '標籤已更新';
+            try {
+                const oldLabels = Array.isArray(oldValue) ? oldValue : (oldValue ? JSON.parse(oldValue) : []);
+                const newLabels = Array.isArray(newValue) ? newValue : (newValue ? JSON.parse(newValue) : []);
+                
+                const oldLabelNames = oldLabels.map(l => l.content || l).join(', ');
+                const newLabelNames = newLabels.map(l => l.content || l).join(', ');
+                
+                if (!oldLabelNames && newLabelNames) {
+                    return `添加標籤: ${newLabelNames}`;
+                } else if (oldLabelNames && !newLabelNames) {
+                    return `移除標籤: ${oldLabelNames}`;
+                } else {
+                    return `標籤從「${oldLabelNames}」改為「${newLabelNames}」`;
+                }
+            } catch (error) {
+                return '更新了標籤';
+            }
         default:
             return `${fieldName} 已更新`;
     }

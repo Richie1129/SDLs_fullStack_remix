@@ -233,7 +233,13 @@ io.on("connection", (socket) => {
                 taskId: creatTask.id,
                 taskTitle: creatTask.title,
                 user: extractedOwner,
-                timestamp: new Date()
+                timestamp: new Date(),
+                columnName: kanbanData[selectedcolumn]?.name || '未知列表',
+                taskDetails: {
+                    content: creatTask.content,
+                    labels: creatTask.labels,
+                    assignees: creatTask.assignees
+                }
             });
         } catch (error) {
             console.error("❌ 創建任務錯誤:", error);
@@ -279,12 +285,36 @@ io.on("connection", (socket) => {
             
             // 廣播任務更新事件與活動更新
             io.to(projectId).emit("taskItem", updateTask);
+            
+            // 取得任務所在的列表資訊
+            const taskColumn = await Column.findOne({
+                where: { id: originalTask.columnId },
+                attributes: ['id', 'name']
+            });
+            
+            // 取得最新的變更記錄以獲取詳細資訊
+            const recentChanges = await TaskChangeLog.findAll({
+                where: { 
+                    taskId: cardData.id,
+                    changeType: 'update'
+                },
+                order: [['createdAt', 'DESC']],
+                limit: 5 // 取得最近5個變更記錄
+            });
+            
             io.to(projectId).emit("activityUpdate", {
                 type: 'update',
                 taskId: cardData.id,
                 taskTitle: cardData.title,
                 user: changedBy,
-                timestamp: new Date()
+                timestamp: new Date(),
+                columnName: taskColumn?.name || '未知列表',
+                changes: recentChanges.map(change => ({
+                    fieldName: change.fieldName,
+                    oldValue: change.oldValue,
+                    newValue: change.newValue,
+                    description: change.description
+                }))
             });
         } catch (error) {
             console.error("更新卡片失敗:", error);
@@ -362,7 +392,13 @@ io.on("connection", (socket) => {
                     taskId: cardData.id,
                     taskTitle: cardData.title,
                     user: changedBy,
-                    timestamp: new Date()
+                    timestamp: new Date(),
+                    columnName: column.name,
+                    taskDetails: {
+                        content: cardData.content,
+                        labels: cardData.labels,
+                        assignees: cardData.assignees
+                    }
                 });
 
             } else {
@@ -403,6 +439,9 @@ io.on("connection", (socket) => {
         
         // 只有當移動到不同欄位時才記錄
         if (source.droppableId !== destination.droppableId) {
+            // 獲取任務標題以生成更詳細的描述
+            const taskTitle = dragItem.title || `任務 #${dragItem.id}`;
+            
             await logTaskChange({
                 taskId: dragItem.id,
                 changeType: 'move',
@@ -410,7 +449,7 @@ io.on("connection", (socket) => {
                 projectId: projectId,
                 oldValue: sourceColumnName,
                 newValue: destinationColumnName,
-                description: `任務從「${sourceColumnName}」移動到「${destinationColumnName}」`
+                description: `將任務「${taskTitle}」從「${sourceColumnName}」移動到「${destinationColumnName}」`
             });
         }
         

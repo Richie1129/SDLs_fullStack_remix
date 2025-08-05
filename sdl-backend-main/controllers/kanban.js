@@ -3,6 +3,7 @@ const Column = require('../models/column');
 const Task = require('../models/task');
 const Project = require('../models/project');
 const TaskChangeLog = require('../models/task_change_log');
+const { Op } = require('sequelize');
 
 // 清理函數：移除 Column 中不存在的任務 ID
 const cleanupColumnTasks = async (columnItem) => {
@@ -212,10 +213,18 @@ exports.getTaskChangeLogs = async (req, res) => {
 exports.getProjectActivity = async (req, res) => {
     try {
         const { projectId } = req.params;
-        const { limit = 20, offset = 0 } = req.query;
+        const { limit = 20, offset = 0, before } = req.query;
+        
+        // 建立查詢條件
+        const whereCondition = { projectId };
+        if (before) {
+            whereCondition.createdAt = {
+                [Op.lt]: new Date(before)
+            };
+        }
         
         const activities = await TaskChangeLog.findAll({
-            where: { projectId },
+            where: whereCondition,
             include: [{
                 model: Task,
                 attributes: ['id', 'title'],
@@ -226,7 +235,67 @@ exports.getProjectActivity = async (req, res) => {
             offset: parseInt(offset)
         });
         
-        res.status(200).json(activities);
+        // 組合活動資料，包含詳細的變更資訊
+        const formattedActivities = await Promise.all(activities.map(async (activity) => {
+            const baseActivity = {
+                id: activity.id,
+                changeType: activity.changeType,
+                changedBy: activity.changedBy,
+                createdAt: activity.createdAt,
+                description: activity.description,
+                task: activity.Task ? {
+                    id: activity.Task.id,
+                    title: activity.Task.title
+                } : null
+            };
+
+            // 如果是移動操作，添加 from 和 to 屬性
+            if (activity.changeType === 'move') {
+                baseActivity.from = activity.oldValue;  // sourceColumnName
+                baseActivity.to = activity.newValue;    // destinationColumnName
+                
+                // 如果task為null但description中包含任務標題，嘗試從description中提取
+                if (!baseActivity.task && activity.description) {
+                    const titleMatch = activity.description.match(/將任務「(.+?)」從/);
+                    if (titleMatch) {
+                        baseActivity.task = {
+                            id: activity.taskId,
+                            title: titleMatch[1]
+                        };
+                    }
+                }
+            }
+
+            // 如果是更新操作，獲取相關的所有變更記錄
+            if (activity.changeType === 'update' && activity.taskId) {
+                const relatedChanges = await TaskChangeLog.findAll({
+                    where: { 
+                        taskId: activity.taskId,
+                        changeType: 'update',
+                        createdAt: {
+                            // 取得同一時間範圍內的變更（前後30秒）
+                            [Op.between]: [
+                                new Date(activity.createdAt.getTime() - 30000),
+                                new Date(activity.createdAt.getTime() + 30000)
+                            ]
+                        }
+                    },
+                    order: [['createdAt', 'DESC']],
+                    limit: 5
+                });
+
+                baseActivity.changes = relatedChanges.map(change => ({
+                    fieldName: change.fieldName,
+                    oldValue: change.oldValue,
+                    newValue: change.newValue,
+                    description: change.description
+                }));
+            }
+
+            return baseActivity;
+        }));
+        
+        res.status(200).json(formattedActivities);
     } catch (error) {
         console.error('取得專案活動失敗:', error);
         res.status(500).json({ message: '取得專案活動失敗' });
