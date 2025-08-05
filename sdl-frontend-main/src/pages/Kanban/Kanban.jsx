@@ -278,14 +278,43 @@ export default function Kanban() {
       });
 
     } else if (type === 'CARD') {
+      // 立即更新本地狀態以提供即時反饋
+      const sourceColumnIndex = parseInt(source.droppableId);
+      const destColumnIndex = parseInt(destination.droppableId);
+      
+      const newKanbanData = Array.from(kanbanData);
+      const sourceColumn = { ...newKanbanData[sourceColumnIndex] };
+      const destColumn = sourceColumnIndex === destColumnIndex 
+        ? sourceColumn 
+        : { ...newKanbanData[destColumnIndex] };
+      
+      // 從源列表移除卡片
+      const sourceTasks = Array.from(sourceColumn.task || []);
+      const [movedTask] = sourceTasks.splice(source.index, 1);
+      sourceColumn.task = sourceTasks;
+      
+      // 添加卡片到目標列表
+      const destTasks = Array.from(destColumn.task || []);
+      destTasks.splice(destination.index, 0, movedTask);
+      destColumn.task = destTasks;
+      
+      // 更新 kanbanData
+      newKanbanData[sourceColumnIndex] = sourceColumn;
+      if (sourceColumnIndex !== destColumnIndex) {
+        newKanbanData[destColumnIndex] = destColumn;
+      }
+      
+      // 立即更新本地狀態
+      setKanbanData(newKanbanData);
+      
+      // 發送 socket 事件進行同步
       socket.emit('cardItemDragged', {
         destination,
         source,
-        kanbanData,
+        kanbanData: newKanbanData, // 發送更新後的數據
         projectId,
         user: { username: localStorage.getItem("username") }
-      })
-
+      });
     }
   }, [kanbanData]);
 
