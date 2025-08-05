@@ -5,10 +5,6 @@ on:
     branches:
       - rwd-layout-clean
 
-  pull_request:
-    types: [closed]
-    branches:
-      - rwd-layout-clean
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
@@ -18,12 +14,6 @@ env:
 
 jobs:
   build-and-deploy:
-    if: |
-      (github.event_name == 'push') ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.merged == true &&
-       github.event.pull_request.head.ref == 'sdls-local-v3')
-
     runs-on: ubuntu-latest
     
     steps:
