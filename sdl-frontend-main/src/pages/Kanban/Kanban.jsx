@@ -138,13 +138,28 @@ export default function Kanban() {
     
     function kanbanDragEvent(data) {
       if (data) {
-        console.log("Drag event data:", data);
-        setKanbanData(data);
-        // Update React Query cache immediately to prevent stale data
-        queryClient.setQueryData(['kanbanDatas', projectId], data);
+        console.log("Drag event data received from server:", data);
+        
+        // 重要：只在服務器返回的數據與本地狀態有顯著差異時才更新
+        // 這可以避免服務器回應覆蓋本地的即時更新
+        const currentDataString = JSON.stringify(kanbanData);
+        const serverDataString = JSON.stringify(data);
+        
+        if (currentDataString !== serverDataString) {
+          console.log("服務器數據與本地數據不同，更新本地狀態");
+          
+          // 使用較短的延遲，確保不會覆蓋正在進行的操作
+          setTimeout(() => {
+            setKanbanData(data);
+            // Update React Query cache immediately to prevent stale data
+            queryClient.setQueryData(['kanbanDatas', projectId], data);
+          }, 50);
+        } else {
+          console.log("服務器數據與本地數據相同，跳過更新");
+        }
         
         // 印出拖拽後的列表資料
-        console.log('=== 拖拽後的 Kanban 列表資料 ===');
+        console.log('=== 服務器確認的拖拽後列表資料 ===');
         data.forEach((column, index) => {
           console.log(`列表 ${index + 1}: ${column.name}`);
           console.log(`列表 ID: ${column.id}`);
@@ -277,10 +292,25 @@ export default function Kanban() {
         kanbanId: projectId,
       });
 
-    } else if (type === 'CARD') {
-      // 立即更新本地狀態以提供即時反饋
-      const sourceColumnIndex = parseInt(source.droppableId);
-      const destColumnIndex = parseInt(destination.droppableId);
+        } else if (type === 'CARD') {
+      console.log('🔄 開始處理卡片拖拉:', { source, destination });
+      
+      // 使用 column ID 而不是索引來找到對應的列表
+      const sourceColumnId = parseInt(source.droppableId);
+      const destColumnId = parseInt(destination.droppableId);
+      
+      console.log('拖拉列表ID:', { sourceColumnId, destColumnId });
+      
+      // 找到對應的列表索引
+      const sourceColumnIndex = kanbanData.findIndex(col => col.id === sourceColumnId);
+      const destColumnIndex = kanbanData.findIndex(col => col.id === destColumnId);
+      
+      if (sourceColumnIndex === -1 || destColumnIndex === -1) {
+        console.error('❌ 找不到對應的列表:', { sourceColumnId, destColumnId, sourceColumnIndex, destColumnIndex });
+        return;
+      }
+      
+      console.log('對應的列表索引:', { sourceColumnIndex, destColumnIndex });
       
       const newKanbanData = Array.from(kanbanData);
       const sourceColumn = { ...newKanbanData[sourceColumnIndex] };
@@ -291,6 +321,14 @@ export default function Kanban() {
       // 從源列表移除卡片
       const sourceTasks = Array.from(sourceColumn.task || []);
       const [movedTask] = sourceTasks.splice(source.index, 1);
+      
+      if (!movedTask) {
+        console.error('❌ 找不到要移動的卡片:', { sourceColumnIndex, sourceIndex: source.index });
+        return;
+      }
+      
+      console.log('移動的卡片:', movedTask.title, '從', sourceColumn.name, '到', destColumn.name);
+      
       sourceColumn.task = sourceTasks;
       
       // 添加卡片到目標列表
@@ -307,14 +345,27 @@ export default function Kanban() {
       // 立即更新本地狀態
       setKanbanData(newKanbanData);
       
-      // 發送 socket 事件進行同步
+      // 更新 React Query 緩存
+      queryClient.setQueryData(['kanbanDatas', projectId], newKanbanData);
+      
+      console.log('✅ 本地狀態已更新，準備發送到服務器');
+      
+      // 發送 socket 事件進行同步 - 重要：發送原始的 kanbanData，讓服務器處理拖拉邏輯
       socket.emit('cardItemDragged', {
-        destination,
-        source,
-        kanbanData: newKanbanData, // 發送更新後的數據
+        destination: {
+          ...destination,
+          droppableId: destColumnIndex.toString() // 轉換回索引給服務器
+        },
+        source: {
+          ...source,
+          droppableId: sourceColumnIndex.toString() // 轉換回索引給服務器
+        },
+        kanbanData: kanbanData, // 發送原始數據，不是修改後的數據
         projectId,
         user: { username: localStorage.getItem("username") }
       });
+      
+      console.log('📡 已發送拖拉事件到服務器');
     }
   }, [kanbanData]);
 
@@ -525,7 +576,7 @@ export default function Kanban() {
                                 </button>
                               </div>
                               {
-                                <Droppable droppableId={columnIndex.toString()} type='CARD'>
+                                <Droppable droppableId={column.id.toString()} type='CARD'>
                                   {(provided,snapshot) => {
                                     return (
                                       <div 
