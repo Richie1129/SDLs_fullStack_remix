@@ -25,7 +25,12 @@ export default function ProjectLayout() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         <SideBar />
         <main className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto">
+          {/*
+            For Kanban: prevent parent scrolling and let Kanban manage its own
+            vertical (inside columns) and horizontal (board) scroll.
+            For other pages: allow normal vertical scrolling.
+          */}
+          <div className={inKanBan ? "flex-1 min-h-0 overflow-hidden" : "flex-1 overflow-y-auto"}>
             <Outlet />
           </div>
           {inKanBan && <SubStageComponent />}

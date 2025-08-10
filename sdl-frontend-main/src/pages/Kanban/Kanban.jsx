@@ -52,15 +52,12 @@ export default function Kanban() {
   // 使用觀摩模式 hook
   const { isObservationMode } = useObservationMode();
 
-  // Helper function to determine if scrolling should be enabled for card lists
-  const getCardListStyle = (isDraggingOver, hasOverflow = false) => {
-    const baseClasses = "flex flex-col px-4 pb-1";
-    const heightClasses = "max-h-96 sm:max-h-[28rem] lg:max-h-[32rem]";
-    const backgroundClasses = isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50';
-    // 使用固定的滾動設定，參考 KanbanOri.txt 的做法
-    const scrollClasses = 'overflow-y-auto scrollbar-thin';
-    
-    return `${baseClasses} ${heightClasses} ${backgroundClasses} ${scrollClasses}`.trim();
+  // Helper: on small screens, lists expand naturally (page scroll);
+  // on md+, lists fill remaining height and scroll internally.
+  const getCardListStyle = (isDraggingOver) => {
+    const base = 'flex flex-col px-4 pb-1 overflow-visible md:flex-1 md:min-h-0 md:overflow-y-auto scrollbar-thin';
+    const bg = isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50';
+    return `${base} ${bg}`.trim();
   };
 
 
@@ -541,7 +538,7 @@ export default function Kanban() {
   }
 
   return (
-    <div className="h-full w-full bg-white flex flex-col">
+    <div className="h-full min-h-0 w-full bg-white flex flex-col">
       <DraggableImage/>
       
       {/* 觀摩模式提示 */}
@@ -562,7 +559,7 @@ export default function Kanban() {
         </div>
       )}
       
-      <div className="flex-1 p-4 sm:p-6 lg:p-8">
+      <div className="flex-1 min-h-0 p-4 sm:p-6 lg:p-8 overflow-y-auto md:overflow-hidden ">
         <DragDropContext onDragEnd={isObservationMode ? () => {} : onDragEnd}>
           
           <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
@@ -570,10 +567,12 @@ export default function Kanban() {
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 h-full scrollbar-none"
+                className="w-full h-full overflow-x-hidden overflow-y-auto md:overflow-x-auto md:overflow-y-hidden"
               >
+                {/* Small screens: wrap and stack vertically; md+: single row with horizontal scroll */}
+                <div className="flex flex-row flex-wrap items-start gap-4 h-auto md:inline-flex md:flex-nowrap md:space-x-4 md:gap-0 md:h-full">
                 {!showAddGroupInput && !isObservationMode && (
-                  <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7 mb-4 md:mb-0" onClick={toggleAddGroupInput}>
+                  <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7" onClick={toggleAddGroupInput}>
                     <FaPlus className="text-white mr-2 md:m-3" />
                     <b className="text-sm md:text-base text-white">
                       新增列表
@@ -583,8 +582,8 @@ export default function Kanban() {
 
                 )}
                 {showAddGroupInput && !isObservationMode && (
-                  <form onSubmit={handleAddGroup} className="group-container w-full md:w-60 mb-4 md:mb-0">
-                    <div className="flex flex-col store-container w-full md:w-60 h-auto md:h-24 bg-slate-100 px-4 py-3 rounded-lg mb-2">
+                  <form onSubmit={handleAddGroup} className="group-container w-full md:w-60">
+                    <div className="flex flex-col store-container w-full md:w-60 h-auto md:h-24 bg-slate-100 px-4 py-3 rounded-lg">
                       <input
                         type="text"
                         placeholder="輸入列表標題..."
@@ -622,7 +621,7 @@ export default function Kanban() {
                             <div
                               {...provided.draggableProps}
                               ref={provided.innerRef}
-                              className="group-container w-60 h-fit bg-slate-50 rounded-lg shadow-lg"
+                              className="group-container w-full md:w-60 h-auto md:h-full md:shrink-0 flex flex-col bg-slate-50 rounded-lg shadow-lg"
                             >
                               <div
                                 {...(!isObservationMode ? provided.dragHandleProps : {})}
@@ -677,7 +676,7 @@ export default function Kanban() {
                               }
                               {
                                 showForm && selectedcolumn === columnIndex && !isObservationMode ? (
-                                  <form onSubmit={handleSubmit} className='flex flex-col store-container rounded-lg mb-2 px-4 pt-1'>
+                                  <form onSubmit={handleSubmit} className='flex flex-col store-container rounded-lg px-4 pt-1 pb-2'>
                                     <input
                                       className='text-sm border border-gray-300 p-2 w-52 rounded-md mb-2'
                                       rows={3}
@@ -705,7 +704,7 @@ export default function Kanban() {
 
                                 ) : (
                                   !isObservationMode && (
-                                    <div className="flex justify-start px-4 pt-1">
+                                    <div className="flex justify-start px-4 pt-1 pb-2">
                                       <button
                                         onClick={() => { setSelectedcolumn(columnIndex); setShowForm(true); }}
                                         className="bg-[#5BA491] hover:bg-[#5BA491]/80 text-sm p-2 mb-2 text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
@@ -723,6 +722,7 @@ export default function Kanban() {
                         </Draggable>
                       ))}
                 {provided.placeholder}
+                </div>
               </div>
             )
             }
