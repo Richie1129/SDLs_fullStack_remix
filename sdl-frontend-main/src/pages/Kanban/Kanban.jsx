@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiPlus } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
 import Carditem from './components/Carditem';
@@ -16,6 +16,7 @@ import { getKanbanColumns, getKanbanTasks, addCardItem } from '../../api/kanban'
 import { getSubStage } from '../../api/stage';
 import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
+import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 
 
 
@@ -39,6 +40,7 @@ export default function Kanban() {
   const [showForm, setShowForm] = useState(false);
   const [selectedcolumn, setSelectedcolumn] = useState(0);
   const { projectId } = useParams();
+  const [searchParams] = useSearchParams();
   const [stageInfo, setStageInfo] = useState({ name: "", description: "" });
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -46,6 +48,9 @@ export default function Kanban() {
   const [newGroupName, setNewGroupName] = useState('');
   const [currentStage, setCurrentStage] = useState(() => localStorage.getItem("currentStage"));
   const [currentSubStage, setCurrentSubStage] = useState(() => localStorage.getItem("currentSubStage"));
+  
+  // 使用觀摩模式 hook
+  const { isObservationMode } = useObservationMode();
 
   // Helper function to determine if scrolling should be enabled for card lists
   const getCardListStyle = (isDraggingOver, hasOverflow = false) => {
@@ -243,6 +248,8 @@ export default function Kanban() {
     socket.on("columnOrderUpdated", kanbanDragEvent);
     socket.on("ColumnCreatedSuccess", handleColumnCreated); // Use specific handler
     socket.on("columnDeleted", KanbanUpdateEvent);
+    // 一些後端可能直接廣播 cardUpdated，為安全起見一併監聽
+    socket.on("cardUpdated", KanbanUpdateEvent);
     
     // Error handling listeners for rollback scenarios
     socket.on("ColumnCreatedError", handleCreationError);
@@ -258,6 +265,7 @@ export default function Kanban() {
       socket.off("columnOrderUpdated", kanbanDragEvent);
       socket.off('ColumnCreatedSuccess', handleColumnCreated);
       socket.off('columnDeleted', KanbanUpdateEvent);
+      socket.off('cardUpdated', KanbanUpdateEvent);
       socket.off("ColumnCreatedError", handleCreationError);
       socket.off("taskItemCreatedError", handleCreationError);
       socket.off("error", handleCreationError);
@@ -273,6 +281,12 @@ export default function Kanban() {
 
 
   const onDragEnd = useCallback((result) => {
+    // 觀摩模式下禁止任何拖拽操作
+    if (isObservationMode) {
+      console.warn('觀摩模式下禁止拖拽操作');
+      return;
+    }
+    
     const { destination, source, type } = result;
     if (!destination) return;
     if (
@@ -350,19 +364,25 @@ export default function Kanban() {
       
       console.log('✅ 本地狀態已更新，準備發送到服務器');
       
-      // 發送 socket 事件進行同步 - 重要：發送原始的 kanbanData，讓服務器處理拖拉邏輯
+      // 發送 socket 事件進行同步 - 發送 column ID 而不是索引
       socket.emit('cardItemDragged', {
         destination: {
           ...destination,
-          droppableId: destColumnIndex.toString() // 轉換回索引給服務器
+          droppableId: destColumnId.toString(), // 發送實際的 column ID
+          index: destination.index
         },
         source: {
           ...source,
-          droppableId: sourceColumnIndex.toString() // 轉換回索引給服務器
+          droppableId: sourceColumnId.toString(), // 發送實際的 column ID
+          index: source.index
         },
         kanbanData: kanbanData, // 發送原始數據，不是修改後的數據
         projectId,
-        user: { username: localStorage.getItem("username") }
+        taskId: movedTask.id, // 添加任務 ID 以便後端更準確地處理
+        user: { 
+          username: localStorage.getItem("username"),
+          id: parseInt(localStorage.getItem("id")) || null
+        }
       });
       
       console.log('📡 已發送拖拉事件到服務器');
@@ -375,12 +395,20 @@ export default function Kanban() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // 觀摩模式下禁止新增卡片
+    if (isObservationMode) {
+      console.warn('觀摩模式下禁止新增卡片');
+      return;
+    }
+    
     if (newCard.length === 0) {
       setShowForm(false);
       return;
     }
 
     const username = localStorage.getItem("username");
+    const userId = localStorage.getItem("id"); // 獲取用戶ID，注意是 "id" 不是 "userId"
     console.log("🚀 Optimistically creating new task:", newCard, "in column:", selectedcolumn);
 
     // 1. Create optimistic task data
@@ -420,9 +448,12 @@ export default function Kanban() {
         labels: [],
         assignees: []
       },
-      kanbanData: updatedKanbanData, // Send updated data
+      kanbanData: kanbanData, // Send original data
       projectId,
-      user: { username }
+      user: { 
+        username: username,
+        id: parseInt(userId) || null
+      }
     });
 
     // 6. Clear form immediately
@@ -439,6 +470,13 @@ export default function Kanban() {
   // 新增列表 - With Optimistic Updates
   const handleAddGroup = (e) => {
     e.preventDefault();
+    
+    // 防止觀摩模式下的操作
+    if (isObservationMode) {
+      console.log("🚫 Add group blocked: Observation mode");
+      return;
+    }
+    
     if (newGroupName.trim() !== '') {
       console.log(`🚀 Optimistically creating new column: ${newGroupName}`);
       
@@ -471,6 +509,12 @@ export default function Kanban() {
     }
   };
   const handleDeleteColumn = (columnData) => {
+    // 防止觀摩模式下的操作
+    if (isObservationMode) {
+      console.log("🚫 Delete column blocked: Observation mode");
+      return;
+    }
+    
     Swal.fire({
       title: "刪除",
       text: "列表中的卡片將一併刪除，確定要刪除嗎?",
@@ -499,8 +543,27 @@ export default function Kanban() {
   return (
     <div className="h-full w-full bg-white flex flex-col">
       <DraggableImage/>
+      
+      {/* 觀摩模式提示 */}
+      {isObservationMode && (
+        <div className="bg-blue-100 border-l-4 border-blue-500 p-4 m-4 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">
+                <strong>觀摩模式</strong> - 您正在瀏覽其他班級的專案，無法進行編輯操作
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="flex-1 p-4 sm:p-6 lg:p-8">
-        <DragDropContext onDragEnd={onDragEnd}>
+        <DragDropContext onDragEnd={isObservationMode ? () => {} : onDragEnd}>
           
           <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
             {(provided) => (
@@ -509,7 +572,7 @@ export default function Kanban() {
                 ref={provided.innerRef}
                 className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 h-full scrollbar-none"
               >
-                {!showAddGroupInput && (
+                {!showAddGroupInput && !isObservationMode && (
                   <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7 mb-4 md:mb-0" onClick={toggleAddGroupInput}>
                     <FaPlus className="text-white mr-2 md:m-3" />
                     <b className="text-sm md:text-base text-white">
@@ -519,7 +582,7 @@ export default function Kanban() {
 
 
                 )}
-                {showAddGroupInput && (
+                {showAddGroupInput && !isObservationMode && (
                   <form onSubmit={handleAddGroup} className="group-container w-full md:w-60 mb-4 md:mb-0">
                     <div className="flex flex-col store-container w-full md:w-60 h-auto md:h-24 bg-slate-100 px-4 py-3 rounded-lg mb-2">
                       <input
@@ -553,7 +616,8 @@ export default function Kanban() {
                       kanbanData.map((column, columnIndex) => (
                         <Draggable draggableId={`column-${column.id.toString()}`}
                           index={columnIndex}
-                          key={column.id.toString()}>
+                          key={column.id.toString()}
+                          isDragDisabled={isObservationMode}>
                           {(provided) => (
                             <div
                               {...provided.draggableProps}
@@ -561,19 +625,21 @@ export default function Kanban() {
                               className="group-container w-60 h-fit bg-slate-50 rounded-lg shadow-lg"
                             >
                               <div
-                                {...provided.dragHandleProps}
-                                className="store-container p-3 rounded-lg cursor-move flex justify-between items-center"
+                                {...(!isObservationMode ? provided.dragHandleProps : {})}
+                                className={`store-container p-3 rounded-lg ${!isObservationMode ? 'cursor-move' : 'cursor-default'} flex justify-between items-center`}
                               >
                                 <h3 style={{ color: "#5BA491" }} className="text-lg font-semibold">
                                   {column.name}
                                 </h3>
-                                <button
-                                  onClick={() => handleDeleteColumn(column)}
-                                  className="text-[#494b4a] hover:text-[#494b4a]/60"
-                                  title="删除列"
-                                >
-                                  <RxCross2 size={20} />
-                                </button>
+                                {!isObservationMode && (
+                                  <button
+                                    onClick={() => handleDeleteColumn(column)}
+                                    className="text-[#494b4a] hover:text-[#494b4a]/60"
+                                    title="删除列"
+                                  >
+                                    <RxCross2 size={20} />
+                                  </button>
+                                )}
                               </div>
                               {
                                 <Droppable droppableId={column.id.toString()} type='CARD'>
@@ -610,7 +676,7 @@ export default function Kanban() {
 
                               }
                               {
-                                showForm && selectedcolumn === columnIndex ? (
+                                showForm && selectedcolumn === columnIndex && !isObservationMode ? (
                                   <form onSubmit={handleSubmit} className='flex flex-col store-container rounded-lg mb-2 px-4 pt-1'>
                                     <input
                                       className='text-sm border border-gray-300 p-2 w-52 rounded-md mb-2'
@@ -638,14 +704,16 @@ export default function Kanban() {
                                   </form>
 
                                 ) : (
-                                  <div className="flex justify-start px-4 pt-1">
-                                    <button
-                                      onClick={() => { setSelectedcolumn(columnIndex); setShowForm(true); }}
-                                      className="bg-[#5BA491] hover:bg-[#5BA491]/80 text-sm p-2 mb-2 text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
-                                    >
-                                      新增卡片
-                                    </button>
-                                  </div>
+                                  !isObservationMode && (
+                                    <div className="flex justify-start px-4 pt-1">
+                                      <button
+                                        onClick={() => { setSelectedcolumn(columnIndex); setShowForm(true); }}
+                                        className="bg-[#5BA491] hover:bg-[#5BA491]/80 text-sm p-2 mb-2 text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
+                                      >
+                                        新增卡片
+                                      </button>
+                                    </div>
+                                  )
 
                                 )
                               }
@@ -664,4 +732,3 @@ export default function Kanban() {
     </div >
   )
 }
-

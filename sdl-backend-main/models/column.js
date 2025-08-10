@@ -14,4 +14,6 @@ const Column = sequelize.define('column', {
 });
 
 Column.hasMany(Task);
+Task.belongsTo(Column);
+
 module.exports = Column;

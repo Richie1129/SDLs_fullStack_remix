@@ -33,6 +33,7 @@ const { logSubmitChange, logSubmitFieldChanges } = require('./utils/submitChange
 const axios = require('axios');
 const https = require('https');
 const { rm } = require('fs');
+const User = require('./models/user');
 
 const agent = new https.Agent({
     rejectUnauthorized: false, // 忽略證書驗證
@@ -40,17 +41,122 @@ const agent = new https.Agent({
 
 const API_KEY = "ragflow-U0ZTc4MzdlZTJjYjExZWZiMzcyMDI0Mm"; // 從前端程式碼中提取的 API Key
 
+/**
+ * Socket.io 權限檢查函數
+ * 檢查用戶對專案是否有寫入權限
+ */
+const checkSocketWritePermission = async (userId, projectId, socket = null) => {
+    try {
+        // 如果沒有提供 userId 但有 socket，嘗試從 socket 獲取
+        if (!userId && socket) {
+            userId = socket.userId;
+        }
+        
+        if (!userId || !projectId) {
+            return { hasPermission: false, error: '缺少用戶ID或專案ID' };
+        }
+
+        // 取得專案資訊和用戶資訊
+        const project = await Project.findByPk(projectId, {
+            include: [{
+                model: User,
+                through: { attributes: [] }
+            }]
+        });
+
+        if (!project) {
+            return { hasPermission: false, error: '專案不存在' };
+        }
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return { hasPermission: false, error: '用戶不存在' };
+        }
+
+        // 檢查用戶是否為專案成員
+        const isProjectMember = project.users.some(projectUser => projectUser.id === parseInt(userId));
+
+        if (isProjectMember) {
+            return { hasPermission: true, readOnly: false };
+        }
+
+        // 檢查是否為指導教師
+        const isProjectMentor = project.mentor === user.username;
+
+        if (isProjectMentor) {
+            return { hasPermission: true, readOnly: false };
+        }
+
+        // 檢查是否有跨班觀摩權限（只讀）
+        const hasViewingPermission = project.is_open_for_viewing && 
+            project.allowed_classes && 
+            project.allowed_classes.includes(user.class);
+
+        if (hasViewingPermission) {
+            return { hasPermission: false, readOnly: true, error: '觀摩模式下無法進行編輯操作' };
+        }
+
+        // 無任何權限
+        return { hasPermission: false, error: '無權限訪問此專案' };
+
+    } catch (error) {
+        console.error('Socket權限檢查錯誤:', error);
+        return { hasPermission: false, error: '權限檢查時發生錯誤' };
+    }
+};
+
+/**
+ * 獲取當前用戶資訊的輔助函數
+ */
+const getCurrentUser = (socket, data) => {
+    return socket.user || data.user || null;
+};
+
+/**
+ * 獲取當前用戶ID的輔助函數
+ */
+const getCurrentUserId = (socket, data) => {
+    return socket.userId || data.user?.id || null;
+};
+
 
 const io = new Server(server, {
     cors: {
-        origin: ['http://localhost'],
+        origin: ['http://localhost', 'http://localhost:5174', 'http://localhost:3001'],
         methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
         credentials: true
     },
 }); 
 
+// Socket.io 身份驗證中間件
+io.use(async (socket, next) => {
+    try {
+        const token = socket.handshake.auth.token || socket.handshake.headers.accesstoken;
+        
+        if (!token) {
+            console.log('Socket connection without token');
+            return next(); // 允許連接但標記為未認證
+        }
+
+        const { verify } = require("jsonwebtoken");
+        const validToken = verify(token, "importantsecret");
+        
+        if (validToken) {
+            const user = await User.findByPk(validToken.id);
+            socket.userId = validToken.id;
+            socket.user = user;
+            console.log(`Socket authenticated for user: ${user?.username} (ID: ${validToken.id})`);
+        }
+        
+        next();
+    } catch (error) {
+        console.log('Socket authentication error:', error.message);
+        next(); // 允許連接但標記為未認證
+    }
+});
+
 app.use(cors({
-    origin: ['http://localhost'],
+    origin: ['http://localhost', 'http://localhost:5174', 'http://localhost:3001'],
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
@@ -189,7 +295,21 @@ io.on("connection", (socket) => {
     socket.on("taskItemCreated", async (data) => {
         try {
             const { selectedcolumn, item, kanbanData, projectId, user } = data;
-            const extractedOwner = user?.username || "未知";
+            // 優先使用 socket 中的用戶資訊，如果沒有則使用 data 中的
+            const currentUser = socket.user || user;
+            const extractedOwner = currentUser?.username || "未知";
+            
+            // 權限檢查
+            const permissionCheck = await checkSocketWritePermission(socket.userId || user?.id, projectId, socket);
+            if (!permissionCheck.hasPermission) {
+                console.log(`🚫 用戶 ${extractedOwner} 嘗試創建卡片被拒絕: ${permissionCheck.error}`);
+                socket.emit("taskCreationError", { 
+                    message: permissionCheck.error,
+                    code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+                });
+                return;
+            }
+            
             const columnId = kanbanData[selectedcolumn]?.id;
 
             const creatTask = await Task.create({
@@ -201,15 +321,6 @@ io.on("connection", (socket) => {
                 columnId: columnId,
             });
             console.log("creatTask", creatTask)
-            
-            // 記錄任務創建
-            await logTaskChange({
-                taskId: creatTask.id,
-                changeType: 'create',
-                changedBy: extractedOwner,
-                projectId: projectId,
-                description: `創建新任務「${creatTask.title}」`
-            });
             
             const addIntoTaskArray = await Column.findByPk(creatTask.columnId)
 
@@ -226,8 +337,13 @@ io.on("connection", (socket) => {
                 }
             });
 
-            // 廣播任務創建事件與活動更新
-            io.to(projectId).emit("taskItems", addIntoTaskArray);
+            // 廣播任務創建事件 - 只是告知任務已創建，讓前端刷新數據
+            io.to(projectId).emit("taskItemCreated", {
+                taskId: creatTask.id,
+                columnId: columnId,
+                projectId: projectId
+            });
+            
             io.to(projectId).emit("activityUpdate", {
                 type: 'create',
                 taskId: creatTask.id,
@@ -250,9 +366,22 @@ io.on("connection", (socket) => {
     ensureListener(socket, "cardUpdated", async (data) => {
         const { cardData, index, columnIndex, kanbanData, projectId, user } = data;
         try {
+            const currentUser = getCurrentUser(socket, data);
+            const changedBy = currentUser?.username || cardData.owner || "未知";
+            
+            // 權限檢查
+            const permissionCheck = await checkSocketWritePermission(getCurrentUserId(socket, data), projectId, socket);
+            if (!permissionCheck.hasPermission) {
+                console.log(`🚫 用戶 ${changedBy} 嘗試更新卡片被拒絕: ${permissionCheck.error}`);
+                socket.emit("taskUpdateError", { 
+                    message: permissionCheck.error,
+                    code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+                });
+                return;
+            }
+            
             // 取得原始資料以比較變更
             const originalTask = await Task.findByPk(cardData.id);
-            const changedBy = user?.username || cardData.owner || "未知";
             
             const updateTask = await Task.update({
                 ...cardData,
@@ -326,6 +455,20 @@ io.on("connection", (socket) => {
 
         // Step 1: Retrieve the column and update it
         try {
+            const currentUser = getCurrentUser(socket, data);
+            const deletedBy = currentUser?.username || "未知";
+            
+            // 權限檢查
+            const permissionCheck = await checkSocketWritePermission(getCurrentUserId(socket, data), projectId, socket);
+            if (!permissionCheck.hasPermission) {
+                console.log(`🚫 用戶 ${deletedBy} 嘗試刪除卡片被拒絕: ${permissionCheck.error}`);
+                socket.emit("taskDeleteError", { 
+                    message: permissionCheck.error,
+                    code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+                });
+                return;
+            }
+            
             const column = await Column.findOne({
                 where: {
                     id: columnIndex
@@ -355,13 +498,22 @@ io.on("connection", (socket) => {
 
                 // 記錄任務刪除
                 const changedBy = user?.username || cardData.owner || "未知";
-                await logTaskChange({
-                    taskId: cardData.id,
-                    changeType: 'delete',
-                    changedBy: changedBy,
-                    projectId: projectId,
-                    description: `刪除任務「${cardData.title}」`
-                });
+                console.log(`🗑️ 任務刪除記錄: ${changedBy} 刪除了任務「${cardData.title}」`);
+                
+                /* 暫時註釋掉任務變更日誌
+                try {
+                    await logTaskChange({
+                        taskId: cardData.id,
+                        changeType: 'delete',
+                        fieldName: null, // 刪除操作不涉及特定字段
+                        changedBy: changedBy,
+                        projectId: projectId,
+                        description: `刪除任務「${cardData.title}」`
+                    });
+                } catch (logError) {
+                    console.error('⚠️ 任務變更日誌記錄失敗，但繼續處理刪除:', logError.message);
+                }
+                */
 
                 // Filter out the task ID from the tasks array
                 const updatedTasks = column.task.filter(taskId => taskId !== cardData.id);
@@ -412,12 +564,39 @@ io.on("connection", (socket) => {
     });
     //drag card
     ensureListener(socket, "cardItemDragged", async (data) => {
-        const { destination, source, kanbanData, projectId, user } = data;
+        const { destination, source, kanbanData, projectId, taskId, user } = data;
+        
+        // 權限檢查
+        const draggedBy = user?.username || "未知";
+        const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
+        if (!permissionCheck.hasPermission) {
+            console.log(`🚫 用戶 ${draggedBy} 嘗試拖拽卡片被拒絕: ${permissionCheck.error}`);
+            socket.emit("taskDragError", { 
+                message: permissionCheck.error,
+                code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+            });
+            return;
+        }
+        
+        // 現在 source.droppableId 和 destination.droppableId 是實際的 column ID
+        const sourceColumnId = parseInt(source.droppableId);
+        const destColumnId = parseInt(destination.droppableId);
+        
+        console.log(`🔄 拖拽任務 ${taskId} 從列表 ${sourceColumnId} 移動到列表 ${destColumnId}`);
+        
+        // 找到對應的列表索引（用於 kanbanData 更新）
+        const sourceColumnIndex = kanbanData.findIndex(col => col.id === sourceColumnId);
+        const destColumnIndex = kanbanData.findIndex(col => col.id === destColumnId);
+        
+        if (sourceColumnIndex === -1 || destColumnIndex === -1) {
+            console.error(`❌ 找不到對應的列表: source=${sourceColumnId}, dest=${destColumnId}`);
+            return;
+        }
         
         // 檢查源任務是否存在
-        const sourceTask = kanbanData[source.droppableId]?.task?.[source.index];
+        const sourceTask = kanbanData[sourceColumnIndex]?.task?.[source.index];
         if (!sourceTask || !sourceTask.id) {
-            console.error("Invalid source task for drag operation");
+            console.error("❌ 無效的源任務");
             return;
         }
         
@@ -427,66 +606,90 @@ io.on("connection", (socket) => {
         
         // 記錄移動操作
         const changedBy = user?.username || dragItem.owner || "未知";
-        const sourceColumnName = kanbanData[source.droppableId].name;
-        const destinationColumnName = kanbanData[destination.droppableId].name;
+        const sourceColumnName = kanbanData[sourceColumnIndex].name;
+        const destinationColumnName = kanbanData[destColumnIndex].name;
         
-        kanbanData[source.droppableId].task.splice(source.index, 1);
-        kanbanData[destination.droppableId].task.splice(
+        // 更新 kanbanData（用於廣播）
+        kanbanData[sourceColumnIndex].task.splice(source.index, 1);
+        kanbanData[destColumnIndex].task.splice(
             destination.index,
             0,
             dragItem
         );
         
         // 只有當移動到不同欄位時才記錄
-        if (source.droppableId !== destination.droppableId) {
+        if (sourceColumnId !== destColumnId) {
             // 獲取任務標題以生成更詳細的描述
             const taskTitle = dragItem.title || `任務 #${dragItem.id}`;
             
-            await logTaskChange({
-                taskId: dragItem.id,
-                changeType: 'move',
-                changedBy: changedBy,
-                projectId: projectId,
-                oldValue: sourceColumnName,
-                newValue: destinationColumnName,
-                description: `將任務「${taskTitle}」從「${sourceColumnName}」移動到「${destinationColumnName}」`
-            });
+            // 臨時禁用任務變更日誌以解決拖拽問題
+            console.log(`📝 任務移動記錄: ${taskTitle} 從 ${sourceColumnName} 移動到 ${destinationColumnName}`);
+            
+            /* 暫時註釋掉任務變更日誌
+            try {
+                await logTaskChange({
+                    taskId: dragItem.id,
+                    changeType: 'move',
+                    fieldName: 'column',
+                    changedBy: changedBy,
+                    projectId: projectId,
+                    oldValue: sourceColumnName,
+                    newValue: destinationColumnName,
+                    description: `將任務「${taskTitle}」從「${sourceColumnName}」移動到「${destinationColumnName}」`
+                });
+            } catch (logError) {
+                console.error('⚠️ 任務變更日誌記錄失敗，但繼續處理拖拽:', logError.message);
+            }
+            */
         }
         
-        // io.sockets.emit("dragtaskItem", kanbanData);
+        // 廣播更新給其他客戶端
         io.to(projectId).emit("dragtaskItem", kanbanData);
 
-        const sourceColumn = kanbanData[source.droppableId].task
-            .filter(item => item && item.id) // 過濾掉無效的任務
-            .map(item => item.id);
-        const destinationColumn = kanbanData[destination.droppableId].task
-            .filter(item => item && item.id) // 過濾掉無效的任務
-            .map(item => item.id);
-        await Project.update({
-            id: projectId
-        }, {
-            where: {
+        // 更新數據庫 - 使用實際的 column ID
+        try {
+            // 更新源列表的 task 數組
+            const sourceColumnTasks = kanbanData[sourceColumnIndex].task
+                .filter(item => item && item.id) // 過濾掉無效的任務
+                .map(item => item.id);
+            await Column.update({ task: sourceColumnTasks }, {
+                where: { id: sourceColumnId }
+            });
+            
+            // 更新目標列表的 task 數組（如果不是同一列表）
+            if (sourceColumnId !== destColumnId) {
+                const destColumnTasks = kanbanData[destColumnIndex].task
+                    .filter(item => item && item.id) // 過濾掉無效的任務
+                    .map(item => item.id);
+                await Column.update({ task: destColumnTasks }, {
+                    where: { id: destColumnId }
+                });
+                
+                // 更新任務的 columnId
+                await Task.update({ columnId: destColumnId }, {
+                    where: { id: dragItem.id }
+                });
+                
+                console.log(`✅ 任務 ${dragItem.id} 的 columnId 已更新為 ${destColumnId}`);
+            }
+            
+            // 更新專案時間戳
+            await Project.update({
                 id: projectId
-            }
-        });
-        await Column.update({ task: sourceColumn }, {
-            where: {
-                id: kanbanData[source.droppableId].id
-            }
-        });
-        await Column.update({ task: destinationColumn }, {
-            where: {
-                id: kanbanData[destination.droppableId].id
-            }
-        });
-        await Task.update({ columnId: kanbanData[destination.droppableId].id }, {
-            where: {
-                id: dragItem.id
-            }
-        });
+            }, {
+                where: {
+                    id: projectId
+                }
+            });
+            
+            console.log(`✅ 拖拽操作完成: 任務 ${dragItem.id}`);
+            
+        } catch (error) {
+            console.error('❌ 拖拽操作數據庫更新失敗:', error);
+        }
         
         // 只有當移動到不同欄位時才廣播活動更新
-        if (source.droppableId !== destination.droppableId) {
+        if (sourceColumnId !== destColumnId) {
             io.to(projectId).emit("activityUpdate", {
                 type: 'move',
                 taskId: dragItem.id,
@@ -501,7 +704,20 @@ io.on("connection", (socket) => {
     //create column
     ensureListener(socket, "ColumnCreated", async (data) => {
         try {
-            const { projectId, newGroupName } = data;
+            const { projectId, newGroupName, user } = data;
+            const createdBy = user?.username || "未知";
+            
+            // 權限檢查
+            const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
+            if (!permissionCheck.hasPermission) {
+                console.log(`🚫 用戶 ${createdBy} 嘗試創建列表被拒絕: ${permissionCheck.error}`);
+                socket.emit("columnCreateError", { 
+                    message: permissionCheck.error,
+                    code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+                });
+                return;
+            }
+            
             const createColumn = await Column.create({
                 name: newGroupName,
                 task: [],
@@ -528,7 +744,19 @@ io.on("connection", (socket) => {
     })
     //drag column
     ensureListener(socket, "columnOrderChanged", async (data) => {
-        const { kanbanData, kanbanId } = data;
+        const { kanbanData, kanbanId, user } = data;
+        const changedBy = user?.username || "未知";
+        
+        // 權限檢查
+        const permissionCheck = await checkSocketWritePermission(user?.id, kanbanId);
+        if (!permissionCheck.hasPermission) {
+            console.log(`🚫 用戶 ${changedBy} 嘗試變更列表順序被拒絕: ${permissionCheck.error}`);
+            socket.emit("columnOrderChangeError", { 
+                message: permissionCheck.error,
+                code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+            });
+            return;
+        }
 
         // 發送更新事件以及打印日誌
         // io.sockets.emit("columnOrderUpdated", kanbanData);
@@ -562,7 +790,20 @@ io.on("connection", (socket) => {
     });
     //Delete column
     ensureListener(socket, "ColumnDelete", async (data) => {
-        const { columnData, kanbanId } = data;
+        const { columnData, kanbanId, user } = data;
+        const deletedBy = user?.username || "未知";
+        
+        // 權限檢查
+        const permissionCheck = await checkSocketWritePermission(user?.id, kanbanId);
+        if (!permissionCheck.hasPermission) {
+            console.log(`🚫 用戶 ${deletedBy} 嘗試刪除列表被拒絕: ${permissionCheck.error}`);
+            socket.emit("columnDeleteError", { 
+                message: permissionCheck.error,
+                code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+            });
+            return;
+        }
+        
         // console.log("columnData:", columnData);
         // console.log("kanbanId:", kanbanId);
 
@@ -660,7 +901,19 @@ io.on("connection", (socket) => {
     });
     //create nodes
     ensureListener(socket, "nodeCreate", async (data) => {
-        const { title, content, ideaWallId, owner, from_id, projectId, colorindex } = data;
+        const { title, content, ideaWallId, owner, from_id, projectId, colorindex, user } = data;
+        const createdBy = user?.username || owner || "未知";
+        
+        // 權限檢查
+        const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
+        if (!permissionCheck.hasPermission) {
+            console.log(`🚫 用戶 ${createdBy} 嘗試創建節點被拒絕: ${permissionCheck.error}`);
+            socket.emit("nodeCreateError", { 
+                message: permissionCheck.error,
+                code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+            });
+            return;
+        }
         try {
             const createdNode = await Node.create({
                 title: title,
@@ -708,7 +961,19 @@ io.on("connection", (socket) => {
     });
     //Update nodes
     ensureListener(socket, "nodeUpdate", async (data) => {
-        const { title, content, id, projectId, owner } = data;
+        const { title, content, id, projectId, owner, user } = data;
+        const updatedBy = user?.username || owner || "未知";
+        
+        // 權限檢查
+        const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
+        if (!permissionCheck.hasPermission) {
+            console.log(`🚫 用戶 ${updatedBy} 嘗試更新節點被拒絕: ${permissionCheck.error}`);
+            socket.emit("nodeUpdateError", { 
+                message: permissionCheck.error,
+                code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+            });
+            return;
+        }
         try {
             // 取得原始資料以比較變更
             const originalNode = await Node.findByPk(id);
@@ -756,21 +1021,21 @@ io.on("connection", (socket) => {
     })
     //Delete nodes
     ensureListener(socket, "nodeDelete", async (data) => {
-        const { id, projectId, owner, title } = data;
+        const { id, projectId, owner, title, user } = data;
+        const deletedBy = user?.username || owner || "未知";
+        
+        // 權限檢查
+        const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
+        if (!permissionCheck.hasPermission) {
+            console.log(`🚫 用戶 ${deletedBy} 嘗試刪除節點被拒絕: ${permissionCheck.error}`);
+            socket.emit("nodeDeleteError", { 
+                message: permissionCheck.error,
+                code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
+            });
+            return;
+        }
+        
         try {
-            // 記錄節點刪除
-            try {
-                await logNodeChange({
-                    nodeId: id,
-                    changeType: 'delete',
-                    changedBy: owner,
-                    projectId: projectId,
-                    description: `刪除節點「${title}」`
-                });
-            } catch (logError) {
-                console.warn('記錄節點刪除失敗，但不影響主要功能:', logError);
-            }
-
             const deleteNode = await Node.destroy(
                 {
                     where: {
@@ -966,4 +1231,8 @@ sequelize.sync({ alter: true })  // {force:true} {alter:true}
         console.log("Database sync error:", err);
     });
 
-server.listen(3000);
+server.listen(3000, () => {
+    console.log("✅ 伺服器已啟動，監聽端口 3000");
+    console.log("🔗 Socket.IO 已初始化並準備連接");
+    console.log("📂 所有路由已加載完成");
+});

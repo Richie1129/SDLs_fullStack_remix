@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../../../components/Modal';
 import AssignMember from './AssignMember';
 import { getProjectUser } from '../../../api/users';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from 'react-query';
 import Swal from 'sweetalert2';
 import { GrFormClose } from "react-icons/gr";
@@ -18,6 +18,7 @@ import { AiOutlineCloudDownload } from "react-icons/ai";
 import { formatTime } from '../../../utils/timeUtils';
 import { getTaskChangeLogs } from '../../../api/kanban';
 import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
+import useObservationMode from '../../../hooks/useObservationMode'; // 引入觀摩模式 hook
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -44,7 +45,8 @@ const FileManagementModal = ({
   removeFile, 
   removeImage, 
   openImageModal,
-  fileInputRef 
+  fileInputRef,
+  isObservationMode = false
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
 
@@ -57,17 +59,19 @@ const FileManagementModal = ({
             ({cardData.images?.length || 0} 圖片, {cardData.files?.length || 0} 檔案)
           </span>
         </div>
-        <label className='flex items-center space-x-2 px-4 py-2 bg-white border border-customgreen text-customgreen rounded-lg hover:bg-customgreen/5 transition-all duration-200 cursor-pointer'>
-          <AiOutlineCloudDownload size={18} />
-          <span className='font-medium'>上傳檔案</span>
-          <input
-            type="file"
-            multiple
-            onChange={handleFileUpload}
-            ref={fileInputRef}
-            className='hidden'
-          />
-        </label>
+        {!isObservationMode && (
+          <label className='flex items-center space-x-2 px-4 py-2 bg-white border border-customgreen text-customgreen rounded-lg hover:bg-customgreen/5 transition-all duration-200 cursor-pointer'>
+            <AiOutlineCloudDownload size={18} />
+            <span className='font-medium'>上傳檔案</span>
+            <input
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              ref={fileInputRef}
+              className='hidden'
+            />
+          </label>
+        )}
       </div>
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
@@ -89,12 +93,14 @@ const FileManagementModal = ({
                     className='w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200 bg-gray-50'
                     onClick={() => openImageModal(index)}
                   />
-                  <button
-                    onClick={() => removeImage(index)}
-                    className='absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm hover:bg-white'
-                  >
-                    <GrFormClose size={14} />
-                  </button>
+                  {!isObservationMode && (
+                    <button
+                      onClick={() => removeImage(index)}
+                      className='absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm hover:bg-white'
+                    >
+                      <GrFormClose size={14} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -140,12 +146,14 @@ const FileManagementModal = ({
                     >
                       下載
                     </button>
-                    <button
-                      onClick={() => removeFile(index)}
-                      className='p-1.5 text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-lg hover:bg-gray-200'
-                    >
-                      <GrFormClose size={16} />
-                    </button>
+                    {!isObservationMode && (
+                      <button
+                        onClick={() => removeFile(index)}
+                        className='p-1.5 text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-lg hover:bg-gray-200'
+                      >
+                        <GrFormClose size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -186,18 +194,21 @@ const MemberAssignment = ({
   setAssignMemberModalOpen,
   owner,
   personImg,
-  Tooltip
+  Tooltip,
+  isObservationMode = false
 }) => (
   <div className='bg-white rounded-xl border border-gray-100 p-4 mb-4'>
     <div className='flex items-center justify-between mb-3'>
       <h4 className='text-base font-medium text-gray-700'>成員</h4>
-      <button
-        onClick={() => setAssignMemberModalOpen(true)}
-        className='flex items-center space-x-2 px-3 py-1.5 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200'
-      >
-        <BsFillPersonFill size={16} />
-        <span className='text-sm font-medium'>指派成員</span>
-      </button>
+      {!isObservationMode && (
+        <button
+          onClick={() => setAssignMemberModalOpen(true)}
+          className='flex items-center space-x-2 px-3 py-1.5 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200'
+        >
+          <BsFillPersonFill size={16} />
+          <span className='text-sm font-medium'>指派成員</span>
+        </button>
+      )}
     </div>
 
     {owner && (
@@ -241,7 +252,12 @@ function Carditem({ data, index, columnIndex }) {
   const [showChangeHistory, setShowChangeHistory] = useState(false);
   const [changeLogs, setChangeLogs] = useState([]);
   const { projectId } = useParams();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  
+  // 使用觀摩模式 hook
+  const { isObservationMode } = useObservationMode();
+  
   const [cardData, setCardData] = useState({
     id: "",
     title: "",
@@ -304,7 +320,7 @@ function Carditem({ data, index, columnIndex }) {
     });
   }, [data]);
 
-  // 監聽任務更新事件，刷新變更記錄
+  // 監聽任務更新事件，刷新變更記錄與看板資料
   useEffect(() => {
     const handleTaskUpdate = (updateData) => {
       // 如果更新的是當前任務，刷新變更記錄
@@ -312,15 +328,20 @@ function Carditem({ data, index, columnIndex }) {
           (updateData.taskId === cardData.id || updateData.id === cardData.id)) {
         console.log('任務更新，刷新變更記錄:', cardData.id);
         queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
+        // 同步失效看板快取，確保列表中的卡片內容立即更新
+        queryClient.invalidateQueries(['kanbanDatas', projectId]);
       }
     };
 
     socket.on('taskItem', handleTaskUpdate);
     socket.on('activityUpdate', handleTaskUpdate);
+    // 有些後端會在更新後廣播 cardUpdated，這裡一併處理
+    socket.on('cardUpdated', handleTaskUpdate);
 
     return () => {
       socket.off('taskItem', handleTaskUpdate);
       socket.off('activityUpdate', handleTaskUpdate);
+      socket.off('cardUpdated', handleTaskUpdate);
     };
   }, [cardData.id, queryClient]);
 
@@ -509,6 +530,8 @@ function Carditem({ data, index, columnIndex }) {
       
       // 失效變更記錄的緩存，強制重新獲取
       queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
+      // 同步失效看板資料，讓列表立即反映更新
+      queryClient.invalidateQueries(['kanbanDatas', projectId]);
       
       setOpen(false);
     } else {
@@ -542,17 +565,17 @@ function Carditem({ data, index, columnIndex }) {
   
   return (
     <>
-      <Draggable draggableId={data.id.toString()} index={index}>
+      <Draggable draggableId={data.id.toString()} index={index} isDragDisabled={isObservationMode}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.draggableProps}
-            {...provided.dragHandleProps}
+            {...(!isObservationMode ? provided.dragHandleProps : {})}
             className={`item-container rounded-lg mb-3 w-full transition-all duration-200 ${
               snapshot.isDragging 
                 ? "shadow-xl bg-customgreen/90 text-white" 
                 : "bg-white shadow-md hover:shadow-lg"
-            }`}
+            } ${isObservationMode ? 'cursor-default' : 'cursor-move'}`}
           >
             {cardData.images && cardData.images.length > 0 && (
               <CardImage 
@@ -565,7 +588,7 @@ function Carditem({ data, index, columnIndex }) {
             <div className="p-3">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-base font-semibold text-gray-800 line-clamp-2 pr-2">
-                  {data.title}
+                  {cardData.title}
                 </h3>
                 <button
                   onClick={() => setOpen(true)}
@@ -575,15 +598,15 @@ function Carditem({ data, index, columnIndex }) {
                 </button>
               </div>
 
-              {data.content && (
+              {cardData.content && (
                 <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                  {data.content}
+                  {cardData.content}
                 </p>
               )}
 
-              {data.assignees?.length > 0 && (
+              {cardData.assignees?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
-                  {data.assignees.map((assignee, index) => {
+                  {cardData.assignees.map((assignee, index) => {
                     const imgIndex = parseInt(assignee.id) % personImg.length;
                     const userImg = personImg[imgIndex];
                     return (
@@ -616,9 +639,9 @@ function Carditem({ data, index, columnIndex }) {
                   )}
                 </div>
                 
-                {data.createdAt && (
+                {cardData.createdAt && (
                   <div className="text-xs text-gray-400">
-                    {formatTime(data.createdAt, 'relative')}
+                    {formatTime(cardData.createdAt, 'relative')}
                   </div>
                 )}
               </div>
@@ -722,39 +745,41 @@ function Carditem({ data, index, columnIndex }) {
               <>
                 <div className='flex justify-between mb-4'>
                   <input
-                    className="rounded outline-none ring-2 p-2 ring-customgreen w-full"
+                    className={`rounded outline-none ring-2 p-2 ring-customgreen w-full ${isObservationMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     type="text"
                     placeholder="標題"
                     value={cardData.title}
-                    onChange={(e) => setCardData({ ...cardData, title: e.target.value })}
+                    onChange={isObservationMode ? undefined : (e) => setCardData({ ...cardData, title: e.target.value })}
+                    readOnly={isObservationMode}
                   />
                 </div>
                 <textarea
-                  className="rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4"
+                  className={`rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4 ${isObservationMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   rows={3}
                   placeholder="內容"
                   value={cardData.content}
-                  onChange={(e) => setCardData({ ...cardData, content: e.target.value })}
+                  onChange={isObservationMode ? undefined : (e) => setCardData({ ...cardData, content: e.target.value })}
+                  readOnly={isObservationMode}
                 />
 
                 {/* 時間資訊 */}
-                {(data.createdAt || data.updatedAt) && (
+                {(cardData.createdAt || cardData.updatedAt) && (
                   <div className='bg-gray-50 rounded-lg p-3 mb-4'>
                     <h4 className='text-sm font-medium text-gray-700 mb-2'>時間資訊</h4>
                     <div className='space-y-1 text-sm text-gray-600'>
-                      {data.createdAt && (
+                      {cardData.createdAt && (
                         <div className='flex justify-between'>
                           <span>建立時間：</span>
-                          <span title={formatTime(data.createdAt, 'full')}>
-                            {formatTime(data.createdAt, 'full')}
+                          <span title={formatTime(cardData.createdAt, 'full')}>
+                            {formatTime(cardData.createdAt, 'full')}
                           </span>
                         </div>
                       )}
-                      {data.updatedAt && data.updatedAt !== data.createdAt && (
+                      {cardData.updatedAt && cardData.updatedAt !== cardData.createdAt && (
                         <div className='flex justify-between'>
                           <span>更新時間：</span>
-                          <span title={formatTime(data.updatedAt, 'full')}>
-                            {formatTime(data.updatedAt, 'relative')}
+                          <span title={formatTime(cardData.updatedAt, 'full')}>
+                            {formatTime(cardData.updatedAt, 'relative')}
                           </span>
                         </div>
                       )}
@@ -765,9 +790,10 @@ function Carditem({ data, index, columnIndex }) {
                 <MemberAssignment
                   cardData={cardData}
                   setAssignMemberModalOpen={setAssignMemberModalOpen}
-                  owner={data.owner}
+                  owner={cardData.owner}
                   personImg={personImg}
                   Tooltip={Tooltip}
+                  isObservationMode={isObservationMode}
                 />
                 
                 <FileManagementModal
@@ -778,27 +804,32 @@ function Carditem({ data, index, columnIndex }) {
                   removeImage={removeImage}
                   openImageModal={openImageModal}
                   fileInputRef={fileInputRef}
+                  isObservationMode={isObservationMode}
                 />
 
                 <div className='flex justify-end mt-4 space-x-2'>
-                  <button
-                    onClick={cardHandleDelete}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
-                  >
-                    刪除
-                  </button>
+                  {!isObservationMode && (
+                    <button
+                      onClick={cardHandleDelete}
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+                    >
+                      刪除
+                    </button>
+                  )}
                   <button
                     onClick={() => setOpen(false)}
                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
                   >
-                    取消
+                    {isObservationMode ? '關閉' : '取消'}
                   </button>
-                  <button
-                    onClick={cardHandleSubmit}
-                    className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
-                  >
-                    儲存
-                  </button>
+                  {!isObservationMode && (
+                    <button
+                      onClick={cardHandleSubmit}
+                      className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
+                    >
+                      儲存
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -886,12 +917,14 @@ function Carditem({ data, index, columnIndex }) {
         </Modal> 
       )}
 
-      <Modal open={assignMemberModalopen} onClose={() => setAssignMemberModalOpen(false)} opacity={false} position={"justify-end items-center m-3"}>
-        <button onClick={() => setAssignMemberModalOpen(false)} className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
-          <GrFormClose className='w-6 h-6' />
-        </button>
-        <AssignMember menberData={menberData} setMenberData={setMenberData} setCardData={setCardData} cardHandleSubmit={cardHandleSubmit} />
-      </Modal>
+      {!isObservationMode && (
+        <Modal open={assignMemberModalopen} onClose={() => setAssignMemberModalOpen(false)} opacity={false} position={"justify-end items-center m-3"}>
+          <button onClick={() => setAssignMemberModalOpen(false)} className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
+            <GrFormClose className='w-6 h-6' />
+          </button>
+          <AssignMember menberData={menberData} setMenberData={setMenberData} setCardData={setCardData} cardHandleSubmit={cardHandleSubmit} />
+        </Modal>
+      )}
 
       <Toaster />
     </>

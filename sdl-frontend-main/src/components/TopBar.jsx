@@ -3,6 +3,7 @@ import { IoIosNotificationsOutline } from "react-icons/io";
 import { BsChevronDown, BsPlusCircleDotted } from "react-icons/bs";
 import { FiActivity } from "react-icons/fi"; // 引入活動圖示
 import { RiDashboardLine } from "react-icons/ri"; // 添加儀表板圖示
+import { FaEye, FaEyeSlash } from "react-icons/fa"; // 添加觀摩圖示
 import { getProjectUser } from '../api/users';
 import { getProject, getProjectsByMentor } from '../api/project';
 import { useQuery } from 'react-query';
@@ -13,6 +14,7 @@ import Swal from 'sweetalert2';
 import { socket } from '../utils/socket';
 import { Context } from '../context/context';
 import Announcement from './Announcement'; // 引入新的 Announcement 元件
+import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
 
 export default function TopBar({ showActivityStream, setShowActivityStream }) {
   const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
@@ -35,10 +37,35 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
   const role = localStorage.getItem("role") || "guest"; // 預設值為 "guest"，避免空值
   const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context);
 
+  // 使用觀摩模式 hook
+  const { isObservationMode, isLoading: isObservationLoading } = useObservationMode();
+
   const getProjectUserQuery = useQuery("getProjectUser", () => getProjectUser(projectId), {
     onSuccess: setProjectUsers,
     enabled: !!projectId,
   });
+
+  // 監聽觀摩模式激活事件
+  useEffect(() => {
+    const handleObservationModeActivated = (event) => {
+      const { detail } = event;
+      if (detail && detail.message) {
+        Swal.fire({
+          title: '觀摩模式',
+          text: detail.message,
+          icon: 'info',
+          confirmButtonColor: "#5BA491",
+          confirmButtonText: "了解"
+        });
+      }
+    };
+
+    window.addEventListener('observationModeActivated', handleObservationModeActivated);
+
+    return () => {
+      window.removeEventListener('observationModeActivated', handleObservationModeActivated);
+    };
+  }, []);
 
   // useEffect(() => {
   //   async function fetchData() {
@@ -221,6 +248,18 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
           <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-14 w-auto" />
         </Link>
         <div className="flex items-center">
+          {/* 跨班觀摩按鈕 - 只有教師可見 */}
+          {role === "teacher" && (
+            <button
+              onClick={() => navigate("/observation")}
+              className="flex items-center space-x-1 mr-3 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-3 py-2 text-sm font-semibold transition-colors"
+              title="跨班專案觀摩"
+            >
+              <FaEye className="text-sm" />
+              <span>觀摩</span>
+            </button>
+          )}
+          
           <h3 
             className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3 hover:bg-gray-100 transition-colors"
             onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
@@ -247,6 +286,13 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
         {!isOverviewPage && (
         <p className="font-bold text-sm sm:text-xl text-teal-900 truncate">{projectInfo.name || "專案名稱"}</p>
         )}
+        {/* 觀摩模式指示器 */}
+        {isObservationMode && !isOverviewPage && (
+          <div className="flex items-center ml-3 px-2 py-1 bg-yellow-100 border border-yellow-400 rounded-md">
+            <FaEye className="text-yellow-600 mr-1" size={16} />
+            <span className="text-yellow-700 text-sm font-semibold">觀摩模式</span>
+          </div>
+        )}
       </div>
       {/* 右側功能 */}
       <div className="flex items-center flex-shrink-0">
@@ -258,11 +304,9 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
                 const imgIndex = parseInt(projectUser.id) % 9;
                 const userImg = personImg[imgIndex];
                 return (
-                  <Tooltip key={index} children={""} content={`${projectUser.username}`}>
-                    <li  className="relative w-8 h-8 rounded-full shadow-xl">
+                  <li key={index} className="relative w-8 h-8 rounded-full shadow-xl" title={projectUser.username}>
                     <img src={userImg} alt="Person" className="w-full h-full object-cover" />
                   </li>
-                  </Tooltip>
                 )
               })
           }

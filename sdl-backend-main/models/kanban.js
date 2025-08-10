@@ -10,6 +10,8 @@ const Kanban = sequelize.define('kanban', {
 });
 
 Kanban.hasMany(Column);
+Column.belongsTo(Kanban);
+
 module.exports = Kanban;
 
 // (async () => {

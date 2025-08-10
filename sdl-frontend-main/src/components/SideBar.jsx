@@ -13,6 +13,7 @@ import { RiDashboardLine } from "react-icons/ri";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { Context } from '../context/context'
 import ChatRoom from './ChatRoom';
+import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
 
 // Move NavItem outside to prevent re-declaration on each render
 const NavItem = ({ children, selected, id, setSelected }) => {
@@ -216,6 +217,9 @@ export default function SideBar() {
     const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context);
     const role = localStorage.getItem("role");
 
+    // 使用觀摩模式 hook
+    const { isObservationMode } = useObservationMode();
+
     // Floating tooltip state
     const [floatingTooltip, setFloatingTooltip] = useState({
         isVisible: false,
@@ -234,15 +238,25 @@ export default function SideBar() {
         { name: "教師儀錶板", link: `/project/${projectId}/teacherDashboard`, icon: LuLayoutDashboard },
     ];
     
+    // 觀摩模式下只顯示特定的選項
+    const observationMenus = ["進度看板", "想法延伸", "歷程檔案"];
+    
     const studentOrder = ["進度看板", "想法延伸", "成果紀錄", "歷程檔案", "反思日誌", "提問專區", "學習概覽"];
     const teacherOrder = ["進度看板", "想法延伸", "成果紀錄", "歷程檔案", "反思日誌", "提問專區", "教師儀錶板"];
     
-    const menus = baseMenus
-        .filter(menu => (role === "student" ? studentOrder.includes(menu.name) : teacherOrder.includes(menu.name)))
-        .sort((a, b) => {
-            const order = role === "student" ? studentOrder : teacherOrder;
-            return order.indexOf(a.name) - order.indexOf(b.name);
-        });
+    let menus;
+    if (isObservationMode) {
+        // 觀摩模式：只顯示指定的選項
+        menus = baseMenus.filter(menu => observationMenus.includes(menu.name));
+    } else {
+        // 正常模式：根據角色顯示相應選項
+        menus = baseMenus
+            .filter(menu => (role === "student" ? studentOrder.includes(menu.name) : teacherOrder.includes(menu.name)))
+            .sort((a, b) => {
+                const order = role === "student" ? studentOrder : teacherOrder;
+                return order.indexOf(a.name) - order.indexOf(b.name);
+            });
+    }
 
     const stages = [
         { name: "定標", index: 1 },

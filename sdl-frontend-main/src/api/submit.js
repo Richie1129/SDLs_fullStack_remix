@@ -15,6 +15,25 @@ const getsubmitApi = axios.create({
     },
 })
 
+// 添加請求攔截器以自動添加 token
+const addTokenInterceptor = (apiInstance) => {
+    apiInstance.interceptors.request.use(
+        (config) => {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                config.headers['accessToken'] = token;
+            }
+            return config;
+        },
+        (error) => {
+            return Promise.reject(error);
+        }
+    );
+};
+
+addTokenInterceptor(submitApi);
+addTokenInterceptor(getsubmitApi);
+
 export const submitTask = async (data) => {
     const response = await submitApi.post("/", data)
     return response.data

@@ -39,6 +39,17 @@ const Project = sequelize.define('project', {
         type: DataTypes.BOOLEAN,
         allowNull: true,
         defaultValue: false  // 假設默認值為 false，意味著項目尚未完成
+    },
+    is_open_for_viewing: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: '是否開放給其他班級觀摩'
+    },
+    allowed_classes: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        comment: '可觀摩的班級清單'
     }
 },{
     timestamps: true  

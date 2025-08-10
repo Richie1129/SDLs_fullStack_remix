@@ -389,3 +389,34 @@ exports.createKanban = async ( projectId ) => {
     })
 }
 
+exports.createKanban = async ( projectId ) => {
+    const kanban = await Kanban.create({
+        column:[], 
+        projectId:projectId
+    });
+    const todo = await Column.create({
+        name:"待處理", 
+        task:[], 
+        kanbanId:kanban.id
+    });
+    const inProgress = await Column.create({
+        name:"進行中", 
+        task:[], 
+        kanbanId:kanban.id
+    });
+    const Completed = await Column.create({
+        name:"完成", 
+        task:[], 
+        kanbanId:kanban.id
+    });
+    Kanban.findByPk(kanban.id)
+    .then(kanban =>{
+        kanban.column = [
+            todo.id, 
+            inProgress.id, 
+            Completed.id 
+        ];
+        return kanban.save();
+    })
+}
+

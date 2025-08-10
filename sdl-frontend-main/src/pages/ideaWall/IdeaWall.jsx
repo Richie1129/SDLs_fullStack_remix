@@ -7,8 +7,9 @@ import { visNetworkOptions as option } from '../../utils/visNetworkOptions'
 import svgConvertUrl from '../../utils/svgConvertUrl';
 import { useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { getIdeaWall } from '../../api/ideaWall';
-import { getNodes, getNodeRelation } from '../../api/nodes';
+import { getIdeaWall, createIdeaWall } from '../../api/ideaWall';
+import { getNodes, getNodeRelation, getProjectNodes, getProjectNodeRelation } from '../../api/nodes';
+import { getProject } from '../../api/project';
 import { socket } from '../../utils/socket';
 import { getNodeChangeLogs } from '../../api/kanban';
 import { formatTime } from '../../utils/timeUtils';
@@ -18,6 +19,7 @@ import Lottie from "lottie-react";
 import Adding_icon from "../../assets/AnimationAddingNode.json";
 import Timer from './components/Timer';
 import Idea_development from './components/Idea_development';
+import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 
 export default function IdeaWall() {
     const container = useRef(null);
@@ -47,39 +49,84 @@ export default function IdeaWall() {
 
     const [aiDevelopmentModalOpen, setAiDevelopmentModalOpen] = useState(false);
     const [showNodeChangeHistory, setShowNodeChangeHistory] = useState(false);
-    const [nodeChangeLogs, setNodeChangeLogs] = useState([]);
 
-    const ideaWallInfoQuery = useQuery(
-        'ideaWallInfo',
-        // () => getIdeaWall(projectId, `${currentStage}-${currentSubStage}`),
-        () => getIdeaWall(projectId, "1-1"),
+    // 使用觀摩模式 hook
+    const { isObservationMode } = useObservationMode();
+    const [nodeChangeLogs, setNodeChangeLogs] = useState([]);
+    const [currentStage, setCurrentStage] = useState("1");
+    const [currentSubStage, setCurrentSubStage] = useState("1");
+
+    // 首先獲取專案信息以得到當前階段
+    const projectInfoQuery = useQuery(
+        ['projectInfo', projectId],
+        () => getProject(projectId),
         {
             onSuccess: (data) => {
+                if (data) {
+                    setCurrentStage(data.currentStage || "1");
+                    setCurrentSubStage(data.currentSubStage || "1");
+                }
+            },
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+        }
+    );
 
+    const ideaWallInfoQuery = useQuery(
+        ['ideaWallInfo', projectId, currentStage, currentSubStage],
+        async () => {
+            const stageString = `${currentStage}-${currentSubStage}`;
+            try {
+                // 首先嘗試獲取現有的想法牆
+                const ideaWall = await getIdeaWall(projectId, stageString);
+                return ideaWall;
+            } catch (error) {
+                if (error.response?.status === 404) {
+                    // 如果不存在，創建新的想法牆
+                    console.log(`創建新的想法牆，階段: ${stageString}`);
+                    try {
+                        const newIdeaWall = await createIdeaWall({
+                            name: `專案想法牆-${stageString}`,
+                            type: "project",
+                            projectId: projectId,
+                            stage: stageString
+                        });
+                        return newIdeaWall;
+                    } catch (createError) {
+                        console.error('創建想法牆失敗:', createError);
+                        throw createError;
+                    }
+                } else {
+                    throw error;
+                }
+            }
+        },
+        {
+            enabled: !!projectId && !!currentStage && !!currentSubStage,
+            onSuccess: (data) => {
                 setIdealWallInfo(data)
                 if (data) {
                     const { id } = data
                     setTempId(id)
                 }
             },
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
         }
     )
     const getNodesQuery = useQuery({
-        queryKey: ['ideaWallDatas', tempid],
-        queryFn: () => getNodes(tempid),
-        // The query will not execute until the userId exists
+        queryKey: ['projectNodes', projectId],
+        queryFn: () => getProjectNodes(projectId),
         onSuccess: setnodes,
-        enabled: !!tempid,
-        // staleTime: 5 * 60 * 1000,
+        enabled: !!projectId,
         retryOnMount: false
     });
 
     const getNodeRelationQuery = useQuery({
-        queryKey: ['ideaWallEdgesDatas', tempid],
-        queryFn: () => getNodeRelation(tempid),
-        // The query will not execute until the userId exists
+        queryKey: ['projectNodeRelations', projectId],
+        queryFn: () => getProjectNodeRelation(projectId),
         onSuccess: setEdges,
-        enabled: !!tempid,
+        enabled: !!projectId,
         retryOnMount: false
     });
 
@@ -135,6 +182,11 @@ export default function IdeaWall() {
         })
 
         network?.on("oncontext", (properties) => {
+            // 觀摩模式下禁用右鍵創建功能
+            if (isObservationMode) {
+                return;
+            }
+            
             const { pointer, event, nodes } = properties;
             event.preventDefault();
             const x_coordinate = pointer.DOM.x;
@@ -254,43 +306,48 @@ export default function IdeaWall() {
         <div className="h-full w-full relative">
             <div ref={container} className="h-full w-full" />
             {/* create option */}
-            <Modal open={createOptionModalOpen} onClose={() => setCreateOptionModalOpen(false)} opacity={false} modalCoordinate={canvasPosition} custom={"w-25 h-12"}>
-                <div>
-                    <button onClick={() => {
-                        setNodeData({}) // 重置 nodeData 状态
-                        setTitle("")
-                        setContent("")
-                        setCreateOptionModalOpen(false)
-                        setCreateNodeModalOpen(true)
-                    }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                        建立想法
-                    </button>
-                    <button onClick={() => setCreateOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                        取消
-                    </button>
-                </div>
-            </Modal>
+            {!isObservationMode && (
+                <Modal open={createOptionModalOpen} onClose={() => setCreateOptionModalOpen(false)} opacity={false} modalCoordinate={canvasPosition} custom={"w-25 h-12"}>
+                    <div>
+                        <button onClick={() => {
+                            setNodeData({}) // 重置 nodeData 状态
+                            setTitle("")
+                            setContent("")
+                            setCreateOptionModalOpen(false)
+                            setCreateNodeModalOpen(true)
+                        }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                            建立想法
+                        </button>
+                        <button onClick={() => setCreateOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                            取消
+                        </button>
+                    </div>
+                </Modal>
+            )}
             {/* build on */}
-            <Modal open={buildOnOptionModalOpen} onClose={() => setBuildOnOptionModalOpen(false)} opacity={false} modalCoordinate={canvasPosition} custom={"w-30 h-15"}>
-                <div>
-                    <button onClick={() => {
-                        setNodeData({}) // 重置 nodeData 状态
-                        setTitle("")
-                        setContent("")
-                        setBuildOnOptionModalOpen(false)
-                        setCreateNodeModalOpen(true)
-                    }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                        延伸想法
-                    </button>
-                    <button onClick={() => setBuildOnOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                        取消
-                    </button>
-                </div>
-            </Modal>
+            {!isObservationMode && (
+                <Modal open={buildOnOptionModalOpen} onClose={() => setBuildOnOptionModalOpen(false)} opacity={false} modalCoordinate={canvasPosition} custom={"w-30 h-15"}>
+                    <div>
+                        <button onClick={() => {
+                            setNodeData({}) // 重置 nodeData 状态
+                            setTitle("")
+                            setContent("")
+                            setBuildOnOptionModalOpen(false)
+                            setCreateNodeModalOpen(true)
+                        }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                            延伸想法
+                        </button>
+                        <button onClick={() => setBuildOnOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                            取消
+                        </button>
+                    </div>
+                </Modal>
+            )}
             {/* create modal */}
-            <Modal open={createNodeModalOpen} onClose={() => setCreateNodeModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                <div className='flex flex-col p-3'>
-                    <h3 className=' font-bold text-base mb-3'>建立想法</h3>
+            {!isObservationMode && (
+                <Modal open={createNodeModalOpen} onClose={() => setCreateNodeModalOpen(false)} opacity={false} position={"justify-center items-center"}>
+                    <div className='flex flex-col p-3'>
+                        <h3 className=' font-bold text-base mb-3'>建立想法</h3>
                     <p className=' font-bold text-base mb-3'>標題</p>
                     <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
                         type="text"
@@ -317,10 +374,11 @@ export default function IdeaWall() {
                     </button>
 
                 </div>
-            </Modal>
+                </Modal>
+            )}
             {/* update modal */}
             {
-                selectNodeInfo &&
+                selectNodeInfo && (
                 <Modal open={updateNodeModalOpen} onClose={() => setUpdateNodeModalOpen(false)} opacity={false} position={"justify-center items-center"}>
                     <div className='flex flex-col w-full'>
                         {/* 標籤頁導航 */}
@@ -362,7 +420,7 @@ export default function IdeaWall() {
                                     name='title'
                                     value={selectNodeInfo.title}
                                     onChange={handleUpdataChange}
-                                    disabled={localStorage.getItem("username") !== selectNodeInfo.owner}
+                                    disabled={isObservationMode || localStorage.getItem("username") !== selectNodeInfo.owner}
                                 />
                                 <p className=' font-bold text-base mb-3'>內容</p>
                                 <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
@@ -371,7 +429,7 @@ export default function IdeaWall() {
                                     name='content'
                                     value={selectNodeInfo.content}
                                     onChange={handleUpdataChange}
-                                    disabled={localStorage.getItem("username") !== selectNodeInfo.owner}
+                                    disabled={isObservationMode || localStorage.getItem("username") !== selectNodeInfo.owner}
                                 />
                                 <div className='flex justify-between items-center mt-3'>
                                     <p className=' font-bold text-base'>建立者: {selectNodeInfo.owner}</p>
@@ -454,9 +512,12 @@ export default function IdeaWall() {
                     {!showNodeChangeHistory ? (
                         localStorage.getItem("username") === selectNodeInfo.owner ? (
                             <div className='flex flex-row justify-between m-2'>
-                                <button onClick={handleDelete} className="w-16 h-7 bg-red-500 rounded font-bold text-sm sm:text-bas text-white mr-2">
-                                    刪除
-                                </button>
+                                {/* 刪除按鈕 - 觀摩模式隱藏 */}
+                                {!isObservationMode && (
+                                    <button onClick={handleDelete} className="w-16 h-7 bg-red-500 rounded font-bold text-sm sm:text-bas text-white mr-2">
+                                        刪除
+                                    </button>
+                                )}
                                 <div className='flex'>
                                     {/* <button
                                         onClick={handleAiDevelopment}
@@ -464,25 +525,31 @@ export default function IdeaWall() {
                                     >
                                         AI 輔助發展
                                     </button> */}
-                                    <button
-                                        onClick={() => {
-                                            setBuildOnId(selectNodeInfo.id);
-                                            setNodeData({});
-                                            setTitle("");
-                                            setContent("");
-                                            setUpdateNodeModalOpen(false);
-                                            setCreateNodeModalOpen(true);
-                                        }}
-                                        className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white mr-2"
-                                    >
-                                        延伸想法
-                                    </button>
+                                    {/* 延伸想法按鈕 - 觀摩模式隱藏 */}
+                                    {!isObservationMode && (
+                                        <button
+                                            onClick={() => {
+                                                setBuildOnId(selectNodeInfo.id);
+                                                setNodeData({});
+                                                setTitle("");
+                                                setContent("");
+                                                setUpdateNodeModalOpen(false);
+                                                setCreateNodeModalOpen(true);
+                                            }}
+                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white mr-2"
+                                        >
+                                            延伸想法
+                                        </button>
+                                    )}
                                     <button onClick={() => setUpdateNodeModalOpen(false)} className="w-16 h-7 bg-customgray rounded font-bold text-sm sm:text-bas text-black/60 mr-2">
                                         取消
                                     </button>
-                                    <button onClick={handleUpdateSubmit} className="w-16 h-7 bg-customgreen rounded font-bold text-sm sm:text-bas text-white">
-                                        儲存
-                                    </button>
+                                    {/* 儲存按鈕 - 觀摩模式隱藏 */}
+                                    {!isObservationMode && (
+                                        <button onClick={handleUpdateSubmit} className="w-16 h-7 bg-customgreen rounded font-bold text-sm sm:text-bas text-white">
+                                            儲存
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ) : (
@@ -490,21 +557,24 @@ export default function IdeaWall() {
                                 <button onClick={() => setUpdateNodeModalOpen(false)} className="mx-auto w-1/3 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-base text-white mr-2" >
                                     關閉
                                 </button>
-                                <div className='flex justify-start'>
-                                    <button
-                                        onClick={() => {
-                                            setBuildOnId(selectNodeInfo.id);
-                                            setNodeData({});
-                                            setTitle("");
-                                            setContent("");
-                                            setUpdateNodeModalOpen(false);
-                                            setCreateNodeModalOpen(true);
-                                        }}
-                                        className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
-                                    >
-                                        延伸想法
-                                    </button>
-                                </div>
+                                {/* 延伸想法按鈕 - 觀摩模式隱藏 */}
+                                {!isObservationMode && (
+                                    <div className='flex justify-start'>
+                                        <button
+                                            onClick={() => {
+                                                setBuildOnId(selectNodeInfo.id);
+                                                setNodeData({});
+                                                setTitle("");
+                                                setContent("");
+                                                setUpdateNodeModalOpen(false);
+                                                setCreateNodeModalOpen(true);
+                                            }}
+                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
+                                        >
+                                            延伸想法
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )
                     ) : (
@@ -518,35 +588,39 @@ export default function IdeaWall() {
                         </div>
                     )}
                 </Modal>
-            }
-            <Modal open={aiDevelopmentModalOpen} onClose={() => setAiDevelopmentModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                <Idea_development
-                    nodeInfo={selectNodeInfo}
-                    onClose={() => setAiDevelopmentModalOpen(false)}
-                    onNewNode={handleNewNodeFromAI}
-                />
-            </Modal>
+            )}
+            {!isObservationMode && (
+                <Modal open={aiDevelopmentModalOpen} onClose={() => setAiDevelopmentModalOpen(false)} opacity={false} position={"justify-center items-center"}>
+                    <Idea_development
+                        nodeInfo={selectNodeInfo}
+                        onClose={() => setAiDevelopmentModalOpen(false)}
+                        onNewNode={handleNewNodeFromAI}
+                    />
+                </Modal>
+            )}
             <Timer />
-            <button
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                onClick={() => {
-                    setNodeData({});  // 重置 nodeData 状态
-                    setTitle("");
-                    setContent("");
-                    setCreateOptionModalOpen(false);
-                    setCreateNodeModalOpen(true);
-                }}
-                aria-label="新增節點"
-                className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-2xl transition duration-300 z-50 ${hovering ?"scale-110" : "scale-100" } `}
-            >
-                <Lottie
-                    className="w-28"
-                    animationData={Adding_icon}
-                    loop={false}
-                    autoplay={false}
-                />
-            </button>
+            {!isObservationMode && (
+                <button
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                    onClick={() => {
+                        setNodeData({});  // 重置 nodeData 状态
+                        setTitle("");
+                        setContent("");
+                        setCreateOptionModalOpen(false);
+                        setCreateNodeModalOpen(true);
+                    }}
+                    aria-label="新增節點"
+                    className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-2xl transition duration-300 z-50 ${hovering ?"scale-110" : "scale-100" } `}
+                >
+                    <Lottie
+                        className="w-28"
+                        animationData={Adding_icon}
+                        loop={false}
+                        autoplay={false}
+                    />
+                </button>
+            )}
             <Toaster />
         </div>
     )

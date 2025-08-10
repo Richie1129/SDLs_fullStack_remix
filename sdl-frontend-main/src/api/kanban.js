@@ -8,6 +8,20 @@ const kanbanApi = axios.create({
     },
 })
 
+// 添加請求攔截器以自動添加 token
+kanbanApi.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            config.headers['accessToken'] = token;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
 export const getKanbanColumns = async (projectId) => {
     const response = await kanbanApi.get(`/${projectId}`)
     return response.data
@@ -35,7 +49,10 @@ export const getProjectActivity = async (projectId, params = {}) => {
 }
 
 export const addCardItem = async (cardItem) => {
-    const response = await kanbanApi.post("/", cardItem)
+    // 注意：任務創建現在只通過 Socket 處理，此函數保留作為兼容性
+    // 實際的任務創建應該通過 socket.emit("taskItemCreated", ...) 完成
+    console.warn('addCardItem: 任務創建應該使用 Socket，不是 HTTP API');
+    return Promise.resolve();
 }
 
 export const updateCardItem = async (cardItem) => {
