@@ -35,7 +35,11 @@ addTokenInterceptor(submitApi);
 addTokenInterceptor(getsubmitApi);
 
 export const submitTask = async (data) => {
-    const response = await submitApi.post("/", data)
+    const isFormData = data instanceof FormData;
+    const projectId = isFormData ? data.get('projectId') : data?.projectId;
+    const response = await submitApi.post("/", data, {
+        params: projectId ? { projectId } : undefined
+    })
     return response.data
 }
 

@@ -162,8 +162,31 @@ export default function IdeaWall() {
         socket.off("nodeUpdated", nodeUpdateEvent);
         socket.on("nodeUpdated", nodeUpdateEvent);
 
+        // 錯誤處理事件：建立/更新/刪除節點失敗
+        const handleNodeError = (err) => {
+            console.warn('節點操作失敗:', err);
+            // 統一錯誤提示
+            if (err?.code === 'READ_ONLY_MODE') {
+                toast.error('觀摩模式下無法編輯或建立節點');
+            } else if (err?.message) {
+                toast.error(err.message);
+            } else {
+                toast.error('節點操作失敗，請稍後再試');
+            }
+        };
+
+        socket.off('nodeCreateError', handleNodeError);
+        socket.off('nodeUpdateError', handleNodeError);
+        socket.off('nodeDeleteError', handleNodeError);
+        socket.on('nodeCreateError', handleNodeError);
+        socket.on('nodeUpdateError', handleNodeError);
+        socket.on('nodeDeleteError', handleNodeError);
+
         return () => {
             socket.off("nodeUpdated", nodeUpdateEvent);
+            socket.off('nodeCreateError', handleNodeError);
+            socket.off('nodeUpdateError', handleNodeError);
+            socket.off('nodeDeleteError', handleNodeError);
         }
     }, [socket, projectId, getNodesQuery, getNodeRelationQuery]);
 
@@ -254,10 +277,21 @@ export default function IdeaWall() {
     const handleCreateSubmit = (e) => {
         e.preventDefault();
         if (title.trim() !== "" && content.trim() !== "") {
+            // 基本校驗：需有 ideaWallId 與 projectId
+            if (!ideaWallInfo?.id || !projectId) {
+                toast.error('想法牆尚未就緒，請稍後再試');
+                return;
+            }
             setCreateNodeModalOpen(false);
             socket.emit('nodeCreate', {
                 ...nodeData,
+                ideaWallId: ideaWallInfo.id,
+                projectId,
                 from_id: buildOnNodeId, // 設定來源節點 ID（如果是延伸想法）
+                user: {
+                    username: localStorage.getItem('username'),
+                    id: parseInt(localStorage.getItem('id')) || null,
+                },
             });
             setBuildOnId(""); // 清空，以免影響其他新建節點
         } else {
@@ -269,7 +303,15 @@ export default function IdeaWall() {
         e.preventDefault()
         if (selectNodeInfo.title.trim() !== "" && selectNodeInfo.content.trim() !== "") {
             setUpdateNodeModalOpen(false)
-            socket.emit('nodeUpdate', { ...selectNodeInfo, owner: localStorage.getItem("username") })
+            socket.emit('nodeUpdate', { 
+                ...selectNodeInfo, 
+                owner: localStorage.getItem("username"),
+                projectId,
+                user: {
+                    username: localStorage.getItem('username'),
+                    id: parseInt(localStorage.getItem('id')) || null,
+                },
+            })
         } else {
             toast.error("標題及內容請填寫完整!");
         }
@@ -281,7 +323,12 @@ export default function IdeaWall() {
         socket.emit('nodeDelete', { 
             ...selectNodeInfo, 
             owner: localStorage.getItem("username"),
-            title: selectNodeInfo.title
+            title: selectNodeInfo.title,
+            projectId,
+            user: {
+                username: localStorage.getItem('username'),
+                id: parseInt(localStorage.getItem('id')) || null,
+            },
         })
     }
 
@@ -299,7 +346,14 @@ export default function IdeaWall() {
 
     const handleNewNodeFromAI = (nodeData) => {
         console.log("發送新節點數據:", nodeData);
-        socket.emit('nodeCreate', nodeData);
+        socket.emit('nodeCreate', {
+            ...nodeData,
+            projectId,
+            user: {
+                username: localStorage.getItem('username'),
+                id: parseInt(localStorage.getItem('id')) || null,
+            },
+        });
     };
 
     return (
