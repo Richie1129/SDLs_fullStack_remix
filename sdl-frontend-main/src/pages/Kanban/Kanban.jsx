@@ -570,7 +570,7 @@ export default function Kanban() {
                 className="w-full h-full overflow-x-hidden overflow-y-auto md:overflow-x-auto md:overflow-y-hidden"
               >
                 {/* Small screens: wrap and stack vertically; md+: single row with horizontal scroll */}
-                <div className="flex flex-row flex-wrap items-start gap-4 h-auto md:inline-flex md:flex-nowrap md:space-x-4 md:gap-0 md:h-full">
+                <div className="flex flex-row flex-wrap items-start gap-4 h-auto md:inline-flex md:flex-nowrap md:space-x-4 md:gap-0 md:h-full ">
                 {!showAddGroupInput && !isObservationMode && (
                   <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7" onClick={toggleAddGroupInput}>
                     <FaPlus className="text-white mr-2 md:m-3" />
@@ -621,7 +621,7 @@ export default function Kanban() {
                             <div
                               {...provided.draggableProps}
                               ref={provided.innerRef}
-                              className="group-container w-full md:w-60 h-auto md:h-full md:shrink-0 flex flex-col bg-slate-50 rounded-lg shadow-lg"
+                              className="group-container w-full md:w-60 h-auto md:shrink-0 md:max-h-full md:min-h-0 flex flex-col bg-slate-50 rounded-lg shadow-lg"
                             >
                               <div
                                 {...(!isObservationMode ? provided.dragHandleProps : {})}
