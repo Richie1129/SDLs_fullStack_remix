@@ -250,6 +250,8 @@ export default function Kanban() {
     
     // Error handling listeners for rollback scenarios
     socket.on("ColumnCreatedError", handleCreationError);
+    // Also handle backend's actual error event name
+    socket.on("columnCreateError", handleCreationError);
     socket.on("taskItemCreatedError", handleCreationError);
     socket.on("error", handleCreationError);
 
@@ -264,6 +266,7 @@ export default function Kanban() {
       socket.off('columnDeleted', KanbanUpdateEvent);
       socket.off('cardUpdated', KanbanUpdateEvent);
       socket.off("ColumnCreatedError", handleCreationError);
+      socket.off("columnCreateError", handleCreationError);
       socket.off("taskItemCreatedError", handleCreationError);
       socket.off("error", handleCreationError);
       console.log("Socket listeners cleaned up");
@@ -493,9 +496,14 @@ export default function Kanban() {
       queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
 
       // 4. Send to server (will broadcast to other users)
+      // Include user info for backend permission checks
       socket.emit("ColumnCreated", {
         projectId,
-        newGroupName: newGroupName.trim()
+        newGroupName: newGroupName.trim(),
+        user: {
+          username: localStorage.getItem("username"),
+          id: parseInt(localStorage.getItem("id")) || null
+        }
       });
 
       // 5. Clear form immediately
