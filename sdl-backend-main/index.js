@@ -539,12 +539,14 @@ io.on("connection", (socket) => {
                 const changedBy = user?.username || cardData.owner || "未知";
                 console.log(`🗑️ 任務刪除記錄: ${changedBy} 刪除了任務「${cardData.title}」`);
                 
-                /* 暫時註釋掉任務變更日誌
+                // 寫入任務變更日誌
                 try {
                     await logTaskChange({
                         taskId: cardData.id,
                         changeType: 'delete',
                         fieldName: null, // 刪除操作不涉及特定字段
+                        oldValue: null,
+                        newValue: null,
                         changedBy: changedBy,
                         projectId: projectId,
                         description: `刪除任務「${cardData.title}」`
@@ -552,7 +554,6 @@ io.on("connection", (socket) => {
                 } catch (logError) {
                     console.error('⚠️ 任務變更日誌記錄失敗，但繼續處理刪除:', logError.message);
                 }
-                */
 
                 // Filter out the task ID from the tasks array
                 const updatedTasks = column.task.filter(taskId => taskId !== cardData.id);
@@ -655,8 +656,15 @@ io.on("connection", (socket) => {
         // 只有當移動到不同欄位時才記錄
         if (sourceColumnId !== destColumnId) {
             console.log(`📝 任務移動記錄: 任務 ${taskId} 從 ${srcName} 移動到 ${dstName}`);
-            
-            /* 暫時註釋掉任務變更日誌
+
+            // 取得任務標題以豐富描述
+            let movedTaskTitle = undefined;
+            try {
+                const movedTask = await Task.findByPk(taskId);
+                movedTaskTitle = movedTask?.title;
+            } catch (e) {
+                // 忽略取得標題的錯誤
+            }
             try {
                 await logTaskChange({
                     taskId: taskId,
@@ -666,12 +674,11 @@ io.on("connection", (socket) => {
                     projectId: projectId,
                     oldValue: srcName,
                     newValue: dstName,
-                    description: `將任務「${taskId}」從「${srcName}」移動到「${dstName}」`
+                    description: `將任務「${movedTaskTitle || taskId}」從「${srcName}」移動到「${dstName}」`
                 });
             } catch (logError) {
                 console.error('⚠️ 任務變更日誌記錄失敗，但繼續處理拖拽:', logError.message);
             }
-            */
         }
 
         // 更新數據庫 - 使用實際的 column ID
@@ -736,15 +743,22 @@ io.on("connection", (socket) => {
                 return;
             }
             
+            // 依據 projectId 找到對應的 Kanban 記錄
+            const kanbanRowForCreate = await Kanban.findOne({ where: { projectId } });
+            if (!kanbanRowForCreate) {
+                console.error(`❌ 找不到專案 ${projectId} 的 Kanban 記錄，無法建立列表`);
+                socket.emit("columnCreateError", { message: 'Kanban not found' });
+                return;
+            }
+
             const createColumn = await Column.create({
                 name: newGroupName,
                 task: [],
-                kanbanId: projectId
+                kanbanId: kanbanRowForCreate.id
             })
 
-            const addIntoColumnArray = await Kanban.findByPk(projectId)
-            addIntoColumnArray.column = [...addIntoColumnArray.column, createColumn.id];
-            await addIntoColumnArray.save()
+            kanbanRowForCreate.column = [...(kanbanRowForCreate.column || []), createColumn.id];
+            await kanbanRowForCreate.save()
                 .then(() => console.log("success"))
             // io.sockets.emit("ColumnCreatedSuccess", addIntoColumnArray);
             await Project.update({
@@ -754,7 +768,16 @@ io.on("connection", (socket) => {
                     id: projectId
                 }
             });
-            io.to(projectId).emit("ColumnCreatedSuccess", addIntoColumnArray);
+
+            io.to(projectId).emit("ColumnCreatedSuccess", kanbanRowForCreate);
+
+            // 發送即時活動更新（顯示於 ActivityStream）
+            io.to(projectId).emit("activityUpdate", {
+                type: 'create',
+                user: createdBy,
+                timestamp: new Date(),
+                description: `使用者 ${createdBy} 建立了新列表「${newGroupName}」`
+            });
 
         } catch (error) {
             console.error("處理 ColumnCreated 時出錯：", error);
@@ -798,14 +821,24 @@ io.on("connection", (socket) => {
         } catch (error) {
             console.error("Error updating columns in Kanban table:", error);
         }
+
+        // 發送即時活動更新（顯示於 ActivityStream）
+        io.to(roomProjectId).emit("activityUpdate", {
+            type: 'update',
+            user: changedBy,
+            timestamp: new Date(),
+            description: `使用者 ${changedBy} 調整了列表順序`
+        });
     });
     //Delete column
     ensureListener(socket, "ColumnDelete", async (data) => {
-        const { columnData, kanbanId, user } = data;
-        const deletedBy = user?.username || "未知";
+        const { columnData, kanbanId } = data;
+        // 從 socket 或傳入資料取得目前使用者
+        const currentUser = getCurrentUser(socket, data);
+        const deletedBy = currentUser?.username || "未知";
         
-        // 權限檢查
-        const permissionCheck = await checkSocketWritePermission(user?.id, kanbanId);
+        // 權限檢查（優先使用 socket 上的 userId）
+        const permissionCheck = await checkSocketWritePermission(getCurrentUserId(socket, data), kanbanId, socket);
         if (!permissionCheck.hasPermission) {
             console.log(`🚫 用戶 ${deletedBy} 嘗試刪除列表被拒絕: ${permissionCheck.error}`);
             socket.emit("columnDeleteError", { 
@@ -820,11 +853,8 @@ io.on("connection", (socket) => {
 
         try {
             // Step 1: Update the Kanban table by removing the column ID from the columns array
-            const kanban = await Kanban.findOne({
-                where: {
-                    id: kanbanId
-                }
-            });
+            // 注意：前端傳來的 kanbanId 實際上是 projectId
+            const kanban = await Kanban.findOne({ where: { projectId: kanbanId } });
 
             if (kanban) {
                 const updatedColumns = kanban.column.filter(columnId => columnId !== columnData.id);
@@ -832,17 +862,21 @@ io.on("connection", (socket) => {
 
                 // Step 2: Delete all tasks associated with the column
                 try {
-                    // 首先從 columnData.task 中提取所有任務的 ID
-                    const taskIds = columnData.task.map(task => task.id);
+                    // 首先從 columnData.task 中提取所有任務的 ID（兼容 ID 與物件）
+                    const rawTasks = Array.isArray(columnData.task) ? columnData.task : [];
+                    const taskIds = rawTasks.map(t => (t && typeof t === 'object') ? t.id : t).filter(Boolean);
                     console.log(`🗑️ 開始刪除欄位 ${columnData.name} 中的 ${taskIds.length} 個任務及其檔案...`);
 
                     // 批量清理 MinIO 檔案
                     try {
                         const { extractTaskFileNames, batchDeleteMinioFiles } = require('./utils/minioFileHelper');
                         const allFileNames = [];
-
-                        // 從前端傳來的 columnData.task 中提取所有檔案名稱
-                        for (const task of columnData.task) {
+                        let tasksForCleanup = rawTasks;
+                        // 若為 ID 陣列，從 DB 取回完整任務資料
+                        if (tasksForCleanup.length > 0 && (typeof tasksForCleanup[0] !== 'object' || tasksForCleanup[0] === null)) {
+                            tasksForCleanup = await Task.findAll({ where: { id: { [Op.in]: taskIds } } });
+                        }
+                        for (const task of tasksForCleanup) {
                             const taskFileNames = extractTaskFileNames(task);
                             allFileNames.push(...taskFileNames);
                         }
@@ -1232,15 +1266,15 @@ console.log('Models loaded:', Object.keys(sequelize.models));
 
 // sync database
 console.log("syncing database---------------------------------------------------------------------")
-sequelize.sync({ alter: true })  // {force:true} {alter:true}
-    .then(result => {
-        console.log("Database connected");
-        console.log("Database structure synced");
-        console.log("All tables created/recreated successfully");
-    })
-    .catch(err => {
-        console.log("Database sync error:", err);
-    });
+// sequelize.sync({ alter: true })  // {force:true} {alter:true}
+//     .then(result => {
+//         console.log("Database connected");
+//         console.log("Database structure synced");
+//         console.log("All tables created/recreated successfully");
+//     })
+//     .catch(err => {
+//         console.log("Database sync error:", err);
+//     });
 
 server.listen(3000, () => {
     console.log("✅ 伺服器已啟動，監聽端口 3000");
