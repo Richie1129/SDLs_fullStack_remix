@@ -9,7 +9,7 @@ const EmptyState = ({
   return (
     <div className={className}>
       <Lottie
-        className="w-48 sm:w-56 md:w-64 lg:w-72 max-w-full h-auto"
+        className="h-64 sm:h-72 lg:h-80 w-auto"
         animationData={animationData}
       />
       <p className="font-bold text-zinc-600 text-sm sm:text-base lg:text-lg text-center leading-relaxed">

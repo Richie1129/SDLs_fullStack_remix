@@ -1,7 +1,6 @@
 const { DataTypes} = require('sequelize');
 const sequelize = require('../util/database');
 const Node = require('./node');
-const Node_relation = require('./node_relation')
 
 const Idea_wall = sequelize.define('idea_wall', {
     name: {

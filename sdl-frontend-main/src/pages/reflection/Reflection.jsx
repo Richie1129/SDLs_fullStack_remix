@@ -387,28 +387,6 @@ export default function Reflection() {
     );
   };
 
-  const handleCreateTeamDaily = (e) => {
-    e.preventDefault();
-
-    if (title.trim() !== "" && content.trim() !== "") {
-      const formData = new FormData();
-      formData.append("projectId", projectId);
-      formData.append("creator", localStorage.getItem("username"));
-      if (attachFile) {
-        for (let i = 0; i < attachFile.length; i++) {
-          formData.append("attachFile", attachFile[i]);
-        }
-      }
-      for (let key in dailyData) {
-        formData.append(key, dailyData[key]);
-      }
-      console.log(...formData);
-      teamDailyMutate(formData);
-      setTeamDailyModalOpen(false);
-    } else {
-      toast.error("標題及內容請填寫完整!");
-    }
-  };
 
   // socket
   useEffect(() => {
@@ -603,10 +581,9 @@ export default function Reflection() {
         {/* 左側欄位 - 個人日誌 */}
         <div className="flex flex-col lg:border-r border-gray-200 bg-white">
           {/* 標題區塊 */}
-          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-[#5BA491]/10 to-[#5BA491]/5">
+          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 ">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
-                <span className="w-3 h-3 bg-[#5BA491] rounded-full mr-2 sm:mr-3"></span>
                 個人日誌
               </h2>
 
@@ -670,7 +647,7 @@ export default function Reflection() {
           </div>
 
           {/* 內容區塊 */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
             <LogSection
               title=""
               items={personalDaily}
@@ -697,10 +674,9 @@ export default function Reflection() {
         {/* 右側欄位 - 小組日誌 */}
         <div className="flex flex-col bg-white border-t lg:border-t-0 border-gray-200">
           {/* 標題區塊 */}
-          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-[#5BA491]/10 to-[#5BA491]/5">
+          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 ">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
-                <span className="w-3 h-3 bg-[#5BA491] rounded-full mr-2 sm:mr-3"></span>
                 小組日誌
               </h2>
 
@@ -742,7 +718,7 @@ export default function Reflection() {
           </div>
 
           {/* 內容區塊 */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
             <LogSection
               title=""
               items={teamDaily}

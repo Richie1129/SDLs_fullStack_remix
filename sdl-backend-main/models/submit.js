@@ -10,6 +10,11 @@ const Submit = sequelize.define('submit', {
         type: DataTypes.JSON,
         allowNull:false,
     },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'users', key: 'id' }
+    },
     fileData:{
         type: DataTypes.BLOB,
         allowNull:true,

@@ -53,7 +53,18 @@ router.get('/:submitId', optionalAuth, getProjectIdFromSubmit, optionalProjectPe
 router.get('/:submitId/changes', optionalAuth, getProjectIdFromSubmit, optionalProjectPermission, controller.getSubmitChangeLogs);
 
 // 寫入路由 - 需要完整權限，禁止觀摩者操作
-router.post('/', validateToken, checkProjectViewingPermission, checkWritePermission, uploadToMinio('attachFile'), controller.createSubmit);
+router.post('/', 
+  (req, _res, next) => { 
+    console.log('=== POST /api/submit incoming ===');
+    console.log('Has accessToken header:', !!req.header('accessToken'));
+    next();
+  },
+  validateToken, 
+  checkProjectViewingPermission, 
+  checkWritePermission, 
+  uploadToMinio('attachFile'), 
+  controller.createSubmit
+);
 router.put('/:submitId', validateToken, getProjectIdFromSubmit, checkProjectViewingPermission, checkWritePermission, uploadSingleToMinio('attachFile'), controller.updateSubmit);
 router.delete('/:submitId', validateToken, getProjectIdFromSubmit, checkProjectViewingPermission, checkWritePermission, controller.deleteSubmit);
 
