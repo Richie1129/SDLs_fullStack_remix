@@ -1,82 +1,60 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link, useParams, useLocation } from 'react-router-dom';
-import { IoBulbOutline } from 'react-icons/io5';
 import { FaRegLightbulb } from "react-icons/fa";
 import { MdOutlineViewKanban } from "react-icons/md";
 import { TiFolderOpen } from "react-icons/ti";
-import { CgNotes, CgFolder } from "react-icons/cg";
+import { CgNotes } from "react-icons/cg";
 import { LuLayoutDashboard } from "react-icons/lu";
 import { BiTask } from "react-icons/bi";
 import { BsChatDots } from "react-icons/bs";
-import { TbMessageQuestion, TbZoomQuestion } from "react-icons/tb";
+import { TbMessageQuestion } from "react-icons/tb";
 import { RiDashboardLine } from "react-icons/ri";
-import { AnimatePresence, motion, MotionConfig } from "framer-motion";
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Context } from '../context/context'
 import ChatRoom from './ChatRoom';
 import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
 
-// Move NavItem outside to prevent re-declaration on each render
+// Simple NavItem without framer-motion
 const NavItem = ({ children, selected, id, setSelected }) => {
     return (
-        <motion.button
-            className="hover:bg-slate-200 transition-colors relative w-full"
+        <button
+            className="hover:bg-slate-100 transition-colors relative w-full rounded-md"
             onClick={() => setSelected(id)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
         >
             <span className="block relative z-10 w-full">{children}</span>
-            <AnimatePresence>
-                {selected && (
-                    <motion.span
-                        className="absolute inset-0 rounded-md bg-[#5BA491]/30 z-0"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                    ></motion.span>
-                )}
-            </AnimatePresence>
-        </motion.button>
+            {selected && (
+                <span className="absolute inset-0 rounded-md bg-[#5BA491]/20 z-0" />
+            )}
+        </button>
     );
 };
 
 // Floating Tooltip Component for Stage Definitions
 const FloatingTooltip = ({ isVisible, position, content, onClose }) => {
     if (!isVisible) return null;
-
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="fixed z-50 bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-4 max-w-xs"
-                style={{
-                    left: position.x + 10,
-                    top: position.y - 10,
-                }}
+        <div
+            className="fixed z-50 bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-4 max-w-xs transition-opacity"
+            style={{ left: position.x + 10, top: position.y - 10 }}
+        >
+            <button
+                onClick={onClose}
+                className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
             >
-                {/* Close button */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-                >
-                    <span className="text-gray-500 text-sm">×</span>
-                </button>
-                
-                {/* Content */}
-                <div className="pr-8">
-                    <h3 className="font-bold text-[#5BA491] mb-2">{content.title}</h3>
-                    <ul className="text-sm text-gray-700 space-y-1">
-                        {content.items.map((item, index) => (
-                            <li key={index} className="flex items-start">
-                                <span className="text-[#5BA491] mr-2">•</span>
-                                {item}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </motion.div>
-        </AnimatePresence>
+                <span className="text-gray-500 text-sm">×</span>
+            </button>
+            <div className="pr-8">
+                <h3 className="font-bold text-[#5BA491] mb-2">{content.title}</h3>
+                <ul className="text-sm text-gray-700 space-y-1">
+                    {content.items.map((item, index) => (
+                        <li key={index} className="flex items-start">
+                            <span className="text-[#5BA491] mr-2">•</span>
+                            {item}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </div>
     );
 };
 
@@ -96,7 +74,7 @@ const HoverTooltip = ({ children, text, show = true }) => {
 };
 
 // Stage Progress Item with Perfect Centering
-const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick, subStages }) => {
+const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick }) => {
     const getStageColor = (stageIndex) => {
         if (parseInt(currentStageIndex) === stageIndex) {
             return '#5BA491';
@@ -108,105 +86,41 @@ const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick, subStage
     };
 
     if (!isOpen) {
-        // Collapsed state: show as perfectly centered numbered dot
+        // Collapsed state: small fixed-size colored block with centered text
         return (
-            <motion.div
+            <div
                 onClick={onClick}
                 style={{ backgroundColor: getStageColor(stage.index) }}
-                className="w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110 hover:shadow-md mx-auto"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
+                className="h-8 w-14 rounded-md flex items-center justify-center cursor-pointer mx-auto hover:shadow"
             >
-                <span className="text-sm font-bold text-white">{stage.index}</span>
-            </motion.div>
+                <span className="text-xs font-semibold text-white tracking-wide">{stage.name}</span>
+            </div>
         );
     }
 
     // Expanded state: show full stage button
     return (
-        <motion.div
+        <div
             onClick={onClick}
             style={{ backgroundColor: getStageColor(stage.index) }}
-            className="h-10 w-full flex items-center justify-center cursor-pointer rounded-lg transition-all duration-200 hover:shadow-md"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            className="h-10 w-full flex items-center justify-center cursor-pointer rounded-lg hover:shadow"
         >
             <span className="text-sm font-bold text-white">{stage.name}</span>
-        </motion.div>
+        </div>
     );
 };
 
-// Fixed AnimatedHamburgerButton that accepts external state
-const AnimatedHamburgerButton = ({ isOpen, onClick }) => {
+// Simple toggle button with chevrons
+const ToggleButton = ({ isOpen, onClick }) => {
     return (
-        <MotionConfig
-            transition={{
-                duration: 0.5,
-                ease: "easeInOut",
-            }}
+        <button
+            onClick={onClick}
+            className="h-10 w-10 flex items-center justify-center hover:bg-gray-100 rounded-md border border-gray-200"
+            aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         >
-            <motion.button
-                initial={false}
-                animate={isOpen ? "open" : "closed"}
-                onClick={onClick}
-                className="relative h-10 w-10 flex items-center justify-center transition-colors hover:bg-gray-100 rounded-md"
-            >
-                <motion.span
-                    variants={VARIANTS.top}
-                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"
-                    style={{ y: "-50%", left: "50%", x: "-50%", top: "25%" }}
-                />
-                <motion.span
-                    variants={VARIANTS.middle}
-                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"
-                    style={{ left: "50%", x: "-50%", top: "50%", y: "-50%" }}
-                />
-                <motion.span
-                    variants={VARIANTS.bottom}
-                    className="absolute h-1 w-6 bg-zinc-800 rounded-full"
-                    style={{
-                        x: "-50%",
-                        y: "50%",
-                        bottom: "25%",
-                        left: "50%",
-                    }}
-                />
-            </motion.button>
-        </MotionConfig>
+            {isOpen ? <FiChevronLeft className="text-zinc-800" /> : <FiChevronRight className="text-zinc-800" />}
+        </button>
     );
-};
-
-const VARIANTS = {
-    top: {
-        open: {
-            rotate: ["0deg", "0deg", "45deg"],
-            top: ["25%", "50%", "50%"],
-        },
-        closed: {
-            rotate: ["45deg", "0deg", "0deg"],
-            top: ["50%", "50%", "25%"],
-        },
-    },
-    middle: {
-        open: {
-            rotate: ["0deg", "0deg", "-45deg"],
-        },
-        closed: {
-            rotate: ["-45deg", "0deg", "0deg"],
-        },
-    },
-    bottom: {
-        open: {
-            rotate: ["0deg", "0deg", "45deg"],
-            bottom: ["25%", "50%", "50%"],
-            left: "50%",
-        },
-        closed: {
-            rotate: ["45deg", "0deg", "0deg"],
-            bottom: ["50%", "50%", "25%"],
-            left: "50%",
-        },
-    },
 };
 
 export default function SideBar() {
@@ -314,22 +228,19 @@ export default function SideBar() {
 
     // Dynamic sidebar width classes with better responsive sizing
     const sidebarWidthClass = open 
-        ? "w-56 sm:w-60 md:w-64 lg:w-68" 
-        : "w-16 sm:w-18 md:w-20 lg:w-20";
+        ? "w-56 sm:w-60 md:w-64" 
+        : "w-16 md:w-20";
 
     return (
         <>
-            <motion.div 
+            <div 
                 className={`z-10 bg-white flex flex-col flex-shrink-0 border-r-2 border-gray-200 h-full ${sidebarWidthClass}`}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                style={{ transition: 'width 0.3s ease-in-out' }}
             >
                 {/* Header with Hamburger Button */}
                 <div className="flex-shrink-0 p-3 border-b border-gray-100">
                     <div className={`flex ${open ? "justify-end" : "justify-center"}`}>
-                        <AnimatedHamburgerButton 
-                            isOpen={open} 
-                            onClick={() => setOpen(!open)} 
-                        />
+                        <ToggleButton isOpen={open} onClick={() => setOpen(!open)} />
                     </div>
                 </div>
 
@@ -343,27 +254,18 @@ export default function SideBar() {
                                         <NavItem selected={selected === i} id={i} setSelected={setSelected}>
                                             <Link 
                                                 to={menu?.link} 
-                                                className={`flex items-center text-sm font-medium p-3 rounded-lg w-full transition-all duration-200 ${
+                                                className={`flex items-center text-sm font-medium p-3 rounded-lg w-full ${
                                                     open ? 'gap-3' : 'justify-center'
                                                 }`}
                                             >
                                                 <div className="flex-shrink-0 flex items-center justify-center">
                                                     {React.createElement(menu?.icon, { size: "24" })}
                                                 </div>
-                                                <motion.h2 
-                                                    className="whitespace-pre text-gray-700"
-                                                    animate={{
-                                                        opacity: open ? 1 : 0,
-                                                        width: open ? "auto" : 0,
-                                                        marginLeft: open ? "0.75rem" : "0"
-                                                    }}
-                                                    transition={{ 
-                                                        duration: 0.3, 
-                                                        delay: open ? i * 0.03 : 0 
-                                                    }}
+                                                <span
+                                                    className={`whitespace-pre text-gray-700 overflow-hidden transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 w-0'}`}
                                                 >
                                                     {menu?.name}
-                                                </motion.h2>
+                                                </span>
                                             </Link>
                                         </NavItem>
                                     </HoverTooltip>
@@ -380,14 +282,9 @@ export default function SideBar() {
                         <div className="p-3">
                             {/* Section Title for expanded state */}
                             {open && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.2 }}
-                                    className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 mb-3"
-                                >
+                                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 mb-3">
                                     學習階段
-                                </motion.div>
+                                </div>
                             )}
                             
                             <div className={`${open ? 'space-y-2' : 'flex flex-col items-center space-y-3'}`}>
@@ -398,7 +295,6 @@ export default function SideBar() {
                                         isOpen={open}
                                         currentStageIndex={currentStageIndex}
                                         onClick={(e) => handleStageClick(stage, e)}
-                                        subStages={subStages}
                                     />
                                 ))}
                             </div>
@@ -409,34 +305,26 @@ export default function SideBar() {
                     {projectId !== undefined && (
                         <div className="p-3 border-t border-gray-100">
                             <HoverTooltip text={!open ? "聊天室" : ""} show={!open}>
-                                <motion.div 
+                                <div 
                                     onClick={() => setChatRoomOpen(true)} 
-                                    className={`flex items-center font-medium p-3 rounded-lg cursor-pointer bg-zinc-800 hover:bg-zinc-700 transition-all duration-200 hover:shadow-md ${
+                                    className={`flex items-center font-medium p-3 rounded-lg cursor-pointer bg-zinc-800 hover:bg-zinc-700 ${
                                         open ? 'gap-3' : 'justify-center'
                                     }`}
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
                                 >
                                     <div className="flex-shrink-0 flex items-center justify-center">
                                         <BsChatDots size="24" className="text-white" />
                                     </div>
-                                    <motion.h2 
-                                        className="whitespace-pre text-sm text-white"
-                                        animate={{
-                                            opacity: open ? 1 : 0,
-                                            width: open ? "auto" : 0,
-                                            marginLeft: open ? "0.75rem" : "0"
-                                        }}
-                                        transition={{ duration: 0.3 }}
+                                    <span 
+                                        className={`whitespace-pre text-sm text-white overflow-hidden transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 w-0'}`}
                                     >
                                         聊天室
-                                    </motion.h2>
-                                </motion.div>
+                                    </span>
+                                </div>
                             </HoverTooltip>
                         </div>
                     )}
                 </div>
-            </motion.div>
+            </div>
 
             {/* Floating Tooltip */}
             <FloatingTooltip
