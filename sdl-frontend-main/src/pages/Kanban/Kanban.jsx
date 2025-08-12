@@ -559,7 +559,7 @@ export default function Kanban() {
         </div>
       )}
       
-      <div className="flex-1 min-h-0 p-4 sm:p-6 lg:p-8 overflow-y-auto md:overflow-hidden ">
+      <div className="flex-1 min-h-0 p-4 sm:p-6 lg:p-8 overflow-visible md:overflow-hidden ">
         <DragDropContext onDragEnd={isObservationMode ? () => {} : onDragEnd}>
           
           <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
@@ -567,7 +567,7 @@ export default function Kanban() {
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
-                className="w-full h-full overflow-x-hidden overflow-y-auto md:overflow-x-auto md:overflow-y-hidden"
+                className="w-full h-full overflow-x-hidden md:overflow-x-auto overflow-y-visible md:overflow-y-hidden"
               >
                 {/* Small screens: wrap and stack vertically; md+: single row with horizontal scroll */}
                 <div className="flex flex-row flex-wrap items-start gap-4 h-auto md:inline-flex md:flex-nowrap md:space-x-4 md:gap-0 md:h-full ">

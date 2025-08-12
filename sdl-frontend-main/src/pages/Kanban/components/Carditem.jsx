@@ -709,9 +709,8 @@ function Carditem({ data, index, columnIndex }) {
         </Modal>
       )}
 
-      {open && (
-        <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"}>
-          <div className='flex flex-col w-full'>
+      <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"}>
+        <div className='flex flex-col w-full'>
             {/* 標籤頁導航 */}
             <div className='flex border-b border-gray-200 mb-4'>
               <button
@@ -914,8 +913,7 @@ function Carditem({ data, index, columnIndex }) {
               </div>
             )}
           </div>
-        </Modal> 
-      )}
+        </Modal>
 
       {!isObservationMode && (
         <Modal open={assignMemberModalopen} onClose={() => setAssignMemberModalOpen(false)} opacity={false} position={"justify-end items-center m-3"}>
