@@ -24,7 +24,7 @@ const Task = sequelize.define('task', {
         allowNull:true
     },
     image: {
-        type: DataTypes.BLOB, // 使用 BLOB 儲存圖片二進制數據
+        type: DataTypes.BLOB,
         allowNull: true,
     },
     images: {
@@ -38,11 +38,11 @@ const Task = sequelize.define('task', {
         allowNull: true,
     }
 }, {
-    timestamps: true // 啟用自動時間戳記
+    timestamps: true 
 });
 
-Task.belongsToMany(Tag, {through:"Card_Tag"});
-Tag.belongsToMany(Task, {through:"Card_Tag"});
+Task.belongsToMany(Tag, { through: 'card_tags' });
+Tag.belongsToMany(Task, { through: 'card_tags' });
 
 // 建立與 TaskChangeLog 的關聯
 const TaskChangeLog = require('./task_change_log');

@@ -12,7 +12,7 @@ const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
 const Stage = require('../models/stage');
 const Sub_stage = require('../models/sub_stage');
-const User_project = require('../models/userproject');
+const User_project = require('../models/user_project');
 
 exports.getProject = async (req, res) => {
     const projectId = req.params.projectId;

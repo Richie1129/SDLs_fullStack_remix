@@ -13,6 +13,8 @@ const Sub_stage = sequelize.define('sub_stage', {
         type: DataTypes.JSON,
         allowNull:false
     }
+}, {
+    tableName: 'sub_stages'
 });
 
 module.exports = Sub_stage;

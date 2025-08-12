@@ -7,23 +7,8 @@ const Question = sequelize.define('question', {
         type: DataTypes.TEXT,
         allowNull: false
     }
-    // ,
-    // userId: {
-    //     type: DataTypes.INTEGER,
-    //     allowNull: false,
-    //     references: {
-    //         model: 'user', // 注意这里使用字符串指向模型名
-    //         key: 'id'
-    //     }
-    // },
-    // projectId: {
-    //     type: DataTypes.INTEGER,
-    //     allowNull: false,
-    //     references: {
-    //         model: 'project', // 注意这里使用字符串指向模型名
-    //         key: 'id'
-    //     }
-    // }
+}, {
+    tableName: 'questions'
 });
 Question.hasMany(QuestionMessage, {
     foreignKey: 'questionId',

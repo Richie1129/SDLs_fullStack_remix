@@ -39,7 +39,8 @@ const Submit = sequelize.define('submit', {
         comment: '檔案大小 (bytes)'
     }
 }, {
-    timestamps: true // 啟用自動時間戳記
+    timestamps: true, 
+    tableName: 'submits'
 });
 
 module.exports = Submit;

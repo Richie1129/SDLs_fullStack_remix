@@ -20,5 +20,7 @@ const Tag = sequelize.define('tag', {
         type: DataTypes.TEXT,
         allowNull:false
     },   
+}, {
+    tableName: 'tags'
 });
 module.exports = Tag;

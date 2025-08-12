@@ -16,7 +16,7 @@ const SubmitChangeLog = sequelize.define('submit_change_log', {
     },
     fieldName: {
         type: DataTypes.STRING,
-        allowNull: true // null表示整個提交的變更（如創建、刪除）
+        allowNull: true 
     },
     oldValue: {
         type: DataTypes.TEXT,
@@ -39,7 +39,8 @@ const SubmitChangeLog = sequelize.define('submit_change_log', {
         allowNull: true
     }
 }, {
-    timestamps: true
+    timestamps: true,
+    tableName: 'submit_change_logs'
 });
 
 module.exports = SubmitChangeLog; 

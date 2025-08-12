@@ -5,8 +5,8 @@ const Threads = require('./threads');
 const Threads_Message = require('./threads_message');
 const daily_personal = require('./daily_personal');
 const daily_team = require('./daily_team');
-const Chatroom_message = require('./chatroom_message');
 const Question = require('./question');
+const UserProject = require('./user_project'); 
 
 const User = sequelize.define('user', {
     username: {
@@ -33,11 +33,13 @@ const User = sequelize.define('user', {
         type: DataTypes.TEXT,
         allowNull:true
     }
+}, {
+    tableName: 'users'
 });
 
 
-User.belongsToMany(Project, {through:"User_Projects"});
-Project.belongsToMany(User, {through:"User_Projects"});
+User.belongsToMany(Project, {through:"UserProject"});
+Project.belongsToMany(User, {through:"UserProject"});
 
 User.hasMany(Threads_Message);
 User.hasMany(Threads);
