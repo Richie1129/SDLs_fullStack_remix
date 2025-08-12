@@ -35,6 +35,8 @@ const Rag_message = sequelize.define('Rag_message', {
         type: DataTypes.STRING,
         allowNull: true,
     }
+}, {
+    tableName: 'rag_messages'
 });
 
 module.exports = Rag_message;

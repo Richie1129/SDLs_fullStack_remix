@@ -10,6 +10,8 @@ const Question_message = sequelize.define('question_message', {
         allowNull: false
     }
 
+}, {
+    tableName: 'question_messages'
 });
 
 

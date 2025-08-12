@@ -16,10 +16,11 @@ const Idea_wall = sequelize.define('idea_wall', {
         type: DataTypes.TEXT,
         allowNull:true
     }
+}, {
+    tableName: 'idea_walls'
 });
 Idea_wall.hasMany(Node);
-Idea_wall.hasMany(Node_relation);
+Node.belongsTo(Idea_wall, { foreignKey: 'ideaWallId' });
+// Removed invalid association to Node_relation (no ideaWallId in join table)
 
 module.exports = Idea_wall;
-
-

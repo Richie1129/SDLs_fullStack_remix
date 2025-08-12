@@ -11,6 +11,8 @@ const Stage = sequelize.define('stage', {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull:false,
     }
+}, {
+    tableName: 'stages'
 });
 Stage.hasMany(Sub_stage);
 

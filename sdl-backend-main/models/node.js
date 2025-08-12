@@ -1,5 +1,6 @@
 const { DataTypes} = require('sequelize');
 const sequelize = require('../util/database');
+const NodeRelation = require('./node_relation');
 
 const Node = sequelize.define('node', {
     title: {
@@ -18,9 +19,23 @@ const Node = sequelize.define('node', {
         type: DataTypes.INTEGER,
         allowNull:true
     }
+}, {
+    tableName: 'nodes'
 });
 
-Node.belongsToMany(Node, {as:"from_id" , through:"Node_Relation"});
-Node.belongsToMany(Node, {as:"to_id" , through:"Node_Relation"});
+// Self-referential many-to-many via node_relations
+Node.belongsToMany(Node, {
+    as: 'successors',
+    through: NodeRelation,
+    foreignKey: 'from_id',
+    otherKey: 'to_id'
+});
+
+Node.belongsToMany(Node, {
+    as: 'predecessors',
+    through: NodeRelation,
+    foreignKey: 'to_id',
+    otherKey: 'from_id'
+});
 
 module.exports = Node;

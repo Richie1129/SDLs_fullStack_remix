@@ -4,25 +4,11 @@ services:
     restart: always
     ports:
       - 80:80    
-      - 443:443  # 添加 443 端口用於 HTTPS
     volumes:
-      - "./nginx.conf:/etc/nginx/nginx.conf"  # Nginx 開發環境配置文件
-      - "./letsencrypt:/etc/letsencrypt"      # Let's Encrypt 憑證目錄
-      - "./www:/var/www/html"                 # 用於 Let's Encrypt 驗證的靜態文件目錄
+      - "./nginx.conf:/etc/nginx/nginx.conf"
     depends_on:
       - api
       - front
-    networks:
-      - agent_network
-
-  certbot:
-    image: certbot/certbot
-    volumes:
-      - "./letsencrypt:/etc/letsencrypt"
-      - "./www:/var/www/html"
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    depends_on:
-      - nginx
     networks:
       - agent_network
 
@@ -64,7 +50,7 @@ services:
     build:
       context: ./sdl-frontend-main
       # dockerfile: dockerfile
-    image: stone881129/sdl-front:latest   # <--- 加這行
+    image: stone881129/sdl-front:latest   
     expose:
       - 5173
     volumes:

@@ -52,7 +52,8 @@ const Project = sequelize.define('project', {
         comment: '可觀摩的班級清單'
     }
 },{
-    timestamps: true  
+    timestamps: true,
+    tableName: 'projects'  
 });
 
 // Project.hasMany(Chatroom_message);

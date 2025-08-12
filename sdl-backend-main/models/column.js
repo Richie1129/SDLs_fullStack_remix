@@ -11,6 +11,8 @@ const Column = sequelize.define('column', {
         type: DataTypes.ARRAY(DataTypes.INTEGER),
         allowNull:true
     },  
+}, {
+    tableName: 'columns'
 });
 
 Column.hasMany(Task);

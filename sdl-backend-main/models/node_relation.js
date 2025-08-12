@@ -1,15 +1,22 @@
 const { DataTypes} = require('sequelize');
 const sequelize = require('../util/database');
 
-const Node_relation = sequelize.define('node_relation', {
+const NodeRelation = sequelize.define('NodeRelation', {
     from_id: {
         type: DataTypes.INTEGER,
-        allowNull:false
+        allowNull: false,
+        primaryKey: true,
+        references: { model: 'nodes', key: 'id' }
     },
-    to_id:{
+    to_id: {
         type: DataTypes.INTEGER,
-        allowNull:false
+        allowNull: false,
+        primaryKey: true,
+        references: { model: 'nodes', key: 'id' }
     }
+}, {
+    tableName: 'node_relations',
+    timestamps: true
 });
 
-module.exports = Node_relation;
+module.exports = NodeRelation;
