@@ -128,6 +128,45 @@ const io = new Server(server, {
     },
 }); 
 
+// Helper: build latest kanban data for a project (ordered columns and tasks)
+async function buildKanbanData(projectId) {
+    const kanbanRows = await Kanban.findAll({
+        attributes: ['id', 'column'],
+        where: { projectId }
+    });
+    if (!kanbanRows || kanbanRows.length === 0) return [];
+    const { id: kanbanId, column: columnOrder } = kanbanRows[0];
+
+    const columns = await Column.findAll({
+        attributes: ['id', 'name', 'task'],
+        where: { kanbanId }
+    });
+
+    // Map for quick lookup
+    const colMap = new Map(columns.map(c => [c.id, c.toJSON ? c.toJSON() : c]));
+    const orderedColumns = columnOrder
+        .map(colId => colMap.get(colId))
+        .filter(Boolean);
+
+    // Attach ordered tasks per column
+    for (let i = 0; i < orderedColumns.length; i++) {
+        const col = orderedColumns[i];
+        const taskIds = Array.isArray(col.task) ? col.task : [];
+        if (taskIds.length === 0) {
+            col.task = [];
+            continue;
+        }
+        const tasks = await Task.findAll({
+            attributes: ['id','title','content','labels','owner','assignees','images','files','createdAt','updatedAt'],
+            where: { columnId: col.id }
+        });
+        const taskMap = new Map(tasks.map(t => [t.id, t.toJSON ? t.toJSON() : t]));
+        col.task = taskIds.map(id => taskMap.get(id)).filter(Boolean);
+    }
+
+    return orderedColumns;
+}
+
 // Socket.io 身份驗證中間件
 io.use(async (socket, next) => {
     try {
@@ -562,9 +601,9 @@ io.on("connection", (socket) => {
             // Handle errors and possibly emit error information to clients
         }
     });
-    //drag card
+    //drag card (minimal payload)
     ensureListener(socket, "cardItemDragged", async (data) => {
-        const { destination, source, kanbanData, projectId, taskId, user } = data;
+        const { destination, source, projectId, taskId, user } = data;
         
         // 權限檢查
         const draggedBy = user?.username || "未知";
@@ -578,99 +617,74 @@ io.on("connection", (socket) => {
             return;
         }
         
-        // 現在 source.droppableId 和 destination.droppableId 是實際的 column ID
-        const sourceColumnId = parseInt(source.droppableId);
-        const destColumnId = parseInt(destination.droppableId);
+        // 使用最小描述: columnId + index
+        const sourceColumnId = parseInt(source.columnId);
+        const destColumnId = parseInt(destination.columnId);
         
         console.log(`🔄 拖拽任務 ${taskId} 從列表 ${sourceColumnId} 移動到列表 ${destColumnId}`);
-        
-        // 找到對應的列表索引（用於 kanbanData 更新）
-        const sourceColumnIndex = kanbanData.findIndex(col => col.id === sourceColumnId);
-        const destColumnIndex = kanbanData.findIndex(col => col.id === destColumnId);
-        
-        if (sourceColumnIndex === -1 || destColumnIndex === -1) {
-            console.error(`❌ 找不到對應的列表: source=${sourceColumnId}, dest=${destColumnId}`);
+
+        // 載入來源與目標欄位
+        const sourceColumn = await Column.findByPk(sourceColumnId);
+        const destColumn = sourceColumnId === destColumnId ? sourceColumn : await Column.findByPk(destColumnId);
+        if (!sourceColumn || !destColumn) {
+            console.error(`❌ 找不到來源或目標欄位: source=${sourceColumnId}, dest=${destColumnId}`);
             return;
         }
-        
-        // 檢查源任務是否存在
-        const sourceTask = kanbanData[sourceColumnIndex]?.task?.[source.index];
-        if (!sourceTask || !sourceTask.id) {
-            console.error("❌ 無效的源任務");
-            return;
+
+        // 以欄位的 task 陣列為準進行重排
+        const sourceTasks = Array.isArray(sourceColumn.task) ? [...sourceColumn.task] : [];
+        const destTasks = sourceColumnId === destColumnId ? sourceTasks : (Array.isArray(destColumn.task) ? [...destColumn.task] : []);
+
+        // 從來源移除
+        const taskIndexInSource = sourceTasks.indexOf(parseInt(taskId));
+        if (taskIndexInSource === -1 && source.index != null && source.index < sourceTasks.length) {
+            // 後備依 index
+            sourceTasks.splice(source.index, 1);
+        } else if (taskIndexInSource > -1) {
+            sourceTasks.splice(taskIndexInSource, 1);
         }
-        
-        const dragItem = {
-            ...sourceTask,
-        };
-        
+
+        // 插入到目標位置
+        const insertAt = Math.max(0, Math.min(destination.index, destTasks.length));
+        destTasks.splice(insertAt, 0, parseInt(taskId));
+
         // 記錄移動操作
-        const changedBy = user?.username || dragItem.owner || "未知";
-        const sourceColumnName = kanbanData[sourceColumnIndex].name;
-        const destinationColumnName = kanbanData[destColumnIndex].name;
-        
-        // 更新 kanbanData（用於廣播）
-        kanbanData[sourceColumnIndex].task.splice(source.index, 1);
-        kanbanData[destColumnIndex].task.splice(
-            destination.index,
-            0,
-            dragItem
-        );
-        
+        const srcName = sourceColumn.name;
+        const dstName = destColumn.name;
+        const changedBy = user?.username || '未知';
         // 只有當移動到不同欄位時才記錄
         if (sourceColumnId !== destColumnId) {
-            // 獲取任務標題以生成更詳細的描述
-            const taskTitle = dragItem.title || `任務 #${dragItem.id}`;
-            
-            // 臨時禁用任務變更日誌以解決拖拽問題
-            console.log(`📝 任務移動記錄: ${taskTitle} 從 ${sourceColumnName} 移動到 ${destinationColumnName}`);
+            console.log(`📝 任務移動記錄: 任務 ${taskId} 從 ${srcName} 移動到 ${dstName}`);
             
             /* 暫時註釋掉任務變更日誌
             try {
                 await logTaskChange({
-                    taskId: dragItem.id,
+                    taskId: taskId,
                     changeType: 'move',
                     fieldName: 'column',
-                    changedBy: changedBy,
+                    changedBy,
                     projectId: projectId,
-                    oldValue: sourceColumnName,
-                    newValue: destinationColumnName,
-                    description: `將任務「${taskTitle}」從「${sourceColumnName}」移動到「${destinationColumnName}」`
+                    oldValue: srcName,
+                    newValue: dstName,
+                    description: `將任務「${taskId}」從「${srcName}」移動到「${dstName}」`
                 });
             } catch (logError) {
                 console.error('⚠️ 任務變更日誌記錄失敗，但繼續處理拖拽:', logError.message);
             }
             */
         }
-        
-        // 廣播更新給其他客戶端
-        io.to(projectId).emit("dragtaskItem", kanbanData);
 
         // 更新數據庫 - 使用實際的 column ID
         try {
-            // 更新源列表的 task 數組
-            const sourceColumnTasks = kanbanData[sourceColumnIndex].task
-                .filter(item => item && item.id) // 過濾掉無效的任務
-                .map(item => item.id);
-            await Column.update({ task: sourceColumnTasks }, {
-                where: { id: sourceColumnId }
-            });
-            
-            // 更新目標列表的 task 數組（如果不是同一列表）
+            // 更新來源與目標欄位的排序
+            await Column.update({ task: sourceTasks }, { where: { id: sourceColumnId } });
             if (sourceColumnId !== destColumnId) {
-                const destColumnTasks = kanbanData[destColumnIndex].task
-                    .filter(item => item && item.id) // 過濾掉無效的任務
-                    .map(item => item.id);
-                await Column.update({ task: destColumnTasks }, {
-                    where: { id: destColumnId }
-                });
-                
-                // 更新任務的 columnId
-                await Task.update({ columnId: destColumnId }, {
-                    where: { id: dragItem.id }
-                });
-                
-                console.log(`✅ 任務 ${dragItem.id} 的 columnId 已更新為 ${destColumnId}`);
+                await Column.update({ task: destTasks }, { where: { id: destColumnId } });
+                await Task.update({ columnId: destColumnId }, { where: { id: taskId } });
+                console.log(`✅ 任務 ${taskId} 的 columnId 已更新為 ${destColumnId}`);
+            } else {
+                // 同欄位內移動
+                await Column.update({ task: destTasks }, { where: { id: destColumnId } });
             }
             
             // 更新專案時間戳
@@ -682,21 +696,25 @@ io.on("connection", (socket) => {
                 }
             });
             
-            console.log(`✅ 拖拽操作完成: 任務 ${dragItem.id}`);
+            console.log(`✅ 拖拽操作完成: 任務 ${taskId}`);
             
         } catch (error) {
             console.error('❌ 拖拽操作數據庫更新失敗:', error);
         }
         
+        // 廣播更新給其他客戶端（以最新資料為準）
+        const latest = await buildKanbanData(projectId);
+        io.to(projectId).emit("dragtaskItem", latest);
+
         // 只有當移動到不同欄位時才廣播活動更新
         if (sourceColumnId !== destColumnId) {
             io.to(projectId).emit("activityUpdate", {
                 type: 'move',
-                taskId: dragItem.id,
-                taskTitle: dragItem.title,
+                taskId: taskId,
+                taskTitle: undefined,
                 user: changedBy,
-                from: sourceColumnName,
-                to: destinationColumnName,
+                from: srcName,
+                to: dstName,
                 timestamp: new Date()
             });
         }
@@ -742,13 +760,14 @@ io.on("connection", (socket) => {
             console.error("處理 ColumnCreated 時出錯：", error);
         }
     })
-    //drag column
+    //drag column - accept minimal payload { projectId, columnOrder }
     ensureListener(socket, "columnOrderChanged", async (data) => {
-        const { kanbanData, kanbanId, user } = data;
+        const { projectId, columnOrder, kanbanData, kanbanId, user } = data;
         const changedBy = user?.username || "未知";
         
         // 權限檢查
-        const permissionCheck = await checkSocketWritePermission(user?.id, kanbanId);
+        const roomProjectId = projectId || kanbanId; // backward compat
+        const permissionCheck = await checkSocketWritePermission(user?.id, roomProjectId);
         if (!permissionCheck.hasPermission) {
             console.log(`🚫 用戶 ${changedBy} 嘗試變更列表順序被拒絕: ${permissionCheck.error}`);
             socket.emit("columnOrderChangeError", { 
@@ -758,31 +777,23 @@ io.on("connection", (socket) => {
             return;
         }
 
-        // 發送更新事件以及打印日誌
-        // io.sockets.emit("columnOrderUpdated", kanbanData);
-        io.to(kanbanId).emit("columnOrderUpdated", kanbanData);
+        // 計算新的欄位順序（支援舊/新格式）
+        let newOrder = [];
+        if (Array.isArray(columnOrder)) {
+            newOrder = columnOrder.map(id => parseInt(id));
+        } else if (Array.isArray(kanbanData)) {
+            newOrder = kanbanData.map(c => parseInt(c.id));
+        }
 
-        // console.log("kanbanData", kanbanData);
-        // console.log("kanbanId", kanbanId);
-
-        // 提取每個列的id到一个數组中
-        const columnIds = kanbanData.map(column => column.id);
-        // console.log("Column IDs:", columnIds);
-
-        // 更新Kanban表中的columns字段
         try {
-            await Kanban.update({ column: columnIds }, {
-                where: {
-                    id: kanbanId
-                }
-            });
-            await Project.update({
-                id: kanbanId
-            }, {
-                where: {
-                    id: kanbanId
-                }
-            });
+            const kanbanRow = await Kanban.findOne({ where: { projectId: roomProjectId } });
+            if (!kanbanRow) throw new Error('Kanban not found');
+            await Kanban.update({ column: newOrder }, { where: { id: kanbanRow.id } });
+            await Project.update({ id: roomProjectId }, { where: { id: roomProjectId } });
+
+            // Emit latest full data
+            const latest = await buildKanbanData(roomProjectId);
+            io.to(roomProjectId).emit("columnOrderUpdated", latest);
             console.log("Columns updated successfully in Kanban table.");
         } catch (error) {
             console.error("Error updating columns in Kanban table:", error);

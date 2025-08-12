@@ -300,10 +300,19 @@ export default function Kanban() {
       const [reorderedColumn] = newKanbanData.splice(source.index, 1);
       newKanbanData.splice(destination.index, 0, reorderedColumn);
 
+      // Optimistic UI update
       setKanbanData(newKanbanData);
+      queryClient.setQueryData(['kanbanDatas', projectId], newKanbanData);
+
+      // Emit minimal payload: projectId + columnOrder
+      const columnOrder = newKanbanData.map(col => col.id.toString());
       socket.emit('columnOrderChanged', {
-        kanbanData: newKanbanData,
-        kanbanId: projectId,
+        projectId,
+        columnOrder,
+        user: {
+          username: localStorage.getItem('username'),
+          id: parseInt(localStorage.getItem('id')) || null,
+        },
       });
 
         } else if (type === 'CARD') {
@@ -364,25 +373,16 @@ export default function Kanban() {
       
       console.log('✅ 本地狀態已更新，準備發送到服務器');
       
-      // 發送 socket 事件進行同步 - 發送 column ID 而不是索引
+      // Emit minimal payload for card move
       socket.emit('cardItemDragged', {
-        destination: {
-          ...destination,
-          droppableId: destColumnId.toString(), // 發送實際的 column ID
-          index: destination.index
-        },
-        source: {
-          ...source,
-          droppableId: sourceColumnId.toString(), // 發送實際的 column ID
-          index: source.index
-        },
-        kanbanData: kanbanData, // 發送原始數據，不是修改後的數據
         projectId,
-        taskId: movedTask.id, // 添加任務 ID 以便後端更準確地處理
-        user: { 
-          username: localStorage.getItem("username"),
-          id: parseInt(localStorage.getItem("id")) || null
-        }
+        taskId: movedTask.id,
+        source: { columnId: sourceColumnId, index: source.index },
+        destination: { columnId: destColumnId, index: destination.index },
+        user: {
+          username: localStorage.getItem('username'),
+          id: parseInt(localStorage.getItem('id')) || null,
+        },
       });
       
       console.log('📡 已發送拖拉事件到服務器');
