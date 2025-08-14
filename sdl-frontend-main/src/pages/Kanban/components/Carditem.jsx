@@ -3,7 +3,7 @@ import Modal from '../../../components/Modal';
 import AssignMember from './AssignMember';
 import { getProjectUser } from '../../../api/users';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient, useMutation } from 'react-query';
 import Swal from 'sweetalert2';
 import { GrFormClose } from "react-icons/gr";
 import { FiEdit } from "react-icons/fi";
@@ -11,10 +11,11 @@ import { BsFillPersonFill } from "react-icons/bs";
 import { Draggable } from 'react-beautiful-dnd';
 import { socket } from '../../../utils/socket';
 import toast, { Toaster } from 'react-hot-toast';
+import { fetchComments, createComment, toggleCommentLike, updateComment as updateCommentApi, deleteComment as deleteCommentApi } from '../../../api/comments';
 import axios from 'axios';
 import { CircleArrowLeft, CircleArrowRight } from "lucide-react"
 import FileDownload from 'js-file-download';
-import { AiOutlineCloudDownload } from "react-icons/ai";
+import { AiOutlineCloudDownload, AiOutlinePaperClip, AiOutlineLike, AiFillLike } from "react-icons/ai";
 import { formatTime } from '../../../utils/timeUtils';
 import { getTaskChangeLogs } from '../../../api/kanban';
 import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
@@ -188,6 +189,78 @@ const Tooltip = ({ children, content }) => {
   );
 };
 
+// 子元件：評論操作（編輯、刪除）
+const CommentActions = ({ comment, onAfterChange }) => {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content || '');
+  const queryClient = useQueryClient();
+
+  const saveMutation = useMutation(updateCommentApi, {
+    onSuccess: () => {
+      setEditing(false);
+      if (onAfterChange) onAfterChange();
+      toast.success('已更新評論');
+    },
+    onError: (err) => toast.error(err?.response?.data?.message || '更新失敗')
+  });
+
+  const delMutation = useMutation(deleteCommentApi, {
+    onSuccess: () => {
+      if (onAfterChange) onAfterChange();
+      toast.success('已刪除評論');
+    },
+    onError: (err) => toast.error(err?.response?.data?.message || '刪除失敗')
+  });
+
+  if (editing) {
+    return (
+      <div className='w-full mt-2'>
+        <textarea
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          className='w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
+          rows={3}
+        />
+        <div className='mt-2 flex gap-2'>
+          <button
+            onClick={() => saveMutation.mutate({ commentId: comment.id, content: editText })}
+            className='px-3 py-1.5 bg-customgreen text-white rounded text-xs hover:bg-customgreen/90'
+          >
+            儲存
+          </button>
+          <button
+            onClick={() => { setEditing(false); setEditText(comment.content || ''); }}
+            className='px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300'
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className='flex items-center gap-2'>
+      <button
+        onClick={() => setEditing(true)}
+        className='text-xs text-gray-600 hover:underline'
+      >
+        編輯
+      </button>
+      <button
+        onClick={() => {
+          if (window.confirm('確定要刪除這則評論嗎？')) {
+            delMutation.mutate({ commentId: comment.id });
+          }
+        }}
+        className='text-xs text-red-600 hover:underline'
+      >
+        刪除
+      </button>
+    </div>
+  );
+};
+
 // 子元件：成員指派區塊
 const MemberAssignment = ({ 
   cardData, 
@@ -270,6 +343,7 @@ function Carditem({ data, index, columnIndex }) {
     files: [],
   });
   const fileInputRef = useRef(null);
+  const commentFileInputRef = useRef(null);
 
   const openImageModal = (index) => {
     setSelectedImageIndex(index);
@@ -285,31 +359,91 @@ function Carditem({ data, index, columnIndex }) {
     );
   };
 
+  // 評論圖片放大檢視狀態
+  const [commentImageList, setCommentImageList] = useState([]);
+  const [selectedCommentImageIndex, setSelectedCommentImageIndex] = useState(null);
+  const openCommentImageModal = (imageAttachments, index) => {
+    const urls = (imageAttachments || []).map(att => `http://localhost/api/file/image/${att.fileName}`);
+    setCommentImageList(urls);
+    setSelectedCommentImageIndex(index || 0);
+  };
+  const closeCommentImageModal = () => {
+    setCommentImageList([]);
+    setSelectedCommentImageIndex(null);
+  };
+  const nextCommentImage = () => {
+    setSelectedCommentImageIndex((prev) => {
+      if (commentImageList.length === 0) return null;
+      return prev === commentImageList.length - 1 ? 0 : prev + 1;
+    });
+  };
+  const prevCommentImage = () => {
+    setSelectedCommentImageIndex((prev) => {
+      if (commentImageList.length === 0) return null;
+      return prev === 0 ? commentImageList.length - 1 : prev - 1;
+    });
+  };
+
   const [menberData, setMenberData] = useState([]);
 
-  // 本地評論狀態（僅前端靜態 UI）
-  const [comments, setComments] = useState([
-    // 範例資料（可移除）
-    // { id: 1, user: { name: 'Alice', avatar: '/person/woman2.png' }, content: '這張卡片需要補上流程圖。', createdAt: new Date().toISOString() },
-    // { id: 2, user: { name: 'Bob', avatar: '/person/man3.png' }, content: '我會在今晚補上。', createdAt: new Date().toISOString() },
-  ]);
+  // 評論區狀態與 API 連接
   const [newComment, setNewComment] = useState("");
+  const [filesToUpload, setFilesToUpload] = useState([]);
+
+  const { data: comments = [], refetch: refetchComments } = useQuery(
+    ['comments', cardData.id],
+    () => fetchComments(cardData.id),
+    { enabled: open && !!cardData.id }
+  );
+
+  const addCommentMutation = useMutation(createComment, {
+    onSuccess: () => {
+      setNewComment("");
+      setFilesToUpload([]);
+      queryClient.invalidateQueries(['comments', cardData.id]);
+      toast.success('已發表評論');
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || '發表評論失敗');
+    }
+  });
+
+  const likeMutation = useMutation(toggleCommentLike, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['comments', cardData.id]);
+    }
+  });
+
+  // 取得評論附件下載 URL 並觸發下載
+  const handleCommentAttachmentDownload = async (attachment) => {
+    try {
+      const fileName = attachment.fileName;
+      const resp = await axios.get(`http://localhost/api/file/download/${fileName}`);
+      const url = resp.data?.downloadUrl || `http://localhost/api/file/direct/${fileName}`;
+      // 直接打開下載 URL
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('下載附件失敗:', err);
+      toast.error('下載附件失敗');
+    }
+  };
 
   const handleAddComment = () => {
     const content = newComment.trim();
     if (!content) return;
-    const username = localStorage.getItem('username') || '使用者';
-    const userId = parseInt(localStorage.getItem('id')) || 0;
-    const avatarIdx = Math.abs(userId) % personImg.length;
-    const avatar = personImg[avatarIdx];
-    const newItem = {
-      id: Date.now(),
-      user: { name: username, avatar },
-      content,
-      createdAt: new Date().toISOString(),
-    };
-    setComments((prev) => [newItem, ...prev]);
-    setNewComment("");
+    addCommentMutation.mutate({ taskId: cardData.id, content, files: filesToUpload });
+  };
+
+  const handleSelectCommentFiles = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setFilesToUpload((prev) => [...prev, ...files]);
+    // reset input to allow reselect same files later
+    if (commentFileInputRef.current) commentFileInputRef.current.value = "";
+  };
+
+  const removePendingFile = (index) => {
+    setFilesToUpload((prev) => prev.filter((_, i) => i !== index));
   };
 
   useQuery("getProjectUser", () => getProjectUser(projectId), {
@@ -680,7 +814,7 @@ function Carditem({ data, index, columnIndex }) {
         <Modal 
           open={true} 
           onClose={() => setSelectedImageIndex(null)}
-          position="justify-center items-center"
+          position="justify-center items-center z-[70]"
         >
           <button onClick={() => setSelectedImageIndex(null)} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
             <GrFormClose className="w-6 h-6" />
@@ -728,6 +862,42 @@ function Carditem({ data, index, columnIndex }) {
                     </div>
                   ))}
                 </div>
+              </>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* 評論圖片放大檢視 */}
+      {selectedCommentImageIndex !== null && (
+        <Modal
+          open={true}
+          onClose={closeCommentImageModal}
+          position="justify-center items-center z-[80]"
+        >
+          <button onClick={closeCommentImageModal} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
+            <GrFormClose className="w-6 h-6" />
+          </button>
+          <div className="relative max-w-4xl w-full">
+            <img
+              src={commentImageList[selectedCommentImageIndex]}
+              alt="Comment Attachment"
+              className="w-full h-auto"
+            />
+            {commentImageList.length > 1 && (
+              <>
+                <button
+                  onClick={prevCommentImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                >
+                  <CircleArrowLeft size={24}/>
+                </button>
+                <button
+                  onClick={nextCommentImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                >
+                  <CircleArrowRight size={24}/>
+                </button>
               </>
             )}
           </div>
@@ -951,20 +1121,80 @@ function Carditem({ data, index, columnIndex }) {
                   尚無評論，來發表第一則留言吧！
                 </div>
               )}
-              {comments.map((c) => (
-                <div key={c.id} className='flex items-start space-x-3'>
-                  <img src={c.user.avatar} alt={c.user.name} className='w-9 h-9 rounded-full object-cover' />
-                  <div className='flex-1'>
-                    <div className='flex items-center justify-between'>
-                      <span className='text-sm font-medium text-gray-800'>{c.user.name}</span>
-                      <span className='text-xs text-gray-400'>{formatTime(c.createdAt, 'relative')}</span>
+              {comments.map((c) => {
+                const imgIndex = parseInt(c.user?.id || 0) % personImg.length;
+                const userImg = personImg[imgIndex];
+                return (
+                  <div key={c.id} className='flex items-start space-x-3'>
+                    <img src={userImg} alt={c.user?.username} className='w-9 h-9 rounded-full object-cover' />
+                    <div className='flex-1'>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-sm font-medium text-gray-800'>{c.user?.username}</span>
+                        <span className='text-xs text-gray-400'>{formatTime(c.createdAt, 'relative')}</span>
+                      </div>
+                      <p className='text-sm text-gray-700 whitespace-pre-wrap mt-1'>
+                        {c.content}
+                      </p>
+                      {/* 附件顯示 */}
+                      {Array.isArray(c.attachments) && c.attachments.length > 0 && (
+                        <div className='mt-2 space-y-2'>
+                          {c.attachments.map((a, i) => {
+                            const isImage = (a.mimeType || '').startsWith('image/');
+                            if (isImage) {
+                              const imgUrl = `http://localhost/api/file/image/${a.fileName}`;
+                              return (
+                                <div key={i}>
+                                  <img
+                                    src={imgUrl}
+                                    alt={a.originalName}
+                                    className='max-h-40 rounded border cursor-pointer'
+                                    onClick={() => openCommentImageModal(c.attachments.filter(x => (x.mimeType||'').startsWith('image/')), i)}
+                                  />
+                                </div>
+                              );
+                            }
+                            const dlUrl = `http://localhost/api/file/direct/${a.fileName}`;
+                            return (
+                              <div key={i} className='text-xs flex items-center gap-2'>
+                                <a href={dlUrl} target='_blank' rel='noreferrer' className='text-blue-600 hover:underline'>
+                                  {a.originalName}
+                                </a>
+                                <span className='text-gray-400'>{a.mimeType}</span>
+                                <button
+                                  onClick={() => handleCommentAttachmentDownload(a)}
+                                  className='ml-2 px-2 py-0.5 bg-customgreen text-white rounded hover:bg-customgreen/90'
+                                >
+                                  下載
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className='mt-2 flex items-center gap-3'>
+                        <button
+                          onClick={() => likeMutation.mutate({ commentId: c.id })}
+                          className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${c.likedByCurrentUser ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                          title={c.likedByCurrentUser ? '已按讚' : '按讚'}
+                        >
+                          {c.likedByCurrentUser ? <AiFillLike size={14}/> : <AiOutlineLike size={14}/>} {c.likeCount || 0}
+                        </button>
+                        {/* 編輯/刪除 */}
+                        {(() => {
+                          const loggedInId = parseInt(localStorage.getItem('id')) || 0;
+                          const isOwner = c.user?.id === loggedInId || c.userId === loggedInId;
+                          return isOwner ? (
+                            <CommentActions 
+                              comment={c} 
+                              onAfterChange={() => queryClient.invalidateQueries(['comments', cardData.id])} 
+                            />
+                          ) : null;
+                        })()}
+                      </div>
                     </div>
-                    <p className='text-sm text-gray-700 whitespace-pre-wrap mt-1'>
-                      {c.content}
-                    </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {/* 新增評論輸入框 */}
             <div className='flex items-start space-x-3'>
@@ -977,10 +1207,38 @@ function Carditem({ data, index, columnIndex }) {
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                 />
-                <div className='flex justify-end mt-2'>
+                {/* 選擇的附件列表 */}
+                {filesToUpload.length > 0 && (
+                  <div className='mt-2 space-y-1'>
+                    {filesToUpload.map((f, idx) => (
+                      <div key={idx} className='flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded'>
+                        <span className='truncate'>{f.name}</span>
+                        <button className='text-red-500 hover:underline ml-2' onClick={() => removePendingFile(idx)}>移除</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className='flex justify-between items-center mt-2'>
+                  <div>
+                    <button
+                      type='button'
+                      onClick={() => commentFileInputRef.current && commentFileInputRef.current.click()}
+                      className={`inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800`}
+                    >
+                      <AiOutlinePaperClip />
+                      附加檔案
+                    </button>
+                    <input
+                      ref={commentFileInputRef}
+                      type='file'
+                      className='hidden'
+                      multiple
+                      onChange={handleSelectCommentFiles}
+                    />
+                  </div>
                   <button
                     onClick={handleAddComment}
-                    className='px-4 py-1.5 bg-customgreen text-white rounded-md text-sm hover:bg-customgreen/90'
+                    className={`px-4 py-1.5 rounded-md text-sm bg-customgreen text-white hover:bg-customgreen/90`}
                   >
                     送出
                   </button>

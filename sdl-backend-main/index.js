@@ -15,6 +15,7 @@ const { uploadToMinio } = require('./middlewares/minioUploadMiddleware'); // 引
 const { Socket } = require('dgram');
 const server = http.createServer(app);
 const Task = require('./models/task');
+const Comment = require('./models/comment');
 const Column = require('./models/column');
 const Kanban = require('./models/kanban');
 const Node = require('./models/node');
@@ -421,16 +422,33 @@ io.on("connection", (socket) => {
             
             // 取得原始資料以比較變更
             const originalTask = await Task.findByPk(cardData.id);
-            
-            const updateTask = await Task.update({
-                ...cardData,
-                files: cardData.files || [], // 確保 files 欄位存在
-                images: cardData.images || [] // 確保 images 欄位存在
-            }, {
-                where: {
-                    id: cardData.id
+
+            // 使用交易同時更新 Task 與其關聯評論中的任務快照
+            let updateTask;
+            const t = await sequelize.transaction();
+            try {
+                updateTask = await Task.update({
+                    ...cardData,
+                    files: cardData.files || [], // 確保 files 欄位存在
+                    images: cardData.images || [] // 確保 images 欄位存在
+                }, {
+                    where: { id: cardData.id },
+                    transaction: t
+                });
+
+                // 若標題或內容有變更，同步更新關聯評論的反正規化快照
+                if (originalTask && (originalTask.title !== cardData.title || originalTask.content !== cardData.content)) {
+                    await Comment.update(
+                        { task_title: cardData.title, task_content: cardData.content },
+                        { where: { taskId: cardData.id }, transaction: t }
+                    );
                 }
-            });
+
+                await t.commit();
+            } catch (txErr) {
+                await t.rollback();
+                throw txErr;
+            }
             
             // 記錄欄位變更
             if (originalTask) {
@@ -1253,6 +1271,7 @@ app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/llm', require('./routes/llm'));
 app.use('/api/file', require('./routes/file'));  // MinIO 檔案管理路由
+app.use('/api', require('./routes/comments'));   // 任務評論/附件/按讚
 
 //error handling
 app.use((error, req, res, next) => {
