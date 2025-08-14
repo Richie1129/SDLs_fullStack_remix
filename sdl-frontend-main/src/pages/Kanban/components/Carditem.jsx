@@ -287,6 +287,31 @@ function Carditem({ data, index, columnIndex }) {
 
   const [menberData, setMenberData] = useState([]);
 
+  // 本地評論狀態（僅前端靜態 UI）
+  const [comments, setComments] = useState([
+    // 範例資料（可移除）
+    // { id: 1, user: { name: 'Alice', avatar: '/person/woman2.png' }, content: '這張卡片需要補上流程圖。', createdAt: new Date().toISOString() },
+    // { id: 2, user: { name: 'Bob', avatar: '/person/man3.png' }, content: '我會在今晚補上。', createdAt: new Date().toISOString() },
+  ]);
+  const [newComment, setNewComment] = useState("");
+
+  const handleAddComment = () => {
+    const content = newComment.trim();
+    if (!content) return;
+    const username = localStorage.getItem('username') || '使用者';
+    const userId = parseInt(localStorage.getItem('id')) || 0;
+    const avatarIdx = Math.abs(userId) % personImg.length;
+    const avatar = personImg[avatarIdx];
+    const newItem = {
+      id: Date.now(),
+      user: { name: username, avatar },
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    setComments((prev) => [newItem, ...prev]);
+    setNewComment("");
+  };
+
   useQuery("getProjectUser", () => getProjectUser(projectId), {
     onSuccess: setMenberData,
     enabled: !!projectId
@@ -709,8 +734,10 @@ function Carditem({ data, index, columnIndex }) {
         </Modal>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"}>
-        <div className='flex flex-col w-full'>
+      <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"} custom={"w-11/12 sm:w-5/6 lg:w-3/4 xl:w-2/3 p-0"}>
+        <div className='flex flex-col lg:flex-row w-full lg:h-[80vh]'>
+          {/* 左側：卡片編輯區 */}
+          <div className='w-full lg:w-2/3 p-4 sm:p-6 lg:p-8 lg:min-h-0 lg:overflow-y-auto'>
             {/* 標籤頁導航 */}
             <div className='flex border-b border-gray-200 mb-4'>
               <button
@@ -913,7 +940,56 @@ function Carditem({ data, index, columnIndex }) {
               </div>
             )}
           </div>
-        </Modal>
+
+          {/* 右側：評論區 */}
+          <div className='w-full lg:w-1/3 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 sm:p-6 lg:min-h-0 lg:overflow-y-auto'>
+            <h3 className='text-xl font-semibold mb-3'>討論區</h3>
+            {/* 評論列表 */}
+            <div className='space-y-4 mb-4'>
+              {comments.length === 0 && (
+                <div className='text-sm text-gray-400 text-center py-6'>
+                  尚無評論，來發表第一則留言吧！
+                </div>
+              )}
+              {comments.map((c) => (
+                <div key={c.id} className='flex items-start space-x-3'>
+                  <img src={c.user.avatar} alt={c.user.name} className='w-9 h-9 rounded-full object-cover' />
+                  <div className='flex-1'>
+                    <div className='flex items-center justify-between'>
+                      <span className='text-sm font-medium text-gray-800'>{c.user.name}</span>
+                      <span className='text-xs text-gray-400'>{formatTime(c.createdAt, 'relative')}</span>
+                    </div>
+                    <p className='text-sm text-gray-700 whitespace-pre-wrap mt-1'>
+                      {c.content}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* 新增評論輸入框 */}
+            <div className='flex items-start space-x-3'>
+              <img src={(personImg[Math.abs(parseInt(localStorage.getItem('id')) || 0) % personImg.length])} alt='me' className='w-9 h-9 rounded-full object-cover' />
+              <div className='flex-1'>
+                <textarea
+                  className='w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
+                  rows={3}
+                  placeholder='新增評論…'
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                <div className='flex justify-end mt-2'>
+                  <button
+                    onClick={handleAddComment}
+                    className='px-4 py-1.5 bg-customgreen text-white rounded-md text-sm hover:bg-customgreen/90'
+                  >
+                    送出
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {!isObservationMode && (
         <Modal open={assignMemberModalopen} onClose={() => setAssignMemberModalOpen(false)} opacity={false} position={"justify-end items-center m-3"}>
