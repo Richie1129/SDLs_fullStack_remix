@@ -4,12 +4,14 @@ import SideBar from "../components/SideBar";
 import { Outlet, useLocation, useParams } from "react-router-dom";
 import SubStageComponent from "../components/SubStageBar";
 import ActivityStream from "../components/ActivityStream";
+import ProjectCommentDrawer from "../components/ProjectCommentDrawer";
 
 export default function ProjectLayout() {
   const location = useLocation();
   const { projectId } = useParams();
   const [inKanBan, setinKanBan] = useState(false);
   const [showActivityStream, setShowActivityStream] = useState(false);
+  const [showProjectCommentDrawer, setShowProjectCommentDrawer] = useState(false);
 
   useEffect(() => {
     setinKanBan(location.pathname === `/project/${projectId}/kanban`);
@@ -25,6 +27,8 @@ export default function ProjectLayout() {
         <TopBar
           showActivityStream={showActivityStream}
           setShowActivityStream={setShowActivityStream}
+          showProjectCommentDrawer={showProjectCommentDrawer}
+          setShowProjectCommentDrawer={setShowProjectCommentDrawer}
         />
 
         <main className="flex-1 flex flex-col min-h-0 min-w-0">
@@ -47,6 +51,15 @@ export default function ProjectLayout() {
           projectId={projectId}
           isOpen={showActivityStream}
           onClose={() => setShowActivityStream(false)}
+        />
+      )}
+
+      {/* 專案評論抽屜 - 固定在右側，與活動流類似 */}
+      {showProjectCommentDrawer && (
+        <ProjectCommentDrawer
+          projectId={projectId}
+          isOpen={showProjectCommentDrawer}
+          onClose={() => setShowProjectCommentDrawer(false)}
         />
       )}
     </div>

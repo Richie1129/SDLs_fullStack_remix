@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { IoIosNotificationsOutline } from "react-icons/io";
 import { BsChevronDown, BsPlusCircleDotted } from "react-icons/bs";
 import { FiActivity } from "react-icons/fi"; // 引入活動圖示
+import { FaComments } from "react-icons/fa"; // 引入評論圖示
 import { RiDashboardLine } from "react-icons/ri"; // 添加儀表板圖示
 import { FaEye, FaEyeSlash } from "react-icons/fa"; // 添加觀摩圖示
 import { getProjectUser } from '../api/users';
@@ -16,7 +17,7 @@ import { Context } from '../context/context';
 import Announcement from './Announcement'; // 引入新的 Announcement 元件
 import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
 
-export default function TopBar({ showActivityStream, setShowActivityStream }) {
+export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer }) {
   const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
   const [projectInfo, setProjectInfo] = useState({});
   const [referralCodeModalOpen, setReferralCodeModalOpen] = useState(false);
@@ -327,6 +328,20 @@ export default function TopBar({ showActivityStream, setShowActivityStream }) {
           {localStorage.getItem("username")}
         </h3>
         {/* 將 dashboard icon 按鈕移除 */}
+        {/* 專案評論按鈕 - 插在使用者名稱/頭像與活動圖示之間 */}
+        {!isOverviewPage && projectId && setShowProjectCommentDrawer && (
+          <button
+            onClick={() => setShowProjectCommentDrawer(!showProjectCommentDrawer)}
+            className={
+              `flex items-center justify-center mr-2 p-1 rounded-md transition-colors ${showProjectCommentDrawer 
+                ? 'bg-customgreen text-white' 
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`
+            }
+            title="專案評論"
+          >
+            <FaComments size={20} />
+          </button>
+        )}
         {/* 專案活動按鈕 - 只在專案頁面顯示 */}
         {!isOverviewPage && projectId && setShowActivityStream && (
           <button
