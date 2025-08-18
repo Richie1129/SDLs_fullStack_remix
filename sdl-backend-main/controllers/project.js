@@ -915,7 +915,7 @@ exports.getClassUsersAndProjects = async (req, res) => {
         // 1. 獲取該班級的所有用戶
         const classUsers = await User.findAll({
             where: { class: className },
-            attributes: ['id', 'username', 'class'],
+            attributes: ['id', 'username', 'class', 'seatNumber'],
             raw: true
         });
         
@@ -936,7 +936,7 @@ exports.getClassUsersAndProjects = async (req, res) => {
         const projects = await Project.findAll({
             include: [{
                 model: User,
-                attributes: ['id', 'username', 'class'],
+                attributes: ['id', 'username', 'class', 'seatNumber'],
                 where: {
                     id: {
                         [require('sequelize').Op.in]: userIds
@@ -944,7 +944,19 @@ exports.getClassUsersAndProjects = async (req, res) => {
                 },
                 through: { attributes: [] }
             }],
-            attributes: ['id', 'name', 'describe', 'mentor', 'currentStage', 'currentSubStage', 'createdAt', 'updatedAt']
+            attributes: [
+                'id',
+                'name',
+                'describe',
+                'mentor',
+                'currentStage',
+                'currentSubStage',
+                'createdAt',
+                'updatedAt',
+                // 觀摩設定相關欄位，供前端 Modal 初始化狀態
+                'is_open_for_viewing',
+                'allowed_classes'
+            ]
         });
         
         // 3. 排除重複的專案（因為一個專案可能有多個該班級的用戶）
@@ -963,6 +975,9 @@ exports.getClassUsersAndProjects = async (req, res) => {
                     currentSubStage: project.currentSubStage,
                     createdAt: project.createdAt,
                     updatedAt: project.updatedAt,
+                    // 將觀摩設定欄位一併回傳，供前端初始化
+                    is_open_for_viewing: project.is_open_for_viewing,
+                    allowed_classes: project.allowed_classes,
                     classMembers: project.users.filter(user => user.class === className)
                 });
             }

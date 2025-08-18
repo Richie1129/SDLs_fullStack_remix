@@ -5,6 +5,7 @@ import { FaEye, FaUsers, FaSearch, FaFilter, FaTimes, FaChalkboardTeacher, FaCog
 import TopBar from '../../components/TopBar';
 import SideBar from '../../components/SideBar';
 import { getProjectsByMentor, getAllClasses, getClassUsersAndProjects, updateViewingSettings } from '../../api/project';
+import Swal from 'sweetalert2';
 
 /**
  * 教師跨班觀摩頁面
@@ -20,6 +21,7 @@ const ClassObservationPage = () => {
     const [showViewingSettings, setShowViewingSettings] = useState(false); // 控制觀摩設定模態框
     const [selectedProjectForSetting, setSelectedProjectForSetting] = useState(null);
     const [allowedClasses, setAllowedClasses] = useState([]);
+    const [classSearch, setClassSearch] = useState('');
     
     // 取得當前用戶資訊和指導老師名稱
     useEffect(() => {
@@ -66,7 +68,39 @@ const ClassObservationPage = () => {
             enabled: !!selectedClass,
             onSuccess: (data) => {
                 console.log(`${selectedClass} 班級資料:`, data);
-                setClassData(data);
+                // 正規化資料：將後端的 seat_number 轉為前端使用的 seatNumber
+                const mapUserSeatNumber = (u = {}) => ({
+                    ...u,
+                    seatNumber: u.seatNumber ?? u.seat_number ?? null,
+                });
+
+                const normalizedUsers = Array.isArray(data?.users)
+                    ? data.users.map(mapUserSeatNumber)
+                    : [];
+
+                // 一些版本的後端在 projects 內提供 users 或 classMembers
+                const normalizedProjects = Array.isArray(data?.projects)
+                    ? data.projects.map(p => {
+                        const projectUsers = Array.isArray(p?.users)
+                            ? p.users
+                            : (Array.isArray(p?.classMembers) ? p.classMembers : []);
+                        const mappedUsers = projectUsers.map(mapUserSeatNumber);
+                        return {
+                            ...p,
+                            // 確保前端後續統一讀取 project.users
+                            users: mappedUsers,
+                            classMembers: Array.isArray(p?.classMembers)
+                                ? p.classMembers.map(mapUserSeatNumber)
+                                : undefined,
+                        };
+                    })
+                    : [];
+
+                setClassData({
+                    ...data,
+                    users: normalizedUsers,
+                    projects: normalizedProjects,
+                });
             },
             onError: (error) => {
                 console.error(`獲取 ${selectedClass} 班級資料失敗:`, error);
@@ -164,32 +198,59 @@ const ClassObservationPage = () => {
     };
 
     const handleSaveViewingSettings = async () => {
-        if (!selectedProjectForSetting) return;
+    if (!selectedProjectForSetting) return;
+    
+    try {
+        await updateViewingSettings(selectedProjectForSetting.id, {
+            is_open_for_viewing: allowedClasses.length > 0,
+            allowed_classes: allowedClasses
+        });
         
-        try {
-            await updateViewingSettings(selectedProjectForSetting.id, {
-                is_open_for_viewing: allowedClasses.length > 0,
-                allowed_classes: allowedClasses
-            });
-            
-            // 重新載入專案資料
-            refetchProjects();
-            setShowViewingSettings(false);
-            alert('觀摩設定已更新！');
-        } catch (error) {
-            console.error('更新觀摩設定失敗:', error);
-            alert('更新失敗，請重試！');
-        }
+        // 重新載入專案資料
+        refetchProjects();
+
+        // 同步更新當前班級資料中的該專案，確保再次開啟時顯示正確狀態
+        setClassData(prev => {
+            if (!prev) return prev;
+            const updated = {
+                ...prev,
+                projects: (prev.projects || []).map(p => 
+                    p.id === selectedProjectForSetting.id
+                        ? { ...p, is_open_for_viewing: allowedClasses.length > 0, allowed_classes: allowedClasses }
+                        : p
+                )
+            };
+            return updated;
+        });
+
+        setShowViewingSettings(false);
+
+        // ✅ 成功提示
+        Swal.fire({
+            icon: 'success',
+            title: '觀摩設定已更新！',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    } catch (error) {
+        console.error('更新觀摩設定失敗:', error);
+
+        // ❌ 失敗提示
+        Swal.fire({
+            icon: 'error',
+            title: '更新失敗',
+            text: '請重試！'
+        });
+    }
+};
+
+    // GitHub Reviewers-like interactions
+    const addClassForViewing = (className) => {
+        setAllowedClasses(prev => (prev.includes(className) ? prev : [...prev, className]));
     };
 
-    const toggleClassForViewing = (className) => {
-        setAllowedClasses(prev => {
-            if (prev.includes(className)) {
-                return prev.filter(c => c !== className);
-            } else {
-                return [...prev, className];
-            }
-        });
+    const removeClassForViewing = (className) => {
+        setAllowedClasses(prev => prev.filter(c => c !== className));
     };
 
     return (
@@ -208,7 +269,7 @@ const ClassObservationPage = () => {
                                     <h1 className='text-3xl font-bold text-gray-800'>跨班專案觀摩</h1>
                                 </div>
                                 <p className='text-gray-600 text-lg'>
-                                    探索 <span className="font-semibold text-blue-600">{mentorName}</span> 老師指導的專案作品，學習不同班級的創意與實作方法
+                                    讓同學探索 <span className="font-semibold text-blue-600">{mentorName}</span> 老師指導的專案作品，學習不同班級的創意與實作方法
                                 </p>
                             </div>
 
@@ -421,21 +482,80 @@ const ClassObservationPage = () => {
                                             </p>
                                         </div>
                                         <div className='p-6'>
-                                            <p className='text-sm text-gray-700 mb-4'>
-                                                選擇允許觀摩此專案的班級：
-                                            </p>
-                                            <div className='space-y-2 max-h-48 overflow-y-auto'>
-                                                {classesData?.classes?.map((className) => (
-                                                    <label key={className} className='flex items-center'>
+                                            {/* 已選定班級 */}
+                                            <div className='mb-4'>
+                                                <div className='text-sm font-medium text-gray-700 mb-2'>已選定班級</div>
+                                                {allowedClasses.length === 0 ? (
+                                                    <div className='text-xs text-gray-500'>尚未選擇任何班級</div>
+                                                ) : (
+                                                    <div className='flex flex-wrap gap-2'>
+                                                        {allowedClasses.map((cls) => (
+                                                            <span key={cls} className='inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded'>
+                                                                {cls}
+                                                                <button
+                                                                    onClick={() => removeClassForViewing(cls)}
+                                                                    className='ml-1 text-blue-700 hover:text-blue-900'
+                                                                    aria-label={`移除 ${cls}`}
+                                                                >
+                                                                    <FaTimes />
+                                                                </button>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <hr className='my-3' />
+
+                                            {/* 可選班級清單 + 搜尋 */}
+                                            <div>
+                                                <div className='flex items-center justify-between mb-2'>
+                                                    <div className='text-sm font-medium text-gray-700'>所有可選班級</div>
+                                                    <div className='relative'>
                                                         <input
-                                                            type="checkbox"
-                                                            checked={allowedClasses.includes(className)}
-                                                            onChange={() => toggleClassForViewing(className)}
-                                                            className='mr-3 rounded'
+                                                            type='text'
+                                                            placeholder='搜尋班級...'
+                                                            value={classSearch}
+                                                            onChange={(e) => setClassSearch(e.target.value)}
+                                                            className='text-sm px-3 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
                                                         />
-                                                        <span className='text-sm text-gray-700'>{className}</span>
-                                                    </label>
-                                                ))}
+                                                        {classSearch && (
+                                                            <button
+                                                                onClick={() => setClassSearch('')}
+                                                                className='absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+                                                                aria-label='清除搜尋'
+                                                            >
+                                                                <FaTimes />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {(() => {
+                                                    const all = classesData?.classes || [];
+                                                    const available = all
+                                                        .filter(c => !allowedClasses.includes(c))
+                                                        .filter(c => c.toLowerCase().includes(classSearch.toLowerCase()));
+
+                                                    return (
+                                                        <div className='space-y-2 max-h-48 overflow-y-auto'>
+                                                            {available.length === 0 ? (
+                                                                <div className='text-xs text-gray-500'>沒有可加入的班級</div>
+                                                            ) : (
+                                                                available.map((c) => (
+                                                                    <button
+                                                                        key={c}
+                                                                        onClick={() => addClassForViewing(c)}
+                                                                        className='w-full flex items-center justify-between px-3 py-2 text-left border border-gray-200 rounded hover:bg-gray-50'
+                                                                    >
+                                                                        <span className='text-sm text-gray-700'>{c}</span>
+                                                                        <span className='text-xs text-gray-400'>加入</span>
+                                                                    </button>
+                                                                ))
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                         <div className='px-6 py-4 border-t border-gray-200 flex justify-end space-x-3'>
