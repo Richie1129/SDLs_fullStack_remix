@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { getProjectUser } from '../api/users';
 
 /**
  * 觀摩模式 Hook
@@ -16,34 +17,41 @@ export const useObservationMode = () => {
     try {
       setIsLoading(true);
 
-      // 1. 檢查 URL 參數
+      // 1) 初步檢查：URL 或 localStorage 是否請求觀摩模式
       const modeParam = searchParams.get('mode');
-      if (modeParam === 'observation') {
-        setIsObservationMode(true);
+      const wantsObservation = modeParam === 'observation'
+        || localStorage.getItem(`observationMode_${projectId}`) === 'true'
+        || localStorage.getItem('isObservationMode') === 'true';
+
+      // 2) 若使用者是專案成員，強制關閉觀摩模式（即使 URL 夾帶 observation）
+      let isMember = false;
+      try {
+        if (projectId) {
+          const members = await getProjectUser(projectId);
+          const meId = localStorage.getItem('id');
+          if (Array.isArray(members)) {
+            isMember = members.some(m => String(m?.id ?? '') === String(meId ?? ''));
+          }
+        }
+      } catch (e) {
+        // 取不到成員資料時，不影響後續判斷，只是無法做成員排除
+        console.warn('取得專案成員失敗，暫以非成員處理觀摩模式判斷');
+      }
+
+      if (isMember) {
+        // 清掉任何觀摩模式標記，避免後續頁面殘留
+        setIsObservationMode(false);
+        localStorage.removeItem('isObservationMode');
+        localStorage.removeItem(`observationMode_${projectId}`);
+        setIsLoading(false);
+        return;
+      }
+
+      // 3) 非成員：才依照 wantsObservation 決定是否觀摩
+      setIsObservationMode(!!wantsObservation);
+      if (wantsObservation) {
         localStorage.setItem(`observationMode_${projectId}`, 'true');
-        setIsLoading(false);
-        return;
       }
-
-      // 2. 檢查 localStorage 中的項目特定狀態
-      const projectObservationMode = localStorage.getItem(`observationMode_${projectId}`);
-      if (projectObservationMode === 'true') {
-        setIsObservationMode(true);
-        setIsLoading(false);
-        return;
-      }
-
-      // 3. 檢查全域觀摩模式標記
-      const globalObservationMode = localStorage.getItem('isObservationMode');
-      if (globalObservationMode === 'true') {
-        setIsObservationMode(true);
-        localStorage.setItem(`observationMode_${projectId}`, 'true');
-        setIsLoading(false);
-        return;
-      }
-
-      // 4. 如果都沒有，則不是觀摩模式
-      setIsObservationMode(false);
       setIsLoading(false);
     } catch (error) {
       console.error('檢查觀摩模式失敗:', error);

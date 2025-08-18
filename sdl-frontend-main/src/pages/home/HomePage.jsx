@@ -291,8 +291,17 @@ useEffect(() => {
         
         // 如果後端返回的格式是 {projects: [...]}，則使用 response.projects
         // 如果直接返回陣列，則使用 response
-        const projects = response.projects || response || [];
-        console.log('設定的可觀摩專案:', projects);
+        let projects = response.projects || response || [];
+
+        // 過濾掉使用者自己參與的專案
+        const myId = String(localStorage.getItem('id') || '');
+        const myName = localStorage.getItem('username') || '';
+        projects = projects.filter(p => {
+          if (!Array.isArray(p?.members)) return true; // 若無成員資訊則保留（後端可回補）
+          return !p.members.some(m => String(m?.id ?? '') === myId || (m?.username || '') === myName);
+        });
+
+        console.log('設定的可觀摩專案(已過濾本人專案):', projects);
         setViewableProjects(projects);
       }
     } catch (error) {
@@ -1247,4 +1256,3 @@ const Accordion = ({ index, title, children, activeIndex, setActiveIndex }) => {
     </div>
   );
 };
-

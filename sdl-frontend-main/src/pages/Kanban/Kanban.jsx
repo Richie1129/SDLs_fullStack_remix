@@ -547,7 +547,8 @@ export default function Kanban() {
 
   return (
     <div className="h-full min-h-0 w-full bg-white flex flex-col">
-      <DraggableImage/>
+      {/* 觀摩模式隱藏科學助手 */}
+      {!isObservationMode && <DraggableImage/>}
       
       {/* 觀摩模式提示 */}
       {isObservationMode && (

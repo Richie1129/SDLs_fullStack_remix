@@ -76,11 +76,12 @@ export const deleteSessionMessages = async (userId, sessionId) => {
 }
 
 // 新增：創建新會話並保存開場白到資料庫
-export const createNewSessionInDB = async (userId, sessionId, userName) => {
+export const createNewSessionInDB = async (userId, sessionId, userName, projectId = null) => {
     const response = await ragApi.post('/create-session', {
         userId,
         sessionId,
-        userName
+        userName,
+        projectId
     });
     return response.data;
 }

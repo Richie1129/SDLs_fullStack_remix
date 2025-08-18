@@ -8,7 +8,7 @@ exports.getRagMessageHistory = async (req, res) => {
 
     try {
         const messages = await Rag_message.findAll({
-            attributes: ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'createdAt'],
+            attributes: ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt'],
             where: { userId: userId },
             order: [['createdAt', 'ASC']]
         });
@@ -28,7 +28,7 @@ exports.getRagMessageBySession = async (req, res) => {
 
     try {
         // 先嘗試取得基本欄位
-        let attributes = ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'createdAt'];
+        let attributes = ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt'];
         
         // 檢查是否存在 ragflow_session_id 欄位
         try {
@@ -68,7 +68,7 @@ exports.getUserSessions = async (req, res) => {
     try {
         // 先獲取所有該用戶的訊息，然後在 JavaScript 中處理去重
         const messages = await Rag_message.findAll({
-            attributes: ['sessionId', 'userName', 'createdAt'],
+            attributes: ['sessionId', 'userName', 'project_id', 'createdAt'],
             where: { 
                 userId: userId,
                 sessionId: { [require('sequelize').Op.not]: null }
@@ -191,7 +191,7 @@ exports.deleteSessionMessages = async (req, res) => {
 
 // 新增：創建新會話並保存開場白
 exports.createNewSession = async (req, res) => {
-    const { userId, sessionId, userName } = req.body;
+    const { userId, sessionId, userName, projectId } = req.body;
     console.log("創建新會話，userId:", userId, "sessionId:", sessionId, "userName:", userName);
 
     try {
@@ -204,7 +204,8 @@ exports.createNewSession = async (req, res) => {
             author: "科學助手",
             userId: userId,
             userName: userName,
-            sessionId: sessionId
+            sessionId: sessionId,
+            project_id: projectId || null
         });
 
         console.log("新會話創建成功，ID:", newMessage.id);

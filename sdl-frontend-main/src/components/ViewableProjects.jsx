@@ -79,6 +79,15 @@ const ViewableProjects = () => {
         );
     }
 
+    // 過濾掉使用者自己參與的專案
+    const meId = String(localStorage.getItem('id') || '');
+    const meName = localStorage.getItem('username') || '';
+    const safeProjects = Array.isArray(viewableProjects?.projects) ? viewableProjects.projects : [];
+    const filteredProjects = safeProjects.filter(p => {
+        if (!Array.isArray(p?.members)) return true; // 若無成員資訊，保留顯示（後端可補強）
+        return !p.members.some(m => String(m?.id ?? '') === meId || (m?.username || '') === meName);
+    });
+
     return (
         <div className="bg-white rounded-lg shadow-sm">
             {/* 標題區域 */}
@@ -88,7 +97,7 @@ const ViewableProjects = () => {
                         <FaEye className="text-blue-600 text-lg" />
                         <h3 className="text-lg font-semibold text-gray-800">觀摩專案</h3>
                         <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                            {viewableProjects.projects.length} 個專案
+                            {filteredProjects.length} 個專案
                         </span>
                     </div>
                 </div>
@@ -100,7 +109,7 @@ const ViewableProjects = () => {
             {/* 專案卡片網格 */}
             <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {viewableProjects.projects.map((project) => (
+                    {filteredProjects.map((project) => (
                         <div
                             key={project.id}
                             className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-lg hover:shadow-lg transition-all duration-300 overflow-hidden group"

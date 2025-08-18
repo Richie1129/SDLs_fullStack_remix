@@ -299,7 +299,9 @@ io.on("connection", (socket) => {
                     author: data.author,
                     userId: userId,  // 使用確認過的 userId
                     userName: userName,  // 儲存用戶名稱
-                    sessionId: sessionId  // 儲存 sessionId
+                    sessionId: sessionId,  // 儲存 sessionId
+                    // 儲存專案ID：優先使用 data.projectId，其次使用房間ID data.room
+                    project_id: data.projectId || data.project_id || data.room || null
                 });
     
                 // 將訊息的 ID 返回前端，便於後續 response_message 更新
