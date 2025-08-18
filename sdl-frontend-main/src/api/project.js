@@ -117,7 +117,7 @@ export const getAllClasses = async () => {
     console.log('=== getAllClasses API 被調用 ===');
     const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
     console.log('從 localStorage 取得的 token:', token);
-    console.log('準備發送請求到:', 'http://localhost/api/projects/classes/list');
+    console.log('準備發送請求到:', 'https://science.sdlswuret.com/api/projects/classes/list');
     
     try {
         const response = await projectApi.get('/classes/list', {

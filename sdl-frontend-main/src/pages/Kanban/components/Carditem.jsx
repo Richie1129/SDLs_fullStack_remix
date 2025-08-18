@@ -363,7 +363,7 @@ function Carditem({ data, index, columnIndex }) {
   const [commentImageList, setCommentImageList] = useState([]);
   const [selectedCommentImageIndex, setSelectedCommentImageIndex] = useState(null);
   const openCommentImageModal = (imageAttachments, index) => {
-    const urls = (imageAttachments || []).map(att => `http://localhost/api/file/image/${att.fileName}`);
+    const urls = (imageAttachments || []).map(att => `https://science.sdlswuret.com/api/file/image/${att.fileName}`);
     setCommentImageList(urls);
     setSelectedCommentImageIndex(index || 0);
   };
@@ -418,8 +418,8 @@ function Carditem({ data, index, columnIndex }) {
   const handleCommentAttachmentDownload = async (attachment) => {
     try {
       const fileName = attachment.fileName;
-      const resp = await axios.get(`http://localhost/api/file/download/${fileName}`);
-      const url = resp.data?.downloadUrl || `http://localhost/api/file/direct/${fileName}`;
+      const resp = await axios.get(`https://science.sdlswuret.com/api/file/download/${fileName}`);
+      const url = resp.data?.downloadUrl || `https://science.sdlswuret.com/api/file/direct/${fileName}`;
       // 直接打開下載 URL
       window.open(url, '_blank');
     } catch (err) {
@@ -1141,7 +1141,7 @@ function Carditem({ data, index, columnIndex }) {
                           {c.attachments.map((a, i) => {
                             const isImage = (a.mimeType || '').startsWith('image/');
                             if (isImage) {
-                              const imgUrl = `http://localhost/api/file/image/${a.fileName}`;
+                              const imgUrl = `https://science.sdlswuret.com/api/file/image/${a.fileName}`;
                               return (
                                 <div key={i}>
                                   <img
@@ -1153,7 +1153,7 @@ function Carditem({ data, index, columnIndex }) {
                                 </div>
                               );
                             }
-                            const dlUrl = `http://localhost/api/file/direct/${a.fileName}`;
+                            const dlUrl = `https://science.sdlswuret.com/api/file/direct/${a.fileName}`;
                             return (
                               <div key={i} className='text-xs flex items-center gap-2'>
                                 <a href={dlUrl} target='_blank' rel='noreferrer' className='text-blue-600 hover:underline'>
