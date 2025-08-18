@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FiX, FiImage, FiPaperclip, FiSend, FiDownload, FiFile, FiFileText } from 'react-icons/fi';
+import { FiX, FiImage, FiPaperclip, FiSend, FiDownload, FiFile, FiFileText, FiTrash } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
+import Swal from 'sweetalert2';
 import { 
   fetchProjectComments, 
   createProjectComment,
@@ -10,6 +11,7 @@ import {
   toggleProjectCommentLike,
   uploadProjectCommentAttachments,
 } from '../api/projectComments';
+import { deleteProjectCommentAttachment } from '../api/projectComments';
 import Modal from './Modal';
 
 const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
@@ -48,6 +50,12 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
       setEditingId(null);
       setEditingContent('');
       queryClient.invalidateQueries(['project-comments', projectId]);
+      Swal.fire({
+        title: '儲存成功！',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   });
 
@@ -66,6 +74,12 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const uploadMut = useMutation(uploadProjectCommentAttachments, {
     onSuccess: () => {
       setPendingFiles([]);
+      queryClient.invalidateQueries(['project-comments', projectId]);
+    }
+  });
+
+  const deleteAttachmentMut = useMutation(deleteProjectCommentAttachment, {
+    onSuccess: () => {
       queryClient.invalidateQueries(['project-comments', projectId]);
     }
   });
@@ -194,6 +208,40 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
     return <FiFile className="text-gray-600" />;
   };
 
+  const handleDeleteAttachment = (attachmentId) => {
+    if (!attachmentId) return;
+    Swal.fire({
+      title: '確定要刪除這個附件嗎？',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: '是的，刪除！',
+      cancelButtonText: '取消',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteAttachmentMut.mutate({ attachmentId });
+      }
+    });
+  };
+
+  const handleDeleteComment = (commentId) => {
+    Swal.fire({
+      title: '確定要刪除這則評論嗎？',
+      text: '這個操作將無法復原！',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: '是的，刪除！',
+      cancelButtonText: '取消',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        deleteMut.mutate({ commentId });
+      }
+    });
+  };
+
   const renderAttachments = (c) => {
     if (!Array.isArray(c.attachments) || c.attachments.length === 0) return null;
     const imgs = c.attachments.filter(a => isImage(a.mimeType));
@@ -204,13 +252,23 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
         {imgs.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {imgs.map(a => (
-              <div key={a.id}>
+              <div key={a.id} className="relative group">
                 <img
                   src={`http://localhost/api/file/image/${a.fileName}`}
                   alt={a.originalName}
                   className="w-full h-24 object-cover rounded border cursor-pointer"
                   onClick={() => openCommentImageModal(imgs, imgs.indexOf(a))}
                 />
+                {editingId === c.id && (
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="刪除附件"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteAttachment(a.id); }}
+                  >
+                    <FiX size={12} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -235,9 +293,25 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
                 {a.size && (
                   <span className="ml-2 text-xs text-gray-500">({Math.round(a.size/1024)} KB)</span>
                 )}
-                <button className="ml-auto text-gray-500 hover:text-gray-700" onClick={() => handleAttachmentDownload(a)} title="下載">
-                  <FiDownload />
-                </button>
+                {editingId === c.id ? (
+                  <button
+                    type="button"
+                    className="ml-auto text-red-500 hover:text-red-700"
+                    title="刪除附件"
+                    onClick={() => handleDeleteAttachment(a.id)}
+                  >
+                    <FiTrash />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ml-auto text-gray-500 hover:text-gray-700"
+                    onClick={() => handleAttachmentDownload(a)}
+                    title="下載"
+                  >
+                    <FiDownload />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -288,7 +362,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               <div className="mt-2">
                 {/* 引言區塊：當同時存在 reply_to_username 與 reply_to_content 時顯示 */}
                 {c.reply_to_username && c.reply_to_content && (
-                  <div className="mb-2 p-2 border-l-4 border-gray-300 bg-gray-100 rounded-r-md">
+                  <div className="mb-2 p-2 border-l-4 border-[#5BA491] bg-[#5BA491]/25 rounded-r-md">
                     <p className="text-xs font-semibold text-gray-600">{c.reply_to_username}</p>
                     <p className="text-sm text-gray-800 whitespace-pre-line line-clamp-2">{c.reply_to_content}</p>
                   </div>
@@ -330,7 +404,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
                   <span>·</span>
                   <button type="button" className="hover:underline" onClick={() => startEdit(c)}>編輯</button>
                   <span>·</span>
-                  <button type="button" className="hover:underline" onClick={() => deleteMut.mutate({ commentId: c.id })}>刪除</button>
+                  <button type="button" className="hover:underline" onClick={() => handleDeleteComment(c.id)}>刪除</button>
                 </>
               )}
               <span>·</span>

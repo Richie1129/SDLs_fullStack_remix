@@ -3,6 +3,7 @@ const ProjectCommentLike = require('../models/project_comment_like');
 const ProjectCommentAttachment = require('../models/project_comment_attachment');
 const Project = require('../models/project');
 const User = require('../models/user');
+const { deleteFileFromMinio } = require('../config/minio');
 
 // GET /api/projects/:projectId/comments
 exports.listByProject = async (req, res) => {
@@ -209,5 +210,38 @@ exports.addAttachments = async (req, res) => {
   } catch (err) {
     console.error('add project comment attachments error:', err);
     res.status(500).json({ message: '附件上傳失敗', error: err.message });
+  }
+};
+
+// DELETE /api/project-comments/attachments/:attachmentId
+exports.removeAttachment = async (req, res) => {
+  try {
+    const { attachmentId } = req.params;
+    const userId = req.userId;
+
+    const attachment = await ProjectCommentAttachment.findByPk(attachmentId);
+    if (!attachment) return res.status(404).json({ message: '附件不存在' });
+
+    const comment = await ProjectComment.findByPk(attachment.commentId);
+    if (!comment) return res.status(404).json({ message: '附件所屬評論不存在' });
+
+    if (parseInt(comment.userId) !== parseInt(userId)) {
+      return res.status(403).json({ message: '僅能刪除自己評論的附件' });
+    }
+
+    // Best effort: also delete object from MinIO
+    try {
+      if (attachment.fileName) {
+        await deleteFileFromMinio(attachment.fileName);
+      }
+    } catch (err) {
+      console.warn('刪除 MinIO 檔案失敗，僅刪除資料庫記錄:', err?.message || err);
+    }
+
+    await attachment.destroy();
+    res.json({ message: '附件已刪除' });
+  } catch (err) {
+    console.error('remove project comment attachment error:', err);
+    res.status(500).json({ message: '刪除附件失敗', error: err.message });
   }
 };

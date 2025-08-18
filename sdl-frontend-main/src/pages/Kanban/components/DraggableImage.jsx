@@ -383,36 +383,54 @@ const DraggableImage = () => {
         return newHistory;
       });
 
-      // 從 localStorage 獲取用戶信息
-      const userId = localStorage.getItem('id') || '1';
+      // 從 localStorage 獲取用戶與專案資訊並做型別/有效性檢查
+      const userIdRaw = localStorage.getItem('id') ?? localStorage.getItem('userId');
+      const userId = Number(userIdRaw);
       const userName = localStorage.getItem('username') || '未知用戶';
-      const projectId = localStorage.getItem('projectId') || 'default';
-      
-      console.log('發送訊息的用戶資訊:', { userId, userName, projectId });
+      let projectIdRaw = localStorage.getItem('projectId');
+      // 後備：從 URL 提取 projectId
+      if (!projectIdRaw) {
+        const m = window.location.pathname.match(/\/project\/(\d+)/);
+        if (m && m[1]) projectIdRaw = m[1];
+      }
+      const projectIdNum = Number(projectIdRaw);
 
-      // 發送輸入訊息到後端的 socket，包含用戶資訊
-      socket.emit("rag_message", {
+      const payloadInput = {
         messageType: "input",
         message: userQuestion,
         author: userName || "用戶",
-        creator: userId,
-        room: projectId,
-        userName: userName,
-        sessionId: currentSessionId
+        creator: Number.isFinite(userId) ? userId : undefined,
+        // room 用於廣播；保持為字串但僅在有效時提供
+        room: Number.isFinite(projectIdNum) ? String(projectIdNum) : undefined,
+        // 明確提供數字型別的 projectId 以供後端 DB 使用
+        projectId: Number.isFinite(projectIdNum) ? projectIdNum : undefined,
+        userName,
+        sessionId: currentSessionId,
+      };
+
+      console.log('發送訊息的用戶資訊:', {
+        userId: payloadInput.creator,
+        userName,
+        projectId: payloadInput.projectId,
+        room: payloadInput.room,
       });
+
+      socket.emit("rag_message", payloadInput);
 
       // 處理後端回傳的訊息 ID，並將回答存回 socket
       socket.once("input_stored", (storedData) => {
-        socket.emit("rag_message", {
+        const payloadResponse = {
           messageType: "response",
           message: answer,
           author: "科學助手",
-          creator: userId,
-          messageId: storedData.id,
-          room: projectId,
-          userName: userName,
-          sessionId: currentSessionId
-        });
+          creator: Number.isFinite(userId) ? userId : undefined,
+          messageId: storedData?.id,
+          room: Number.isFinite(projectIdNum) ? String(projectIdNum) : undefined,
+          projectId: Number.isFinite(projectIdNum) ? projectIdNum : undefined,
+          userName,
+          sessionId: currentSessionId,
+        };
+        socket.emit("rag_message", payloadResponse);
         
         // 如果是新會話，在訊息保存完成後更新對話歷史列表
         if (isNewSession) {

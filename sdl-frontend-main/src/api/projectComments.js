@@ -45,3 +45,8 @@ export const uploadProjectCommentAttachments = async ({ commentId, files }) => {
   });
   return res.data.item;
 };
+
+export const deleteProjectCommentAttachment = async ({ attachmentId }) => {
+  const res = await api.delete(`/project-comments/attachments/${attachmentId}`);
+  return res.data;
+};
