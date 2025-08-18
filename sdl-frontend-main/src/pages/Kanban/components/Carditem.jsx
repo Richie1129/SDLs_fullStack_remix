@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Modal from '../../../components/Modal';
 import AssignMember from './AssignMember';
 import { getProjectUser } from '../../../api/users';
-import { useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from 'react-query';
+import { useParams, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient, useMutation } from 'react-query';
 import Swal from 'sweetalert2';
 import { GrFormClose } from "react-icons/gr";
 import { FiEdit } from "react-icons/fi";
@@ -11,13 +11,15 @@ import { BsFillPersonFill } from "react-icons/bs";
 import { Draggable } from 'react-beautiful-dnd';
 import { socket } from '../../../utils/socket';
 import toast, { Toaster } from 'react-hot-toast';
+import { fetchComments, createComment, toggleCommentLike, updateComment as updateCommentApi, deleteComment as deleteCommentApi } from '../../../api/comments';
 import axios from 'axios';
 import { CircleArrowLeft, CircleArrowRight } from "lucide-react"
 import FileDownload from 'js-file-download';
-import { AiOutlineCloudDownload } from "react-icons/ai";
+import { AiOutlineCloudDownload, AiOutlinePaperClip, AiOutlineLike, AiFillLike } from "react-icons/ai";
 import { formatTime } from '../../../utils/timeUtils';
 import { getTaskChangeLogs } from '../../../api/kanban';
 import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
+import useObservationMode from '../../../hooks/useObservationMode'; // 引入觀摩模式 hook
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -44,7 +46,8 @@ const FileManagementModal = ({
   removeFile, 
   removeImage, 
   openImageModal,
-  fileInputRef 
+  fileInputRef,
+  isObservationMode = false
 }) => {
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
 
@@ -57,17 +60,19 @@ const FileManagementModal = ({
             ({cardData.images?.length || 0} 圖片, {cardData.files?.length || 0} 檔案)
           </span>
         </div>
-        <label className='flex items-center space-x-2 px-4 py-2 bg-white border border-customgreen text-customgreen rounded-lg hover:bg-customgreen/5 transition-all duration-200 cursor-pointer'>
-          <AiOutlineCloudDownload size={18} />
-          <span className='font-medium'>上傳檔案</span>
-          <input
-            type="file"
-            multiple
-            onChange={handleFileUpload}
-            ref={fileInputRef}
-            className='hidden'
-          />
-        </label>
+        {!isObservationMode && (
+          <label className='flex items-center space-x-2 px-4 py-2 bg-white border border-customgreen text-customgreen rounded-lg hover:bg-customgreen/5 transition-all duration-200 cursor-pointer'>
+            <AiOutlineCloudDownload size={18} />
+            <span className='font-medium'>上傳檔案</span>
+            <input
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              ref={fileInputRef}
+              className='hidden'
+            />
+          </label>
+        )}
       </div>
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
@@ -89,12 +94,14 @@ const FileManagementModal = ({
                     className='w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200 bg-gray-50'
                     onClick={() => openImageModal(index)}
                   />
-                  <button
-                    onClick={() => removeImage(index)}
-                    className='absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm hover:bg-white'
-                  >
-                    <GrFormClose size={14} />
-                  </button>
+                  {!isObservationMode && (
+                    <button
+                      onClick={() => removeImage(index)}
+                      className='absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm hover:bg-white'
+                    >
+                      <GrFormClose size={14} />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -140,12 +147,14 @@ const FileManagementModal = ({
                     >
                       下載
                     </button>
-                    <button
-                      onClick={() => removeFile(index)}
-                      className='p-1.5 text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-lg hover:bg-gray-200'
-                    >
-                      <GrFormClose size={16} />
-                    </button>
+                    {!isObservationMode && (
+                      <button
+                        onClick={() => removeFile(index)}
+                        className='p-1.5 text-gray-400 hover:text-red-500 transition-colors duration-200 rounded-lg hover:bg-gray-200'
+                      >
+                        <GrFormClose size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -180,24 +189,99 @@ const Tooltip = ({ children, content }) => {
   );
 };
 
+// 子元件：評論操作（編輯、刪除）
+const CommentActions = ({ comment, onAfterChange }) => {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content || '');
+  const queryClient = useQueryClient();
+
+  const saveMutation = useMutation(updateCommentApi, {
+    onSuccess: () => {
+      setEditing(false);
+      if (onAfterChange) onAfterChange();
+      toast.success('已更新評論');
+    },
+    onError: (err) => toast.error(err?.response?.data?.message || '更新失敗')
+  });
+
+  const delMutation = useMutation(deleteCommentApi, {
+    onSuccess: () => {
+      if (onAfterChange) onAfterChange();
+      toast.success('已刪除評論');
+    },
+    onError: (err) => toast.error(err?.response?.data?.message || '刪除失敗')
+  });
+
+  if (editing) {
+    return (
+      <div className='w-full mt-2'>
+        <textarea
+          value={editText}
+          onChange={(e) => setEditText(e.target.value)}
+          className='w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
+          rows={3}
+        />
+        <div className='mt-2 flex gap-2'>
+          <button
+            onClick={() => saveMutation.mutate({ commentId: comment.id, content: editText })}
+            className='px-3 py-1.5 bg-customgreen text-white rounded text-xs hover:bg-customgreen/90'
+          >
+            儲存
+          </button>
+          <button
+            onClick={() => { setEditing(false); setEditText(comment.content || ''); }}
+            className='px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300'
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className='flex items-center gap-2'>
+      <button
+        onClick={() => setEditing(true)}
+        className='text-xs text-gray-600 hover:underline'
+      >
+        編輯
+      </button>
+      <button
+        onClick={() => {
+          if (window.confirm('確定要刪除這則評論嗎？')) {
+            delMutation.mutate({ commentId: comment.id });
+          }
+        }}
+        className='text-xs text-red-600 hover:underline'
+      >
+        刪除
+      </button>
+    </div>
+  );
+};
+
 // 子元件：成員指派區塊
 const MemberAssignment = ({ 
   cardData, 
   setAssignMemberModalOpen,
   owner,
   personImg,
-  Tooltip
+  Tooltip,
+  isObservationMode = false
 }) => (
   <div className='bg-white rounded-xl border border-gray-100 p-4 mb-4'>
     <div className='flex items-center justify-between mb-3'>
       <h4 className='text-base font-medium text-gray-700'>成員</h4>
-      <button
-        onClick={() => setAssignMemberModalOpen(true)}
-        className='flex items-center space-x-2 px-3 py-1.5 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200'
-      >
-        <BsFillPersonFill size={16} />
-        <span className='text-sm font-medium'>指派成員</span>
-      </button>
+      {!isObservationMode && (
+        <button
+          onClick={() => setAssignMemberModalOpen(true)}
+          className='flex items-center space-x-2 px-3 py-1.5 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200'
+        >
+          <BsFillPersonFill size={16} />
+          <span className='text-sm font-medium'>指派成員</span>
+        </button>
+      )}
     </div>
 
     {owner && (
@@ -241,7 +325,12 @@ function Carditem({ data, index, columnIndex }) {
   const [showChangeHistory, setShowChangeHistory] = useState(false);
   const [changeLogs, setChangeLogs] = useState([]);
   const { projectId } = useParams();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  
+  // 使用觀摩模式 hook
+  const { isObservationMode } = useObservationMode();
+  
   const [cardData, setCardData] = useState({
     id: "",
     title: "",
@@ -254,6 +343,7 @@ function Carditem({ data, index, columnIndex }) {
     files: [],
   });
   const fileInputRef = useRef(null);
+  const commentFileInputRef = useRef(null);
 
   const openImageModal = (index) => {
     setSelectedImageIndex(index);
@@ -269,7 +359,92 @@ function Carditem({ data, index, columnIndex }) {
     );
   };
 
+  // 評論圖片放大檢視狀態
+  const [commentImageList, setCommentImageList] = useState([]);
+  const [selectedCommentImageIndex, setSelectedCommentImageIndex] = useState(null);
+  const openCommentImageModal = (imageAttachments, index) => {
+    const urls = (imageAttachments || []).map(att => `http://localhost/api/file/image/${att.fileName}`);
+    setCommentImageList(urls);
+    setSelectedCommentImageIndex(index || 0);
+  };
+  const closeCommentImageModal = () => {
+    setCommentImageList([]);
+    setSelectedCommentImageIndex(null);
+  };
+  const nextCommentImage = () => {
+    setSelectedCommentImageIndex((prev) => {
+      if (commentImageList.length === 0) return null;
+      return prev === commentImageList.length - 1 ? 0 : prev + 1;
+    });
+  };
+  const prevCommentImage = () => {
+    setSelectedCommentImageIndex((prev) => {
+      if (commentImageList.length === 0) return null;
+      return prev === 0 ? commentImageList.length - 1 : prev - 1;
+    });
+  };
+
   const [menberData, setMenberData] = useState([]);
+
+  // 評論區狀態與 API 連接
+  const [newComment, setNewComment] = useState("");
+  const [filesToUpload, setFilesToUpload] = useState([]);
+
+  const { data: comments = [], refetch: refetchComments } = useQuery(
+    ['comments', cardData.id],
+    () => fetchComments(cardData.id),
+    { enabled: open && !!cardData.id }
+  );
+
+  const addCommentMutation = useMutation(createComment, {
+    onSuccess: () => {
+      setNewComment("");
+      setFilesToUpload([]);
+      queryClient.invalidateQueries(['comments', cardData.id]);
+      toast.success('已發表評論');
+    },
+    onError: (err) => {
+      toast.error(err?.response?.data?.message || '發表評論失敗');
+    }
+  });
+
+  const likeMutation = useMutation(toggleCommentLike, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(['comments', cardData.id]);
+    }
+  });
+
+  // 取得評論附件下載 URL 並觸發下載
+  const handleCommentAttachmentDownload = async (attachment) => {
+    try {
+      const fileName = attachment.fileName;
+      const resp = await axios.get(`http://localhost/api/file/download/${fileName}`);
+      const url = resp.data?.downloadUrl || `http://localhost/api/file/direct/${fileName}`;
+      // 直接打開下載 URL
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('下載附件失敗:', err);
+      toast.error('下載附件失敗');
+    }
+  };
+
+  const handleAddComment = () => {
+    const content = newComment.trim();
+    if (!content) return;
+    addCommentMutation.mutate({ taskId: cardData.id, content, files: filesToUpload });
+  };
+
+  const handleSelectCommentFiles = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setFilesToUpload((prev) => [...prev, ...files]);
+    // reset input to allow reselect same files later
+    if (commentFileInputRef.current) commentFileInputRef.current.value = "";
+  };
+
+  const removePendingFile = (index) => {
+    setFilesToUpload((prev) => prev.filter((_, i) => i !== index));
+  };
 
   useQuery("getProjectUser", () => getProjectUser(projectId), {
     onSuccess: setMenberData,
@@ -304,7 +479,7 @@ function Carditem({ data, index, columnIndex }) {
     });
   }, [data]);
 
-  // 監聽任務更新事件，刷新變更記錄
+  // 監聽任務更新事件，刷新變更記錄與看板資料
   useEffect(() => {
     const handleTaskUpdate = (updateData) => {
       // 如果更新的是當前任務，刷新變更記錄
@@ -312,15 +487,20 @@ function Carditem({ data, index, columnIndex }) {
           (updateData.taskId === cardData.id || updateData.id === cardData.id)) {
         console.log('任務更新，刷新變更記錄:', cardData.id);
         queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
+        // 同步失效看板快取，確保列表中的卡片內容立即更新
+        queryClient.invalidateQueries(['kanbanDatas', projectId]);
       }
     };
 
     socket.on('taskItem', handleTaskUpdate);
     socket.on('activityUpdate', handleTaskUpdate);
+    // 有些後端會在更新後廣播 cardUpdated，這裡一併處理
+    socket.on('cardUpdated', handleTaskUpdate);
 
     return () => {
       socket.off('taskItem', handleTaskUpdate);
       socket.off('activityUpdate', handleTaskUpdate);
+      socket.off('cardUpdated', handleTaskUpdate);
     };
   }, [cardData.id, queryClient]);
 
@@ -509,6 +689,8 @@ function Carditem({ data, index, columnIndex }) {
       
       // 失效變更記錄的緩存，強制重新獲取
       queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
+      // 同步失效看板資料，讓列表立即反映更新
+      queryClient.invalidateQueries(['kanbanDatas', projectId]);
       
       setOpen(false);
     } else {
@@ -542,17 +724,17 @@ function Carditem({ data, index, columnIndex }) {
   
   return (
     <>
-      <Draggable draggableId={data.id.toString()} index={index}>
+      <Draggable draggableId={data.id.toString()} index={index} isDragDisabled={isObservationMode}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.draggableProps}
-            {...provided.dragHandleProps}
+            {...(!isObservationMode ? provided.dragHandleProps : {})}
             className={`item-container rounded-lg mb-3 w-full transition-all duration-200 ${
               snapshot.isDragging 
                 ? "shadow-xl bg-customgreen/90 text-white" 
                 : "bg-white shadow-md hover:shadow-lg"
-            }`}
+            } ${isObservationMode ? 'cursor-default' : 'cursor-move'}`}
           >
             {cardData.images && cardData.images.length > 0 && (
               <CardImage 
@@ -565,7 +747,7 @@ function Carditem({ data, index, columnIndex }) {
             <div className="p-3">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-base font-semibold text-gray-800 line-clamp-2 pr-2">
-                  {data.title}
+                  {cardData.title}
                 </h3>
                 <button
                   onClick={() => setOpen(true)}
@@ -575,15 +757,15 @@ function Carditem({ data, index, columnIndex }) {
                 </button>
               </div>
 
-              {data.content && (
+              {cardData.content && (
                 <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                  {data.content}
+                  {cardData.content}
                 </p>
               )}
 
-              {data.assignees?.length > 0 && (
+              {cardData.assignees?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
-                  {data.assignees.map((assignee, index) => {
+                  {cardData.assignees.map((assignee, index) => {
                     const imgIndex = parseInt(assignee.id) % personImg.length;
                     const userImg = personImg[imgIndex];
                     return (
@@ -616,9 +798,9 @@ function Carditem({ data, index, columnIndex }) {
                   )}
                 </div>
                 
-                {data.createdAt && (
+                {cardData.createdAt && (
                   <div className="text-xs text-gray-400">
-                    {formatTime(data.createdAt, 'relative')}
+                    {formatTime(cardData.createdAt, 'relative')}
                   </div>
                 )}
               </div>
@@ -632,7 +814,7 @@ function Carditem({ data, index, columnIndex }) {
         <Modal 
           open={true} 
           onClose={() => setSelectedImageIndex(null)}
-          position="justify-center items-center"
+          position="justify-center items-center z-[70]"
         >
           <button onClick={() => setSelectedImageIndex(null)} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
             <GrFormClose className="w-6 h-6" />
@@ -686,9 +868,46 @@ function Carditem({ data, index, columnIndex }) {
         </Modal>
       )}
 
-      {open && (
-        <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"}>
-          <div className='flex flex-col w-full'>
+      {/* 評論圖片放大檢視 */}
+      {selectedCommentImageIndex !== null && (
+        <Modal
+          open={true}
+          onClose={closeCommentImageModal}
+          position="justify-center items-center z-[80]"
+        >
+          <button onClick={closeCommentImageModal} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
+            <GrFormClose className="w-6 h-6" />
+          </button>
+          <div className="relative max-w-4xl w-full">
+            <img
+              src={commentImageList[selectedCommentImageIndex]}
+              alt="Comment Attachment"
+              className="w-full h-auto"
+            />
+            {commentImageList.length > 1 && (
+              <>
+                <button
+                  onClick={prevCommentImage}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                >
+                  <CircleArrowLeft size={24}/>
+                </button>
+                <button
+                  onClick={nextCommentImage}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                >
+                  <CircleArrowRight size={24}/>
+                </button>
+              </>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"} custom={"w-11/12 sm:w-5/6 lg:w-3/4 xl:w-2/3 p-0"}>
+        <div className='flex flex-col lg:flex-row w-full lg:h-[80vh]'>
+          {/* 左側：卡片編輯區 */}
+          <div className='w-full lg:w-2/3 p-4 sm:p-6 lg:p-8 lg:min-h-0 lg:overflow-y-auto'>
             {/* 標籤頁導航 */}
             <div className='flex border-b border-gray-200 mb-4'>
               <button
@@ -722,39 +941,41 @@ function Carditem({ data, index, columnIndex }) {
               <>
                 <div className='flex justify-between mb-4'>
                   <input
-                    className="rounded outline-none ring-2 p-2 ring-customgreen w-full"
+                    className={`rounded outline-none ring-2 p-2 ring-customgreen w-full ${isObservationMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     type="text"
                     placeholder="標題"
                     value={cardData.title}
-                    onChange={(e) => setCardData({ ...cardData, title: e.target.value })}
+                    onChange={isObservationMode ? undefined : (e) => setCardData({ ...cardData, title: e.target.value })}
+                    readOnly={isObservationMode}
                   />
                 </div>
                 <textarea
-                  className="rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4"
+                  className={`rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4 ${isObservationMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   rows={3}
                   placeholder="內容"
                   value={cardData.content}
-                  onChange={(e) => setCardData({ ...cardData, content: e.target.value })}
+                  onChange={isObservationMode ? undefined : (e) => setCardData({ ...cardData, content: e.target.value })}
+                  readOnly={isObservationMode}
                 />
 
                 {/* 時間資訊 */}
-                {(data.createdAt || data.updatedAt) && (
+                {(cardData.createdAt || cardData.updatedAt) && (
                   <div className='bg-gray-50 rounded-lg p-3 mb-4'>
                     <h4 className='text-sm font-medium text-gray-700 mb-2'>時間資訊</h4>
                     <div className='space-y-1 text-sm text-gray-600'>
-                      {data.createdAt && (
+                      {cardData.createdAt && (
                         <div className='flex justify-between'>
                           <span>建立時間：</span>
-                          <span title={formatTime(data.createdAt, 'full')}>
-                            {formatTime(data.createdAt, 'full')}
+                          <span title={formatTime(cardData.createdAt, 'full')}>
+                            {formatTime(cardData.createdAt, 'full')}
                           </span>
                         </div>
                       )}
-                      {data.updatedAt && data.updatedAt !== data.createdAt && (
+                      {cardData.updatedAt && cardData.updatedAt !== cardData.createdAt && (
                         <div className='flex justify-between'>
                           <span>更新時間：</span>
-                          <span title={formatTime(data.updatedAt, 'full')}>
-                            {formatTime(data.updatedAt, 'relative')}
+                          <span title={formatTime(cardData.updatedAt, 'full')}>
+                            {formatTime(cardData.updatedAt, 'relative')}
                           </span>
                         </div>
                       )}
@@ -765,9 +986,10 @@ function Carditem({ data, index, columnIndex }) {
                 <MemberAssignment
                   cardData={cardData}
                   setAssignMemberModalOpen={setAssignMemberModalOpen}
-                  owner={data.owner}
+                  owner={cardData.owner}
                   personImg={personImg}
                   Tooltip={Tooltip}
+                  isObservationMode={isObservationMode}
                 />
                 
                 <FileManagementModal
@@ -778,27 +1000,32 @@ function Carditem({ data, index, columnIndex }) {
                   removeImage={removeImage}
                   openImageModal={openImageModal}
                   fileInputRef={fileInputRef}
+                  isObservationMode={isObservationMode}
                 />
 
                 <div className='flex justify-end mt-4 space-x-2'>
-                  <button
-                    onClick={cardHandleDelete}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
-                  >
-                    刪除
-                  </button>
+                  {!isObservationMode && (
+                    <button
+                      onClick={cardHandleDelete}
+                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+                    >
+                      刪除
+                    </button>
+                  )}
                   <button
                     onClick={() => setOpen(false)}
                     className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
                   >
-                    取消
+                    {isObservationMode ? '關閉' : '取消'}
                   </button>
-                  <button
-                    onClick={cardHandleSubmit}
-                    className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
-                  >
-                    儲存
-                  </button>
+                  {!isObservationMode && (
+                    <button
+                      onClick={cardHandleSubmit}
+                      className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
+                    >
+                      儲存
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -883,15 +1110,153 @@ function Carditem({ data, index, columnIndex }) {
               </div>
             )}
           </div>
-        </Modal> 
-      )}
 
-      <Modal open={assignMemberModalopen} onClose={() => setAssignMemberModalOpen(false)} opacity={false} position={"justify-end items-center m-3"}>
-        <button onClick={() => setAssignMemberModalOpen(false)} className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
-          <GrFormClose className='w-6 h-6' />
-        </button>
-        <AssignMember menberData={menberData} setMenberData={setMenberData} setCardData={setCardData} cardHandleSubmit={cardHandleSubmit} />
+          {/* 右側：評論區 */}
+          <div className='w-full lg:w-1/3 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 sm:p-6 lg:min-h-0 lg:overflow-y-auto'>
+            <h3 className='text-xl font-semibold mb-3'>討論區</h3>
+            {/* 評論列表 */}
+            <div className='space-y-4 mb-4'>
+              {comments.length === 0 && (
+                <div className='text-sm text-gray-400 text-center py-6'>
+                  尚無評論，來發表第一則留言吧！
+                </div>
+              )}
+              {comments.map((c) => {
+                const imgIndex = parseInt(c.user?.id || 0) % personImg.length;
+                const userImg = personImg[imgIndex];
+                return (
+                  <div key={c.id} className='flex items-start space-x-3'>
+                    <img src={userImg} alt={c.user?.username} className='w-9 h-9 rounded-full object-cover' />
+                    <div className='flex-1'>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-sm font-medium text-gray-800'>{c.user?.username}</span>
+                        <span className='text-xs text-gray-400'>{formatTime(c.createdAt, 'relative')}</span>
+                      </div>
+                      <p className='text-sm text-gray-700 whitespace-pre-wrap mt-1'>
+                        {c.content}
+                      </p>
+                      {/* 附件顯示 */}
+                      {Array.isArray(c.attachments) && c.attachments.length > 0 && (
+                        <div className='mt-2 space-y-2'>
+                          {c.attachments.map((a, i) => {
+                            const isImage = (a.mimeType || '').startsWith('image/');
+                            if (isImage) {
+                              const imgUrl = `http://localhost/api/file/image/${a.fileName}`;
+                              return (
+                                <div key={i}>
+                                  <img
+                                    src={imgUrl}
+                                    alt={a.originalName}
+                                    className='max-h-40 rounded border cursor-pointer'
+                                    onClick={() => openCommentImageModal(c.attachments.filter(x => (x.mimeType||'').startsWith('image/')), i)}
+                                  />
+                                </div>
+                              );
+                            }
+                            const dlUrl = `http://localhost/api/file/direct/${a.fileName}`;
+                            return (
+                              <div key={i} className='text-xs flex items-center gap-2'>
+                                <a href={dlUrl} target='_blank' rel='noreferrer' className='text-blue-600 hover:underline'>
+                                  {a.originalName}
+                                </a>
+                                <span className='text-gray-400'>{a.mimeType}</span>
+                                <button
+                                  onClick={() => handleCommentAttachmentDownload(a)}
+                                  className='ml-2 px-2 py-0.5 bg-customgreen text-white rounded hover:bg-customgreen/90'
+                                >
+                                  下載
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className='mt-2 flex items-center gap-3'>
+                        <button
+                          onClick={() => likeMutation.mutate({ commentId: c.id })}
+                          className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${c.likedByCurrentUser ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                          title={c.likedByCurrentUser ? '已按讚' : '按讚'}
+                        >
+                          {c.likedByCurrentUser ? <AiFillLike size={14}/> : <AiOutlineLike size={14}/>} {c.likeCount || 0}
+                        </button>
+                        {/* 編輯/刪除 */}
+                        {(() => {
+                          const loggedInId = parseInt(localStorage.getItem('id')) || 0;
+                          const isOwner = c.user?.id === loggedInId || c.userId === loggedInId;
+                          return isOwner ? (
+                            <CommentActions 
+                              comment={c} 
+                              onAfterChange={() => queryClient.invalidateQueries(['comments', cardData.id])} 
+                            />
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* 新增評論輸入框 */}
+            <div className='flex items-start space-x-3'>
+              <img src={(personImg[Math.abs(parseInt(localStorage.getItem('id')) || 0) % personImg.length])} alt='me' className='w-9 h-9 rounded-full object-cover' />
+              <div className='flex-1'>
+                <textarea
+                  className='w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
+                  rows={3}
+                  placeholder='新增評論…'
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                {/* 選擇的附件列表 */}
+                {filesToUpload.length > 0 && (
+                  <div className='mt-2 space-y-1'>
+                    {filesToUpload.map((f, idx) => (
+                      <div key={idx} className='flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded'>
+                        <span className='truncate'>{f.name}</span>
+                        <button className='text-red-500 hover:underline ml-2' onClick={() => removePendingFile(idx)}>移除</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className='flex justify-between items-center mt-2'>
+                  <div>
+                    <button
+                      type='button'
+                      onClick={() => commentFileInputRef.current && commentFileInputRef.current.click()}
+                      className={`inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800`}
+                    >
+                      <AiOutlinePaperClip />
+                      附加檔案
+                    </button>
+                    <input
+                      ref={commentFileInputRef}
+                      type='file'
+                      className='hidden'
+                      multiple
+                      onChange={handleSelectCommentFiles}
+                    />
+                  </div>
+                  <button
+                    onClick={handleAddComment}
+                    className={`px-4 py-1.5 rounded-md text-sm bg-customgreen text-white hover:bg-customgreen/90`}
+                  >
+                    送出
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </Modal>
+
+      {!isObservationMode && (
+        <Modal open={assignMemberModalopen} onClose={() => setAssignMemberModalOpen(false)} opacity={false} position={"justify-end items-center m-3"}>
+          <button onClick={() => setAssignMemberModalOpen(false)} className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
+            <GrFormClose className='w-6 h-6' />
+          </button>
+          <AssignMember menberData={menberData} setMenberData={setMenberData} setCardData={setCardData} cardHandleSubmit={cardHandleSubmit} />
+        </Modal>
+      )}
 
       <Toaster />
     </>

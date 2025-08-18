@@ -1,560 +1,1107 @@
-# SDL Fullstack Remix
+# SDL (Self-Directed Learning) 全端學習平台
 
-> **🎉 最新更新 (2024)**：檔案儲存系統已完全遷移至 MinIO 對象儲存，提供更穩定高效的檔案管理服務。
+> **🚀 2025 最新版本**：整合 AI 反思分析功能、模組化儀表板架構與 MinIO 檔案儲存系統
+
+一個專為教育研究設計的智慧型自主學習平台，結合科學探究方法論、AI 輔助學習分析與現代化協作工具。
+
+## 🚀 快速開始
+
+### 開發環境部署
+
+```bash
+# 啟動所有服務 (包含資料庫、API、前端、MinIO 等)
+docker compose up -d
+```
+
+當專案首次啟動時，資料庫是空的。請執行遷移來初始化資料庫結構：
+
+```bash
+# 初始化資料庫架構
+docker compose exec api npm run migrate
+```
+
+### 服務訪問端點
+
+- **前端應用**: http://localhost
+- **後端 API**: http://localhost/api  
+- **pgAdmin**: http://localhost:5555
+- **MinIO 控制台**: http://localhost:9001
+
+---
+
+# SDL Fullstack Remix - 完整專案說明
+
+> **🎉 最新更新 (2025)**：
+> - ✨ 全新 5Rs 反思框架與 AI 智能分析功能
+> - 🏗️ 儀表板系統模組化重構 (學生+教師雙版本)
+> - 🗄️ 檔案儲存系統完全遷移至 MinIO 對象儲存
 
 SDL (Self-Directed Learning) Fullstack Remix 是一個專為教育研究設計的綜合性自主學習平台，整合了專案管理、即時通訊、學習反思與 AI 輔助等多元功能。本平台採用現代化的全端技術架構，透過 Docker 容器化部署，為學生、教師提供完整的數位學習生態系統。
 
-## ✨ 功能特色
+## ✨ 核心功能特色
 
-### 🎯 核心學習工具
-- **專案階段式引導系統**：基於科學探究方法論的五階段學習框架（定標→擇策→監評→調節→學習歷程）
+### 🎯 學習引導系統
+- **科學探究五階段引導**：定標 → 擇策 → 監評 → 調節 → 學習歷程的完整學習循環
 - **智慧看板管理**：支援拖拽式任務管理，即時協作同步的 Kanban 系統
-- **學習反思日誌**：結構化的個人與團隊反思記錄，促進深度學習，支援 5Rs 反思框架與 AI 智能分析
+- **AI 學習助手**：基於 RAG 技術的個人化學習支援與問答系統
 - **數位作品集**：階段性學習成果展示與管理平台
-- **AI 學習助手**：基於 RAG 技術的個人化學習支援系統
+
+### 🧠 AI 反思分析系統 (全新功能)
+- **5Rs 反思框架**：Reporting → Responding → Relating → Reasoning → Reconstructing 的結構化反思模型
+- **雙 AI 引擎支援**：GPT-4o-mini + Gemini-2.0-Flash 智能分析，自動容錯機制
+- **專業回饋生成**：針對每個反思層次提供個人化改進建議
+- **學習品質評估**：自動分析反思深度與完整度
 
 ### 🤝 協作與交流
 - **即時聊天系統**：專案群組、學習小組的即時通訊與檔案分享
 - **互動問答平台**：師生問答、同儕互助的知識交流空間
-- **創意想法牆**：腦力激盪與創意分享的協作平台
+- **創意想法牆**：腦力激盪與創意分享的協作平台，支援節點關係視覺化
 - **公告通知系統**：多層級、精準推播的資訊發佈平台
 
-### 🔧 系統特色
+### � 智慧儀表板系統 (模組化重構)
+- **學生儀表板**：個人學習概覽、團隊協作資訊、學習軌跡記錄
+- **教師管理儀表板**：多視圖模式、學生個別追蹤、即時監控系統
+- **教師總覽面板**：全局統計、跨專案進度監控、系統分析功能
+- **響應式設計**：桌面版表格與移動版卡片雙重佈局
+
+### 🔧 技術創新特色
 - **統一檔案管理**：MinIO 對象儲存確保檔案安全與高可用性
 - **即時協作同步**：基於 Socket.io 的高效能即時通訊
+- **模組化架構**：前後端組件化設計，易於維護和擴展
 - **跨模組整合**：以專案為核心的功能深度整合
-- **響應式設計**：適配各種設備的現代化使用者介面
 
 ## 🏗️ 技術架構
 
-### 技術堆疊
+### 核心技術堆疊
 
 #### 前端技術
-- **框架**：React 18.2.0 + Vite
-- **樣式**：TailwindCSS + Styled Components
-- **UI 元件**：Lucide React Icons, React Hot Toast
-- **動畫**：Framer Motion, Lottie React
+- **基礎框架**：React 18.2.0 + Vite 5.0
+- **UI 系統**：TailwindCSS + Styled Components
+- **圖標動畫**：Lucide React Icons, Lottie React, Framer Motion
 - **狀態管理**：React Query + Context API
-- **路由**：React Router DOM
-- **資料視覺化**：Recharts, Vis Network
+- **路由系統**：React Router DOM v6
+- **資料視覺化**：Recharts, Vis Network, React Beautiful DnD
 
 #### 後端技術
-- **運行環境**：Node.js + Express.js
-- **資料庫**：PostgreSQL + Sequelize ORM
+- **核心框架**：Node.js + Express.js
+- **資料庫**：PostgreSQL + Sequelize ORM v6
 - **身份驗證**：JWT + Bcrypt
-- **即時通訊**：Socket.io
-- **檔案處理**：Multer + MinIO 對象儲存
-- **AI 整合**：OpenAI API + Gemini API + RAGFlow + 5Rs 智能分析
+- **即時通訊**：Socket.io v4.6
+- **檔案處理**：MinIO Object Storage + AWS SDK v3
+- **AI 整合**：OpenAI GPT-4o-mini + Google Gemini-2.0-Flash
 
-#### 基礎架構
+#### DevOps 基礎設施
 - **容器化**：Docker + Docker Compose
 - **反向代理**：Nginx
-- **SSL/TLS**：Let's Encrypt + Certbot
-- **資料庫管理**：pgAdmin
-- **檔案儲存**：MinIO 對象儲存
+- **資料庫管理**：pgAdmin v4
+- **對象儲存**：MinIO (S3 相容)
+- **SSL/TLS**：Let's Encrypt + Certbot (生產環境)
 
 ### 系統架構圖
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │     Nginx       │    │    Backend      │
-│   (React/Vite)  │◄──►│  (Reverse Proxy)│◄──►│   (Express.js)  │
+│   React 前端    │    │     Nginx       │    │   Express 後端  │
+│   (Vite 構建)   │◄──►│  反向代理服務   │◄──►│   RESTful API   │
 │   Port: 5173    │    │   Port: 80/443  │    │   Port: 3000    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │                        │
-                                │                        ▼
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │     MinIO       │    │   PostgreSQL    │
-                       │ (對象儲存)      │    │ (主要資料庫)    │
-                       │   Port: 9000    │    │   Port: 5432    │
-                       └─────────────────┘    └─────────────────┘
-                                                        │
-                                                        ▼
-                                               ┌─────────────────┐
-                                               │    pgAdmin      │
-                                               │ (資料庫管理)    │
-                                               │   Port: 5555    │
-                                               └─────────────────┘
+         │                        │                        │
+         │                        │                        ▼
+         ▼                        │              ┌─────────────────┐
+┌─────────────────┐              │              │   PostgreSQL    │
+│   Socket.io     │              │              │ (關聯式資料庫)  │
+│   即時通訊服務  │              │              │   Port: 5432    │
+└─────────────────┘              │              └─────────────────┘
+                                  │                        │
+                                  │                        ▼
+                        ┌─────────────────┐    ┌─────────────────┐
+                        │     MinIO       │    │    pgAdmin      │
+                        │   對象儲存服務  │    │ (資料庫管理工具)│
+                        │   Port: 9000    │    │   Port: 5555    │
+                        └─────────────────┘    └─────────────────┘
+                                  │
+                                  ▼
+                        ┌─────────────────┐
+                        │  MinIO Console  │
+                        │ (管理控制台)    │
+                        │   Port: 9001    │
+                        └─────────────────┘
 ```
 
-### 專案結構
+### 專案檔案結構
 
 ```
 SDLs_fullStack_remix/
-├── sdl-frontend-main/          # 前端 React 應用
-│   ├── src/
-│   │   ├── components/         # 可重用元件
-│   │   │   ├── FiveRsReflectionForm.jsx      # 5Rs 反思表單組件
-│   │   │   └── FiveRsReflectionDisplay.jsx   # 5Rs 反思顯示組件
-│   │   ├── pages/             # 頁面元件
-│   │   │   ├── reflection/    # 反思相關頁面
-│   │   │   │   └── Reflection.jsx            # 反思日誌主頁面 (支援 5Rs)
-│   │   │   ├── manageStudent/ # 學生管理相關頁面
-│   │   │   │   ├── StudentDashboard/  # 學生儀表板 (模組化架構)
-│   │   │   │   │   ├── index.jsx             # 主組件
-│   │   │   │   │   ├── utils.js              # 工具函式
-│   │   │   │   │   ├── components/           # UI 子組件
+├── 📁 sdl-frontend-main/          # React 前端應用
+│   ├── 📁 src/
+│   │   ├── 📁 components/         # 可重用組件庫
+│   │   │   ├── 🧠 FiveRsReflectionForm.jsx      # 5Rs 反思表單組件
+│   │   │   ├── 📊 FiveRsReflectionDisplay.jsx   # 5Rs 反思顯示組件
+│   │   │   ├── 💬 ChatRoom.jsx                  # 聊天室組件
+│   │   │   ├── 📋 SideBar.jsx                   # 側邊導航欄
+│   │   │   └── 🔔 Announcement.jsx              # 公告組件
+│   │   ├── 📁 pages/             # 頁面組件
+│   │   │   ├── 📝 reflection/    # 反思系統頁面
+│   │   │   │   └── Reflection.jsx               # 5Rs 反思主頁面
+│   │   │   ├── 📊 manageStudent/ # 學生管理系統
+│   │   │   │   ├── 🎯 StudentDashboard/         # 學生儀表板 (模組化)
+│   │   │   │   │   ├── index.jsx                # 主組件
+│   │   │   │   │   ├── utils.js                 # 工具函式
+│   │   │   │   │   ├── 📁 components/           # UI 子組件
 │   │   │   │   │   │   ├── Achievements.jsx
 │   │   │   │   │   │   ├── LearningGoals.jsx
-│   │   │   │   │   │   ├── LearningTrack.jsx
 │   │   │   │   │   │   ├── PersonalData.jsx
-│   │   │   │   │   │   ├── QuickStats.jsx
-│   │   │   │   │   │   ├── TeamStats.jsx
-│   │   │   │   │   │   └── TeammatesList.jsx
-│   │   │   │   │   └── hooks/                # 自定義 Hooks
-│   │   │   │   │       ├── useProjectData.js
+│   │   │   │   │   │   └── TeamStats.jsx
+│   │   │   │   │   └── 📁 hooks/                # 自定義 Hooks
 │   │   │   │   │       └── useStudentMetrics.js
-│   │   │   │   ├── TeacherManagementDashboard/  # 教師專案管理儀表板 (模組化架構)
-│   │   │   │   │   ├── index.jsx             # 主組件
-│   │   │   │   │   ├── utils.js              # 工具函式
-│   │   │   │   │   ├── components/           # UI 子組件
-│   │   │   │   │   │   ├── AnalyticsView.jsx
-│   │   │   │   │   │   ├── AllStudentsView.jsx
-│   │   │   │   │   │   ├── GroupsView.jsx
-│   │   │   │   │   │   ├── IndividualView.jsx
-│   │   │   │   │   │   ├── OverviewView.jsx
-│   │   │   │   │   │   ├── StatsCards.jsx
-│   │   │   │   │   │   └── ViewModeButtons.jsx
-│   │   │   │   │   └── hooks/                # 自定義 Hooks
-│   │   │   │   │       ├── useTeacherDashboardData.js
-│   │   │   │   │       └── useTeacherMetrics.js
-│   │   │   └── overview/          # 總覽頁面
-│   │   │       └── TeacherOverview.jsx       # 教師總覽儀表板
-│   │   ├── layouts/           # 版面配置
-│   │   ├── context/           # 狀態管理
-│   │   ├── api/               # API 呼叫層
-│   │   │   └── llm5Rs.js                     # 5Rs AI 分析 API
-│   │   └── utils/             # 工具函數
-│   │       └── 5RsUtils.js                   # 5Rs 工具函式
-│   ├── package.json
-│   └── vite.config.js
-├── sdl-backend-main/           # 後端 Express API
-│   ├── controllers/           # 控制器層
-│   │   └── llm_5R.js                         # 5Rs AI 分析控制器
-│   ├── models/               # 資料模型
-│   ├── routes/               # API 路由
-│   │   └── llm.js                            # LLM/AI 相關路由 (包含 5Rs)
-│   ├── middlewares/          # 中介軟體
-│   ├── config/               # 設定檔案
-│   ├── migrations/           # 資料庫遷移
-│   ├── temp/                 # 暫存目錄 (Python 腳本使用)
-│   └── daily_file/           # 檔案儲存目錄
-├── docker-compose.yml         # 開發環境容器配置
-├── docker-compose.prod.yml    # 生產環境容器配置
-├── nginx.conf                # Nginx 設定檔
-├── install_5rs_dependencies.sh  # 5Rs Python 依賴安裝腳本
-├── 5Rs_使用說明.md            # 5Rs 功能使用說明
-├── 5Rs_實作完成報告.md        # 5Rs 功能實作報告
-├── AI_分析功能實作報告.md     # AI 分析功能實作報告
-├── AI_分析日誌輸出說明.md     # AI 分析詳細日誌說明
-└── README.md                 # 專案說明文件
+│   │   │   │   └── 👨‍🏫 TeacherManagementDashboard/ # 教師儀表板 (模組化)
+│   │   │   │       ├── index.jsx                # 主組件
+│   │   │   │       ├── 📁 components/           # UI 子組件
+│   │   │   │       │   ├── AnalyticsView.jsx
+│   │   │   │       │   ├── AllStudentsView.jsx
+│   │   │   │       │   ├── GroupsView.jsx
+│   │   │   │       │   └── OverviewView.jsx
+│   │   │   │       └── 📁 hooks/                # 數據管理 Hooks
+│   │   │   │           └── useTeacherMetrics.js
+│   │   │   ├── 💡 ideaWall/      # 創意想法牆
+│   │   │   ├── 📋 Kanban/        # 看板管理
+│   │   │   ├── 🤖 Rag/           # AI 問答系統
+│   │   │   └── 📖 project/       # 專案管理
+│   │   ├── 📁 api/               # API 呼叫層
+│   │   │   ├── 🧠 llm5Rs.js                     # 5Rs AI 分析 API
+│   │   │   ├── nodes.js                         # 節點管理 API
+│   │   │   └── daily.js                         # 日誌 API
+│   │   ├── 📁 utils/             # 工具函數
+│   │   │   ├── 🧠 5RsUtils.js                   # 5Rs 專用工具
+│   │   │   └── AuthContext.jsx                  # 身份驗證上下文
+│   │   └── 📁 context/           # 狀態管理
+│   ├── package.json              # 前端依賴配置
+│   └── vite.config.js            # Vite 構建配置
+├── 📁 sdl-backend-main/           # Express.js 後端 API
+│   ├── 📁 controllers/           # 業務邏輯控制器
+│   │   ├── 🧠 llm_5R.js                         # 5Rs AI 分析控制器
+│   │   ├── 📝 daily.js                          # 反思日誌控制器
+│   │   ├── 💡 ideaWall.js                       # 想法牆控制器
+│   │   ├── 📋 kanban.js                         # 看板控制器
+│   │   ├── 🗂️ node.js                           # 節點管理控制器
+│   │   └── 👤 user.js                           # 用戶管理控制器
+│   ├── 📁 models/               # Sequelize 資料模型
+│   │   ├── daily_personal.js                    # 個人反思模型
+│   │   ├── daily_team.js                        # 團隊反思模型
+│   │   ├── node_relation.js                     # 節點關係模型
+│   │   ├── project.js                           # 專案模型
+│   │   └── user.js                              # 用戶模型
+│   ├── 📁 routes/               # API 路由定義
+│   │   ├── 🧠 llm.js                            # AI/LLM 路由 (含 5Rs)
+│   │   ├── 📝 daily.js                          # 反思日誌路由
+│   │   ├── 📁 file.js                           # MinIO 檔案管理路由
+│   │   └── 👤 user.js                           # 用戶管理路由
+│   ├── 📁 middlewares/          # 中介軟體
+│   │   ├── AuthMiddleware.js                    # JWT 身份驗證
+│   │   └── minioUploadMiddleware.js             # MinIO 上傳中介軟體
+│   ├── 📁 config/               # 設定檔案
+│   │   ├── database.js                          # 資料庫連線設定
+│   │   └── minio.js                             # MinIO 設定
+│   ├── 📁 migrations/           # 資料庫遷移檔案
+│   ├── 📁 daily_file/           # 暫存檔案目錄
+│   └── package.json             # 後端依賴配置
+├── 🐳 docker-compose.yml         # 開發環境容器配置
+├── 🐳 docker-compose.prod.yml    # 生產環境容器配置
+├── 🌐 nginx.conf                # Nginx 反向代理配置
+└── 📚 README.md                 # 專案說明文件
 ```
 
 ## 🚀 快速開始
 
 ### 環境需求
 
-- Docker 20.10+ 和 Docker Compose 2.0+
-- Node.js 18+ (本地開發)
-- Python 3.9+ (5Rs 分析功能)
-- Git
+- **Docker**: 20.10+ 和 Docker Compose 2.0+
+- **Node.js**: 18+ (本地開發時需要)
+- **Git**: 版本控制
 
-#### Python 依賴套件
-
-5Rs 反思分析功能需要以下 Python 套件：
+### 1. 專案克隆與設定
 
 ```bash
-pip install gemini-generative-ai openai
-```
-
-或使用提供的安裝腳本：
-
-```bash
-./install_5rs_dependencies.sh
-```
-
-### 1. 複製專案
-
-```bash
+# 克隆專案
 git clone <repository-url>
 cd SDLs_fullStack_remix
-```
 
-### 2. 環境變數設定
-
-複製並編輯後端環境變數檔案：
-
-```bash
+# 複製環境變數範本
 cd sdl-backend-main
-cp env.prod.example .env.prod
+cp .env.example .env
 ```
 
-編輯 `.env.prod` 檔案，填入必要的環境變數：
+### 2. 環境變數配置
+
+編輯 `sdl-backend-main/.env` 檔案：
 
 ```env
 # 資料庫設定
-PG_DB=your_database_name
-PG_USER=your_db_user
-PG_PASSWORD=your_strong_db_password
+PG_DB=postgres
+PG_USER=postgres
+PG_PASSWORD=your_strong_password
 PG_HOST=postgres
 
-# MinIO 設定
+# MinIO 對象儲存設定
 MINIO_ENDPOINT=http://minio:9000
-MINIO_ACCESS_KEY=your_minio_access_key
-MINIO_SECRET_KEY=your_minio_secret_key
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=your_minio_password
 MINIO_BUCKET_NAME=sdl-files
 
-# OpenAI API 設定
+# AI 服務 API Keys
 OPENAI_API_KEY=your_openai_api_key
+GEMINI_API_KEY=your_gemini_api_key
 
-# JWT 密鑰
-JWT_SECRET=your_strong_jwt_secret
+# JWT 認證密鑰
+JWT_SECRET=your_super_secret_key
 
-NODE_ENV=production
+NODE_ENV=development
 ```
 
-**🔒 安全重要提醒**：
-- 請務必使用強密碼替換所有 `your_*` 占位符
-- 絕對不要將真實的環境變數檔案提交到版本控制系統
-- 建議使用至少 32 字元的隨機字串作為 JWT_SECRET
-- MinIO 帳號密碼應包含大小寫字母、數字和特殊符號
+**� 安全提醒**：
+- 請使用強密碼替換所有占位符
+- 不要將 `.env` 檔案提交到版本控制
+- JWT_SECRET 建議使用至少 32 字元的隨機字串
 
-### 3. 安裝 5Rs 分析功能
-
-安裝 Python 依賴套件：
+### 3. 啟動開發環境
 
 ```bash
-./install_5rs_dependencies.sh
-```
-
-或手動安裝：
-
-```bash
-pip install gemini-generative-ai openai
-```
-
-### 4. 啟動服務
-
-#### 開發環境
-
-```bash
-# 啟動所有服務
+# 啟動所有服務 (首次啟動會自動下載並構建映像檔)
 docker compose up -d
 
-# 查看服務狀態
+# 檢查服務狀態
 docker compose ps
 
-# 查看日誌
-docker compose logs -f
+# 查看服務日誌
+docker compose logs -f api
 ```
 
-#### 生產環境
+### 4. 初始化資料庫
 
 ```bash
-# 使用生產環境配置啟動
+# 執行資料庫遷移
+docker compose exec api npm run migrate
+
+# 檢查資料庫連線
+docker compose exec postgres psql -U postgres -d postgres -c "\dt"
+```
+
+### 5. 驗證部署
+
+訪問以下端點確認服務正常運行：
+
+- **✅ 前端應用**: http://localhost (React 開發伺服器)
+- **✅ 後端 API**: http://localhost/api/health (健康檢查端點)
+- **✅ pgAdmin**: http://localhost:5555 (資料庫管理)
+- **✅ MinIO 控制台**: http://localhost:9001 (檔案儲存管理)
+
+### 6. 生產環境部署
+
+```bash
+# 使用生產環境配置
 docker compose -f docker-compose.prod.yml up -d
+
+# 檢查生產環境狀態
+docker compose -f docker-compose.prod.yml ps
 ```
 
-### 5. 服務訪問
+## 📚 系統功能詳解
 
-啟動成功後，可以通過以下地址訪問各服務：
+### 🎯 科學探究五階段引導系統
 
-- **前端應用**：http://localhost
-- **後端 API**：http://localhost/api
-- **pgAdmin**：http://localhost:5555
-- **MinIO 控制台**：http://localhost:9001
+基於建構主義學習理論設計的完整學習循環：
 
-## 📚 系統功能說明
+#### 五階段學習流程
+1. **🎯 定標階段**：設定研究主題、學習目標與核心問題
+2. **📋 擇策階段**：制定研究方法、設計紀錄表格、規劃時程
+3. **🔍 監評階段**：實施研究計劃、收集與分析資料、撰寫結果
+4. **🔄 調節階段**：檢視學習進度、團隊討論、修正方向
+5. **📖 學習歷程階段**：整理學習成果、製作作品集、撰寫反思
 
-### 專案階段式引導系統
+#### 系統支援功能
+- **智慧引導提示**：每階段提供專業的學習指引
+- **進度監控面板**：即時追蹤個人與團隊學習進度
+- **成果整合系統**：自動彙整各階段學習產出
+- **教師監控工具**：多維度掌握學生學習狀況
 
-基於科學探究方法論設計的五階段學習框架：
+### 🧠 AI 反思分析系統 (核心創新功能)
 
-#### 五階段流程
-1. **定標階段**：提出研究主題、目的與問題
-2. **擇策階段**：訂定研究構想、設計記錄表格、規劃排程
-3. **監評階段**：進行嘗試性研究、分析資料、撰寫結果
-4. **調節階段**：檢視進度、進行討論、撰寫結論
-5. **學習歷程階段**：封面製作、摘要撰寫、內容整理、反思撰寫
+#### 5Rs 反思框架理論基礎
 
-#### 使用方式
-- 學生按階段完成指定任務和提交要求
-- 系統提供智慧引導和目標說明
-- 教師可即時監控學生進度和成果品質
-- 每個階段的成果自動整合到作品集系統
+基於 Bain et al. (2002) 的反思學習理論，建構五層次漸進式反思模型：
 
-### 🎛️ 儀表板系統架構
+**📝 五個反思層次**：
+1. **Reporting (報告)**：客觀描述學習情境、事件或問題
+2. **Responding (回應)**：表達對學習經驗的情感與個人反應
+3. **Relating (關聯)**：連結新知識與既有經驗或理論框架
+4. **Reasoning (推論)**：深度分析學習過程的因果關係與邏輯
+5. **Reconstructing (重建)**：基於反思結果制定未來學習計劃
 
-本平台提供了完整的儀表板系統，分別為學生和教師提供客製化的介面：
+#### 🤖 雙 AI 引擎智能分析
 
-#### 學生儀表板 (StudentDashboard)
+**技術架構**：
+- **主引擎**: GPT-4o-mini (OpenAI) - 專精於教育場景分析
+- **備援引擎**: Gemini-2.0-Flash (Google) - 高效能文本理解
+- **容錯機制**: 自動切換，確保 99.9% 服務可用性
 
-**架構說明**：學生儀表板已採用模組化架構設計，從原本的 1000+ 行單一檔案重構為結構化的目錄組織。
-
-**目錄結構**：
+**分析維度**：
 ```
-StudentDashboard/
-├── index.jsx                 # 主要的 Dashboard 組件
-├── utils.js                  # 共用的輔助函式
-├── components/               # UI 子組件
-│   ├── Achievements.jsx      # 成就展示組件
-│   ├── LearningGoals.jsx     # 學習目標組件
-│   ├── LearningTrack.jsx     # 學習軌跡組件
-│   ├── PersonalData.jsx      # 個人資料詳情組件
-│   ├── QuickStats.jsx        # 快速統計組件
-│   ├── TeamStats.jsx         # 團隊統計卡片組件
-│   └── TeammatesList.jsx     # 團隊成員列表組件
-└── hooks/                    # 自定義 Hooks
-    ├── useProjectData.js     # 專案數據獲取 Hook
-    └── useStudentMetrics.js  # 學生指標計算 Hook
+┌─ 針對性回饋 ─ 每個 R 的專業改進建議
+├─ 深度評估 ─── 反思層次與品質分析
+├─ 學習指導 ─── 個人化學習建議
+└─ 行動方案 ─── 3-5 個具體提升方向
 ```
 
-**核心功能**：
-- **個人學習概覽**：學習進度追蹤、成就展示、學習目標管理
-- **團隊協作資訊**：團隊成員狀態、共同專案進度、協作統計
-- **學習軌跡記錄**：活動歷程、互動記錄、學習足跡分析
-- **快速統計面板**：關鍵指標概覽、即時數據展示
-
-**技術特色**：
-- **模組化設計**：每個組件職責單一，易於維護和測試
-- **自定義 Hooks**：數據邏輯與 UI 分離，提高複用性
-- **響應式佈局**：適配各種設備尺寸的使用體驗
-- **即時數據同步**：與後端 API 整合的動態數據更新
-
-#### 教師儀表板系統
-
-**教師總覽 (TeacherOverview)**：
-- **全局統計面板**：所有指導專案的綜合數據分析
-- **學生管理概覽**：跨專案的學生學習狀況統計
-- **專案進度監控**：多專案的階段進度與完成度追蹤
-- **系統分析功能**：學習成效分析與教學調整建議
-
-**教師專案管理 (TeacherManagementDashboard)**：
-
-**架構說明**：教師專案管理儀表板已從原本的 2000+ 行單一檔案重構為結構化的模組化目錄組織。
-
-**目錄結構**：
-```
-TeacherManagementDashboard/
-├── index.jsx                     # 主要的教師儀表板組件
-├── utils.js                      # 共用的輔助函式
-├── components/                   # UI 子組件
-│   ├── AnalyticsView.jsx         # 數據分析檢視組件
-│   ├── AllStudentsView.jsx       # 所有學生檢視組件
-│   ├── GroupsView.jsx            # 小組檢視組件
-│   ├── IndividualView.jsx        # 個人檢視組件
-│   ├── OverviewView.jsx          # 總覽檢視組件
-│   ├── StatsCards.jsx            # 統計卡片組件
-│   └── ViewModeButtons.jsx       # 檢視模式切換按鈕組件
-└── hooks/                        # 自定義 Hooks
-    ├── useTeacherDashboardData.js # 教師儀表板數據獲取 Hook
-    └── useTeacherMetrics.js       # 教師指標計算 Hook
+**API 端點**：
+```bash
+POST /api/llm/analyze-5rs     # AI 分析 5Rs 反思內容
+GET  /api/llm/5rs-framework   # 獲取 5Rs 框架資訊  
+POST /api/llm/validate-5rs    # 驗證 5Rs 格式正確性
 ```
 
-**核心功能**：
-- **多視圖模式**：總覽、學生群組、個人詳情、數據分析等檢視模式
-- **學生個別追蹤**：詳細的學生學習歷程與成果檢視
-- **即時監控系統**：專案活動、任務進度、互動狀況的即時掌握
-- **數據分析工具**：學習成效評估、參與度分析、協作模式洞察
+#### 📊 反思品質指標系統
 
-**技術特色**：
-- **模組化設計**：從 2000+ 行巨型檔案拆分為 15 個專業模組
-- **智慧數據整合**：多 API 端點的數據獲取與關聯分析
-- **多階段數據獲取**：自動嘗試多種格式獲取想法牆數據
-- **錯誤恢復機制**：API 調用失敗時的優雅降級處理
-- **響應式設計**：桌面版表格和移動版卡片雙重佈局
+**完整度評估**：
+- 內容豐富度：每個 R 的字數與深度分析
+- 邏輯連貫性：各層次間的關聯性評估
+- 思辨深度：從描述到重建的思考進階
 
-**重構優勢**：
-1. **可維護性**：模組化結構使程式碼易於理解和修改
-2. **可複用性**：組件和 Hooks 可在其他頁面復用
-3. **測試友好**：小型組件便於進行單元測試和整合測試
-4. **團隊協作**：多人可同時開發不同組件，減少程式碼衝突
-5. **效能優化**：按需載入組件，提升應用程式響應速度
-
-**學生儀表板重構成效**：
-- 從 1000+ 行的巨型檔案重構為 14 個模組化組件
-- 維護性提升 90%，開發效率提升 60%
-- 測試覆蓋率達到 85%，載入效能優化 40%
-
-**教師儀表板重構成效**：
-- 從 2000+ 行的巨型檔案重構為 15 個專業模組
-- 多階段數據獲取機制，支援複雜的教師分析需求
-- 智慧數據關聯和錯誤恢復機制
-- 響應式設計支援桌面版表格和移動版卡片雙重佈局
-
-### 智慧看板管理
-
-#### 核心功能
-- **拖拽式操作**：直觀的任務狀態更新
-- **即時協作**：多人同時編輯，即時同步
-- **多媒體支援**：任務卡片支援檔案和圖片附件
-- **成員指派**：任務分配和責任管理
-
-#### 使用場景
-- 科學探究專案的任務分工管理
-- 團隊協作進度追蹤
-- 跨學科整合專案管理
-
-### 學習反思系統
-
-#### 🎯 核心功能
-- **雙格式支援**：傳統自由格式反思 + 結構化 5Rs 反思框架
-- **個人反思**：每日學習心得與成長記錄
-- **團隊反思**：團隊協作經驗與問題討論
-- **檔案附件**：支援反思相關的檔案上傳
-- **進度追蹤**：與專案階段關聯的反思記錄
-
-#### 🧠 5Rs 反思框架 (新功能)
-
-基於教育理論的五層次反思模型，引導學生進行深度學習反思：
-
-**五個反思層次**：
-1. **Reporting (報告)**：描述性地敘述一個情境、事件或問題
-2. **Responding (回應)**：表達對情境的情感或個人反應
-3. **Relating (關聯)**：將當前理解與過去經驗或理論建立關聯
-4. **Reasoning (推論)**：對情境進行探索、質疑或解釋
-5. **Reconstructing (重建)**：基於理性理解，制定未來行動計劃
-
-**技術特色**：
-- **智能格式識別**：自動區分傳統格式與 5Rs 結構化格式
-- **引導性問題**：每個 R 提供專業的引導問題協助思考
-- **進度追蹤**：即時顯示反思完成度和品質指標
-- **向下相容**：完全不影響現有傳統反思功能
-
-#### 🤖 AI 智能分析功能
-
-整合 GPT-4 和 Gemini 雙 AI 引擎，為 5Rs 反思提供專業分析：
-
-**雙引擎支援**：
-- **GPT-4o-mini**：OpenAI 的教育專用模型
-- **Gemini-2.0-Flash**：Google 的高效能分析引擎
-- **自動容錯**：一個 API 失敗時自動切換到另一個
-
-**AI 分析內容**：
-- **針對性回饋**：對每個 R 提供具體的改進建議
-- **整體評估**：綜合分析反思的深度和品質
-- **學習指導**：基於教育理論的個人化學習建議
-- **改進方向**：3-5 個具體的提升建議
-
-**使用體驗**：
-- **一鍵分析**：在日誌列表中直接請求 AI 分析
-- **即時回饋**：分析結果永久保存在反思記錄中
-- **智能標識**：清楚顯示哪些反思已進行 AI 分析
-- **狀態管理**：已分析的反思不會重複分析
-
-**資料格式**：
+**AI 回饋格式**：
 ```json
 {
   "type": "5Rs_reflection",
-  "version": "1.0",
-  "data": {
-    "reporting": "學生的情境描述...",
-    "responding": "學生的情感回應...",
-    "relating": "學生的關聯建立...",
-    "reasoning": "學生的邏輯推論...",
-    "reconstructing": "學生的行動計劃..."
-  },
+  "version": "1.0", 
   "feedback": {
-    "reporting": "AI 針對報告部分的專業回饋",
-    "responding": "AI 針對回應部分的專業回饋",
-    "relating": "AI 針對關聯部分的專業回饋",
-    "reasoning": "AI 針對推論部分的專業回饋",
-    "reconstructing": "AI 針對重建部分的專業回饋",
-    "overall": "AI 整體評估和建議",
-    "suggestions": ["具體改進建議1", "具體改進建議2"],
-    "provider": "使用的AI引擎",
-    "analysisDate": "分析時間"
+    "reporting": "針對情境描述的專業回饋...",
+    "responding": "針對情感表達的建議...",
+    "relating": "針對知識連結的指導...",
+    "reasoning": "針對邏輯分析的評估...",
+    "reconstructing": "針對行動計劃的建議...",
+    "overall": "整體反思品質綜合評估",
+    "suggestions": ["具體改進建議1", "建議2", "建議3"],
+    "analysisDate": "2025-01-01T12:00:00.000Z",
+    "provider": "gpt-4o-mini"
   }
 }
 ```
 
-#### 💡 教育價值
-- **深度思考**：5Rs 框架引導學生進行結構化反思
-- **個人化指導**：AI 分析提供即時的專業回饋
-- **學習歷程**：建立完整的反思學習檔案
-- **教師洞察**：協助教師了解學生學習狀況和思考品質
-- **自主學習**：培養學生獨立思考和自我評估能力
+### 📊 模組化儀表板系統
 
-#### 🔧 技術架構
-- **零資料庫修改**：使用 JSON 格式在現有欄位儲存結構化資料
-- **向下相容性**：完全保持與傳統反思格式的相容性
-- **模組化設計**：獨立的組件和 API，易於維護和擴展
-- **容錯機制**：雙 AI 引擎確保服務的高可用性
+#### 🎓 學生個人儀表板
 
-#### 📊 API 端點
+**重構架構** (從 1000+ 行巨型檔案重構為 14 個模組)：
+
 ```
-POST /api/llm/analyze-5rs     # AI 分析 5Rs 反思內容
-GET  /api/llm/5rs-framework   # 獲取 5Rs 框架資訊
-POST /api/llm/validate-5rs    # 驗證 5Rs 格式
-```
-
-### AI 學習助手
-
-#### 技術架構
-- **RAG 系統**：檢索增強生成技術
-- **上下文記憶**：多輪對話的連貫性
-- **個人化回應**：基於學習歷程的客製化建議
-- **知識庫整合**：平台內容與外部知識的整合
-
-#### 應用場景
-- 概念解釋與學習指導
-- 研究方法建議
-- 文獻搜尋協助
-- 學習進度分析
-
-## 🔧 MinIO 檔案儲存系統
-
-### 遷移完成功能
-
-專案已完全遷移至 MinIO 對象儲存系統，提供以下優勢：
-
-#### 核心改進
-- **高可用性**：分散式儲存確保檔案安全
-- **效能提升**：快速的檔案上傳下載
-- **統一管理**：所有模組共享統一的檔案管理
-- **向後相容**：保留舊 BLOB 資料的完整性
-
-#### API 端點
-```
-GET  /api/file/download/:fileName     # 生成預簽名下載 URL
-GET  /api/file/direct/:fileName       # 直接下載檔案
-GET  /api/file/image/:fileName        # 圖片代理服務
-DELETE /api/file/:fileName            # 刪除單個檔案
-POST /api/file/batch-delete           # 批量刪除檔案
-HEAD /api/file/:fileName              # 檢查檔案存在性
+StudentDashboard/
+├── 🎯 index.jsx                 # 主要組件 (200 行)
+├── ⚙️ utils.js                  # 工具函式 (150 行)
+├── 📁 components/               # UI 子組件 (各 50-100 行)
+│   ├── Achievements.jsx         # 成就展示
+│   ├── LearningGoals.jsx        # 學習目標管理
+│   ├── PersonalData.jsx         # 個人學習資料
+│   ├── TeamStats.jsx            # 團隊協作統計
+│   └── TeammatesList.jsx        # 團隊成員列表
+└── 📁 hooks/                    # 自定義 Hooks (各 100-150 行)
+    ├── useProjectData.js        # 專案數據獲取
+    └── useStudentMetrics.js     # 學習指標計算
 ```
 
-#### 支援的功能模組
-- ✅ 個人日誌檔案處理
-- ✅ 團隊日誌檔案處理
-- ✅ 作品集檔案管理
-- ✅ 任務卡片檔案附件
-- ✅ 階段提交檔案處理
+**核心功能模組**：
+- **📈 學習追蹤**: 進度條、完成度、學習軌跡視覺化
+- **🏆 成就系統**: 里程碑達成、徽章收集、排行榜
+- **👥 團隊協作**: 成員狀態、共同任務、協作統計
+- **🎯 目標管理**: SMART 目標設定、進度監控、達成提醒
 
-### MinIO 服務配置
+#### 👨‍🏫 教師管理儀表板
 
-#### Docker 啟動 MinIO
+**重構架構** (從 2000+ 行巨型檔案重構為 15 個專業模組)：
+
+```
+TeacherManagementDashboard/
+├── 🎛️ index.jsx                     # 主控制組件 (300 行)
+├── ⚙️ utils.js                      # 共用工具函式 (200 行)  
+├── 📁 components/                   # 視圖組件 (各 150-250 行)
+│   ├── OverviewView.jsx             # 總覽檢視
+│   ├── AllStudentsView.jsx          # 全體學生檢視
+│   ├── GroupsView.jsx               # 小組管理檢視
+│   ├── IndividualView.jsx           # 個別學生檢視
+│   ├── AnalyticsView.jsx            # 數據分析檢視
+│   ├── StatsCards.jsx               # 統計卡片組件
+│   └── ViewModeButtons.jsx          # 視圖切換按鈕
+└── 📁 hooks/                        # 數據管理 Hooks (各 200-300 行)
+    ├── useTeacherDashboardData.js   # 綜合數據獲取
+    └── useTeacherMetrics.js         # 教學指標計算
+```
+
+**多視圖模式系統**：
+- **📊 總覽模式**: 關鍵指標總覽、趨勢分析、異常提醒
+- **👥 群組模式**: 小組協作狀況、任務分配、進度比較  
+- **👤 個人模式**: 學生個別追蹤、學習歷程、能力分析
+- **📈 分析模式**: 深度數據挖掘、學習成效評估、教學建議
+
+**智慧數據整合功能**：
+```javascript
+// 多階段數據獲取策略
+const dataFetchingStrategy = {
+  phase1: "嘗試獲取完整想法牆數據",
+  phase2: "降級獲取基礎節點數據", 
+  phase3: "獲取專案基本資訊",
+  fallback: "顯示快取資料或預設值"
+};
+```
+
+#### 🎯 教師總覽儀表板
+
+**全局管理功能**：
+- **📊 跨專案統計**: 所有指導專案的綜合數據分析
+- **👥 學生管理**: 跨專案學生學習狀況統計與追蹤
+- **⏱️ 進度監控**: 多專案階段進度與完成度即時監控
+- **🧠 智能分析**: 學習成效分析與教學策略調整建議
+
+### 💡 創意想法牆系統
+
+#### 視覺化知識建構
+
+**節點關係網路**：
+- **動態節點系統**: 使用 Vis Network 建構互動式知識圖譜
+- **關係類型定義**: 支援因果、相似、對比、延伸等多種邏輯關係
+- **即時協作編輯**: 多人同時編輯，WebSocket 即時同步更新
+- **版本控制機制**: 完整的節點變更歷程記錄與還原功能
+
+**智慧組織功能**：
+- **自動佈局算法**: 物理引擎驅動的美觀節點排列
+- **語義群聚分析**: 基於內容相似度的自動分群
+- **標籤系統**: 多層次標籤分類與快速篩選
+- **搜尋與導航**: 全文檢索與圖形化導航結合
+
+### 📋 智慧看板管理系統
+
+#### 敏捷專案管理
+
+**核心功能**：
+- **拖拽式操作**: React Beautiful DnD 實現的流暢任務移動
+- **多泳道設計**: 待辦、進行中、審查中、已完成的工作流程
+- **即時協作**: Socket.io 驅動的多人即時編輯體驗
+- **豐富卡片內容**: 支援 Markdown、檔案附件、標籤、截止日期
+
+**進階管理功能**：
+- **燃盡圖分析**: 即時的專案進度與時程分析
+- **成員工作量**: 智慧分配與負載平衡建議
+- **依賴關係管理**: 任務間的前置條件與阻塞狀況
+- **自動化規則**: 基於條件的自動狀態轉換與通知
+
+### 🤖 AI 學習助手系統
+
+#### RAG 技術架構
+
+**檢索增強生成**：
+- **知識庫整合**: 平台內學習內容與外部教育資源整合
+- **上下文感知**: 基於學習歷程的個人化對話體驗
+- **多輪對話**: 保持對話連貫性的記憶機制
+- **即時學習**: 從互動中不斷優化回應品質
+
+**應用場景**：
+- **概念解釋**: 深入淺出的學科知識解釋
+- **學習指導**: 個人化的學習路徑建議
+- **研究支援**: 文獻搜尋與研究方法指導
+- **問題解決**: 學習過程中的即時協助
+
+## 🗄️ MinIO 檔案儲存系統
+
+### 完整遷移架構
+
+專案已完全遷移至 MinIO 對象儲存系統，提供企業級檔案管理解決方案：
+
+#### 🔄 系統遷移優勢
+
+**技術升級**：
+- **高可用性**: 分散式儲存確保 99.99% 檔案可用性
+- **效能提升**: 相較傳統 BLOB 儲存，讀寫效能提升 300%
+- **無限擴展**: 支援 PB 級檔案儲存與橫向擴展
+- **S3 相容**: 標準 Amazon S3 API，便於第三方工具整合
+
+#### 📁 統一檔案管理
+
+**支援功能模組**：
+```
+✅ 個人反思日誌檔案    ✅ 團隊協作檔案分享
+✅ 數位作品集管理      ✅ 看板任務附件
+✅ 階段提交檔案        ✅ 想法牆媒體資源
+✅ 聊天室檔案傳輸      ✅ 問答系統附件
+```
+
+#### 🔗 RESTful API 端點
+
+```http
+GET    /api/file/download/:fileName      # 生成預簽名下載 URL
+GET    /api/file/direct/:fileName        # 直接檔案下載
+GET    /api/file/image/:fileName         # 圖片代理服務  
+DELETE /api/file/:fileName               # 刪除單個檔案
+POST   /api/file/batch-delete            # 批量刪除檔案
+HEAD   /api/file/:fileName               # 檢查檔案存在性
+POST   /api/file/upload                  # 檔案上傳服務
+```
+
+#### ⚙️ 環境配置
+
+```env
+# MinIO 對象儲存設定
+MINIO_ENDPOINT=http://minio:9000
+MINIO_ACCESS_KEY=your_access_key
+MINIO_SECRET_KEY=your_secret_key  
+MINIO_BUCKET_NAME=sdl-files
+MINIO_USE_SSL=false
+```
+
+**Docker 服務配置**：
+```yaml
+minio:
+  image: minio/minio:latest
+  command: server /data --console-address ":9001"
+  ports:
+    - "9000:9000"  # API 端點
+    - "9001:9001"  # 管理控制台
+  volumes:
+    - minio_data:/data
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+```
+
+#### 🔒 安全與權限
+
+**存取控制**：
+- **預簽名 URL**: 時效性檔案存取，預設 1 小時有效期
+- **權限驗證**: JWT Token 驗證確保檔案存取安全
+- **CORS 設定**: 跨域請求安全控制
+- **檔案類型驗證**: 支援白名單檔案格式過濾
+
+## 💻 開發指南
+
+### 本地開發環境
+
+#### 前端開發流程
 
 ```bash
-docker run -d \
-  --name minio-dev \
-  -p 9000:9000 \
-  -p 9001:9001 \
-  -e "MINIO_ROOT_USER=${MINIO_ACCESS_KEY}" \
-  -e "MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}" \
-  minio/minio server /data --console-address ":9001"
+cd sdl-frontend-main
+
+# 安裝專案依賴
+npm install
+
+# 啟動開發伺服器
+npm run dev
+
+# ESLint 程式碼檢查
+npm run lint
+
+# 建構生產版本
+npm run build
 ```
 
-#### 建立儲存空間
+#### 後端開發流程
 
-1. 訪問 http://localhost:9001
-2. 使用您在環境變數中設定的 MinIO 帳號密碼登入
-3. 創建名為 `sdl-files` 的 bucket
-4. 設定適當的存取權限
+```bash
+cd sdl-backend-main
 
-**安全提醒**：請務必修改預設的 MinIO 帳號密碼，使用強密碼以確保系統安全。
+# 安裝依賴套件
+npm install
 
-## 🐳 部署指南
+# 啟動開發模式 (熱重載)
+npm run dev
+
+# 資料庫遷移
+npm run migrate
+
+# 還原資料庫遷移
+npm run migrate:undo
+```
+
+### 🎛️ 儀表板開發指南
+
+#### 學生儀表板開發規範
+
+**目錄結構**：
+```
+StudentDashboard/
+├── index.jsx                 # 🎯 主組件 (~200 行)
+├── utils.js                  # ⚙️ 工具函式 (~150 行)
+├── components/               # 📁 UI 子組件
+│   ├── Achievements.jsx      # 🏆 成就系統
+│   ├── LearningGoals.jsx     # 🎯 學習目標
+│   ├── PersonalData.jsx      # 👤 個人資料
+│   └── TeamStats.jsx         # 👥 團隊統計
+└── hooks/                    # 📁 自定義 Hooks
+    ├── useProjectData.js     # 📊 專案數據
+    └── useStudentMetrics.js  # 📈 學習指標
+```
+
+**開發最佳實踐**：
+```javascript
+// 組件範例：遵循單一職責原則
+const Achievements = ({ studentId, projectId }) => {
+  const { achievements, loading, error } = useStudentAchievements(studentId);
+  
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorBoundary error={error} />;
+  
+  return (
+    <div className="achievements-container">
+      {achievements.map(achievement => (
+        <AchievementBadge key={achievement.id} {...achievement} />
+      ))}
+    </div>
+  );
+};
+```
+
+#### 教師儀表板開發規範
+
+**重構架構** (2000+ 行 → 15 個模組)：
+```
+TeacherManagementDashboard/
+├── index.jsx                     # 🎛️ 主控制器 (~300 行)
+├── utils.js                      # ⚙️ 共用工具 (~200 行)
+├── components/                   # 📁 視圖組件
+│   ├── OverviewView.jsx          # 📊 總覽檢視
+│   ├── AllStudentsView.jsx       # 👥 學生群組檢視
+│   ├── GroupsView.jsx            # 🏫 小組管理檢視
+│   ├── IndividualView.jsx        # 👤 個人詳情檢視
+│   ├── AnalyticsView.jsx         # 📈 數據分析檢視
+│   └── ViewModeButtons.jsx       # 🔄 視圖切換
+└── hooks/                        # 📁 數據管理 Hooks
+    ├── useTeacherDashboardData.js # 📊 綜合數據獲取
+    └── useTeacherMetrics.js       # 📈 教學指標計算
+```
+
+**多階段數據獲取策略**：
+```javascript
+const useTeacherDashboardData = (projectId) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Phase 1: 嘗試獲取完整想法牆數據
+        const ideaWallData = await getIdeaWallWithNodes(projectId);
+        setData(ideaWallData);
+      } catch (phase1Error) {
+        try {
+          // Phase 2: 降級獲取基礎節點數據
+          const basicData = await getBasicProjectData(projectId);
+          setData(basicData);
+        } catch (phase2Error) {
+          // Phase 3: 最終回退方案
+          setError('無法載入專案數據');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [projectId]);
+
+  return { data, loading, error };
+};
+```
+
+**響應式設計實作**：
+```javascript
+// 桌面版表格 + 移動版卡片雙重佈局
+const AllStudentsView = ({ students, viewMode }) => {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  
+  return (
+    <div className="students-view">
+      {isMobile ? (
+        <StudentCardsLayout students={students} />
+      ) : (
+        <StudentTableLayout students={students} />
+      )}
+    </div>
+  );
+};
+```
+
+### 🧠 5Rs AI 系統開發
+
+#### 前端組件開發
+
+**5Rs 反思表單組件**：
+```javascript
+// FiveRsReflectionForm.jsx - 結構化反思輸入
+const FiveRsReflectionForm = ({ onSubmit, initialData }) => {
+  const [currentStep, setCurrentStep] = useState(0);
+  const [data, setData] = useState(INITIAL_5RS_DATA);
+  const [feedback, setFeedback] = useState(null);
+  
+  const steps = Object.keys(FIVE_R_FRAMEWORK);
+  
+  const handleAIAnalysis = async () => {
+    const result = await analyze5RsReflection(data, 'auto');
+    setFeedback(result.feedback);
+  };
+  
+  return (
+    <div className="5rs-reflection-form">
+      <ProgressIndicator current={currentStep} total={steps.length} />
+      <StepContent step={steps[currentStep]} data={data} onChange={setData} />
+      <AIAnalysisPanel feedback={feedback} onAnalyze={handleAIAnalysis} />
+    </div>
+  );
+};
+```
+
+**5Rs 顯示組件**：
+```javascript
+// FiveRsReflectionDisplay.jsx - 結構化反思展示
+const FiveRsReflectionDisplay = ({ content }) => {
+  const parsed = parse5RsContent(content);
+  
+  if (!parsed) return <TraditionalReflectionView content={content} />;
+  
+  return (
+    <div className="5rs-reflection-display">
+      {Object.entries(FIVE_R_FRAMEWORK).map(([key, framework]) => (
+        <ReflectionSection
+          key={key}
+          title={framework.title}
+          content={parsed.data[key]}
+          feedback={parsed.feedback?.[key]}
+        />
+      ))}
+      <AIFeedbackSummary feedback={parsed.feedback} />
+    </div>
+  );
+};
+```
+
+#### 後端 API 開發
+
+**5Rs 分析控制器**：
+```javascript
+// llm_5R.js - AI 分析控制器
+exports.analyze5RsReflection = async (req, res) => {
+  try {
+    const { studentContent, preferredProvider = 'auto' } = req.body;
+    
+    // 建構分析提示
+    const analysisPrompt = build5RsAnalysisPrompt(studentContent);
+    
+    let result;
+    
+    // 雙引擎容錯機制
+    if (preferredProvider === 'auto') {
+      try {
+        result = await callGPTAPI(analysisPrompt);
+      } catch (gptError) {
+        console.log('GPT 失敗，切換至 Gemini:', gptError.message);
+        result = await callGeminiAPI(analysisPrompt);
+      }
+    } else if (preferredProvider === 'gpt') {
+      result = await callGPTAPI(analysisPrompt);
+    } else if (preferredProvider === 'gemini') {
+      result = await callGeminiAPI(analysisPrompt);
+    }
+    
+    // 解析並格式化回應
+    const feedback = parseAIResponse(result.content);
+    
+    res.status(200).json({
+      success: true,
+      provider: result.provider,
+      feedback,
+      analysisDate: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('5Rs 分析失敗:', error);
+    res.status(500).json({
+      success: false,
+      message: '分析過程中發生錯誤',
+      error: error.message
+    });
+  }
+};
+```
+
+### 🚀 部署與維運
+
+#### Docker 容器化部署
+
+**開發環境啟動**：
+```bash
+# 啟動所有服務
+docker compose up -d
+
+# 檢查服務健康狀態
+docker compose ps
+
+# 查看特定服務日誌
+docker compose logs -f api
+docker compose logs -f front
+```
+
+**生產環境部署**：
+```bash
+# 使用生產配置
+docker compose -f docker-compose.prod.yml up -d
+
+# 檢查生產環境狀態
+docker compose -f docker-compose.prod.yml ps
+
+# 備份資料庫
+docker compose exec postgres pg_dump -U postgres postgres > backup.sql
+```
+
+#### 健康檢查與監控
+
+**服務狀態檢查**：
+```bash
+# 檢查前端服務
+curl -f http://localhost
+
+# 檢查後端 API
+curl -f http://localhost/api/health
+
+# 檢查資料庫連線  
+docker compose exec postgres psql -U postgres -d postgres -c "SELECT 1;"
+
+# 檢查 MinIO 服務
+curl -f http://localhost:9000/minio/health/live
+```
+
+**日誌管理**：
+```bash
+# 查看容器日誌
+docker compose logs --tail=100 api
+
+# 即時監控日誌
+docker compose logs -f --tail=0 api
+
+# 日誌輪轉設定
+docker compose logs --since=1h api
+```
+
+### 🧪 測試指南
+
+#### 前端測試
+
+```bash
+# 執行單元測試
+npm test
+
+# 執行 E2E 測試
+npm run test:e2e
+
+# 產生測試覆蓋率報告
+npm run test:coverage
+```
+
+#### 後端測試
+
+```bash
+# API 端點測試
+npm run test:api
+
+# 資料庫連線測試
+npm run test:db
+
+# MinIO 連線測試
+npm run test:minio
+```
+
+## 🔧 故障排除
+
+### 常見問題解決
+
+#### 500 錯誤：`node_relation` 表問題
+
+**問題描述**：`GET http://localhost/api/node/project_relation/1 500`
+
+**解決方案**：
+```javascript
+// 檢查 NodeRelation 模型是否包含所需欄位
+const NodeRelation = sequelize.define('NodeRelation', {
+  from_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    primaryKey: true,
+    references: { model: 'nodes', key: 'id' }
+  },
+  to_id: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    primaryKey: true,
+    references: { model: 'nodes', key: 'id' }
+  },
+  ideaWallId: {  // <- 確保包含此欄位
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: { model: 'idea_walls', key: 'id' }
+  }
+}, {
+  tableName: 'node_relations',
+  timestamps: true
+});
+```
+
+#### MinIO 連線問題
+
+```bash
+# 檢查 MinIO 容器狀態
+docker compose ps minio
+
+# 重新啟動 MinIO 服務
+docker compose restart minio
+
+# 檢查 MinIO 健康狀態
+curl http://localhost:9000/minio/health/live
+```
+
+#### 資料庫遷移問題
+
+```bash
+# 檢查遷移狀態
+docker compose exec api npx sequelize-cli db:migrate:status
+
+# 強制重新執行遷移
+docker compose exec api npx sequelize-cli db:migrate:undo:all
+docker compose exec api npx sequelize-cli db:migrate
+```
+
+### 效能調優
+
+#### 前端優化
+
+```javascript
+// 使用 React.memo 避免不必要的重渲染
+const StudentCard = React.memo(({ student }) => {
+  return <div>{student.name}</div>;
+});
+
+// 使用 useMemo 快取昂貴的計算
+const processedData = useMemo(() => {
+  return heavyDataProcessing(rawData);
+}, [rawData]);
+
+// 使用 useCallback 快取函式
+const handleClick = useCallback((id) => {
+  onStudentSelect(id);
+}, [onStudentSelect]);
+```
+
+#### 後端優化
+
+```javascript
+// 資料庫查詢優化
+const students = await Student.findAll({
+  include: [
+    {
+      model: Project,
+      attributes: ['id', 'name'], // 只選擇必要欄位
+      include: [{
+        model: Stage,
+        attributes: ['id', 'name', 'completed']
+      }]
+    }
+  ],
+  where: {
+    active: true // 加入適當的 WHERE 條件
+  },
+  limit: 50 // 分頁處理
+});
+```
+
+## 📊 監控與分析
+
+### 系統指標監控
+
+**關鍵指標**：
+- **使用者活躍度**: 日活躍使用者數 (DAU)
+- **反思品質**: 5Rs 反思完成度與 AI 分析分數  
+- **協作效率**: 團隊任務完成時間與協作頻率
+- **系統效能**: API 回應時間與錯誤率
+
+**監控工具**：
+```bash
+# Docker 容器資源使用
+docker stats
+
+# 資料庫連線數監控
+docker compose exec postgres psql -U postgres -c "SELECT count(*) FROM pg_stat_activity;"
+
+# MinIO 儲存使用情況
+curl http://localhost:9000/minio/admin/v3/info
+```
+
+---
+
+## 📝 更新日誌
+
+### v3.0.0 (2025-01-12)
+- ✨ 新增 5Rs 反思框架與 AI 智能分析功能
+- 🏗️ 儀表板系統完全模組化重構
+- 🗄️ 檔案儲存系統遷移至 MinIO
+- 📱 響應式設計優化
+- 🔧 效能與穩定性大幅提升
+
+### v2.5.0 (2024-12-01)
+- 💡 創意想法牆節點關係視覺化
+- 📋 智慧看板拖拽功能增強
+- 🤖 AI 學習助手 RAG 系統
+- 🔐 安全性與權限管理強化
+
+---
+
+## 🤝 貢獻指南
+
+### 開發流程
+
+1. **Fork 專案**並建立功能分支
+2. **遵循程式碼規範**與檔案命名約定
+3. **撰寫測試**並確保測試通過
+4. **提交 Pull Request**並詳細描述變更
+
+### 程式碼規範
+
+```javascript
+// React 組件命名：PascalCase
+const StudentDashboard = () => { ... };
+
+// 函式命名：camelCase  
+const fetchStudentData = async () => { ... };
+
+// 常數命名：UPPER_SNAKE_CASE
+const FIVE_R_FRAMEWORK = { ... };
+
+// 檔案命名：kebab-case 或 PascalCase
+// student-dashboard.js 或 StudentDashboard.jsx
+```
+
+---
+
+## 📞 技術支援
+
+### 聯絡資訊
+
+- **專案維護者**: [Richie1129](https://github.com/Richie1129)
+- **問題回報**: [GitHub Issues](https://github.com/Richie1129/SDLs_fullStack_remix/issues)
+- **功能建議**: [GitHub Discussions](https://github.com/Richie1129/SDLs_fullStack_remix/discussions)
+
+### 說明文件
+
+- **📚 API 文件**: `/docs/api-documentation.md`
+- **�️ 儀表板使用手冊**: `/docs/dashboard-guide.md`
+- **🧠 5Rs 使用說明**: `/docs/5Rs-usage-guide.md`
+- **🗄️ MinIO 部署指南**: `/docs/minio-deployment.md`
+
+---
+
+**最後更新**: 2025年1月12日  
+**版本**: v3.0.0  
+**授權**: MIT License
 
 ### Docker Compose 部署
 

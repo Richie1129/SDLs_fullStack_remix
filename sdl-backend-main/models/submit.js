@@ -10,6 +10,11 @@ const Submit = sequelize.define('submit', {
         type: DataTypes.JSON,
         allowNull:false,
     },
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'users', key: 'id' }
+    },
     fileData:{
         type: DataTypes.BLOB,
         allowNull:true,
@@ -39,7 +44,8 @@ const Submit = sequelize.define('submit', {
         comment: '檔案大小 (bytes)'
     }
 }, {
-    timestamps: true // 啟用自動時間戳記
+    timestamps: true, 
+    tableName: 'submits'
 });
 
 module.exports = Submit;

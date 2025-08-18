@@ -7,6 +7,7 @@ import { getChatroomHistory } from "../../../../api/chatroom";
 import { getRagMessageHistory } from "../../../../api/rag";
 import { getProjectUser } from "../../../../api/users";
 import { getProject } from "../../../../api/project";
+import { fetchComments } from "../../../../api/comments";
 
 /**
  * 自定義 Hook 用於獲取專案相關數據
@@ -46,6 +47,7 @@ export function useProjectData(projectId, userId) {
   const [projectActivities, setProjectActivities] = useState([]);
   const [ideaNodes, setIdeaNodes] = useState([]);
   const [kanbanTasks, setKanbanTasks] = useState([]);
+  const [projectComments, setProjectComments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // 獲取所有專案資料
@@ -103,6 +105,21 @@ export function useProjectData(projectId, userId) {
           }
         });
         setKanbanTasks(tasks);
+
+        // 收集此專案所有卡片的評論，供成就系統統計跨組評論
+        try {
+          const commentSettled = await Promise.allSettled(
+            tasks.map((t) => fetchComments(t.id))
+          );
+          const allComments = commentSettled
+            .filter((r) => r.status === 'fulfilled')
+            .flatMap((r) => r.value || [])
+            .map((c) => ({ ...c }));
+          setProjectComments(allComments);
+        } catch (e) {
+          console.error('抓取卡片評論失敗:', e);
+          setProjectComments([]);
+        }
 
         // 處理想法節點
         if (ideaWall && ideaWall.id) {
@@ -179,6 +196,7 @@ export function useProjectData(projectId, userId) {
         setProjectActivities([]);
         setIdeaNodes([]);
         setKanbanTasks([]);
+        setProjectComments([]);
       } finally {
         setLoading(false);
       }
@@ -200,6 +218,9 @@ export function useProjectData(projectId, userId) {
     projectActivities,
     ideaNodes,
     kanbanTasks,
+    // 專案內所有卡片評論（用於跨組評論統計）
+    peerComments: projectComments,
+    projectComments,
     
     // 狀態
     loading

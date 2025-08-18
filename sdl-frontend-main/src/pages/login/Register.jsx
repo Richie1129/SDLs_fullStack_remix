@@ -16,11 +16,20 @@ export default function Register() {
     const [isFormSubmitted, setIsFormSubmitted] = useState(false);
 
     const handleChange = e => {
-        const { name, value } = e.target
-        setUserData(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        const { name, value } = e.target;
+        setUserData(prev => {
+            // 當切換為教師時，清空不適用欄位以避免誤送
+            if (name === 'role') {
+                if (value === 'teacher') {
+                    return { ...prev, role: value, class: '', seatNumber: '' };
+                }
+                return { ...prev, role: value };
+            }
+            return {
+                ...prev,
+                [name]: value
+            };
+        });
     }
 
     // const validateInput = () => {
@@ -211,14 +220,32 @@ export default function Register() {
                             <input type="password" name="confirmPassword" placeholder="請輸入確認密碼" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
                             {error && <span className=' text-xs text-red-600'>{error}</span>}
                         </div>
-                        <div>
-                            <label className="block text-gray-700 text-base">班級</label>
-                            <input type="text" name="class" placeholder="請輸入班級（如：資工三甲）" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-base">座號</label>
-                            <input type="text" name="seatNumber" placeholder="請輸入座號" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" />
-                        </div>
+                        {userData.role === 'student' && (
+                            <>
+                                <div>
+                                    <label className="block text-gray-700 text-base">班級</label>
+                                    <input
+                                        type="text"
+                                        name="class"
+                                        placeholder="請輸入班級（教師請跳到職位）"
+                                        value={userData.class}
+                                        onChange={handleChange}
+                                        className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-gray-700 text-base">座號</label>
+                                    <input
+                                        type="text"
+                                        name="seatNumber"
+                                        placeholder="請輸入座號（教師請跳到職位）"
+                                        value={userData.seatNumber}
+                                        onChange={handleChange}
+                                        className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
+                                    />
+                                </div>
+                            </>
+                        )}
                         <div className="mt-4">
                             <label className="block text-gray-700 text-base">職位</label>
                             <select name="role" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-blue-500 focus:bg-white focus:outline-none" required>

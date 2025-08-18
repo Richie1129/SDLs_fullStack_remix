@@ -16,16 +16,25 @@ export default function ProjectLayout() {
   }, [projectId, location.pathname]);
 
   return (
-    <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-col">
-      <TopBar
-        showActivityStream={showActivityStream}
-        setShowActivityStream={setShowActivityStream}
-      />
+    <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-row">
+      {/* Left navigation rail */}
+      <SideBar />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <SideBar />
-        <main className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto">
+      {/* Main column: TopBar + main content */}
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
+        <TopBar
+          showActivityStream={showActivityStream}
+          setShowActivityStream={setShowActivityStream}
+        />
+
+        <main className="flex-1 flex flex-col min-h-0 min-w-0">
+          <div
+            className={
+              inKanBan
+                ? "flex-1 min-h-0 min-w-0 overflow-hidden md:overflow-x-auto md:overflow-y-hidden"
+                : "flex-1 overflow-y-auto"
+            }
+          >
             <Outlet />
           </div>
           {inKanBan && <SubStageComponent />}

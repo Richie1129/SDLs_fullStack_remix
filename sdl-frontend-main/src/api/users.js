@@ -9,6 +9,20 @@ const usersApi = axios.create({
     },
 })
 
+// 添加請求攔截器來自動添加 accessToken
+usersApi.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            config.headers['accessToken'] = token;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
 export const userLogin = async (userdata) => {
     const response = await usersApi.post("/login", userdata)
     return response;
@@ -32,5 +46,21 @@ export const getAllTeachers = async () => {
     } catch (error) {
         console.error('Failed to fetch teachers:', error);
         throw error; // 可以根據需要進一步處理錯誤或傳播
+    }
+}
+
+// get current user
+export const getCurrentUser = async () => {
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await usersApi.get('/me', {
+            headers: {
+                'accessToken': token,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Failed to fetch current user:', error);
+        throw error;
     }
 }

@@ -25,6 +25,8 @@ const Announcement = sequelize.define('Announcement', {
         type: DataTypes.INTEGER,
         allowNull: true,
     },
+}, {
+    tableName: 'announcements'
 });
 
 // 儲存前打印數據

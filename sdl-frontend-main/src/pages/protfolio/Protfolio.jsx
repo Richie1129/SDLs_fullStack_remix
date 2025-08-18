@@ -13,6 +13,7 @@ import { BiSave } from "react-icons/bi";
 import Swal from "sweetalert2";
 import { Context } from '../../context/context';
 import { formatTime } from '../../utils/timeUtils';
+import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 
 export default function Protfolio() {
     const { currentStageIndex } = useContext(Context);
@@ -27,6 +28,9 @@ export default function Protfolio() {
     const [showSubmitChangeHistory, setShowSubmitChangeHistory] = useState(false);
     const [submitChangeLogs, setSubmitChangeLogs] = useState([]);
     const queryClient = useQueryClient();
+
+    // 使用觀摩模式 hook
+    const { isObservationMode } = useObservationMode();
     
     const {
         isLoading,
@@ -437,6 +441,8 @@ export default function Protfolio() {
                                                             value={value}
                                                             onChange={(e) => handleChange(key, e.target.value)}
                                                             placeholder={`輸入 ${key} 內容...`}
+                                                            disabled={isObservationMode}
+                                                            readOnly={isObservationMode}
                                                         />
                                                     </div>
                                                 ))}
@@ -477,15 +483,18 @@ export default function Protfolio() {
                                                             下載
                                                         </button>
                                                     )}
-                                                    <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 cursor-pointer transition-colors shadow-sm">
-                                                        <AiOutlineUpload className="mr-2 w-4 h-4" />
-                                                        {modalData.fileData ? "重新上傳" : "上傳檔案"}
-                                                        <input
-                                                            type="file"
-                                                            className="hidden"
-                                                            onChange={handleFileChange}
-                                                        />
-                                                    </label>
+                                                    {/* 上傳檔案按鈕 - 觀摩模式隱藏 */}
+                                                    {!isObservationMode && (
+                                                        <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 cursor-pointer transition-colors shadow-sm">
+                                                            <AiOutlineUpload className="mr-2 w-4 h-4" />
+                                                            {modalData.fileData ? "重新上傳" : "上傳檔案"}
+                                                            <input
+                                                                type="file"
+                                                                className="hidden"
+                                                                onChange={handleFileChange}
+                                                            />
+                                                        </label>
+                                                    )}
                                                 </div>
                                             </div>
 
@@ -500,12 +509,15 @@ export default function Protfolio() {
                                                 >
                                                     取消
                                                 </button>
-                                                <button
-                                                    onClick={handleSave}
-                                                    className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
-                                                >
-                                                    儲存變更
-                                                </button>
+                                                {/* 儲存按鈕 - 觀摩模式隱藏 */}
+                                                {!isObservationMode && (
+                                                    <button
+                                                        onClick={handleSave}
+                                                        className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
+                                                    >
+                                                        儲存變更
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (

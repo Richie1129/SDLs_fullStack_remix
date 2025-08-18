@@ -40,6 +40,7 @@ exports.createSubmit = async(req, res) => {
                     stage: `${currentStageInt}-${currentSubStageInt}`,
                     content: content,
                     projectId: projectId,
+                    userId: req.userId,
                     // 改為儲存 MinIO 相關資訊，而非 BLOB
                     fileName: file.fileName,        // MinIO 檔案名
                     originalName: file.originalName, // 原始檔案名
@@ -59,6 +60,7 @@ exports.createSubmit = async(req, res) => {
                 stage: `${currentStageInt}-${currentSubStageInt}`,
                 content: content,
                 projectId: projectId,
+                userId: req.userId,
             });
             console.log('✅ 創建 Submit 成功 (無檔案)');
         }
@@ -82,7 +84,7 @@ exports.createSubmit = async(req, res) => {
             });
 
             await Idea_wall.create({
-                userId: req.body.userId,
+                userId: req.userId,
                 projectId: projectId,
                 stage: `${currentStageInt}-${currentSubStageInt + 1}`,
                 title: `${stage[0].sub_stage[currentSubStageInt]}`,
@@ -103,7 +105,7 @@ exports.createSubmit = async(req, res) => {
                 });
 
             await Idea_wall.create({
-                    userId: req.body.userId,
+                    userId: req.userId,
                 projectId: projectId,
                     stage: `${currentStageInt + 1}-1`,
                     title: `${nextStage[0].sub_stage[0]}`,
@@ -119,7 +121,7 @@ exports.createSubmit = async(req, res) => {
                 });
 
                 await Idea_wall.create({
-                    userId: req.body.userId,
+                    userId: req.userId,
                     projectId: projectId,
                     stage: "completed",
                     title: "專案已完成",

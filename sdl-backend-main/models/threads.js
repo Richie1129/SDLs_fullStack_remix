@@ -11,6 +11,8 @@ const Threads = sequelize.define('threads',{
         type: DataTypes.TEXT,
         allowNull:true
     }
+}, {
+    tableName: 'threads'
 });
 
 Threads.hasMany(Threads_Message);

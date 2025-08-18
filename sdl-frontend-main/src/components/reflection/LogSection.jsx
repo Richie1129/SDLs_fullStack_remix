@@ -20,6 +20,7 @@ const LogSection = ({
   showCreator = false,
   className = "flex flex-col w-full lg:w-1/2 min-h-0"
 }) => {
+  const isEmpty = !isLoading && !isError && items.length === 0 && showEmptyMessage;
   const renderContent = () => {
     if (isLoading) {
       return <Loader />;
@@ -79,8 +80,13 @@ const LogSection = ({
       )}
 
       {/* Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full">
+      <div className="flex-1 flex flex-col min-h-0">
+        <div
+          className={
+            `flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 scrollbar-thumb-rounded-full ` +
+            (isEmpty ? 'flex items-center justify-center' : '')
+          }
+        >
           {renderContent()}
         </div>
       </div>

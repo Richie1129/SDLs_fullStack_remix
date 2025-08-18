@@ -43,6 +43,26 @@ exports.getUser = (req, res) =>{
         .catch(err => console.log(err));
 }
 
+//get current user from token
+exports.getCurrentUser = async (req, res) => {
+    try {
+        const userId = req.userId; // 來自 AuthMiddleware
+        
+        const user = await User.findByPk(userId, {
+            attributes: ['id', 'username', 'account', 'role', 'class', 'seatNumber'] // 排除密碼
+        });
+        
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        res.status(200).json(user);
+    } catch (error) {
+        console.error('Error fetching current user:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
 // login user
 exports.loginUser = (req, res) => {
     const account = req.body.account;

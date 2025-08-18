@@ -12,7 +12,7 @@ const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
 const Stage = require('../models/stage');
 const Sub_stage = require('../models/sub_stage');
-const User_project = require('../models/userproject');
+const User_project = require('../models/user_project');
 
 exports.getProject = async (req, res) => {
     const projectId = req.params.projectId;
@@ -24,23 +24,45 @@ exports.getProject = async (req, res) => {
 }
 
 exports.getAllProject = async (req, res) => {
-    const userId = req.query.userId;
-    await Project.findAll({
-        include: [{
-            model: User,
-            attributes: [],
-            where: {
-                id: userId
-            },
-        }]
-    })
-        .then(result => {
-            res.status(200).json(result)
-        })
-        .catch(err => console.log(err));
+    try {
+        const userId = req.query.userId || req.userId; // 支援兩種方式獲取 userId
+        const { viewable_by } = req.query;
 
+        console.log('=== getAllProject Debug ===');
+        console.log('req.query.userId:', req.query.userId);
+        console.log('req.userId:', req.userId);
+        console.log('viewable_by:', viewable_by);
+        console.log('final userId:', userId);
 
-}
+        // 如果有 viewable_by 參數，返回可觀摩的專案
+        if (viewable_by) {
+            console.log('調用 getViewableProjects');
+            return exports.getViewableProjects(req, res);
+        }
+
+        // 原有邏輯：返回用戶參與的專案
+        console.log('查詢用戶參與的專案, userId:', userId);
+        const projects = await Project.findAll({
+            include: [{
+                model: User,
+                attributes: ['id', 'username', 'class'],
+                where: {
+                    id: userId
+                },
+                through: { attributes: [] }
+            }]
+        });
+
+        console.log('找到的專案數量:', projects.length);
+        res.status(200).json(projects);
+    } catch (error) {
+        console.error('取得專案列表錯誤:', error);
+        res.status(500).json({ 
+            message: '取得專案列表時發生錯誤',
+            error: error.message 
+        });
+    }
+};
 
 exports.getProjectsByMentor = async (req, res) => {
     const mentorName = req.params.mentor; // 從 URL 參數中獲取 mentor 名字
@@ -633,3 +655,348 @@ exports.deleteProject = async (req, res) => {
 //         })
 //         .catch(err => console.log(err));
 // }
+
+/**
+ * 設定專案的觀摩權限（僅限教師或專案成員）
+ * PATCH /projects/:id/viewing-settings
+ */
+exports.updateViewingSettings = async (req, res) => {
+    try {
+        const projectId = req.params.id;
+        const { is_open_for_viewing, allowed_classes } = req.body;
+
+        // 驗證輸入
+        if (typeof is_open_for_viewing !== 'boolean') {
+            return res.status(400).json({ 
+                message: 'is_open_for_viewing 必須是布林值' 
+            });
+        }
+
+        if (is_open_for_viewing && (!allowed_classes || !Array.isArray(allowed_classes) || allowed_classes.length === 0)) {
+            return res.status(400).json({ 
+                message: '開放觀摩時必須設定至少一個可觀摩的班級' 
+            });
+        }
+
+        const project = await Project.findByPk(projectId);
+        if (!project) {
+            return res.status(404).json({ message: '專案不存在' });
+        }
+
+        // 更新觀摩設定
+        project.is_open_for_viewing = is_open_for_viewing;
+        project.allowed_classes = is_open_for_viewing ? allowed_classes : null;
+        
+        await project.save();
+
+        res.status(200).json({
+            message: '觀摩權限設定更新成功',
+            project: {
+                id: project.id,
+                name: project.name,
+                is_open_for_viewing: project.is_open_for_viewing,
+                allowed_classes: project.allowed_classes
+            }
+        });
+    } catch (error) {
+        console.error('更新觀摩設定錯誤:', error);
+        res.status(500).json({ 
+            message: '更新觀摩設定時發生錯誤',
+            error: error.message 
+        });
+    }
+};
+
+/**
+ * 檢查用戶是否有專案觀摩權限
+ * GET /projects/:id/viewable
+ */
+exports.checkViewingPermission = async (req, res) => {
+    try {
+        const projectId = req.params.id;
+        const userId = req.userId; // 從 AuthMiddleware 取得
+
+        const project = await Project.findByPk(projectId, {
+            include: [{
+                model: User,
+                through: { attributes: [] }
+            }]
+        });
+
+        if (!project) {
+            return res.status(404).json({ message: '專案不存在' });
+        }
+
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: '用戶不存在' });
+        }
+
+        // 檢查是否為專案成員
+        const isProjectMember = project.users.some(projectUser => projectUser.id === parseInt(userId));
+
+        if (isProjectMember) {
+            return res.status(200).json({
+                hasPermission: true,
+                permissionType: 'member',
+                readOnly: false,
+                message: '專案成員，擁有完整權限'
+            });
+        }
+
+        // 檢查觀摩權限
+        const hasViewingPermission = project.is_open_for_viewing && 
+            project.allowed_classes && 
+            project.allowed_classes.includes(user.class);
+
+        if (hasViewingPermission) {
+            return res.status(200).json({
+                hasPermission: true,
+                permissionType: 'viewer',
+                readOnly: true,
+                message: '具有觀摩權限，僅可瀏覽'
+            });
+        }
+
+        return res.status(200).json({
+            hasPermission: false,
+            permissionType: 'none',
+            readOnly: false,
+            message: '無權限訪問此專案'
+        });
+
+    } catch (error) {
+        console.error('檢查觀摩權限錯誤:', error);
+        res.status(500).json({ 
+            message: '檢查權限時發生錯誤',
+            error: error.message 
+        });
+    }
+};
+
+/**
+ * 取得指定班級可觀摩的專案列表
+ * GET /projects?viewable_by=classId
+ */
+exports.getViewableProjects = async (req, res) => {
+    try {
+        const { viewable_by } = req.query;
+        const userId = req.userId;
+
+        if (!viewable_by) {
+            return res.status(400).json({ message: '缺少 viewable_by 參數' });
+        }
+
+        // 驗證用戶權限（確保用戶查詢自己班級的可觀摩專案）
+        console.log('=== getViewableProjects Debug ===');
+        console.log('userId:', userId);
+        console.log('viewable_by:', viewable_by);
+        
+        const user = await User.findByPk(userId);
+        console.log('user found:', user ? user.dataValues : 'null');
+        
+        if (!user) {
+            return res.status(404).json({ message: '用戶不存在' });
+        }
+
+        // 暫時放寬權限檢查，允許所有用戶查詢觀摩專案
+        console.log('user.role:', user.role);
+        console.log('user.class:', user.class);
+        
+        // if (user.role !== 'teacher' && user.class !== viewable_by) {
+        //     return res.status(403).json({ 
+        //         message: '只能查詢自己班級的可觀摩專案' 
+        //     });
+        // }
+
+        // 查詢可觀摩的專案
+        const projects = await Project.findAll({
+            where: {
+                is_open_for_viewing: true
+            },
+            include: [{
+                model: User,
+                through: { attributes: [] },
+                attributes: ['id', 'username', 'class']
+            }]
+        });
+
+        // 篩選允許指定班級觀摩的專案
+        const viewableProjects = projects.filter(project => 
+            project.allowed_classes && 
+            project.allowed_classes.includes(viewable_by)
+        );
+
+        // 格式化回傳資料
+        const formattedProjects = viewableProjects.map(project => ({
+            id: project.id,
+            name: project.name,
+            describe: project.describe,
+            mentor: project.mentor,
+            currentStage: project.currentStage,
+            currentSubStage: project.currentSubStage,
+            createdAt: project.createdAt,
+            members: project.users.map(user => ({
+                id: user.id,
+                username: user.username,
+                class: user.class
+            }))
+        }));
+
+        res.status(200).json({
+            message: '取得可觀摩專案成功',
+            projects: formattedProjects,
+            count: formattedProjects.length
+        });
+
+    } catch (error) {
+        console.error('取得可觀摩專案錯誤:', error);
+        res.status(500).json({ 
+            message: '取得可觀摩專案時發生錯誤',
+            error: error.message 
+        });
+    }
+};
+
+/**
+ * 取得所有班級列表（用於觀摩設定）
+ * GET /projects/classes/list
+ */
+exports.getAllClasses = async (req, res) => {
+    console.log('=== getAllClasses 控制器被調用 ===');
+    console.log('請求標頭:', req.headers);
+    console.log('請求路徑:', req.path);
+    console.log('請求方法:', req.method);
+    console.log('完整 URL:', req.originalUrl);
+    
+    try {
+        console.log('開始查詢用戶班級資料...');
+        const classes = await User.findAll({
+            attributes: ['class'],
+            where: {
+                class: {
+                    [require('sequelize').Op.ne]: null
+                }
+            },
+            group: ['class'],
+            raw: true
+        });
+
+        console.log('查詢到的班級資料:', classes);
+        const classList = classes.map(item => item.class).filter(Boolean).sort();
+        console.log('處理後的班級列表:', classList);
+
+        const response = {
+            message: '取得班級列表成功',
+            classes: classList
+        };
+        console.log('準備發送響應:', response);
+        
+        res.status(200).json(response);
+    } catch (error) {
+        console.error('取得班級列表錯誤:', error);
+        res.status(500).json({ 
+            message: '取得班級列表時發生錯誤',
+            error: error.message 
+        });
+    }
+};
+
+/**
+ * 根據班級名稱獲取該班級的用戶和他們的專案
+ * GET /projects/classes/:className/users-projects
+ */
+exports.getClassUsersAndProjects = async (req, res) => {
+    console.log('=== getClassUsersAndProjects 控制器被調用 ===');
+    const className = req.params.className;
+    console.log('查詢班級:', className);
+    
+    try {
+        // 1. 獲取該班級的所有用戶
+        const classUsers = await User.findAll({
+            where: { class: className },
+            attributes: ['id', 'username', 'class', 'seatNumber'],
+            raw: true
+        });
+        
+        console.log(`${className} 班級的用戶:`, classUsers);
+        
+        if (classUsers.length === 0) {
+            return res.status(200).json({
+                message: '該班級沒有用戶',
+                users: [],
+                projects: []
+            });
+        }
+        
+        // 2. 獲取這些用戶參與的所有專案
+        const userIds = classUsers.map(user => user.id);
+        console.log('用戶ID列表:', userIds);
+        
+        const projects = await Project.findAll({
+            include: [{
+                model: User,
+                attributes: ['id', 'username', 'class', 'seatNumber'],
+                where: {
+                    id: {
+                        [require('sequelize').Op.in]: userIds
+                    }
+                },
+                through: { attributes: [] }
+            }],
+            attributes: [
+                'id',
+                'name',
+                'describe',
+                'mentor',
+                'currentStage',
+                'currentSubStage',
+                'createdAt',
+                'updatedAt',
+                // 觀摩設定相關欄位，供前端 Modal 初始化狀態
+                'is_open_for_viewing',
+                'allowed_classes'
+            ]
+        });
+        
+        // 3. 排除重複的專案（因為一個專案可能有多個該班級的用戶）
+        const uniqueProjects = [];
+        const projectIds = new Set();
+        
+        projects.forEach(project => {
+            if (!projectIds.has(project.id)) {
+                projectIds.add(project.id);
+                uniqueProjects.push({
+                    id: project.id,
+                    name: project.name,
+                    describe: project.describe,
+                    mentor: project.mentor,
+                    currentStage: project.currentStage,
+                    currentSubStage: project.currentSubStage,
+                    createdAt: project.createdAt,
+                    updatedAt: project.updatedAt,
+                    // 將觀摩設定欄位一併回傳，供前端初始化
+                    is_open_for_viewing: project.is_open_for_viewing,
+                    allowed_classes: project.allowed_classes,
+                    classMembers: project.users.filter(user => user.class === className)
+                });
+            }
+        });
+        
+        console.log(`${className} 班級相關的唯一專案:`, uniqueProjects);
+        
+        res.status(200).json({
+            message: `成功獲取 ${className} 班級的用戶和專案`,
+            className: className,
+            users: classUsers,
+            projects: uniqueProjects
+        });
+        
+    } catch (error) {
+        console.error('獲取班級用戶和專案時發生錯誤:', error);
+        res.status(500).json({
+            message: '獲取班級用戶和專案時發生錯誤',
+            error: error.message
+        });
+    }
+};

@@ -1,9 +1,11 @@
 const controller = require('../controllers/user');
 const router = require('express').Router();
+const { validateToken } = require('../middlewares/AuthMiddleware');
 
 //CRUD Routes /users
 router.get('/', controller.getUsers);
 router.get('/teachers', controller.getTeachers);
+router.get('/me', validateToken, controller.getCurrentUser);
 router.get('/:userId', controller.getUser);
 router.get('/project/:projectId', controller.getProjectUsers)
 router.post('/login', controller.loginUser);

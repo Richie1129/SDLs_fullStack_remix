@@ -20,6 +20,11 @@ export function useStudentMetrics(data, userName, projectId, userId) {
     teamMembers = [],
     chatHistory = [],
     aiInteractions = [],
+    // 新命名的資料來源（優先使用），來自 rag_messages
+    ragMessages = undefined,
+    ragMessagesTeam = undefined,
+    // 新增：跨組評論資料來源（假設提供）
+    peerComments = [],
     projectActivities = [],
     projectInfo = null
   } = data || {};
@@ -512,85 +517,196 @@ export function useStudentMetrics(data, userName, projectId, userId) {
         progress: Math.min(100, (ideaNodesCount / 5) * 100), 
         deadline: "2024-01-17", 
         priority: "low" 
-      },
-      { 
-        id: 4, 
-        title: "協助2位同學", 
-        progress: Math.min(100, (chatMessagesCount / 20) * 100), 
-        deadline: "2024-01-25", 
-        priority: "medium" 
       }
     ];
   }, [personalReflections, ideaNodes, chatHistory, userName]);
 
-  // 近期成就（基於真實資料）
+  // 近期成就（基於真實資料，分級：銅/銀/金） - 團隊與個人雙軌
   const achievements = useMemo(() => {
-    // 直接計算數據，避免依賴其他 useMemo
-    const ideaNodesCount = Array.isArray(ideaNodes) ? ideaNodes.length : 0;
-    const weeklyReflectionsCount = Array.isArray(personalReflections) ? 
-      personalReflections.filter(reflection => {
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        return new Date(reflection.createdAt) > oneWeekAgo;
-      }).length : 0;
-    const chatMessagesCount = Array.isArray(chatHistory) ? 
-      chatHistory.filter(chat => chat.author === userName).length : 0;
-    const aiInteractionsCount = Array.isArray(aiInteractions) ? aiInteractions.length : 0;
+    // Helpers
+    const thresholds = {
+      idea: { bronze: 5, silver: 15, gold: 30 },
+      task: { bronze: 5, silver: 15, gold: 30 },
+      reflection: { bronze: 1, silver: 5, gold: 10 },
+      ai: { bronze: 10, silver: 30, gold: 60 },
+      peer_review: { bronze: 3, silver: 10, gold: 25 },
+    };
 
-    const achievementList = [];
-    
-    // 基於想法節點的成就
-    if (ideaNodesCount >= 5) {
-      achievementList.push({
-        title: "創意大師",
-        description: `創建了 ${ideaNodesCount} 個想法節點`,
-        date: Array.isArray(ideaNodes) && ideaNodes.length > 0 ? ideaNodes[0].createdAt : new Date().toISOString(),
-        type: "creativity"
+    const levelFor = (count, t) => {
+      if (count >= t.gold) return 'gold';
+      if (count >= t.silver) return 'silver';
+      if (count >= t.bronze) return 'bronze';
+      return 'none';
+    };
+
+    const nextFor = (count, t) => {
+      if (count < t.bronze) return { nextLevel: 'bronze', nextTarget: t.bronze };
+      if (count < t.silver) return { nextLevel: 'silver', nextTarget: t.silver };
+      if (count < t.gold) return { nextLevel: 'gold', nextTarget: t.gold };
+      return { nextLevel: null, nextTarget: t.gold };
+    };
+
+    const makeAchievement = (key, title, type, count, t) => {
+      const level = levelFor(count, t);
+      const { nextLevel, nextTarget } = nextFor(count, t);
+      const progressPercent = Math.min(100, Math.round((count / t.gold) * 100));
+      return {
+        key,
+        title,
+        type,
+        level,
+        current: count,
+        thresholds: t,
+        nextLevel,
+        nextTarget,
+        progressPercent,
+        description:
+          type === 'idea'
+            ? `已建立 ${count}/${t.gold} 個想法節點`
+            : type === 'task'
+            ? `已參與 ${count}/${t.gold} 個任務`
+            : type === 'reflection'
+            ? `已撰寫 ${count}/${t.gold} 篇反思日誌`
+            : type === 'ai'
+            ? `已進行 ${count}/${t.gold} 次 AI 互動`
+            : `已收到 ${count}/${t.gold} 則跨組評論`,
+      };
+    };
+
+    // Status helpers
+    const isTaskDone = (status) => {
+      const s = (status || '').toString().toLowerCase();
+      return (
+        s.includes('完成') ||
+        s.includes('done') ||
+        s.includes('完畢') ||
+        s.includes('finished') ||
+        s.includes('completed') ||
+        s === '完成'
+      );
+    };
+
+    const normalizeId = (x) => (x == null ? null : String(x));
+    const meId = normalizeId(userId);
+    const meName = userName || '';
+
+    const assigneesIncludesMe = (assignees) => {
+      if (!Array.isArray(assignees)) return false;
+      return assignees.some((a) => {
+        if (a == null) return false;
+        if (typeof a === 'string') {
+          return a === meName || a === meId;
+        }
+        if (typeof a === 'number') {
+          return String(a) === meId;
+        }
+        // object
+        return (
+          String(a.id ?? a.userId ?? '') === meId ||
+          (a.username ?? a.name ?? a.userName ?? '') === meName
+        );
       });
-    }
-    
-    // 基於反思的成就
-    if (weeklyReflectionsCount >= 3) {
-      achievementList.push({
-        title: "反思達人",
-        description: `本週完成 ${weeklyReflectionsCount} 篇反思`,
-        date: Array.isArray(personalReflections) && personalReflections.length > 0 ? personalReflections[0].createdAt : new Date().toISOString(),
-        type: "reflection"
-      });
-    }
-    
-    // 基於協作的成就
-    if (chatMessagesCount >= 10) {
-      achievementList.push({
-        title: "團隊協作者",
-        description: `參與了 ${chatMessagesCount} 次團隊討論`,
-        date: Array.isArray(chatHistory) && chatHistory.length > 0 ? chatHistory[0].createdAt : new Date().toISOString(),
-        type: "collaboration"
-      });
-    }
-    
-    // 基於 AI 互動的成就
-    if (aiInteractionsCount >= 5) {
-      achievementList.push({
-        title: "AI 探索者",
-        description: `與AI助手進行了 ${aiInteractionsCount} 次互動`,
-        date: Array.isArray(aiInteractions) && aiInteractions.length > 0 ? aiInteractions[0].createdAt : new Date().toISOString(),
-        type: "ai"
-      });
-    }
-    
-    // 如果沒有任何成就，提供鼓勵性訊息
-    if (achievementList.length === 0) {
-      achievementList.push({
-        title: "新手上路",
-        description: "歡迎加入專案！開始您的學習之旅，很快就會有成就解鎖。",
-        date: new Date().toISOString(),
-        type: "welcome"
-      });
-    }
-    
-    return achievementList.slice(0, 3); // 最多顯示3個成就
-  }, [ideaNodes, personalReflections, chatHistory, aiInteractions, userName]);
+    };
+
+    // Data sources
+    const reflectionLogsTeam = Array.isArray(data?.reflectionLogs)
+      ? data.reflectionLogs
+      : Array.isArray(personalReflections)
+        ? personalReflections
+        : [];
+
+    // Team counts
+    const teamIdeaCount = Array.isArray(ideaNodes) ? ideaNodes.length : 0;
+    // 任務執行家（團隊）：計算專案內所有任務總數
+    const teamTaskCount = Array.isArray(kanbanTasks) ? kanbanTasks.length : 0;
+    const teamReflectionCount = reflectionLogsTeam.length;
+
+    // AI interactions - scoped by project
+    const normalizeProjectId = (pid) => (pid == null ? null : String(pid));
+    const currentProjectId = normalizeProjectId(projectId);
+    const personalRag = Array.isArray(ragMessages) ? ragMessages : (Array.isArray(aiInteractions) ? aiInteractions : []);
+    const teamRag = Array.isArray(ragMessagesTeam) ? ragMessagesTeam : (Array.isArray(teamAiInteractions) ? teamAiInteractions : []);
+
+    const projectAiInteractionsTeam = teamRag.filter((it) => normalizeProjectId(it?.projectId ?? it?.project_id) === currentProjectId);
+    const teamAiCount = projectAiInteractionsTeam.length;
+
+    // Personal counts
+    const personalIdeaCount = Array.isArray(ideaNodes)
+      ? ideaNodes.filter((n) => {
+          const owner = n?.owner ?? n?.username ?? n?.user_name ?? '';
+          const ownerId = normalizeId(n?.ownerId ?? n?.userId);
+          return owner === meName || (ownerId && ownerId === meId);
+        }).length
+      : 0;
+
+    // 任務執行家（個人）：計算所有指派給該學生的任務總數
+    const personalTaskCount = Array.isArray(kanbanTasks)
+      ? kanbanTasks.filter((t) => assigneesIncludesMe(t?.assignees)).length
+      : 0;
+
+    const personalReflectionsList = Array.isArray(personalReflections)
+      ? personalReflections.filter((r) => {
+          const author = r?.userName ?? r?.author ?? r?.username ?? '';
+          const authorId = normalizeId(r?.userId ?? r?.authorId);
+          return author === meName || (authorId && authorId === meId);
+        })
+      : [];
+    const personalReflectionCount = personalReflectionsList.length;
+
+    const projectAiInteractionsPersonal = personalRag.filter((it) => normalizeProjectId(it?.projectId ?? it?.project_id) === currentProjectId);
+    const personalAiCount = projectAiInteractionsPersonal.filter((it) => {
+      const uid = normalizeId(it?.userId ?? it?.uid);
+      const uname = it?.userName ?? it?.username ?? it?.author ?? '';
+      return (uid && uid === meId) || (uname && uname === meName);
+    }).length;
+
+    // 人氣專案（團隊）：計算收到的外部（跨組）評論數
+    const projectPeerComments = Array.isArray(peerComments) ? peerComments : [];
+    // 若有評論者所屬專案ID，優先以專案ID判斷；否則排除本專案成員即視為跨組評論
+    const teamMemberIdSet = new Set(
+      (Array.isArray(teamMembers) ? teamMembers : []).map((m) => String(m?.id ?? ''))
+    );
+
+    const teamPeerReviewCount = projectPeerComments.filter((c) => {
+      const commenterPid = normalizeProjectId(c?.commenterProjectId ?? c?.commenter_project_id);
+      if (commenterPid != null) {
+        return commenterPid !== currentProjectId;
+      }
+      const commenterId = c?.user?.id ?? c?.userId;
+      return commenterId != null && !teamMemberIdSet.has(String(commenterId));
+    }).length;
+
+    // Build results
+    const team = [
+      makeAchievement('idea_creator_team', '想法創造者', 'idea', teamIdeaCount, thresholds.idea),
+      makeAchievement('task_master_team', '任務執行家', 'task', teamTaskCount, thresholds.task),
+      makeAchievement('reflective_thinker_team', '深度反思者', 'reflection', teamReflectionCount, thresholds.reflection),
+      makeAchievement('ai_explorer_team', 'AI 探險家', 'ai', teamAiCount, thresholds.ai),
+      makeAchievement('peer_review_team', '人氣專案', 'peer_review', teamPeerReviewCount, thresholds.peer_review),
+    ];
+
+    const personal = [
+      makeAchievement('idea_creator_personal', '想法創造者', 'idea', personalIdeaCount, thresholds.idea),
+      makeAchievement('task_master_personal', '任務執行家', 'task', personalTaskCount, thresholds.task),
+      makeAchievement('reflective_thinker_personal', '深度反思者', 'reflection', personalReflectionCount, thresholds.reflection),
+      makeAchievement('ai_explorer_personal', 'AI 探險家', 'ai', personalAiCount, thresholds.ai),
+    ];
+
+    return { team, personal };
+  }, [
+    data?.reflectionLogs,
+    personalReflections,
+    ideaNodes,
+    kanbanTasks,
+    aiInteractions,
+    teamAiInteractions,
+    ragMessages,
+    ragMessagesTeam,
+    peerComments,
+    userId,
+    userName,
+    projectId,
+  ]);
 
   return {
     teamStats,

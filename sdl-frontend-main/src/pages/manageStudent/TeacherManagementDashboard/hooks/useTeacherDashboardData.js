@@ -168,16 +168,44 @@ export const useTeacherDashboardData = (projectId, userRole) => {
           }
         }
 
+        // 學生對照表（id -> student）
+        const studentsList = studentsData.status === 'fulfilled' ? (studentsData.value || []) : [];
+        const studentById = Array.isArray(studentsList)
+          ? studentsList.reduce((acc, s) => {
+              if (s && (s.id !== undefined && s.id !== null)) acc[s.id] = s;
+              return acc;
+            }, {})
+          : {};
+
+        // 將 items 以學生資料補強使用者名稱
+        const augmentWithUserInfo = (items, studentMap, userIdKey = 'userId') => {
+          if (!Array.isArray(items)) return [];
+          return items.map(item => {
+            const uid = item?.[userIdKey];
+            const student = uid ? studentMap[uid] : undefined;
+            const username = item.username || item.user_name || student?.username || student?.name;
+            return { ...item, userId: uid ?? item.userId, username };
+          });
+        };
+
+        // 原始資料
+        const baseReflections = reflectionsData.status === 'fulfilled' ? (reflectionsData.value || []) : [];
+        const baseSubmissions = submissionsData.status === 'fulfilled' ? (submissionsData.value || []) : [];
+
+        // 依據實際 API：反思有 userId；提交目前後端未提供 userId（等待後端補上）
+        const reflectionsWithUser = augmentWithUserInfo(baseReflections, studentById, 'userId');
+        const submissionsWithUser = augmentWithUserInfo(baseSubmissions, studentById, 'userId');
+
         const finalData = {
           tasks: allTasks,
           nodes: allNodes,
           nodeRelations: allRelations,
           projectName: projectName,
-          students: studentsData.status === 'fulfilled' ? (studentsData.value || []) : [],
-          reflections: reflectionsData.status === 'fulfilled' ? (reflectionsData.value || []) : [],
+          students: studentsList,
+          reflections: reflectionsWithUser,
           chatrooms: chatroomsData.status === 'fulfilled' ? (chatroomsData.value || []) : [],
           chatHistory: allChatHistory,
-          submissions: submissionsData.status === 'fulfilled' ? (submissionsData.value || []) : [],
+          submissions: submissionsWithUser,
           projectActivity: projectActivityData.status === 'fulfilled' ? (projectActivityData.value || []) : [],
           allProjects: allProjectsData.status === 'fulfilled' ? (allProjectsData.value || []) : [],
           loading: false

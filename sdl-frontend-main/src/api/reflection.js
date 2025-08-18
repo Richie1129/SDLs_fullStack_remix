@@ -9,6 +9,18 @@ const dailyApi = axios.create({
     },
 })
 
+// 自動附加 accessToken 於所有請求標頭，通過後端驗證中介層
+dailyApi.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            config.headers['accessToken'] = token;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
 // 取得所有個人日報
 export const getAllPersonalDaily = async (config) => {
     const response = await dailyApi.get("/", {
@@ -23,7 +35,12 @@ export const getAllPersonalDaily = async (config) => {
 
 // 建立個人日報
 export const createPersonalDaily = async (data) => {
-    const response = await dailyApi.post("/", data);
+    const isFormData = data instanceof FormData;
+    const projectId = isFormData ? data.get('projectId') : data?.projectId;
+    const response = await dailyApi.post("/", data, {
+        // 將 projectId 也放到 query 中，避免在 multipart 尚未解析前被後端中介層拒絕
+        params: projectId ? { projectId } : undefined
+    });
     return response.data;
 }
 
@@ -50,8 +67,12 @@ export const getAllTeamDaily = async (config) => {
 }
 
 // 建立團隊日報
-export const createTeamDaily = async (config) => {
-    const response = await dailyApi.post("/team", config);
+export const createTeamDaily = async (data) => {
+    const isFormData = data instanceof FormData;
+    const projectId = isFormData ? data.get('projectId') : data?.projectId;
+    const response = await dailyApi.post("/team", data, {
+        params: projectId ? { projectId } : undefined
+    });
     return response.data;
 }
 

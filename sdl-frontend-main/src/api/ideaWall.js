@@ -4,9 +4,23 @@ axios.defaults.withCredentials = true;
 const ideaWallApi = axios.create({
     baseURL: "https://science.sdlswuret.com/api/ideaWall",
     headers:{
-        "Content-Type":" application/json"
+        "Content-Type": "application/json"
     },
 })
+
+// 添加請求攔截器來自動添加 accessToken
+ideaWallApi.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            config.headers['accessToken'] = token;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 export const getIdeaWall = async (projectId,stage) => {
     const response = await ideaWallApi.get(`/${projectId}/${stage}`)

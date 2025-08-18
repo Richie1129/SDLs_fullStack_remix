@@ -8,14 +8,14 @@ import { FaSortDown } from "react-icons/fa";
 import { BsBoxArrowInRight } from "react-icons/bs";
 import Loader from '../../components/Loader';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
-import { createProject, getAllProject, inviteForProject, getProjectsByMentor, updateProject, deleteProject } from '../../api/project';
+import { createProject, getAllProject, inviteForProject, getProjectsByMentor, updateProject, deleteProject, getViewableProjects } from '../../api/project';
 import { getAllTeachers, getProjectUser } from '../../api/users';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { GrFormAdd } from "react-icons/gr";
 import { MdAddchart } from "react-icons/md";
 import dateFormat from 'dateformat';
-import { FaChevronDown, FaChevronUp } from 'react-icons/fa';  // 引入Font Awesome圖標
+import { FaChevronDown, FaChevronUp, FaEye } from 'react-icons/fa';  // 引入Font Awesome圖標和觀摩圖標
 
 export default function HomePage() {
   const [projectData, setProjectData] = useState([]);
@@ -33,8 +33,10 @@ export default function HomePage() {
   const [activeIndex, setActiveIndex] = useState(0);  // 用於記錄當前打開的Accordion索引
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
+  const [viewableProjects, setViewableProjects] = useState([]); // 可觀摩的專案
   const role = localStorage.getItem("role");
   const userName = localStorage.getItem('username');
+  const userClass = localStorage.getItem('class'); // 獲取用戶班級
   const [member, setMembers] = useState([]);
   const {
     isLoading,
@@ -265,6 +267,60 @@ useEffect(() => {
   }
 }, [role]);
 
+// 獲取可觀摩專案
+useEffect(() => {
+  async function fetchViewableProjects() {
+    try {
+      if (role === "student" && userClass) {
+        console.log('=== 開始獲取可觀摩專案 ===');
+        console.log('學生角色:', role);
+        console.log('學生班級:', userClass);
+        console.log('localStorage token:', localStorage.getItem('accessToken'));
+        
+        // 使用專門的 API 函數來獲取可觀摩專案
+        const response = await getAllProject({ 
+          params: { viewable_by: userClass },
+          headers: {
+            'accessToken': localStorage.getItem('accessToken')
+          }
+        });
+        
+        console.log('API 回應:', response);
+        console.log('回應類型:', typeof response);
+        console.log('response.projects:', response.projects);
+        
+        // 如果後端返回的格式是 {projects: [...]}，則使用 response.projects
+        // 如果直接返回陣列，則使用 response
+        let projects = response.projects || response || [];
+
+        // 過濾掉使用者自己參與的專案
+        const myId = String(localStorage.getItem('id') || '');
+        const myName = localStorage.getItem('username') || '';
+        projects = projects.filter(p => {
+          if (!Array.isArray(p?.members)) return true; // 若無成員資訊則保留（後端可回補）
+          return !p.members.some(m => String(m?.id ?? '') === myId || (m?.username || '') === myName);
+        });
+
+        console.log('設定的可觀摩專案(已過濾本人專案):', projects);
+        setViewableProjects(projects);
+      }
+    } catch (error) {
+      console.error("獲取可觀摩專案失敗:", error);
+      console.error("錯誤詳情:", {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: error.config
+      });
+      // 設置空陣列避免顯示錯誤
+      setViewableProjects([]);
+    }
+  }
+
+  fetchViewableProjects();
+}, [role, userClass]);
+
   const { mutate } = useMutation(createProject, {
     onSuccess: (res) => {
       console.log(res);
@@ -276,8 +332,8 @@ useEffect(() => {
         title: '成功',
         text: res.message,
         customClass: {
-          backdrop: 'bg-red-500', // 背景颜色
-          popup: 'bg-[#F7F6F6]', // 弹出框背景颜色
+          backdrop: 'bg-red-500', // 背景顏色
+          popup: 'bg-[#F7F6F6]', // 彈出框背景顏色
         },
       });
     },
@@ -289,8 +345,8 @@ useEffect(() => {
         title: '失敗',
         text: error.response.data.message,
         customClass: {
-          backdrop: 'bg-red-500', // 背景颜色
-          popup: 'bg-[#F7F6F6]', // 弹出框背景颜色
+          backdrop: 'bg-red-500', // 背景顏色
+          popup: 'bg-[#F7F6F6]', // 彈出框背景顏色
         },
       });
     }
@@ -311,27 +367,27 @@ useEffect(() => {
     onSuccess: (res) => {
       console.log(res);
       queryClient.invalidateQueries('projectDatas');
-      // 使用SweetAlert2显示成功消息
+      // 使用 SweetAlert2 顯示成功消息
       Swal.fire({
         icon: 'success',
         title: '成功',
         text: res.message,
         customClass: {
-          backdrop: 'bg-red-500', // 背景颜色
-          popup: 'bg-[#F7F6F6]', // 弹出框背景颜色
+          backdrop: 'bg-red-500', // 背景顏色
+          popup: 'bg-[#F7F6F6]', // 彈出框背景顏色
         },
       });
     },
     onError: (error) => {
       console.log(error);
-      // 使用SweetAlert2显示错误消息
+      // 使用SweetAlert2顯示錯誤訊息
       Swal.fire({
         icon: 'error',
         title: '失敗',
         text: error.response.data.message,
         customClass: {
-          backdrop: 'bg-red-500', // 背景颜色
-          popup: 'bg-[#F7F6F6]', // 弹出框背景颜色
+          backdrop: 'bg-red-500', // 背景顏色
+          popup: 'bg-[#F7F6F6]', // 彈出框背景顏色
         },
       });
     },
@@ -490,6 +546,61 @@ const handleDeleteProject = (projectId) => {
           <div className='flex flex-col w-full '>
             <Accordion
               index={0}
+              title="可觀摩專案"
+              activeIndex={activeIndex}
+              setActiveIndex={setActiveIndex}
+            >
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-4 place-items-center'>
+                {viewableProjects.length > 0 ? viewableProjects.map((projectItem, index) => (
+                  <div key={index} className='bg-blue-50 w-full rounded-lg shadow-lg hover:shadow-lg p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out border-l-4 border-blue-400'>
+                    <div className='flex items-center'>
+                      <FaEye className='text-blue-600 mr-2' />
+                      <h3 className='text-xl font-bold text-blue-600'>{projectItem.name}</h3>
+                    </div>
+                    <Tooltip children={"專案描述"} content={`${projectItem.describe}`}>
+                      <p className='text-gray-600 font-semibold truncate overflow-hidden h-6'>{projectItem.describe}</p>
+                    </Tooltip>
+                    <div className='text-sm text-gray-500 font-bold'>
+                      目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
+                    </div>
+                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-sm text-gray-500'>成員：
+                      {projectItem.members?.map(member => member.username).join("、") || "無成員資訊"}
+                    </div>
+                    <div className='flex justify-between text-sm text-gray-500'>
+                      <span className='flex items-center text-gray-500'>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M3 12a9 9 0 110 18 9 9 0 010-18zm9 9a9 9 0 100-18 9 9 0 000 18z" />
+                        </svg>
+                        創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
+                      </span>
+                    </div>
+                    <ProgressTooltip children={"專案進度"} content={`已完成${calculateProgressPercentage(projectItem.currentStage, projectItem.currentSubStage)}%`}>
+                      <div className='w-full bg-gray-200 rounded-full h-2.5'>
+                        <div className='bg-blue-500 h-2.5 rounded-full transition-all duration-300 ease-in-out' style={{ width: `${calculateProgress(projectItem.currentStage, projectItem.currentSubStage)}%` }}></div>
+                      </div>
+                    </ProgressTooltip>
+                    <button 
+                      className='mt-2 bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 transition duration-200 ease-in-out font-semibold flex items-center justify-center'
+                      onClick={() => navigate(`/project/${projectItem.id}/kanban?mode=observation`)}
+                    >
+                      <FaEye className='mr-2' />
+                      觀摩專案
+                    </button>
+                  </div>
+                )) : (
+                  <div className="col-span-full">
+                    <div className="text-center py-12">
+                      <FaEye className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">目前沒有可觀摩的專案</h3>
+                      <p className="mt-1 text-sm text-gray-500">請等待老師開放專案供觀摩</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Accordion>
+            <Accordion
+              index={1}
               title="進行中活動"
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
@@ -582,7 +693,7 @@ const handleDeleteProject = (projectId) => {
               </div>
             </Accordion>
             <Accordion
-              index={1}
+              index={2}
               title="已結束活動"
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
@@ -630,7 +741,7 @@ const handleDeleteProject = (projectId) => {
               </div>
             </Accordion>
             <Accordion
-              index={2}
+              index={3}
               title="已完成歷程"
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
@@ -1145,4 +1256,3 @@ const Accordion = ({ index, title, children, activeIndex, setActiveIndex }) => {
     </div>
   );
 };
-

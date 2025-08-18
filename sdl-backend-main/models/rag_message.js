@@ -35,6 +35,17 @@ const Rag_message = sequelize.define('Rag_message', {
         type: DataTypes.STRING,
         allowNull: true,
     }
+    ,
+    project_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'projects',
+            key: 'id'
+        }
+    }
+}, {
+    tableName: 'rag_messages'
 });
 
 module.exports = Rag_message;

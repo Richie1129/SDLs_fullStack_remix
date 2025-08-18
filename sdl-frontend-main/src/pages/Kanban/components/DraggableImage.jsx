@@ -654,16 +654,16 @@ const DraggableImage = () => {
     messagePopup: {
       position: "fixed",
       left: `${position.x - 280}px`,
-      top: `${position.y + 150}px`,
+      top: `${position.y + 165}px`,
       backgroundColor: "#5BA491",
       color: "white",
-      padding: "12px 16px",
+      padding: "12px 12px",
       borderRadius: "12px",
       fontSize: "14px",
       boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
       cursor: "pointer",
       zIndex: 1001,
-      maxWidth: "250px",
+      maxWidth: "300px",
       animation: "fadeIn 0.3s ease",
       fontWeight: "500",
     },
@@ -980,7 +980,29 @@ const DraggableImage = () => {
           style={styles.messagePopup}
           onClick={handleImageClick}
         >
-          有什麼問題需要我幫你解答的嗎？
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>有什麼問題需要我幫你解答的嗎？</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowMessage(false); }}
+              title="關閉"
+              style={{
+                marginLeft: '2px',
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '14px',
+                lineHeight: 1,
+                padding: '2px 6px',
+                borderRadius: '4px',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
+              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 

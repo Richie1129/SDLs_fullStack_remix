@@ -25,6 +25,8 @@ const Chatroom_message = sequelize.define('Chatroom_message', {
             key: 'id'
         }
     }
+}, {
+    tableName: 'chatroom_messages'
 });
 
 
