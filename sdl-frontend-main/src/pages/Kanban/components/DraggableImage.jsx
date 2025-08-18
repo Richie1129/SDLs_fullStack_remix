@@ -11,7 +11,7 @@ const API_KEY = "ragflow-U0ZTc4MzdlZTJjYjExZWZiMzcyMDI0Mm"; // 保持不變，�
 // 提取為常數，避免重複宣告
 const OPENING_MESSAGE = "嗨！我是一位專門輔導高中生科學探究與實作的自然科學導師。我會用適合高中生的語言，保持專業的同時，幫助你探索自然科學的奧秘，並引導你選擇一個有興趣的科展主題，以及更深入了解你的研究問題。什麼可以幫到你的嗎？";
 
-const DraggableImage = () => {
+const DraggableImage = ({ containerRef }) => {
   const initialPosition = { x: window.innerWidth - 100, y: window.innerHeight / 2 };
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -35,6 +35,10 @@ const DraggableImage = () => {
   const [isMinimized, setIsMinimized] = useState(false); // 新增最小化狀態
   
   const imgRef = useRef(null);
+  const dragStateRef = useRef({ offsetX: 0, offsetY: 0, containerRect: null, imgW: 0, imgH: 0, lastLeft: 0, lastTop: 0 });
+  const dragIntentRef = useRef({ moved: false, startX: 0, startY: 0 });
+  const draggingRef = useRef(false);
+  const chatClosedByDragRef = useRef(false);
   const chatEndRef = useRef(null);
   const messageTimeoutRef = useRef(null);
 
@@ -49,9 +53,9 @@ const DraggableImage = () => {
       setHistory([{ question: null, answer: OPENING_MESSAGE }]);
     }
 
-    // 每 10 秒顯示一次訊息
+    // 每 10 秒顯示一次訊息（拖曳中不顯示）
     messageTimeoutRef.current = setInterval(() => {
-      if (!showChat) {
+      if (!showChat && !draggingRef.current) {
         setShowMessage(true);
       }
     }, 10000);
@@ -110,8 +114,163 @@ const DraggableImage = () => {
   }, [isFullscreen]);
 
   const handleImageClick = () => {
-      setShowMessage(false);
-      setShowChat(true);
+    if (dragIntentRef.current.moved) return; // 拖曳後不觸發點擊
+    setShowMessage(false);
+    setShowChat(true);
+  };
+
+  // 動態計算聊天視窗位置，確保不被裁切
+  const computeChatPosition = () => {
+    if (isFullscreen) {
+      return { left: 0, top: 0 };
+    }
+    const padding = 8;
+    const imgW = 80; // 與 w-20 一致
+    const containerW = showSidebar ? 580 : 380;
+    const containerH = 520;
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+
+    // 優先顯示在圖示左側；若左側空間不足，改顯示在右側
+    let left;
+    const preferLeft = position.x - containerW; // 貼齊左側（與現有邏輯一致）
+    const canPlaceLeft = preferLeft >= padding;
+    const rightSideLeft = position.x + imgW + padding;
+    const canPlaceRight = rightSideLeft + containerW + padding <= viewW;
+
+    if (canPlaceLeft) {
+      left = preferLeft;
+    } else if (canPlaceRight) {
+      left = rightSideLeft;
+    } else {
+      // 左右都不夠，強制夾在畫面內
+      left = Math.min(
+        Math.max(padding, preferLeft),
+        viewW - containerW - padding
+      );
+    }
+
+    // 垂直方向也做夾取，避免超出上下邊界
+    let top = position.y - 200;
+    top = Math.min(
+      Math.max(padding, top),
+      viewH - containerH - padding
+    );
+    return { left, top };
+  };
+
+  // 動態計算氣泡提示位置，避免被裁切
+  const computeMessagePosition = () => {
+    const padding = 8;
+    const bubbleW = 300; // 與 max-w-[300px] 一致
+    const imgW = 80;
+    const viewW = window.innerWidth;
+    let left;
+    const preferLeft = position.x - (bubbleW - 20); // 原本約 position.x - 280
+    const canPlaceLeft = preferLeft >= padding;
+    const rightSideLeft = position.x + imgW + padding;
+    const canPlaceRight = rightSideLeft + bubbleW + padding <= viewW;
+    if (canPlaceLeft) left = preferLeft;
+    else if (canPlaceRight) left = rightSideLeft;
+    else left = Math.min(Math.max(padding, preferLeft), viewW - bubbleW - padding);
+
+    // 垂直位置維持靠近圖示下方
+    const top = position.y + 165;
+    return { left, top };
+  };
+
+  // 拖曳處理：限制在 Kanban 容器內
+  const getBounds = () => {
+    const containerRect = dragStateRef.current.containerRect || (containerRef?.current
+      ? containerRef.current.getBoundingClientRect()
+      : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight });
+    return { containerRect };
+  };
+
+  const onMouseDown = (e) => {
+    const imgEl = imgRef.current;
+    if (!imgEl) return;
+    e.preventDefault();
+    const rect = imgEl.getBoundingClientRect();
+    const containerRect = containerRef?.current
+      ? containerRef.current.getBoundingClientRect()
+      : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight, width: window.innerWidth, height: window.innerHeight };
+    dragStateRef.current.offsetX = e.clientX - rect.left;
+    dragStateRef.current.offsetY = e.clientY - rect.top;
+    dragStateRef.current.containerRect = containerRect;
+    dragStateRef.current.imgW = imgEl.offsetWidth || 0;
+    dragStateRef.current.imgH = imgEl.offsetHeight || 0;
+    dragStateRef.current.lastLeft = rect.left;
+    dragStateRef.current.lastTop = rect.top;
+    dragIntentRef.current.startX = e.clientX;
+    dragIntentRef.current.startY = e.clientY;
+    dragIntentRef.current.moved = false;
+    draggingRef.current = true;
+    setIsDragging(true);
+    // 拖曳開始時隱藏提示泡泡
+    setShowMessage(false);
+    chatClosedByDragRef.current = false;
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const onMouseMove = (e) => {
+    if (!draggingRef.current) return;
+    const bounds = getBounds();
+    if (!bounds) return;
+    const { containerRect } = bounds;
+    const imgEl = imgRef.current;
+    const imgW = dragStateRef.current.imgW || imgEl?.offsetWidth || 0;
+    const imgH = dragStateRef.current.imgH || imgEl?.offsetHeight || 0;
+    let targetLeft = e.clientX - dragStateRef.current.offsetX;
+    let targetTop = e.clientY - dragStateRef.current.offsetY;
+
+    // 限制在容器內（容器座標是相對視窗）
+    const minLeft = containerRect.left;
+    const maxLeft = containerRect.right - imgW;
+    const minTop = containerRect.top;
+    const maxTop = containerRect.bottom - imgH;
+    if (targetLeft < minLeft) targetLeft = minLeft;
+    if (targetLeft > maxLeft) targetLeft = maxLeft;
+    if (targetTop < minTop) targetTop = minTop;
+    if (targetTop > maxTop) targetTop = maxTop;
+
+    // 小位移視為點擊，不標記為拖曳
+    const moveDX = Math.abs(e.clientX - dragIntentRef.current.startX);
+    const moveDY = Math.abs(e.clientY - dragIntentRef.current.startY);
+    if (moveDX > 3 || moveDY > 3) {
+      dragIntentRef.current.moved = true;
+      // 正在拖曳時關閉已開啟的聊天
+      if (!chatClosedByDragRef.current) {
+        setShowChat(false);
+        chatClosedByDragRef.current = true;
+      }
+      // 拖曳中持續隱藏提示泡泡
+      if (showMessage) setShowMessage(false);
+    }
+
+    // 立即以 DOM 方式移動，避免頻繁 re-render 造成卡頓
+    dragStateRef.current.lastLeft = targetLeft;
+    dragStateRef.current.lastTop = targetTop;
+    if (imgEl) {
+      imgEl.style.left = `${Math.round(targetLeft)}px`;
+      imgEl.style.top = `${Math.round(targetTop)}px`;
+    }
+  };
+
+  const onMouseUp = () => {
+    draggingRef.current = false;
+    setIsDragging(false);
+    chatClosedByDragRef.current = false;
+    // 將最終位置同步到 React 狀態
+    const finalLeft = dragStateRef.current.lastLeft;
+    const finalTop = dragStateRef.current.lastTop;
+    if (Number.isFinite(finalLeft) && Number.isFinite(finalTop)) {
+      setPosition({ x: Math.round(finalLeft), y: Math.round(finalTop - 150) });
+    }
+    window.removeEventListener('mousemove', onMouseMove);
+    window.removeEventListener('mouseup', onMouseUp);
   };
 
   // 新增：獲取歷史對話列表
@@ -654,326 +813,7 @@ const DraggableImage = () => {
     }
   };
 
-  // 樣式常數，提高可維護性
-  const styles = {
-    assistantImage: {
-      position: "fixed",
-      left: `${position.x}px`,
-      top: `${position.y + 150}px`,
-      cursor: "pointer",
-      userSelect: "none",
-      zIndex: 1000,
-      width: "80px",
-      height: "80px",
-      transition: "all 0.3s ease",
-      borderRadius: "50%",
-      boxShadow: "0 4px 12px rgba(91, 164, 145, 0.3)",
-    },
-    messagePopup: {
-      position: "fixed",
-      left: `${position.x - 280}px`,
-      top: `${position.y + 165}px`,
-      backgroundColor: "#5BA491",
-      color: "white",
-      padding: "12px 12px",
-      borderRadius: "12px",
-      fontSize: "14px",
-      boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
-      cursor: "pointer",
-      zIndex: 1001,
-      maxWidth: "300px",
-      animation: "fadeIn 0.3s ease",
-      fontWeight: "500",
-    },
-    chatContainer: {
-      position: "fixed",
-      // 全螢幕模式時占滿整個視窗，否則使用原來的位置
-      left: isFullscreen ? "0" : `${position.x - (showSidebar ? 580 : 380)}px`,
-      top: isFullscreen ? "0" : `${position.y - 200}px`,
-      width: isFullscreen ? "100vw" : (showSidebar ? "580px" : "380px"),
-      height: isFullscreen ? "100vh" : "520px",
-      backgroundColor: "white",
-      borderRadius: isFullscreen ? "0" : "16px",
-      boxShadow: isFullscreen ? "none" : "0 10px 30px rgba(0,0,0,0.2)",
-      display: "flex",
-      flexDirection: screenWidth < 768 && isFullscreen ? "column" : "row",
-      zIndex: isFullscreen ? 9999 : 1002,
-      overflow: "hidden",
-      transition: "all 0.3s ease",
-    },
-    sidebar: {
-      // RWD: 在全螢幕模式下調整側邊欄寬度
-      width: isFullscreen ? (screenWidth >= 768 ? "280px" : "100%") : "220px",
-      height: isFullscreen && screenWidth < 768 ? "auto" : "100%",
-      minHeight: isFullscreen && screenWidth < 768 ? "180px" : "auto",
-      backgroundColor: "#f8f9fa",
-      borderTopLeftRadius: isFullscreen ? "0" : "16px",
-      borderBottomLeftRadius: isFullscreen ? "0" : "16px",
-      padding: "16px",
-      display: "flex",
-      flexDirection: "column",
-      borderRight: screenWidth < 768 && isFullscreen ? "none" : "1px solid #e9ecef",
-      borderBottom: screenWidth < 768 && isFullscreen ? "1px solid #e9ecef" : "none",
-    },
-    newChatButton: {
-      backgroundColor: "#5BA491",
-      color: "white",
-      border: "none",
-      borderRadius: "8px",
-      padding: "12px 16px",
-      marginBottom: "16px",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: "600",
-      transition: "all 0.2s ease",
-      boxShadow: "0 2px 4px rgba(91, 164, 145, 0.2)",
-    },
-    sessionItem: (isActive) => ({
-      padding: "12px 14px",
-      borderRadius: "8px",
-      marginBottom: "6px",
-      cursor: "pointer",
-      fontSize: "13px",
-      backgroundColor: isActive ? "#5BA491" : "transparent",
-      color: isActive ? "white" : "#495057",
-      transition: "all 0.2s ease",
-      wordBreak: "break-word",
-      fontWeight: isActive ? "500" : "400",
-      border: isActive ? "none" : "1px solid transparent",
-      position: "relative",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-    }),
-    sessionName: {
-      flex: 1,
-      overflow: "hidden",
-      textOverflow: "ellipsis",
-      whiteSpace: "nowrap",
-      marginRight: "8px",
-    },
-    deleteButton: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "20px",
-      height: "20px",
-      borderRadius: "4px",
-      border: "none",
-      backgroundColor: "transparent",
-      color: "#dc3545",
-      cursor: "pointer",
-      fontSize: "12px",
-      opacity: 0,
-      transition: "all 0.2s ease",
-      padding: 0,
-      marginLeft: "4px",
-    },
-    mainChatArea: {
-      flex: 1,
-      display: "flex",
-      flexDirection: "column",
-      backgroundColor: "white",
-      minWidth: 0, // 防止 flex item 溢出
-    },
-    chatHeader: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: screenWidth < 768 ? "12px 16px" : "16px 20px",
-      borderBottom: "1px solid #e9ecef",
-      backgroundColor: "#f8f9fa",
-      position: "relative",
-      minHeight: "60px",
-    },
-    headerLeft: {
-      display: "flex",
-      alignItems: "center",
-      flex: "0 0 auto",
-      gap: "8px",
-    },
-    headerCenter: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      flex: "1",
-      gap: "12px",
-      position: "absolute",
-      left: "50%",
-      transform: "translateX(-50%)",
-      maxWidth: "300px",
-    },
-    headerRight: {
-      display: "flex",
-      alignItems: "center",
-      flex: "0 0 auto",
-      gap: "4px",
-    },
-    titleIcon: {
-      fontSize: "24px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "32px",
-      height: "32px",
-      backgroundColor: "#5BA491",
-      borderRadius: "8px",
-      boxShadow: "0 2px 4px rgba(91, 164, 145, 0.2)",
-    },
-    titleText: {
-      fontSize: isFullscreen ? "18px" : "16px",
-      fontWeight: "600",
-      color: "#343a40",
-      margin: 0,
-      userSelect: "none",
-      whiteSpace: "nowrap",
-      display: screenWidth < 480 ? "none" : "block",
-    },
-    headerButton: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "32px",
-      height: "32px",
-      border: "none",
-      borderRadius: "6px",
-      cursor: "pointer",
-      fontSize: "14px",
-      fontWeight: "500",
-      transition: "all 0.2s ease",
-      backgroundColor: "transparent",
-      color: "#6c757d",
-    },
-    backButton: {
-      backgroundColor: "transparent",
-      color: "#5BA491",
-      fontSize: "18px",
-    },
-    controlButtons: {
-      minButton: {
-        color: "#ffc107",
-        fontSize: "16px",
-      },
-      maxButton: {
-        color: "#28a745",
-        fontSize: "14px",
-      },
-      closeButton: {
-        color: "#dc3545",
-        fontSize: "16px",
-      },
-    },
-    toggleButton: {
-      border: "none",
-      background: "transparent",
-      fontSize: "16px",
-      cursor: "pointer",
-      color: "#5BA491",
-      padding: "4px 8px",
-      borderRadius: "4px",
-      transition: "background-color 0.2s ease",
-    },
-    fullscreenButton: {
-      border: "none",
-      background: "transparent",
-      fontSize: "16px",
-      cursor: "pointer",
-      color: "#5BA491",
-      padding: "4px 8px",
-      borderRadius: "4px",
-      transition: "all 0.2s ease",
-      marginLeft: "8px",
-    },
-    closeButton: {
-      border: "none",
-      background: "transparent",
-      fontSize: "18px",
-      cursor: "pointer",
-      color: "#6c757d",
-      padding: "4px 8px",
-      borderRadius: "4px",
-      transition: "all 0.2s ease",
-    },
-    chatContent: {
-      flex: 1,
-      overflowY: "auto",
-      padding: isFullscreen ? (screenWidth < 768 ? "16px" : "24px") : (screenWidth < 768 ? "12px" : "20px"),
-      backgroundColor: "#fdfdfd",
-    },
-    messageContainer: {
-      marginBottom: "16px",
-    },
-    userMessage: {
-      display: "flex",
-      justifyContent: "flex-end",
-      marginBottom: "8px",
-    },
-    userBubble: {
-      backgroundColor: "#5BA491",
-      color: "white",
-      padding: "12px 16px",
-      borderRadius: "18px 18px 4px 18px",
-      maxWidth: isFullscreen ? (screenWidth < 768 ? "85%" : "60%") : (screenWidth < 768 ? "85%" : "75%"),
-      fontSize: screenWidth < 768 ? "13px" : "14px",
-      lineHeight: "1.4",
-      boxShadow: "0 2px 8px rgba(91, 164, 145, 0.2)",
-    },
-    assistantMessage: {
-      display: "flex",
-      justifyContent: "flex-start",
-      marginBottom: "8px",
-    },
-    assistantBubble: {
-      backgroundColor: "white",
-      color: "#495057",
-      padding: "12px 16px",
-      borderRadius: "18px 18px 18px 4px",
-      maxWidth: isFullscreen ? (screenWidth < 768 ? "90%" : "70%") : (screenWidth < 768 ? "90%" : "85%"),
-      fontSize: screenWidth < 768 ? "13px" : "14px",
-      lineHeight: "1.4",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-      border: "1px solid #e9ecef",
-    },
-    inputArea: {
-      padding: screenWidth < 768 ? "12px 16px" : "16px 20px",
-      borderTop: "1px solid #e9ecef",
-      backgroundColor: "white",
-      display: "flex",
-      alignItems: "center",
-      gap: screenWidth < 768 ? "8px" : "12px",
-    },
-    textInput: {
-      flex: 1,
-      padding: screenWidth < 768 ? "10px 14px" : "12px 16px",
-      border: "1px solid #dee2e6",
-      borderRadius: "24px",
-      fontSize: screenWidth < 768 ? "13px" : "14px",
-      outline: "none",
-      transition: "all 0.2s ease",
-      backgroundColor: "#f8f9fa",
-    },
-    submitButton: (isSubmitting) => ({
-      padding: screenWidth < 768 ? "10px 16px" : "12px 20px",
-      borderRadius: "24px",
-      border: "none",
-      fontSize: screenWidth < 768 ? "13px" : "14px",
-      fontWeight: "600",
-      cursor: isSubmitting ? "not-allowed" : "pointer",
-      backgroundColor: isSubmitting ? "#dee2e6" : "#5BA491",
-      color: "white",
-      transition: "all 0.2s ease",
-      boxShadow: isSubmitting ? "none" : "0 2px 8px rgba(91, 164, 145, 0.3)",
-      minWidth: screenWidth < 768 ? "70px" : "80px",
-    }),
-    loadingSpinner: {
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100%",
-      color: "#6c757d",
-      fontSize: "14px",
-    },
-  };
+  // Tailwind-only styling; keep inline style only for dynamic left/top positions
 
   return (
     <>
@@ -981,42 +821,26 @@ const DraggableImage = () => {
         ref={imgRef}
         src={imageSrc}
         alt="科學助手"
-        style={styles.assistantImage}
+        className={`fixed cursor-pointer select-none z-[1000] w-20 h-20 rounded-full shadow-[0_4px_12px_rgba(91,164,145,0.3)] hover:scale-105 hover:shadow-[0_6px_20px_rgba(91,164,145,0.4)] ${isDragging ? 'transition-none' : 'transition-all duration-300 ease-in-out'}`}
+        style={{ left: position.x, top: position.y + 150 }}
         onClick={handleImageClick}
-        onMouseOver={(e) => {
-          e.target.style.transform = "scale(1.05)";
-          e.target.style.boxShadow = "0 6px 20px rgba(91, 164, 145, 0.4)";
-        }}
-        onMouseOut={(e) => {
-          e.target.style.transform = "scale(1)";
-          e.target.style.boxShadow = "0 4px 12px rgba(91, 164, 145, 0.3)";
-        }}
+        onMouseDown={onMouseDown}
+        draggable={false}
       />
 
       {showMessage && (
         <div
-          style={styles.messagePopup}
+          className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-[1001] max-w-[300px] font-medium animate-fade-in"
+          style={computeMessagePosition()}
           onClick={handleImageClick}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="flex items-center gap-2">
             <span>有什麼問題需要我幫你解答的嗎？</span>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setShowMessage(false); }}
               title="關閉"
-              style={{
-                marginLeft: '2px',
-                background: 'transparent',
-                border: 'none',
-                color: '#fff',
-                cursor: 'pointer',
-                fontSize: '14px',
-                lineHeight: 1,
-                padding: '2px 6px',
-                borderRadius: '4px',
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'; }}
-              onMouseOut={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+              className="ml-[2px] bg-transparent border-0 text-white cursor-pointer text-[14px] leading-none py-[2px] px-[6px] rounded hover:bg-white/15 transition-colors"
             >
               ✕
             </button>
@@ -1026,118 +850,61 @@ const DraggableImage = () => {
 
       {showChat && (
         <div 
-          style={styles.chatContainer}
-          className={`chat-container ${isFullscreen ? 'fullscreen' : ''} ${isMinimized ? 'minimized' : ''}`.trim()}
+          className={`chat-container fixed ${
+            isFullscreen
+              ? 'w-screen rounded-none shadow-none z-[9999]'
+              : `${showSidebar ? 'w-[580px]' : 'w-[380px]'} rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] z-[1002]`
+          } ${isMinimized ? 'h-[60px] overflow-hidden' : (isFullscreen ? 'h-screen' : 'h-[520px]')} bg-white transition-all duration-300 ease-in-out flex ${isFullscreen && screenWidth < 768 ? 'flex-col' : 'flex-row'}`.trim()}
+          style={isFullscreen ? { left: 0, top: 0 } : computeChatPosition()}
         >
           {/* 側邊欄 */}
           {showSidebar && (
             <div 
-              style={styles.sidebar}
-              className="sidebar"
+              className={`sidebar ${isMinimized ? 'hidden' : ''} ${isFullscreen ? (screenWidth >= 768 ? 'w-[280px] h-full' : 'w-full h-auto min-h-[180px] border-b border-[#e9ecef]') : 'w-[220px] h-full border-r border-[#e9ecef]'} ${isFullscreen ? 'rounded-none' : 'rounded-l-2xl'} bg-[#f8f9fa] p-4 flex flex-col`}
             >
               {/* 新對話按鈕 */}
               <button
                 onClick={handleNewConversation}
-                style={styles.newChatButton}
-                onMouseOver={(e) => {
-                  e.target.style.backgroundColor = "#4a9076";
-                  e.target.style.transform = "translateY(-1px)";
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.backgroundColor = "#5BA491";
-                  e.target.style.transform = "translateY(0)";
-                }}
+                className="bg-[#5BA491] text-white border-0 rounded-lg py-3 px-4 mb-4 cursor-pointer text-sm font-semibold transition-all shadow-[0_2px_4px_rgba(91,164,145,0.2)] hover:bg-[#4a9076] hover:-translate-y-px"
               >
                 ✨ 新對話
               </button>
 
               {/* 對話列表 */}
-              <div style={{ flex: 1, overflowY: "auto" }}>
+              <div className="flex-1 overflow-y-auto">
                 {isLoadingSessions ? (
-                  <div style={styles.loadingSpinner}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <div style={{ 
-                        width: "16px", 
-                        height: "16px", 
-                        border: "2px solid #5BA491", 
-                        borderTop: "2px solid transparent", 
-                        borderRadius: "50%", 
-                        animation: "spin 1s linear infinite" 
-                      }}></div>
+                  <div className="flex items-center justify-center h-full text-[#6c757d] text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-[#5BA491] border-t-transparent rounded-full animate-spin"></div>
                       載入中...
                     </div>
                   </div>
                 ) : chatSessions.length === 0 ? (
-                  <div style={{ 
-                    padding: "20px", 
-                    textAlign: "center", 
-                    color: "#6c757d", 
-                    fontSize: "13px",
-                    fontStyle: "italic"
-                  }}>
+                  <div className="p-5 text-center text-[#6c757d] text-[13px] italic">
                     🌟 開始你的第一次對話吧！
                   </div>
                 ) : (
                   chatSessions.map((session) => (
                     <div
                       key={session.id}
-                      style={{
-                        ...styles.sessionItem(currentChatId === session.id),
-                        cursor: "default",
-                      }}
-                      onMouseEnter={(e) => {
-                        const deleteBtn = e.currentTarget.querySelector('.delete-btn');
-                        if (deleteBtn) {
-                          deleteBtn.style.opacity = '1';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        const deleteBtn = e.currentTarget.querySelector('.delete-btn');
-                        if (deleteBtn && currentChatId !== session.id) {
-                          deleteBtn.style.opacity = '0';
-                        }
-                      }}
+                      className={`session-item group p-[12px_14px] rounded mb-1.5 cursor-default text-[13px] transition-all break-words flex items-center justify-between ${currentChatId === session.id ? 'bg-[#5BA491] text-white font-medium' : 'text-[#495057] border border-transparent hover:bg-[#e9ecef] hover:border-[#dee2e6]'}`}
                     >
                       <div 
-                        style={styles.sessionName}
+                        className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap mr-2"
                         onClick={() => handleChatSessionClick(session.id)}
-                        onMouseOver={(e) => {
-                          if (currentChatId !== session.id) {
-                            e.target.parentElement.style.backgroundColor = "#e9ecef";
-                            e.target.parentElement.style.borderColor = "#dee2e6";
-                          }
-                        }}
-                        onMouseOut={(e) => {
-                          if (currentChatId !== session.id) {
-                            e.target.parentElement.style.backgroundColor = "transparent";
-                            e.target.parentElement.style.borderColor = "transparent";
-                          }
-                        }}
                       >
                         💬 {session.name || `對話 ${session.id.substring(0, 8)}`}
                       </div>
                       
                       {/* 刪除按鈕 */}
                       <button
-                        className="delete-btn"
-                        style={{
-                          ...styles.deleteButton,
-                          opacity: currentChatId === session.id ? 1 : 0,
-                        }}
+                        className={`delete-btn flex items-center justify-center w-5 h-5 rounded border-0 bg-transparent text-[#dc3545] cursor-pointer text-[12px] transition-all ml-1 ${currentChatId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteSession(
                             session.id, 
                             session.name || `對話 ${session.id.substring(0, 8)}`
                           );
-                        }}
-                        onMouseOver={(e) => {
-                          e.target.style.backgroundColor = "#f8d7da";
-                          e.target.style.transform = "scale(1.1)";
-                        }}
-                        onMouseOut={(e) => {
-                          e.target.style.backgroundColor = "transparent";
-                          e.target.style.transform = "scale(1)";
                         }}
                         title="刪除對話"
                       >
@@ -1151,59 +918,36 @@ const DraggableImage = () => {
           )}
 
           {/* 主聊天區域 */}
-          <div style={styles.mainChatArea}>
+          <div className="flex flex-1 flex-col bg-white min-w-0">
             {/* 頂部工具欄 - 重新設計 */}
             <div 
-              style={styles.chatHeader}
-              className="chat-header"
+              className={`chat-header flex justify-between items-center ${screenWidth < 768 ? 'px-4 py-3' : 'px-5 py-4'} border-b border-[#e9ecef] bg-[#f8f9fa] relative min-h-[60px]`}
             >
               {/* 左側區域 */}
-              <div style={styles.headerLeft}>
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => setShowSidebar(!showSidebar)}
-                  style={{
-                    ...styles.headerButton,
-                    ...styles.backButton,
-                  }}
+                  className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[18px] font-medium transition-all bg-transparent text-[#5BA491] hover:bg-[#f1f3f4] hover:scale-110"
                   title={showSidebar ? "隱藏側邊欄" : "顯示側邊欄"}
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = "#f1f3f4";
-                    e.target.style.transform = "scale(1.1)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = "transparent";
-                    e.target.style.transform = "scale(1)";
-                  }}
                 >
                   {showSidebar ? "◂" : "▸"}
                 </button>
               </div>
 
               {/* 中央區域 - 圖示與標題 */}
-              <div style={styles.headerCenter}>
-                <h3 style={styles.titleText}>
+              <div className="header-center flex items-center justify-center flex-1 gap-3 absolute left-1/2 -translate-x-1/2 max-w-[300px]">
+                <h3 className={`${isFullscreen ? 'text-[18px]' : 'text-[16px]'} font-semibold text-[#343a40] m-0 select-none whitespace-nowrap ${screenWidth < 480 ? 'hidden' : 'block'}`}>
                   🧑‍🔬科學助手
                 </h3>
               </div>
 
               {/* 右側控制按鈕區域 */}
-              <div style={styles.headerRight}>
+              <div className="flex items-center gap-1 shrink-0">
                 {/* 最大化/還原按鈕 */}
                 <button
                   onClick={toggleFullscreen}
-                  style={{
-                    ...styles.headerButton,
-                    ...styles.controlButtons.maxButton,
-                  }}
+                  className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[14px] font-medium transition-all bg-transparent text-[#28a745] hover:bg-[#d1e7dd] hover:scale-110"
                   title={isFullscreen ? "還原視窗" : "最大化"}
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = "#d1e7dd";
-                    e.target.style.transform = "scale(1.1)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = "transparent";
-                    e.target.style.transform = "scale(1)";
-                  }}
                 >
                   {isFullscreen ? "🗗" : "🗖"}
                 </button>
@@ -1211,19 +955,8 @@ const DraggableImage = () => {
                 {/* 關閉按鈕 */}
                 <button 
                   onClick={() => setShowChat(false)} 
-                  style={{
-                    ...styles.headerButton,
-                    ...styles.controlButtons.closeButton,
-                  }}
+                  className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[16px] font-medium transition-all bg-transparent text-[#dc3545] hover:bg-[#f8d7da] hover:scale-110"
                   title="關閉聊天室"
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = "#f8d7da";
-                    e.target.style.transform = "scale(1.1)";
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = "transparent";
-                    e.target.style.transform = "scale(1)";
-                  }}
                 >
                   ✕
                 </button>
@@ -1232,37 +965,29 @@ const DraggableImage = () => {
 
             {/* 聊天內容區域 */}
             <div 
-              style={styles.chatContent}
-              className="chat-content"
+              className={`chat-content ${isMinimized ? 'hidden' : ''} flex-1 overflow-y-auto ${isFullscreen ? (screenWidth < 768 ? 'p-4' : 'p-6') : (screenWidth < 768 ? 'p-3' : 'p-5')} bg-[#fdfdfd]`}
             >
               {isLoadingHistory ? (
-                <div style={styles.loadingSpinner}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div style={{ 
-                      width: "20px", 
-                      height: "20px", 
-                      border: "2px solid #5BA491", 
-                      borderTop: "2px solid transparent", 
-                      borderRadius: "50%", 
-                      animation: "spin 1s linear infinite" 
-                    }}></div>
+                <div className="flex items-center justify-center h-full text-[#6c757d] text-[14px]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-[#5BA491] border-t-transparent rounded-full animate-spin"></div>
                     載入對話歷史...
                   </div>
                 </div>
               ) : (
                 <>
                   {history.map((item, index) => (
-                    <div key={index} style={styles.messageContainer}>
+                    <div key={index} className="mb-4">
                       {item.question && (
-                        <div style={styles.userMessage}>
-                          <div style={styles.userBubble}>
+                        <div className="flex justify-end mb-2">
+                          <div className={`bg-[#5BA491] text-white px-4 py-3 rounded-[18px_18px_4px_18px] ${isFullscreen ? (screenWidth < 768 ? 'max-w-[85%]' : 'max-w-[60%]') : (screenWidth < 768 ? 'max-w-[85%]' : 'max-w-[75%]')} ${screenWidth < 768 ? 'text-[13px]' : 'text-[14px]'} leading-[1.4] shadow-[0_2px_8px_rgba(91,164,145,0.2)]`}>
                             {item.question}
                           </div>
                         </div>
                       )}
                       {item.answer && (
-                        <div style={styles.assistantMessage}>
-                          <div style={styles.assistantBubble}>
+                        <div className="flex justify-start mb-2">
+                          <div className={`bg-white text-[#495057] px-4 py-3 rounded-[18px_18px_18px_4px] ${isFullscreen ? (screenWidth < 768 ? 'max-w-[90%]' : 'max-w-[70%]') : (screenWidth < 768 ? 'max-w-[90%]' : 'max-w-[85%]')} ${screenWidth < 768 ? 'text-[13px]' : 'text-[14px]'} leading-[1.4] shadow-[0_2px_8px_rgba(0,0,0,0.1)] border border-[#e9ecef]`}>
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
                               components={{
@@ -1271,45 +996,26 @@ const DraggableImage = () => {
                                   // 移除不應該傳遞給 DOM 的屬性
                                   const { jsx, ...domProps } = props;
                                   return match ? (
-                                    <pre style={{ 
-                                      backgroundColor: "#f8f9fa", 
-                                      padding: "12px", 
-                                      borderRadius: "8px", 
-                                      margin: "8px 0", 
-                                      overflowX: "auto",
-                                      border: "1px solid #e9ecef"
-                                    }}>
-                                      <code style={{ 
-                                        backgroundColor: "transparent", 
-                                        color: "#495057", 
-                                        fontSize: "12px",
-                                        fontFamily: "Monaco, Consolas, 'Courier New', monospace"
-                                      }} {...domProps}>
+                                    <pre className="bg-[#f8f9fa] p-3 rounded-lg my-2 overflow-x-auto border border-[#e9ecef]">
+                                      <code className="bg-transparent text-[#495057] text-[12px] font-mono" {...domProps}>
                                         {children}
                                       </code>
                                     </pre>
                                   ) : (
-                                    <code style={{ 
-                                      backgroundColor: "#f1f3f4", 
-                                      color: "#5f6368", 
-                                      padding: "2px 6px", 
-                                      borderRadius: "4px", 
-                                      fontSize: "12px",
-                                      fontFamily: "Monaco, Consolas, 'Courier New', monospace"
-                                    }} {...domProps}>
+                                    <code className="bg-[#f1f3f4] text-[#5f6368] px-[6px] py-[2px] rounded text-[12px] font-mono" {...domProps}>
                                       {children}
                                     </code>
                                   );
                                 },
-                                p: ({ children }) => <p style={{ margin: "0 0 8px 0" }}>{children}</p>,
-                                ul: ({ children }) => <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>{children}</ul>,
-                                ol: ({ children }) => <ol style={{ margin: "8px 0", paddingLeft: "20px" }}>{children}</ol>,
-                                li: ({ children }) => <li style={{ marginBottom: "4px" }}>{children}</li>,
-                                h1: ({ children }) => <h1 style={{ fontSize: "16px", fontWeight: "600", margin: "16px 0 8px 0", color: "#343a40" }}>{children}</h1>,
-                                h2: ({ children }) => <h2 style={{ fontSize: "15px", fontWeight: "600", margin: "16px 0 8px 0", color: "#343a40" }}>{children}</h2>,
-                                h3: ({ children }) => <h3 style={{ fontSize: "14px", fontWeight: "600", margin: "16px 0 8px 0", color: "#343a40" }}>{children}</h3>,
-                                blockquote: ({ children }) => <blockquote style={{ borderLeft: "4px solid #5BA491", paddingLeft: "16px", margin: "8px 0", fontStyle: "italic", color: "#6c757d" }}>{children}</blockquote>,
-                                strong: ({ children }) => <strong style={{ fontWeight: "600", color: "#343a40" }}>{children}</strong>,
+                                p: ({ children }) => <p className="m-0 mb-2">{children}</p>,
+                                ul: ({ children }) => <ul className="my-2 pl-5">{children}</ul>,
+                                ol: ({ children }) => <ol className="my-2 pl-5">{children}</ol>,
+                                li: ({ children }) => <li className="mb-1">{children}</li>,
+                                h1: ({ children }) => <h1 className="text-[16px] font-semibold my-4 mt-4 mb-2 text-[#343a40]">{children}</h1>,
+                                h2: ({ children }) => <h2 className="text-[15px] font-semibold my-4 mt-4 mb-2 text-[#343a40]">{children}</h2>,
+                                h3: ({ children }) => <h3 className="text-[14px] font-semibold my-4 mt-4 mb-2 text-[#343a40]">{children}</h3>,
+                                blockquote: ({ children }) => <blockquote className="border-l-4 border-[#5BA491] pl-4 my-2 italic text-[#6c757d]">{children}</blockquote>,
+                                strong: ({ children }) => <strong className="font-semibold text-[#343a40]">{children}</strong>,
                               }}
                             >
                               {item.answer}
@@ -1327,42 +1033,19 @@ const DraggableImage = () => {
             {/* 輸入區域 */}
             <form 
               onSubmit={handleSubmit} 
-              style={styles.inputArea}
-              className="input-area"
+              className={`input-area ${isMinimized ? 'hidden' : ''} ${screenWidth < 768 ? 'px-4 py-3 gap-2' : 'px-5 py-4 gap-3'} border-t border-[#e9ecef] bg-white flex items-center`}
             >
               <input
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="輸入您的問題..."
-                style={styles.textInput}
-                onFocus={(e) => {
-                  e.target.style.borderColor = "#5BA491";
-                  e.target.style.backgroundColor = "white";
-                  e.target.style.boxShadow = "0 0 0 3px rgba(91, 164, 145, 0.1)";
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = "#dee2e6";
-                  e.target.style.backgroundColor = "#f8f9fa";
-                  e.target.style.boxShadow = "none";
-                }}
+                className={`flex-1 ${screenWidth < 768 ? 'py-[10px] px-[14px] text-[13px]' : 'py-3 px-4 text-[14px]'} border border-[#dee2e6] rounded-full outline-none transition-all bg-[#f8f9fa] focus:border-[#5BA491] focus:bg-white focus:ring-2 focus:ring-[rgba(91,164,145,0.1)]`}
               />
               <button
                 type="submit"
-                style={styles.submitButton(isSubmitting)}
+                className={`${screenWidth < 768 ? 'py-[10px] px-4 text-[13px] min-w-[70px]' : 'py-3 px-5 text-[14px] min-w-[80px]'} rounded-full border-0 font-semibold ${isSubmitting ? 'bg-[#dee2e6] cursor-not-allowed shadow-none' : 'bg-[#5BA491] cursor-pointer shadow-[0_2px_8px_rgba(91,164,145,0.3)] hover:bg-[#4a9076] hover:-translate-y-px'} text-white transition-all`}
                 disabled={isSubmitting}
-                onMouseOver={(e) => {
-                  if (!isSubmitting) {
-                    e.target.style.backgroundColor = "#4a9076";
-                    e.target.style.transform = "translateY(-1px)";
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!isSubmitting) {
-                    e.target.style.backgroundColor = "#5BA491";
-                    e.target.style.transform = "translateY(0)";
-                  }
-                }}
               >
                 {isSubmitting ? "送出中..." : "送出"}
               </button>
@@ -1371,236 +1054,7 @@ const DraggableImage = () => {
         </div>
       )}
 
-      {/* 添加 CSS 動畫和 RWD 樣式 */}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        .markdown-content p:last-child {
-          margin-bottom: 0 !important;
-        }
-
-        /* SweetAlert2 自訂樣式 - 確保在全螢幕模式下可見 */
-        .swal2-container-custom {
-          z-index: 99999 !important;
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-        }
-        
-        .swal2-popup-custom {
-          z-index: 99999 !important;
-          position: relative !important;
-        }
-
-        /* 強制 SweetAlert2 顯示在最頂層 */
-        .swal2-container {
-          z-index: 99999 !important;
-        }
-
-        .swal2-container.swal2-shown {
-          z-index: 99999 !important;
-        }
-
-        .swal2-popup {
-          z-index: 99999 !important;
-        }
-        
-        .swal2-backdrop {
-          z-index: 99998 !important;
-        }
-
-        /* 確保 backdrop 不會被遮住 */
-        .swal2-container:not(.swal2-backdrop-show) .swal2-backdrop {
-          z-index: 99998 !important;
-        }
-
-        /* 針對全螢幕模式的特殊處理 */
-        body.swal2-shown .chat-container.fullscreen {
-          z-index: 9998 !important;
-        }
-
-        /* 全螢幕模式覆蓋樣式 */
-        .chat-container.fullscreen {
-          position: fixed !important;
-          top: 0 !important;
-          left: 0 !important;
-          width: 100vw !important;
-          height: 100vh !important;
-          border-radius: 0 !important;
-          z-index: 9999 !important;
-          box-shadow: none !important;
-        }
-
-        /* 最小化模式樣式 */
-        .chat-container.minimized {
-          height: 60px !important;
-          overflow: hidden !important;
-        }
-        
-        .chat-container.minimized .chat-content,
-        .chat-container.minimized .input-area,
-        .chat-container.minimized .sidebar {
-          display: none !important;
-        }
-
-        /* 標題列 hover 效果 */
-        .chat-header:hover {
-          background-color: #f1f3f4 !important;
-        }
-
-        /* 按鈕 hover 效果增強 */
-        .chat-header button {
-          position: relative;
-          overflow: hidden;
-        }
-
-        .chat-header button::before {
-          content: '';
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 0;
-          height: 0;
-          background: rgba(91, 164, 145, 0.1);
-          border-radius: 50%;
-          transform: translate(-50%, -50%);
-          transition: width 0.3s ease, height 0.3s ease;
-        }
-
-        .chat-header button:hover::before {
-          width: 40px;
-          height: 40px;
-        }
-
-        /* 對話項目 hover 效果 */
-        .chat-container .sidebar .session-item {
-          position: relative;
-        }
-        
-        .chat-container .sidebar .session-item:hover .delete-btn {
-          opacity: 1 !important;
-        }
-        
-        .delete-btn {
-          transition: all 0.2s ease !important;
-        }
-        
-        .delete-btn:hover {
-          background-color: #f8d7da !important;
-          transform: scale(1.1) !important;
-        }
-
-        /* RWD 媒體查詢 */
-        @media (max-width: 768px) {
-          .chat-container.fullscreen {
-            flex-direction: column !important;
-          }
-          
-          .chat-container.fullscreen .sidebar {
-            width: 100% !important;
-            height: auto !important;
-            min-height: 180px !important;
-            border-right: none !important;
-            border-bottom: 1px solid #e9ecef !important;
-            border-radius: 0 !important;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .chat-header {
-            padding: 8px 12px !important;
-            min-height: 50px !important;
-          }
-          
-          .chat-header .header-center {
-            max-width: 200px !important;
-          }
-          
-          .chat-header button {
-            width: 28px !important;
-            height: 28px !important;
-            font-size: 12px !important;
-          }
-          
-          .title-icon {
-            width: 24px !important;
-            height: 24px !important;
-            font-size: 16px !important;
-          }
-          
-          .chat-content {
-            padding: 12px !important;
-          }
-          .input-area {
-            padding: 8px 12px !important;
-          }
-        }
-
-        /* 防止全螢幕時背景滾動 */
-        ${isFullscreen ? `
-          body {
-            overflow: hidden !important;
-          }
-        ` : ''}
-
-        /* 平滑過渡動畫 */
-        .chat-container {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        }
-
-        /* 在全螢幕模式添加漸入效果 */
-        .chat-container.fullscreen {
-          animation: fullscreenExpand 0.3s ease-out;
-        }
-
-        /* 最小化動畫 */
-        .chat-container.minimized {
-          animation: minimizeCollapse 0.3s ease-out;
-        }
-
-        @keyframes fullscreenExpand {
-          from {
-            transform: scale(0.95);
-            opacity: 0.8;
-          }
-          to {
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-
-        @keyframes minimizeCollapse {
-          from {
-            height: 520px;
-          }
-          to {
-            height: 60px;
-          }
-        }
-
-        /* 漸變背景動畫 */
-        .chat-header {
-          background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-          border-bottom: 2px solid #dee2e6;
-        }
-
-        /* 增強視覺層次 */
-        .title-icon {
-          background: linear-gradient(135deg, #5BA491 0%, #4a9076 100%) !important;
-          color: white !important;
-          box-shadow: 0 4px 8px rgba(91, 164, 145, 0.3) !important;
-        }
-      `}</style>
+      {/* 移除內嵌 <style>：轉為 Tailwind 類與配置 */}
     </>
   );
 };
