@@ -25,41 +25,49 @@ exports.getProject = async (req, res) => {
 
 exports.getAllProject = async (req, res) => {
     try {
-        const userId = req.query.userId || req.userId; // 支援兩種方式獲取 userId
         const { viewable_by } = req.query;
+        // 支援 query.userId 或由驗證中介層掛上的 req.userId
+        const rawUserId = typeof req.query.userId !== 'undefined' ? req.query.userId : req.userId;
 
         console.log('=== getAllProject Debug ===');
         console.log('req.query.userId:', req.query.userId);
         console.log('req.userId:', req.userId);
         console.log('viewable_by:', viewable_by);
-        console.log('final userId:', userId);
 
-        // 如果有 viewable_by 參數，返回可觀摩的專案
+        // 分支：可觀摩專案查詢
         if (viewable_by) {
-            console.log('調用 getViewableProjects');
+            console.log('[getAllProject] 轉交至 getViewableProjects');
             return exports.getViewableProjects(req, res);
         }
 
-        // 原有邏輯：返回用戶參與的專案
-        console.log('查詢用戶參與的專案, userId:', userId);
+        // 分支：用戶參與的專案
+        // 防呆：沒有 userId 直接回覆 400，避免 ORM where: { id: undefined } 造成例外
+        if (typeof rawUserId === 'undefined' || rawUserId === null || rawUserId === '') {
+            return res.status(400).json({ message: '缺少 userId 參數' });
+        }
+
+        const userId = Number(rawUserId);
+        if (!Number.isInteger(userId) || userId <= 0) {
+            return res.status(400).json({ message: 'userId 參數格式不正確' });
+        }
+
+        console.log('[getAllProject] 查詢用戶參與的專案 userId:', userId);
         const projects = await Project.findAll({
             include: [{
                 model: User,
                 attributes: ['id', 'username', 'class'],
-                where: {
-                    id: userId
-                },
+                where: { id: userId },
                 through: { attributes: [] }
             }]
         });
 
-        console.log('找到的專案數量:', projects.length);
-        res.status(200).json(projects);
+        console.log('[getAllProject] 專案數量:', projects.length);
+        return res.status(200).json(projects);
     } catch (error) {
         console.error('取得專案列表錯誤:', error);
-        res.status(500).json({ 
+        return res.status(500).json({
             message: '取得專案列表時發生錯誤',
-            error: error.message 
+            error: error.message
         });
     }
 };
