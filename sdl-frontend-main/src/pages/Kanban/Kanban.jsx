@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiPlus } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
@@ -545,10 +545,12 @@ export default function Kanban() {
     });
   }
 
+  const kanbanContainerRef = useRef(null);
+
   return (
-    <div className="h-full min-h-0 w-full bg-white flex flex-col">
+    <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
       {/* 觀摩模式隱藏科學助手 */}
-      {!isObservationMode && <DraggableImage/>}
+      {!isObservationMode && <DraggableImage containerRef={kanbanContainerRef} />}
       
       {/* 觀摩模式提示 */}
       {isObservationMode && (
