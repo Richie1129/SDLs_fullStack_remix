@@ -347,7 +347,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
       initial={{ x: 300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 300, opacity: 0 }}
-      className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-[120] overflow-hidden"
+      className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-[120] overflow-hidden flex flex-col"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
@@ -362,7 +362,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
       </div>
 
       {/* Body */}
-      <div className="h-[700px] flex flex-col">
+      <div className="flex-1 min-h-0 flex flex-col">
         {/* Comment list (flat, scrolls independently) */}
         <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 scrollbar-thin">
           {isLoading ? (
