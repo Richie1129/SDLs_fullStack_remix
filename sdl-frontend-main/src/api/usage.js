@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const usageApi = axios.create({
-  baseURL: "http://localhost/api/usage",
+  baseURL: "https://science.sdlswuret.com/api/usage",
   headers: {
     "Content-Type": "application/json",
   },
