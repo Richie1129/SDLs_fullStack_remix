@@ -25,11 +25,17 @@ const StatsCards = ({ classStats }) => {
       value: classStats.totalIdeaNodes,
       subtitle: '創意發想',
       color: 'text-purple-600'
+    },
+    {
+      title: '使用時長(總計)',
+      value: `${classStats.totalUsageHours}h`,
+      subtitle: `每生平均 ${classStats.averageUsageHours}h`,
+      color: 'text-orange-600'
     }
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6 mb-6">
       {cards.map((card, index) => (
         <div key={index} className="bg-white p-3 sm:p-6 rounded-lg shadow-md">
           <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1 sm:mb-2">

@@ -8,6 +8,8 @@ import { getRagMessageHistory } from "../../../../api/rag";
 import { getProjectUser } from "../../../../api/users";
 import { getProject } from "../../../../api/project";
 import { fetchComments } from "../../../../api/comments";
+import { getUsageSummary } from "../../../../api/usage";
+import { getAllSubmit } from "../../../../api/submit";
 
 /**
  * 自定義 Hook 用於獲取專案相關數據
@@ -48,6 +50,8 @@ export function useProjectData(projectId, userId) {
   const [ideaNodes, setIdeaNodes] = useState([]);
   const [kanbanTasks, setKanbanTasks] = useState([]);
   const [projectComments, setProjectComments] = useState([]);
+  const [submissions, setSubmissions] = useState([]);
+  const [usageSummary, setUsageSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // 獲取所有專案資料
@@ -132,26 +136,39 @@ export function useProjectData(projectId, userId) {
           }
         }
 
-        // 獲取反思資料（個人和團隊）
+        // 獲取反思資料（個人和團隊）與提交紀錄
         const [
           personalReflectionsResponse,
-          teamReflectionsResponse
+          teamReflectionsResponse,
+          submissionsResponse
         ] = await Promise.allSettled([
           getAllPersonalDaily({ 
             projectId: projectId, 
             userId: userId,
             isTeacher: false 
           }),
-          getAllTeamDaily({ params: { projectId: projectId } })
+          getAllTeamDaily({ params: { projectId: projectId } }),
+          getAllSubmit({ params: { projectId } })
         ]);
 
         const personalRefl = personalReflectionsResponse.status === 'fulfilled' ? 
           personalReflectionsResponse.value || [] : [];
         const teamRefl = teamReflectionsResponse.status === 'fulfilled' ? 
           teamReflectionsResponse.value || [] : [];
+        const submitList = submissionsResponse.status === 'fulfilled' ?
+          submissionsResponse.value || [] : [];
 
         setPersonalReflections(personalRefl);
         setTeamReflections(teamRefl);
+        setSubmissions(submitList);
+
+        // 取得使用時間統計（精準版）
+        try {
+          const summary = await getUsageSummary({ userId, projectId });
+          setUsageSummary(summary);
+        } catch (e) {
+          setUsageSummary(null);
+        }
 
         // 獲取團隊所有成員的AI互動記錄
         if (members.length > 0) {
@@ -221,6 +238,8 @@ export function useProjectData(projectId, userId) {
     // 專案內所有卡片評論（用於跨組評論統計）
     peerComments: projectComments,
     projectComments,
+    submissions,
+    usageSummary,
     
     // 狀態
     loading

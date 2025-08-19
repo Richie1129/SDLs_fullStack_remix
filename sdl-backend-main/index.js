@@ -1273,6 +1273,7 @@ app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/llm', require('./routes/llm'));
 app.use('/api/file', require('./routes/file'));  // MinIO 檔案管理路由
+app.use('/api/usage', require('./routes/usage'));
 app.use('/api', require('./routes/projectComments'));   // 專案評論/按讚
 app.use('/api', require('./routes/comments'));   // 任務評論/附件/按讚
 

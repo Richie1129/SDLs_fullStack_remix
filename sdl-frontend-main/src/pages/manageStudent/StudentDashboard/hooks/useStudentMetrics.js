@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { formatRelativeTime } from "../utils";
+import { calculateProgress } from "../utils";
 
 /**
  * 自定義 Hook 用於計算學生相關指標
@@ -26,7 +27,9 @@ export function useStudentMetrics(data, userName, projectId, userId) {
     // 新增：跨組評論資料來源（假設提供）
     peerComments = [],
     projectActivities = [],
-    projectInfo = null
+    projectInfo = null,
+    submissions = [],
+    usageSummary = null
   } = data || {};
 
   // 計算小組統計數據
@@ -118,65 +121,178 @@ export function useStudentMetrics(data, userName, projectId, userId) {
         }
       };
 
+      // 以 projectInfo 為主，避免依賴 localStorage
+      const stage = Number(projectInfo?.currentStage) || 0;
+      const subStage = Number(projectInfo?.currentSubStage) || 0;
+      const progressPct = calculateProgress(stage, subStage);
+
+      // 計算最後活動時間（多來源取最大值）
+      const timestamps = [];
+      const pushTime = (t) => { if (t) timestamps.push(new Date(t).getTime()); };
+      (Array.isArray(personalReflections) ? personalReflections : []).forEach(r => pushTime(r?.updatedAt || r?.createdAt));
+      (Array.isArray(kanbanTasks) ? kanbanTasks : []).forEach(t => pushTime(t?.updatedAt || t?.createdAt));
+      (Array.isArray(chatHistory) ? chatHistory : []).forEach(m => pushTime(m?.createdAt));
+      (Array.isArray(aiInteractions) ? aiInteractions : []).forEach(a => pushTime(a?.createdAt));
+      (Array.isArray(projectActivities) ? projectActivities : []).forEach(a => pushTime(a?.createdAt));
+      (Array.isArray(ideaNodes) ? ideaNodes : []).forEach(n => pushTime(n?.createdAt));
+      const lastActivityTs = timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null;
+
+      // QA 問題數：以聊天歷史中屬於自己的訊息數為估計（同專案）
+      const qaCount = getChatMessages();
+
+      // 依活動紀錄近似估算學習時長與平均每次
+      const normalizeId = (x) => (x == null ? null : String(x));
+      const meId = normalizeId(userId);
+      const meName = userName || '';
+      const eventTimes = [];
+      const pushEvent = (t) => { if (t) eventTimes.push(new Date(t).getTime()); };
+
+      // 反思
+      (Array.isArray(personalReflections) ? personalReflections : []).forEach(r => {
+        const uid = normalizeId(r?.userId ?? r?.user_id ?? r?.authorId);
+        const uname = r?.userName ?? r?.username ?? r?.author ?? '';
+        if ((uid && uid === meId) || (uname && uname === meName)) pushEvent(r?.createdAt);
+      });
+      // 任務（自己指派或自己建立）
+      (Array.isArray(kanbanTasks) ? kanbanTasks : []).forEach(t => {
+        const assigned = Array.isArray(t?.assignees) && t.assignees.some((a) => {
+          if (a == null) return false;
+          if (typeof a === 'string') return a === meName || a === meId;
+          if (typeof a === 'number') return String(a) === meId;
+          return String(a.id ?? a.userId ?? '') === meId || (a.username ?? a.name ?? a.userName ?? '') === meName;
+        });
+        const createdBy = t?.userId === userId || t?.user_id === userId || t?.owner === meName || t?.created_by === meName;
+        if (assigned || createdBy) {
+          pushEvent(t?.createdAt);
+          pushEvent(t?.updatedAt);
+        }
+      });
+      // 聊天
+      (Array.isArray(chatHistory) ? chatHistory : []).forEach(c => {
+        const uid = normalizeId(c?.userId ?? c?.user_id);
+        const uname = c?.author ?? c?.username ?? c?.user_name ?? '';
+        if ((uid && uid === meId) || (uname && uname === meName)) pushEvent(c?.createdAt);
+      });
+      // AI 互動
+      (Array.isArray(aiInteractions) ? aiInteractions : []).forEach(a => {
+        const uid = normalizeId(a?.userId ?? a?.uid);
+        const uname = a?.userName ?? a?.username ?? a?.author ?? '';
+        if ((uid && uid === meId) || (uname && uname === meName)) pushEvent(a?.createdAt);
+      });
+      // 專案活動
+      (Array.isArray(projectActivities) ? projectActivities : []).forEach(a => {
+        const uname = a?.changedBy ?? a?.user ?? '';
+        const uid = normalizeId(a?.userId ?? a?.user_id);
+        if ((uid && uid === meId) || (uname && uname === meName)) pushEvent(a?.createdAt);
+      });
+      // 想法節點
+      (Array.isArray(ideaNodes) ? ideaNodes : []).forEach(n => {
+        const uid = normalizeId(n?.ownerId ?? n?.userId ?? n?.user_id);
+        const uname = n?.owner ?? n?.username ?? n?.user_name ?? '';
+        if ((uid && uid === meId) || (uname && uname === meName)) pushEvent(n?.createdAt);
+      });
+      // 歷程檔案提交
+      (Array.isArray(data?.submissions) ? data.submissions : []).forEach(s => {
+        const uid = normalizeId(s?.userId ?? s?.user_id);
+        if (uid && uid === meId) pushEvent(s?.createdAt);
+      });
+
+      // Session 化計算
+      eventTimes.sort((a, b) => a - b);
+      const INACTIVITY_GAP_MS = 45 * 60 * 1000; // 45 分鐘
+      const MIN_SESSION_MS = 10 * 60 * 1000;   // 至少 10 分鐘
+      const MAX_SESSION_MS = 4 * 60 * 60 * 1000; // 最多 4 小時
+      const sessions = [];
+      let startAt = null, lastAt = null;
+      for (const t of eventTimes) {
+        if (startAt === null) { startAt = t; lastAt = t; continue; }
+        if (t - lastAt > INACTIVITY_GAP_MS) {
+          const raw = lastAt - startAt;
+          sessions.push(Math.max(MIN_SESSION_MS, Math.min(MAX_SESSION_MS, raw)));
+          startAt = t; lastAt = t;
+        } else {
+          lastAt = t;
+        }
+      }
+      if (startAt !== null) {
+        const raw = lastAt - startAt;
+        sessions.push(Math.max(MIN_SESSION_MS, Math.min(MAX_SESSION_MS, raw)));
+      }
+      // 近似值
+      const totalHoursApprox = sessions.length ? (sessions.reduce((s, d) => s + d, 0) / 3600000) : 0;
+      const avgHoursApprox = sessions.length ? (totalHoursApprox / sessions.length) : 0;
+      let totalStudyTime = Number(totalHoursApprox.toFixed(1));
+      let averageSessionTime = Number(avgHoursApprox.toFixed(1));
+
+      // 若後端有精準統計，優先使用
+      if (usageSummary && typeof usageSummary.totalSeconds === 'number') {
+        const th = usageSummary.totalSeconds / 3600;
+        totalStudyTime = Number(th.toFixed(1));
+      }
+      if (usageSummary && typeof usageSummary.averageSeconds === 'number' && usageSummary.sessionCount > 0) {
+        const ah = usageSummary.averageSeconds / 3600;
+        averageSessionTime = Number(ah.toFixed(1));
+      }
+
       return {
         id: 1,
-        name: userName || "王小明",
+        name: userName || "學習者",
         projectId: projectId || '',
-        projectName: projectInfo?.name || "環境科學研究",
-        currentStage: parseInt(localStorage.getItem("currentStage")) || 3,
-        currentSubStage: parseInt(localStorage.getItem("currentSubStage")) || 2,
-        progressPercentage: 65,
-        lastActivity: "2024-01-15T10:30:00Z",
+        projectName: projectInfo?.name || "",
+        currentStage: stage,
+        currentSubStage: subStage,
+        progressPercentage: progressPct,
+        lastActivity: lastActivityTs,
         weeklyReflections: getWeeklyReflections(),
         ideaNodes: Array.isArray(ideaNodes) ? ideaNodes.length : 0,
         status: "active",
-        teamRole: "組長",
+        teamRole: "組員",
         chatMessages: getChatMessages(),
-        qaQuestions: 5,
+        qaQuestions: qaCount,
         aiInteractions: Array.isArray(aiInteractions) ? aiInteractions.length : 0,
-        totalStudyTime: 45,
-        averageSessionTime: 2.5,
+        totalStudyTime,
+        averageSessionTime,
         
         // 動態任務統計 - 基於真實的Kanban列表
         tasksByStatus: getTasksByStatus(),
         allColumnNames: getAllColumnNames(),
         
         completedTasks: safeFilter(kanbanTasks, task => {
-          const status = task?.status?.toLowerCase() || '';
+          const status = (task?.status || task?.columnName || '').toLowerCase();
           return status.includes('完成') || status.includes('done') || 
                  status.includes('完畢') || status.includes('finished') ||
                  status.includes('completed') || status === '完成';
-        }).length, // 真實完成任務數
+        }).length,
         
         pendingTasks: safeFilter(kanbanTasks, task => {
-          const status = task?.status?.toLowerCase() || '';
+          const status = (task?.status || task?.columnName || '').toLowerCase();
           return !(status.includes('完成') || status.includes('done') || 
                    status.includes('完畢') || status.includes('finished') ||
                    status.includes('completed') || status === '完成');
-        }).length, // 真實進行中任務數
+        }).length,
         
-        totalTasks: Array.isArray(kanbanTasks) ? kanbanTasks.length : 0 // 總任務數
+        totalTasks: Array.isArray(kanbanTasks) ? kanbanTasks.length : 0
       };
     } catch (error) {
       console.error('個人資料計算錯誤:', error);
       return {
         id: 1,
-        name: userName || "王小明",
+        name: userName || "學習者",
         projectId: projectId || '',
-        projectName: "環境科學研究",
-        currentStage: 3,
-        currentSubStage: 2,
+        projectName: projectInfo?.name || "",
+        currentStage: Number(projectInfo?.currentStage) || 0,
+        currentSubStage: Number(projectInfo?.currentSubStage) || 0,
         progressPercentage: 0,
-        lastActivity: "2024-01-15T10:30:00Z",
+        lastActivity: null,
         weeklyReflections: 0,
         ideaNodes: 0,
         status: "active",
-        teamRole: "組長",
+        teamRole: "組員",
         chatMessages: 0,
         qaQuestions: 0,
         aiInteractions: 0,
-        totalStudyTime: 0,
-        averageSessionTime: 0,
+        totalStudyTime: null,
+        averageSessionTime: null,
         tasksByStatus: {},
         allColumnNames: [],
         completedTasks: 0,
@@ -467,59 +583,214 @@ export function useStudentMetrics(data, userName, projectId, userId) {
 
   // 團隊成員資料（基於真實資料）
   const teammates = useMemo(() => {
-    if (!Array.isArray(teamMembers) || !userId) {
-      return [];
-    }
-    
+    if (!Array.isArray(teamMembers) || !userId) return [];
+
+    const normalized = (v) => (v == null ? '' : String(v));
+
     return teamMembers
-      .filter(member => member && member.id && member.id != userId) // 排除自己並確保有效成員
-      .map(member => ({
-        name: member.username || member.name || "匿名成員",
-        role: member.role || "研究員",
-        progress: Math.floor(Math.random() * 100), // 暫時隨機，需要實際進度計算
-        status: "active", // 可以根據最後活動時間判斷
-        lastSeen: formatRelativeTime(member.updatedAt || member.createdAt)
-      }));
-  }, [teamMembers, userId]);
+      .filter(member => member && member.id && String(member.id) !== String(userId))
+      .map(member => {
+        const name = member.username || member.name || "匿名成員";
+        const mid = member.id;
+        const stage = Number(member.currentStage) || 0;
+        const subStage = Number(member.currentSubStage) || 0;
+        const progress = calculateProgress(stage, subStage);
+
+        // 收集該成員最近活動
+        const times = [];
+        const push = (t) => { if (t) times.push(new Date(t).getTime()); };
+
+        (Array.isArray(kanbanTasks) ? kanbanTasks : []).forEach(t => {
+          const assigned = Array.isArray(t?.assignees) && t.assignees.some(a => {
+            if (a == null) return false;
+            if (typeof a === 'string') return a === normalized(name);
+            if (typeof a === 'number') return String(a) === String(mid);
+            return String(a.id ?? a.userId ?? '') === String(mid) || (a.username ?? a.name ?? a.userName ?? '') === name;
+          });
+          const createdBy = t?.userId === mid || t?.user_id === mid || t?.owner === name || t?.created_by === name;
+          if (assigned || createdBy) push(t?.updatedAt || t?.createdAt);
+        });
+        (Array.isArray(personalReflections) ? personalReflections : []).forEach(r => {
+          if (r?.userId === mid || r?.user_id === mid || r?.userName === name) push(r?.createdAt);
+        });
+        (Array.isArray(ideaNodes) ? ideaNodes : []).forEach(n => {
+          if (n?.userId === mid || n?.user_id === mid || n?.owner === name || n?.username === name) push(n?.createdAt);
+        });
+        (Array.isArray(chatHistory) ? chatHistory : []).forEach(c => {
+          if (c?.userId === mid || c?.user_id === mid || c?.author === name || c?.username === name) push(c?.createdAt);
+        });
+
+        const lastTs = times.length ? new Date(Math.max(...times)) : null;
+        const lastSeen = lastTs ? formatRelativeTime(lastTs.toISOString()) : '無活動';
+
+        let status = 'inactive';
+        if (progress >= 80) status = 'excellent';
+        else if (progress >= 50) status = 'active';
+        else status = 'attention';
+
+        return {
+          name,
+          role: member.role || "研究員",
+          progress,
+          status,
+          lastSeen
+        };
+      });
+  }, [teamMembers, userId, kanbanTasks, personalReflections, ideaNodes, chatHistory]);
 
   // 學習目標（基於真實資料和預設目標）
   const learningGoals = useMemo(() => {
-    // 直接使用原始狀態，避免依賴其他 useMemo
-    const currentProgressPercentage = parseInt(localStorage.getItem("currentStage")) || 0;
-    const weeklyReflectionsCount = Array.isArray(personalReflections) ? 
-      personalReflections.filter(reflection => {
-        const oneWeekAgo = new Date();
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-        return new Date(reflection.createdAt) > oneWeekAgo;
-      }).length : 0;
-    const ideaNodesCount = Array.isArray(ideaNodes) ? ideaNodes.length : 0;
-    const chatMessagesCount = Array.isArray(chatHistory) ? 
-      chatHistory.filter(chat => chat.author === userName).length : 0;
-    
-    return [
-      { 
-        id: 1, 
-        title: "完成第3階段研究", 
-        progress: Math.min(100, currentProgressPercentage * 20), 
-        deadline: "2024-01-20", 
-        priority: "high" 
-      },
-      { 
-        id: 2, 
-        title: "提交週報反思", 
-        progress: Math.min(100, (weeklyReflectionsCount / 3) * 100), 
-        deadline: "2024-01-18", 
-        priority: "medium" 
-      },
-      { 
-        id: 3, 
-        title: "創建5個想法節點", 
-        progress: Math.min(100, (ideaNodesCount / 5) * 100), 
-        deadline: "2024-01-17", 
-        priority: "low" 
-      }
+    const normalizeId = (x) => (x == null ? null : String(x));
+    const meId = normalizeId(userId);
+    const meName = userName || '';
+    const currentStage = Number(projectInfo?.currentStage) || 0;
+    const currentSubStage = Number(projectInfo?.currentSubStage) || 0;
+
+    const assigneesIncludesMe = (assignees) => {
+      if (!Array.isArray(assignees)) return false;
+      return assignees.some((a) => {
+        if (a == null) return false;
+        if (typeof a === 'string') return a === meName || a === meId;
+        if (typeof a === 'number') return String(a) === meId;
+        return String(a.id ?? a.userId ?? '') === meId || (a.username ?? a.name ?? a.userName ?? '') === meName;
+      });
+    };
+
+    // Counts
+    const personalIdeaCount = Array.isArray(ideaNodes)
+      ? ideaNodes.filter((n) => {
+          const owner = n?.owner ?? n?.username ?? n?.user_name ?? '';
+          const ownerId = normalizeId(n?.ownerId ?? n?.userId);
+          return owner === meName || (ownerId && ownerId === meId);
+        }).length
+      : 0;
+
+    const tasksAssignedToMe = Array.isArray(kanbanTasks)
+      ? kanbanTasks.filter((t) => assigneesIncludesMe(t?.assignees))
+      : [];
+    const tasksCompletedByMe = tasksAssignedToMe.filter((t) => {
+      const s = (t?.status || t?.columnName || '').toLowerCase();
+      return (
+        s.includes('完成') || s.includes('done') || s.includes('完畢') || s.includes('finished') || s.includes('completed') || s === '完成'
+      );
+    }).length;
+
+    const personalReflList = Array.isArray(personalReflections)
+      ? personalReflections.filter((r) => {
+          const author = r?.userName ?? r?.author ?? r?.username ?? '';
+          const authorId = normalizeId(r?.userId ?? r?.authorId);
+          return author === meName || (authorId && authorId === meId);
+        })
+      : [];
+    const personalReflCount = personalReflList.length;
+
+    const personalSubmissionsCount = Array.isArray(submissions)
+      ? submissions.filter((s) => normalizeId(s?.userId ?? s?.user_id) === meId).length
+      : 0;
+
+    const projectIdStr = String(projectId);
+    const personalRag = Array.isArray(ragMessages) ? ragMessages : (Array.isArray(aiInteractions) ? aiInteractions : []);
+    const personalAiCount = personalRag.filter((it) => {
+      const pid = normalizeId(it?.projectId ?? it?.project_id);
+      const uid = normalizeId(it?.userId ?? it?.uid);
+      const uname = it?.userName ?? it?.username ?? it?.author ?? '';
+      const pidMatch = pid == null || pid === projectIdStr; // 若無 pid，視為同專案
+      return pidMatch && ((uid && uid === meId) || (uname && uname === meName));
+    }).length;
+
+    const personalChatCount = Array.isArray(chatHistory)
+      ? chatHistory.filter((c) => c?.author === meName || normalizeId(c?.userId ?? c?.user_id) === meId).length
+      : 0;
+
+    const myCommentsCount = Array.isArray(data?.projectComments)
+      ? data.projectComments.filter((c) => {
+          const uid = normalizeId(c?.user?.id ?? c?.userId);
+          const uname = c?.user?.username ?? c?.username ?? c?.author ?? '';
+          return (uid && uid === meId) || (uname && uname === meName);
+        }).length
+      : 0;
+
+    // Activity streak (last 7 days with any activity)
+    const days = new Set();
+    const pushDay = (d) => { if (!d) return; const dt = new Date(d); days.add(dt.toISOString().split('T')[0]); };
+    personalReflList.forEach((r) => pushDay(r?.createdAt));
+    tasksAssignedToMe.forEach((t) => pushDay(t?.updatedAt || t?.createdAt));
+    (Array.isArray(ideaNodes) ? ideaNodes : []).forEach((n) => {
+      const owner = n?.owner ?? n?.username ?? n?.user_name ?? '';
+      const ownerId = normalizeId(n?.ownerId ?? n?.userId);
+      if (owner === meName || (ownerId && ownerId === meId)) pushDay(n?.createdAt);
+    });
+    (Array.isArray(chatHistory) ? chatHistory : []).forEach((c) => {
+      if (c?.author === meName || normalizeId(c?.userId ?? c?.user_id) === meId) pushDay(c?.createdAt);
+    });
+    personalRag.forEach((a) => {
+      const uid = normalizeId(a?.userId ?? a?.uid);
+      const uname = a?.userName ?? a?.username ?? a?.author ?? '';
+      if ((uid && uid === meId) || (uname && uname === meName)) pushDay(a?.createdAt);
+    });
+    const last7 = Array.from(days).filter((d) => {
+      const dt = new Date(d);
+      const now = new Date();
+      return (now - dt) / (1000 * 60 * 60 * 24) <= 7;
+    }).length;
+
+    // Goal from goal/milestone tasks completed by me
+    const isGoalTask = (t) => {
+      const title = (t?.title || '').toLowerCase();
+      const column = (t?.columnName || t?.status || '').toLowerCase();
+      return (
+        title.includes('goal') || title.includes('目標') || title.includes('milestone') ||
+        column.includes('目標') || column.includes('milestone')
+      );
+    };
+    const goalTasksAssignedToMe = tasksAssignedToMe.filter(isGoalTask);
+    const goalTasksDoneByMe = goalTasksAssignedToMe.filter((t) => {
+      const s = (t?.status || t?.columnName || '').toLowerCase();
+      return s.includes('done') || s.includes('完成') || s.includes('finished') || s.includes('completed');
+    }).length;
+
+    // Next substage progress target
+    const currentPct = calculateProgress(currentStage, currentSubStage);
+    const nextTarget = currentSubStage >= 3
+      ? calculateProgress(currentStage + 1, 1)
+      : calculateProgress(currentStage, currentSubStage + 1);
+    const denom = Math.max(1, nextTarget);
+    const towardNextPct = Math.min(100, Math.round((currentPct / denom) * 100));
+
+    // Build 10 goals with progress 0-100
+    const make = (id, title, current, target, priority = 'medium') => ({
+      id, title, current, target, progress: Math.max(0, Math.min(100, Math.round((current / Math.max(1, target)) * 100))), priority
+    });
+
+    const goals = [
+      make('g1', '發表想法節點 5 個', personalIdeaCount, 5, 'medium'),
+      make('g2', '完成指派任務 3 個', tasksCompletedByMe, 3, 'high'),
+      make('g3', '撰寫個人反思 3 篇', personalReflCount, 3, 'high'),
+      make('g4', '上傳歷程檔案 2 份', personalSubmissionsCount, 2, 'medium'),
+      make('g5', '使用科學助手 5 次', personalAiCount, 5, 'medium'),
+      make('g6', '參與小組討論 5 則', personalChatCount, 5, 'low'),
+      make('g7', '給予同儕評論 3 則', myCommentsCount, 3, 'medium'),
+      make('g8', '連續 5 天有學習活動', last7, 5, 'medium'),
+      make('g9', '完成 2 張學習目標卡', goalTasksDoneByMe, 2, 'high'),
+      { id: 'g10', title: '達成下一個階段里程碑', current: currentPct, target: nextTarget, progress: towardNextPct, priority: 'high' }
     ];
-  }, [personalReflections, ideaNodes, chatHistory, userName]);
+
+    return goals;
+  }, [
+    ideaNodes,
+    kanbanTasks,
+    personalReflections,
+    submissions,
+    aiInteractions,
+    ragMessages,
+    chatHistory,
+    data?.projectComments,
+    projectInfo?.currentStage,
+    projectInfo?.currentSubStage,
+    userId,
+    userName,
+    projectId
+  ]);
 
   // 近期成就（基於真實資料，分級：銅/銀/金） - 團隊與個人雙軌
   const achievements = useMemo(() => {
