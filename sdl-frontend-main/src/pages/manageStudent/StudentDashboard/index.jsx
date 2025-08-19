@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 // 自定義 Hooks
 import { useProjectData } from "./hooks/useProjectData";
 import { useStudentMetrics } from "./hooks/useStudentMetrics";
+import { useUsageSession } from "./hooks/useUsageSession";
 
 // 子組件
 import TeamStats from "./components/TeamStats";
@@ -44,6 +45,8 @@ const StudentDashboard = () => {
   // 獲取專案數據
   const projectData = useProjectData(projectId, userId);
   const { loading, ideaNodes, kanbanTasks } = projectData;
+  // 啟用精準使用時間記錄（心跳）
+  useUsageSession(projectId, userId);
   
   // 計算學生指標
   const metrics = useStudentMetrics(projectData, userName, projectId, userId);

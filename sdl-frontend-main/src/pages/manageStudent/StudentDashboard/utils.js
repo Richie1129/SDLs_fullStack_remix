@@ -66,6 +66,25 @@ export const getAchievementIcon = (type) => {
 };
 
 /**
+ * 計算專案進度（以階段與子階段換算成百分比）
+ * 規則：
+ * - 若 `currentStage` 或 `currentSubStage` 缺失，回傳 0
+ * - 若階段為 5，視為 100%
+ * - 否則每個主階段 20%，子階段三等分（每 0.5 子階段 ≈ 10%）
+ */
+export const calculateProgress = (currentStage, currentSubStage) => {
+  if (!currentStage || !currentSubStage) return 0;
+  const stage = Number(currentStage);
+  const sub = Number(currentSubStage);
+  if (Number.isNaN(stage) || Number.isNaN(sub)) return 0;
+
+  if (stage === 5) return 100;
+  const stageProgress = (stage - 1) * 20;
+  const subStageProgress = ((sub - 1) / 2) * 20;
+  return Math.max(0, Math.min(100, Math.round(stageProgress + subStageProgress)));
+};
+
+/**
  * 獲取列樣式
  * @param {string} columnName - 列名
  * @returns {object} 包含顏色和圖標的對象

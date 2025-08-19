@@ -8,6 +8,8 @@ import { getAllChatrooms } from "../../../../api/question";
 import { getChatroomHistory } from "../../../../api/chatroom";
 import { getAllSubmit } from "../../../../api/submit";
 import { getProjectsByMentor } from "../../../../api/project";
+import { getUsageSummary } from "../../../../api/usage";
+import { getRagMessageHistory } from "../../../../api/rag";
 
 export const useTeacherDashboardData = (projectId, userRole) => {
   const [realData, setRealData] = useState({
@@ -196,6 +198,38 @@ export const useTeacherDashboardData = (projectId, userRole) => {
         const reflectionsWithUser = augmentWithUserInfo(baseReflections, studentById, 'userId');
         const submissionsWithUser = augmentWithUserInfo(baseSubmissions, studentById, 'userId');
 
+        // 取得各學生 AI 互動次數（簡易聚合）
+        let aiCountByUserId = {};
+        try {
+          const ragPromises = studentsList.map(async (stu) => {
+            try {
+              const msgs = await getRagMessageHistory(stu.id);
+              aiCountByUserId[stu.id] = Array.isArray(msgs) ? msgs.length : 0;
+            } catch (e) {
+              aiCountByUserId[stu.id] = 0;
+            }
+          });
+          await Promise.all(ragPromises);
+        } catch (e) {
+          aiCountByUserId = {};
+        }
+
+        // 取得各學生使用時長統計
+        let usageByUserId = {};
+        try {
+          const usagePromises = studentsList.map(async (stu) => {
+            try {
+              const summary = await getUsageSummary({ userId: stu.id, projectId });
+              usageByUserId[stu.id] = summary?.totalSeconds || 0;
+            } catch (e) {
+              usageByUserId[stu.id] = 0;
+            }
+          });
+          await Promise.all(usagePromises);
+        } catch (e) {
+          usageByUserId = {};
+        }
+
         const finalData = {
           tasks: allTasks,
           nodes: allNodes,
@@ -208,6 +242,8 @@ export const useTeacherDashboardData = (projectId, userRole) => {
           submissions: submissionsWithUser,
           projectActivity: projectActivityData.status === 'fulfilled' ? (projectActivityData.value || []) : [],
           allProjects: allProjectsData.status === 'fulfilled' ? (allProjectsData.value || []) : [],
+          usageByUserId,
+          aiCountByUserId,
           loading: false
         };
 

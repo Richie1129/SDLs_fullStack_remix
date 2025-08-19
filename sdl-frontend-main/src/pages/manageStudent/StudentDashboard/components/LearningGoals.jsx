@@ -11,8 +11,13 @@ const LearningGoals = ({ learningGoals }) => {
     <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm">
       <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">我的學習目標</h2>
       <div className="space-y-3 sm:space-y-4 max-h-80 overflow-y-auto">
-        {Array.isArray(learningGoals) && learningGoals.map((goal) => (
-          <div key={goal.id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
+        {Array.isArray(learningGoals) && learningGoals.map((goal) => {
+          const isDone = Number(goal.progress) >= 100;
+          const deadlineText = goal.deadline ? new Date(goal.deadline).toLocaleDateString('zh-TW') : '—';
+          const current = goal.current ?? null;
+          const target = goal.target ?? null;
+          return (
+          <div key={goal.id} className="relative border border-gray-200 rounded-lg p-3 sm:p-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-2 sm:space-y-0">
               <h3 className="font-medium text-gray-800 text-sm sm:text-base">{goal.title}</h3>
               <span className={`px-2 py-1 rounded-full text-xs font-medium border self-start ${getPriorityColor(goal.priority)}`}>
@@ -23,7 +28,12 @@ const LearningGoals = ({ learningGoals }) => {
             <div className="mb-2">
               <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-1">
                 <span>進度</span>
-                <span>{goal.progress}%</span>
+                <span>
+                  {goal.progress}%
+                  {(current != null && target != null) && (
+                    <span className="text-[10px] sm:text-xs text-gray-400 ml-2">({current}/{target})</span>
+                  )}
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
@@ -32,11 +42,14 @@ const LearningGoals = ({ learningGoals }) => {
                 ></div>
               </div>
             </div>
-            <div className="text-xs text-gray-500">
-              截止日期: {new Date(goal.deadline).toLocaleDateString('zh-TW')}
+            <div className="text-xs text-gray-500 flex items-center justify-between">
+              <span>截止日期: {deadlineText}</span>
+              {isDone && (
+                <span className="text-green-600 font-medium">達成 ✅</span>
+              )}
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   );

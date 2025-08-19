@@ -41,7 +41,14 @@ export const useTeacherMetrics = (realData, allProjectMembers) => {
         (s.user_id === studentId || s.userId === studentId) && s.type === 'question'
       ).length;
       
-      const aiInteractions = Math.floor(Math.random() * 20) + 5; // 模擬數據，實際應從 API 獲取
+      const aiInteractions = (realData.aiCountByUserId && realData.aiCountByUserId[studentId])
+        ? realData.aiCountByUserId[studentId]
+        : 0;
+
+      const usageTotalSeconds = (realData.usageByUserId && realData.usageByUserId[studentId])
+        ? realData.usageByUserId[studentId]
+        : 0;
+      const usageHours = Math.round((usageTotalSeconds / 3600) * 10) / 10; // 1 decimal
 
       // 找到最後活動時間
       const activities = [
@@ -80,6 +87,7 @@ export const useTeacherMetrics = (realData, allProjectMembers) => {
         chatMessages,
         qaQuestions,
         aiInteractions,
+        usageHours,
         lastActivity,
         status,
         teamRole: student.role || student.teamRole || '成員',
@@ -148,6 +156,9 @@ export const useTeacherMetrics = (realData, allProjectMembers) => {
     const totalTasks = realData.tasks.length;
     const totalProjects = Object.keys(allProjectMembers).length || realData.allProjects.length;
 
+    const totalUsageHours = enhancedStudents.reduce((sum, s) => sum + (s.usageHours || 0), 0);
+    const averageUsageHours = totalStudents > 0 ? Math.round((totalUsageHours / totalStudents) * 10) / 10 : 0;
+
     return {
       totalStudents,
       activeStudents,
@@ -156,7 +167,9 @@ export const useTeacherMetrics = (realData, allProjectMembers) => {
       totalReflections,
       totalIdeaNodes,
       totalTasks,
-      totalProjects
+      totalProjects,
+      totalUsageHours,
+      averageUsageHours
     };
   }, [enhancedStudents, realData, allProjectMembers]);
 
