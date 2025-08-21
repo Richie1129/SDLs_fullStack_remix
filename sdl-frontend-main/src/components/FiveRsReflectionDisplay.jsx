@@ -4,7 +4,7 @@ import { FiChevronDown, FiChevronUp, FiMessageCircle, FiClock, FiUser } from 're
 import { AiOutlineRobot } from 'react-icons/ai';
 import { format5RsForDisplay } from '@/utils/5RsUtils.js';
 
-const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = false }) => {
+const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = false, record = null }) => {
   const [expandedSections, setExpandedSections] = useState({});
   
   const reflectionData = format5RsForDisplay(content);
@@ -17,7 +17,22 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
     );
   }
 
-  const { sections, overallFeedback, suggestions, hasOverallFeedback, provider, analysisDate, completeness } = reflectionData;
+  const { sections, overallFeedback, suggestions, hasOverallFeedback, provider, analysisDate, completeness, overallAssessment, strengths, improvements } = reflectionData;
+
+  // 針對附件的下載處理（支援 MinIO 與舊有 BLOB）
+  const handleDownload = () => {
+    if (!record) return;
+    if (record.fileName) {
+      window.open(`http://localhost/api/file/direct/${record.fileName}`, "_blank");
+    } else if (record.fileData && record.fileData.data) {
+      const buffer = new Uint8Array(record.fileData.data);
+      const blob = new Blob([buffer], { type: "application/octet-stream" });
+      // 延後載入以符合舊有行為（僅在需要時才載入套件）
+      import('js-file-download').then(({ default: FileDownload }) => {
+        FileDownload(blob, record.filename || record.originalName || "downloaded-file");
+      });
+    }
+  };
 
   const toggleSection = (sectionKey) => {
     setExpandedSections(prev => ({
@@ -51,6 +66,27 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
 
       {/* 5Rs 內容展示 */}
       <div className="space-y-4">
+        {/* 附件區塊（如果有附件） */}
+        {record && (record.fileName || record.fileData) && (
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between p-4 bg-gray-50">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center text-sm font-semibold">檔</div>
+                <div>
+                  <h4 className="font-semibold text-gray-800">附件</h4>
+                  <p className="text-sm text-gray-600 break-all">{record.originalName || record.filename || record.fileName}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleDownload}
+                className="inline-flex items-center px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm"
+              >
+                下載附件
+              </button>
+            </div>
+          </div>
+        )}
+
         {Object.entries(sections).map(([key, section]) => (
           <motion.div
             key={key}
@@ -80,6 +116,11 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                 </div>
               </div>
               <div className="flex items-center space-x-2">
+                {typeof section.score === 'number' && (
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full" title="反思深度分數">
+                    分數 {section.score}/5
+                  </span>
+                )}
                 {section.hasFeedback && (
                   <FiMessageCircle className="w-4 h-4 text-blue-500" title="有回饋" />
                 )}
@@ -123,6 +164,24 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                         {section.feedback}
                       </p>
                     </div>
+                    {/* 引導問題 */}
+                    {Array.isArray(section.questions) && section.questions.length > 0 && (
+                      <div className="mt-3">
+                        <h6 className="text-xs font-medium text-blue-800 mb-1">引導問題：</h6>
+                        <ul className="list-disc list-inside text-blue-800 text-sm space-y-1">
+                          {section.questions.map((q, idx) => (
+                            <li key={idx}>{q}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {/* 建議模板 */}
+                    {section.template && (
+                      <div className="mt-3 p-2 bg-white border border-blue-100 rounded">
+                        <h6 className="text-xs font-medium text-blue-800 mb-1">建議填寫模板：</h6>
+                        <p className="text-blue-800 text-sm whitespace-pre-wrap">{section.template}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -147,6 +206,14 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
               </span>
             )}
           </div>
+
+          {/* 精煉總結 */}
+          {overallAssessment && (
+            <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded">
+              <h5 className="font-medium text-purple-800 mb-1">精煉總結：</h5>
+              <p className="text-purple-700 text-sm whitespace-pre-wrap">{overallAssessment}</p>
+            </div>
+          )}
 
           {/* AI 分析資訊 */}
           {(provider || analysisDate) && (
@@ -175,6 +242,36 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                   {overallFeedback}
                 </p>
               </div>
+            </div>
+          )}
+
+          {/* 強項 */}
+          {Array.isArray(strengths) && strengths.length > 0 && (
+            <div className="mb-4">
+              <h5 className="font-medium text-purple-800 mb-2">發現的強項：</h5>
+              <ul className="space-y-1">
+                {strengths.map((s, i) => (
+                  <li key={i} className="flex items-start space-x-2 text-purple-700">
+                    <span className="mt-1.5 w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0" />
+                    <span className="text-sm leading-relaxed">{s}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* 改進方向 */}
+          {Array.isArray(improvements) && improvements.length > 0 && (
+            <div className="mb-4">
+              <h5 className="font-medium text-purple-800 mb-2">改進方向：</h5>
+              <ul className="space-y-1">
+                {improvements.map((im, i) => (
+                  <li key={i} className="flex items-start space-x-2 text-purple-700">
+                    <span className="mt-1.5 w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0" />
+                    <span className="text-sm leading-relaxed">{im}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

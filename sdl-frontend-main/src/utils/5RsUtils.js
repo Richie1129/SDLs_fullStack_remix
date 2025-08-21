@@ -50,7 +50,14 @@ export const build5RsContent = (data, feedback = null) => {
       overall: feedback.overall || "",
       suggestions: feedback.suggestions || [],
       provider: feedback.provider || "AI",
-      analysisDate: feedback.analysisDate || new Date().toISOString()
+      analysisDate: feedback.analysisDate || new Date().toISOString(),
+      // 新增可選欄位（若存在則保存）
+      overall_assessment: feedback.overall_assessment || "",
+      strengths: feedback.strengths || [],
+      improvements: feedback.improvements || [],
+      scores: feedback.scores || {},
+      questions: feedback.questions || {},
+      templates: feedback.templates || {}
     };
   }
 
@@ -170,6 +177,9 @@ export const format5RsForDisplay = (content) => {
   if (!parsed) return null;
   
   const { data, feedback = {} } = parsed;
+  const scores = feedback.scores || {};
+  const followupQuestions = feedback.questions || {};
+  const fillTemplates = feedback.templates || {};
   const formatted = {};
   
   Object.keys(FIVE_R_FRAMEWORK).forEach(key => {
@@ -178,7 +188,10 @@ export const format5RsForDisplay = (content) => {
       content: data[key] || "",
       feedback: feedback[key] || "",
       hasContent: !!(data[key] && data[key].trim()),
-      hasFeedback: !!(feedback[key] && feedback[key].trim())
+      hasFeedback: !!(feedback[key] && feedback[key].trim()),
+      score: typeof scores[key] === 'number' ? scores[key] : null,
+      questions: Array.isArray(followupQuestions[key]) ? followupQuestions[key] : [],
+      template: typeof fillTemplates[key] === 'string' ? fillTemplates[key] : ""
     };
   });
   
@@ -186,6 +199,9 @@ export const format5RsForDisplay = (content) => {
     sections: formatted,
     overallFeedback: feedback.overall || "",
     suggestions: feedback.suggestions || [],
+    overallAssessment: feedback.overall_assessment || "",
+    strengths: feedback.strengths || [],
+    improvements: feedback.improvements || [],
     hasOverallFeedback: !!(feedback.overall && feedback.overall.trim()),
     provider: feedback.provider || "",
     analysisDate: feedback.analysisDate || "",

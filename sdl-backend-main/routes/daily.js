@@ -95,4 +95,8 @@ router.put('/team/:id', validateToken, getProjectIdFromDaily, checkProjectViewin
 router.delete('/personal/:id', validateToken, getProjectIdFromDaily, checkProjectViewingPermission, checkWritePermission, controller.deletePersonalDaily);
 router.delete('/team/:id', validateToken, getProjectIdFromDaily, checkProjectViewingPermission, checkWritePermission, controller.deleteTeamDaily);
 
+// 單獨刪除附件
+router.delete('/personal/:id/attachment', validateToken, getProjectIdFromDaily, checkProjectViewingPermission, checkWritePermission, controller.removePersonalAttachment);
+router.delete('/team/:id/attachment', validateToken, getProjectIdFromDaily, checkProjectViewingPermission, checkWritePermission, controller.removeTeamAttachment);
+
 module.exports = router;

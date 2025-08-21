@@ -2,6 +2,7 @@
 const Daily_personal = require('../models/daily_personal');
 const Daily_team = require('../models/daily_team');
 const { logAudit, summarizeText, clampMetadataSize } = require('../services/auditService');
+const { deleteFileFromMinio } = require('../config/minio');
 
 exports.getPersonalDaily = async (req, res) => {
     const { userId, projectId, isTeacher } = req.query;
@@ -223,21 +224,23 @@ exports.updatePersonalDaily = async (req, res) => {
         console.log('日誌ID:', id);
         console.log('新標題:', title);
         console.log('新內容:', content);
-        console.log('上傳的檔案:', req.uploadedFiles);
-        
-        // 如果有多個檔案上傳，需要處理多個日誌記錄
-        if (req.uploadedFiles && req.uploadedFiles.length > 0) {
-            console.log(`📁 檢測到 ${req.uploadedFiles.length} 個檔案上傳`);
-            
-            // 如果有多個檔案，我們需要決定如何處理
-            // 選項1: 只更新第一個檔案到原有記錄
-            // 選項2: 刪除舊記錄並創建新的多個記錄
-            
-            // 這裡採用選項1，只更新第一個檔案
-            const firstFile = req.uploadedFiles[0];
-            
-            let updateData = { 
-                title, 
+        console.log('上傳的單檔:', req.uploadedFile);
+        console.log('上傳的多檔:', req.uploadedFiles);
+
+        // 將單檔與多檔統一處理
+        const incomingFiles = Array.isArray(req.uploadedFiles) && req.uploadedFiles.length > 0
+          ? req.uploadedFiles
+          : (req.uploadedFile ? [req.uploadedFile] : []);
+
+        // 若有上傳檔案（單檔或多檔）
+        if (incomingFiles.length > 0) {
+            console.log(`📁 檢測到 ${incomingFiles.length} 個檔案上傳`);
+
+            // 只將第一個檔案更新到原有記錄
+            const firstFile = incomingFiles[0];
+
+            const updateData = {
+                title,
                 content,
                 fileName: firstFile.fileName,
                 originalName: firstFile.originalName,
@@ -245,7 +248,7 @@ exports.updatePersonalDaily = async (req, res) => {
                 mimeType: firstFile.mimeType,
                 fileSize: firstFile.size
             };
-            
+
             await daily.update(updateData, { req });
             await logAudit(req, {
                 action: 'DAILY_PERSONAL_UPDATE',
@@ -264,13 +267,13 @@ exports.updatePersonalDaily = async (req, res) => {
                     }
                 })
             });
-            console.log(`✅ 更新個人日誌成功: ${id} (包含檔案: ${firstFile.originalName})`);
-            
-            // 如果有其他檔案，創建新的記錄
-            if (req.uploadedFiles.length > 1) {
-                const additionalFiles = req.uploadedFiles.slice(1);
+            console.log(`✅ 更新個人日誌成功: ${id} (包含檔案: ${firstFile.originalName || firstFile.fileName})`);
+
+            // 如果有其他檔案，創建新的記錄（維持既有行為）
+            if (incomingFiles.length > 1) {
+                const additionalFiles = incomingFiles.slice(1);
                 console.log(`📎 創建額外的 ${additionalFiles.length} 個檔案記錄`);
-                
+
                 const additionalPromises = additionalFiles.map((file, index) => {
                     return Daily_personal.create({
                         userId: daily.userId,
@@ -293,7 +296,7 @@ exports.updatePersonalDaily = async (req, res) => {
                         return created;
                     });
                 });
-                
+
                 await Promise.all(additionalPromises);
                 console.log(`✅ 創建額外檔案記錄成功`);
             }
@@ -390,6 +393,124 @@ exports.updateTeamDaily = async (req, res) => {
     } catch (error) {
         console.error("❌ 更新團隊日誌錯誤:", error);
         return res.status(500).json({ message: "更新失敗", error: error.message });
+    }
+};
+
+// 單獨刪除個人日誌附件
+exports.removePersonalAttachment = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const daily = await Daily_personal.findOne({ where: { id } });
+        if (!daily) {
+            return res.status(404).json({ message: '個人日誌未找到' });
+        }
+
+        const before = {
+            fileName: daily.fileName,
+            originalName: daily.originalName,
+            fileUrl: daily.fileUrl,
+            mimeType: daily.mimeType,
+            fileSize: daily.fileSize,
+        };
+
+        // 先刪除 MinIO 檔案（若存在）
+        if (daily.fileName) {
+            try {
+                await deleteFileFromMinio(daily.fileName);
+                console.log(`🗑️ 已刪除 MinIO 檔案: ${daily.fileName}`);
+            } catch (e) {
+                console.warn('⚠️ 刪除 MinIO 檔案時發生錯誤，將繼續清理資料庫欄位:', e.message);
+            }
+        }
+
+        // 清空資料庫中的附件欄位
+        await daily.update({
+            fileName: null,
+            originalName: null,
+            fileUrl: null,
+            mimeType: null,
+            fileSize: null,
+            fileData: null,
+            filename: null,
+        }, { req });
+
+        await logAudit(req, {
+            action: 'DAILY_PERSONAL_ATTACHMENT_REMOVE',
+            targetType: 'daily_personal',
+            targetId: daily.id,
+            projectId: daily.projectId || null,
+            metadata: clampMetadataSize({
+                diff: {
+                    file: {
+                        before,
+                        after: { fileName: null, originalName: null, fileUrl: null, mimeType: null, fileSize: null }
+                    }
+                }
+            })
+        });
+
+        return res.status(200).json({ message: '附件已移除', data: daily });
+    } catch (error) {
+        console.error('❌ 移除個人日誌附件失敗:', error);
+        return res.status(500).json({ message: '移除附件失敗', error: error.message });
+    }
+};
+
+// 單獨刪除小組日誌附件
+exports.removeTeamAttachment = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const daily = await Daily_team.findOne({ where: { id } });
+        if (!daily) {
+            return res.status(404).json({ message: '小組日誌未找到' });
+        }
+
+        const before = {
+            fileName: daily.fileName,
+            originalName: daily.originalName,
+            fileUrl: daily.fileUrl,
+            mimeType: daily.mimeType,
+            fileSize: daily.fileSize,
+        };
+
+        if (daily.fileName) {
+            try {
+                await deleteFileFromMinio(daily.fileName);
+                console.log(`🗑️ 已刪除 MinIO 檔案: ${daily.fileName}`);
+            } catch (e) {
+                console.warn('⚠️ 刪除 MinIO 檔案時發生錯誤，將繼續清理資料庫欄位:', e.message);
+            }
+        }
+
+        await daily.update({
+            fileName: null,
+            originalName: null,
+            fileUrl: null,
+            mimeType: null,
+            fileSize: null,
+            fileData: null,
+            filename: null,
+        }, { req });
+
+        await logAudit(req, {
+            action: 'DAILY_TEAM_ATTACHMENT_REMOVE',
+            targetType: 'daily_team',
+            targetId: daily.id,
+            projectId: daily.projectId || null,
+            metadata: clampMetadataSize({
+                diff: {
+                    file: {
+                        before,
+                        after: { fileName: null, originalName: null, fileUrl: null, mimeType: null, fileSize: null }
+                    }
+                }
+            })
+        });
+
+        return res.status(200).json({ message: '附件已移除', data: daily });
+    } catch (error) {
+        console.error('❌ 移除小組日誌附件失敗:', error);
+        return res.status(500).json({ message: '移除附件失敗', error: error.message });
     }
 };
 
