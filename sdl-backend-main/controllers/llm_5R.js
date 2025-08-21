@@ -59,55 +59,80 @@ const FIVE_R_FRAMEWORK = {
 
 // 建構 5Rs 分析的 Prompt
 function build5RsAnalysisPrompt(studentContent) {
-  return `你是一位經驗豐富的教育輔導員，專精於 5Rs 反思模型指導。請根據以下 5Rs 框架分析學生的反思日誌，並提供建設性的回饋。
+  return `你是一位經驗豐富的教育輔導員，專精於 5Rs 反思模型指導。請以專業、具體、溫暖且具可操作性的方式，分析以下學生的 5Rs 反思，並僅輸出有效 JSON（不包含額外說明或 Markdown）。
 
-## 5Rs 反思框架定義：
+輸出語言：繁體中文。
+輸出格式：只回傳 JSON，且需符合下列鍵值結構與型別。
 
-1. **Reporting (報告)**：${FIVE_R_FRAMEWORK.reporting.description}
-2. **Responding (回應)**：${FIVE_R_FRAMEWORK.responding.description}
-3. **Relating (關聯)**：${FIVE_R_FRAMEWORK.relating.description}
-4. **Reasoning (推論)**：${FIVE_R_FRAMEWORK.reasoning.description}
-5. **Reconstructing (重建)**：${FIVE_R_FRAMEWORK.reconstructing.description}
+— 5Rs 框架定義（供你參考）：
+1) Reporting (報告)：${FIVE_R_FRAMEWORK.reporting.description}
+2) Responding (回應)：${FIVE_R_FRAMEWORK.responding.description}
+3) Relating (關聯)：${FIVE_R_FRAMEWORK.relating.description}
+4) Reasoning (推論)：${FIVE_R_FRAMEWORK.reasoning.description}
+5) Reconstructing (重建)：${FIVE_R_FRAMEWORK.reconstructing.description}
 
-## 學生提交的 5Rs 反思內容：
+— 反思深度評分標準（1–5 分，供你評估每個 R）：
+1 分＝僅重述事件、無個人思考；
+3 分＝有基本連結與初步解釋，但深度有限；
+5 分＝能夠連結經驗/理論、多角度推論，並提出具體可行的未來行動。
 
-**Reporting (報告)**：
-${studentContent.reporting || '未填寫'}
+— 學生提交的內容：
+Reporting：${studentContent.reporting || '未填寫'}
+Responding：${studentContent.responding || '未填寫'}
+Relating：${studentContent.relating || '未填寫'}
+Reasoning：${studentContent.reasoning || '未填寫'}
+Reconstructing：${studentContent.reconstructing || '未填寫'}
 
-**Responding (回應)**：
-${studentContent.responding || '未填寫'}
+— 產出要求：
+1) 逐一回饋五個區塊，避免僅重述學生原文；
+2) 指出每個區塊的優勢與可改進處，並提出1–2個引導問題；
+3) 若某區塊「未填寫」或內容極少，請提供「簡短填寫模板」協助學生補全；
+4) 給出每個區塊的反思深度分數（1–5）；
+5) 提供整體評估與3–5條可操作建議；
+6) 僅回傳有效 JSON，且不得輸出其他文字。
 
-**Relating (關聯)**：
-${studentContent.relating || '未填寫'}
-
-**Reasoning (推論)**：
-${studentContent.reasoning || '未填寫'}
-
-**Reconstructing (重建)**：
-${studentContent.reconstructing || '未填寫'}
-
-## 請提供分析與回饋：
-
-請針對每個部分提供具體的、建設性的回饋，特別注意：
-1. 評估每個部分的反思深度
-2. 指出學生的優點和可改進之處
-3. 提供引導性問題來幫助學生深化思考
-4. 給予整體的反思品質評估
-
-請以 JSON 格式回應，結構如下：
+— JSON 輸出結構（請完全遵守鍵名與型別；其中五個區塊的文字回饋須為簡潔段落文字）：
 {
-  "reporting": "針對 Reporting 部分的回饋",
-  "responding": "針對 Responding 部分的回饋",
-  "relating": "針對 Relating 部分的回饋",
-  "reasoning": "針對 Reasoning 部分的回饋",
-  "reconstructing": "針對 Reconstructing 部分的回饋",
-  "overall": "整體反思的評估和建議",
-  "suggestions": [
-    "具體的改進建議1",
-    "具體的改進建議2",
-    "具體的改進建議3"
-  ]
-}`;
+  "reporting": "對 Reporting 的具體回饋（段落文字）",
+  "responding": "對 Responding 的具體回饋（段落文字）",
+  "relating": "對 Relating 的具體回饋（段落文字）",
+  "reasoning": "對 Reasoning 的具體回饋（段落文字）",
+  "reconstructing": "對 Reconstructing 的具體回饋（段落文字）",
+  "overall": "整體反思的綜合評估與建議（段落文字）",
+  "suggestions": ["具體可操作建議1","具體可操作建議2","具體可操作建議3"],
+
+  "overall_assessment": "（可選）精煉總結，點出核心優勢與主要改進方向",
+  "strengths": ["（可選）本次反思的優勢1","優勢2"],
+  "improvements": ["（可選）主要可改進方向1","方向2"],
+  "scores": {
+    "reporting": 1,
+    "responding": 1,
+    "relating": 1,
+    "reasoning": 1,
+    "reconstructing": 1
+  },
+  "questions": {
+    "reporting": ["（可選）引導問題1"],
+    "responding": ["（可選）引導問題1"],
+    "relating": ["（可選）引導問題1"],
+    "reasoning": ["（可選）引導問題1"],
+    "reconstructing": ["（可選）引導問題1"]
+  },
+  "templates": {
+    "reporting": "（如未填寫）可直接套用的簡短填寫模板",
+    "responding": "（如未填寫）可直接套用的簡短填寫模板",
+    "relating": "（如未填寫）可直接套用的簡短填寫模板",
+    "reasoning": "（如未填寫）可直接套用的簡短填寫模板",
+    "reconstructing": "（如未填寫）可直接套用的簡短填寫模板"
+  }
+}
+
+請確保：
+• 使用繁體中文；
+• 僅輸出 JSON；
+• JSON 可被嚴格解析；
+• 不要杜撰未提供的事實；
+• 每個區塊的文字回饋以2–4句為宜。`;
 }
 
 // GPT API 呼叫函數
@@ -120,7 +145,7 @@ async function callGPTAPI(prompt) {
         messages: [
           {
             role: 'system',
-            content: '你是一位專業的教育輔導員，擅長使用 5Rs 反思框架指導學生進行深度反思。請提供專業、建設性且溫暖的回饋。'
+            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
           },
           {
             role: 'user',
@@ -159,7 +184,7 @@ async function callGPTNanoAPI(prompt) {
         messages: [
           {
             role: 'system',
-            content: '你是一位專業的教育輔導員，擅長使用 5Rs 反思框架指導學生進行深度反思。請提供專業、建設性且溫暖的回饋。'
+            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
           },
           {
             role: 'user',
@@ -240,6 +265,8 @@ async function callGeminiAPI(prompt) {
   }
 }
 
+const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+
 // 主要的 5Rs 分析功能 (作為 Express.js 路由處理器)
 exports.analyze5RsReflection = async (req, res) => {
   try {
@@ -269,18 +296,18 @@ exports.analyze5RsReflection = async (req, res) => {
     // 根據偏好選擇 API 提供者
     if (preferredProvider === 'auto') {
       try {
-        console.log('自動模式：嘗試使用 GPT-4.1-Nano API...');
-        result = await callGPTNanoAPI(analysisPrompt);
-        console.log('GPT-4.1-Nano API 成功，使用模型:', result.provider);
-      } catch (error) {
-        console.log('GPT-4.1-Nano API 失敗，嘗試使用 Gemini API...');
+        console.log('自動模式：嘗試使用 Gemini API...');
+        result = await callGeminiAPI(analysisPrompt);
+        console.log('Gemini API 成功，使用模型:', result.provider);
+      } catch (geminiError) {
+        console.log('Gemini 失敗，嘗試使用 GPT-4.1-Nano API...');
         try {
-          result = await callGeminiAPI(analysisPrompt);
-          console.log('Gemini API 成功，使用模型:', result.provider);
-        } catch (geminiError) {
-          console.log('Gemini API 也失敗，嘗試使用 GPT-4o-mini API...');
+          result = await callGPTNanoAPI(analysisPrompt);
+          console.log('GPT-4.1-Nano 成功，使用模型:', result.provider);
+        } catch (nanoError) {
+          console.log('Nano 也失敗，改用 GPT-4o-mini API...');
           result = await callGPTAPI(analysisPrompt);
-          console.log('GPT-4o-mini API 成功，使用模型:', result.provider);
+          console.log('GPT-4o-mini 成功，使用模型:', result.provider);
         }
       }
     } else if (preferredProvider === 'gpt') {
@@ -373,6 +400,19 @@ exports.analyze5RsReflection = async (req, res) => {
     console.log('回應資料:', JSON.stringify(finalResponse, null, 2));
     console.log('=== 5Rs AI 分析結束 ===');
 
+    try {
+      await logAudit(req, {
+        action: 'ASSISTANT_5RS_ANALYZE',
+        targetType: 'assistant',
+        targetId: null,
+        projectId: null,
+        metadata: clampMetadataSize({
+          input: Object.fromEntries(Object.entries(studentContent || {}).map(([k, v]) => [k, summarizeText(String(v || ''))])),
+          provider: result.provider
+        })
+      });
+    } catch (_) {}
+
     res.status(200).json(finalResponse);
 
   } catch (error) {
@@ -409,7 +449,7 @@ exports.validate5RsContent = (req, res) => {
       const requiredFields = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
       const missingFields = requiredFields.filter(field => !parsed.data[field]);
 
-      res.status(200).json({
+      const resp = {
         success: true,
         is5RsFormat: true,
         completeness: {
@@ -418,19 +458,37 @@ exports.validate5RsContent = (req, res) => {
           missing: missingFields
         },
         data: parsed.data
-      });
+      };
+      try {
+        logAudit(req, {
+          action: 'ASSISTANT_5RS_VALIDATE',
+          targetType: 'assistant',
+          targetId: null,
+          projectId: null,
+          metadata: clampMetadataSize({
+            is5RsFormat: true,
+            missing: missingFields,
+            sample: Object.fromEntries(Object.entries(parsed.data || {}).slice(0, 2).map(([k, v]) => [k, summarizeText(String(v || ''))]))
+          })
+        });
+      } catch (_) {}
+      res.status(200).json(resp);
     } else {
-      res.status(200).json({
+      const resp = {
         success: true,
         is5RsFormat: false,
         message: '內容不是 5Rs 反思格式'
-      });
+      };
+      try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false }) }); } catch (_) {}
+      res.status(200).json(resp);
     }
   } catch (error) {
-    res.status(200).json({
+    const resp = {
       success: true,
       is5RsFormat: false,
       message: '內容不是有效的 JSON 格式，可能是傳統文字格式'
-    });
+    };
+    try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false, parseError: true }) }); } catch (_) {}
+    res.status(200).json(resp);
   }
 };

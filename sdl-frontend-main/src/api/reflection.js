@@ -83,3 +83,15 @@ export const updateTeamDaily = async (id, data) => {
     });
     return response.data;
 };
+
+// 單獨刪除附件（個人）
+export const removePersonalDailyAttachment = async (id) => {
+  const response = await dailyApi.delete(`/personal/${id}/attachment`);
+  return response.data;
+};
+
+// 單獨刪除附件（小組）
+export const removeTeamDailyAttachment = async (id) => {
+  const response = await dailyApi.delete(`/team/${id}/attachment`);
+  return response.data;
+};

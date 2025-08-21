@@ -1,5 +1,6 @@
 // controller for rag_message
 const Rag_message = require('../models/rag_message');
+const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
 
 // 根據 userId 取得所有 RAG 訊息歷史
 exports.getRagMessageHistory = async (req, res) => {
@@ -171,6 +172,15 @@ exports.deleteSessionMessages = async (req, res) => {
         console.log("已刪除的訊息數量:", deletedCount);
         
         if (deletedCount > 0) {
+            // Audit: delete assistant session messages
+            await logAudit(req, {
+                action: 'ASSISTANT_SESSION_MESSAGES_DELETE',
+                targetType: 'assistant_session',
+                targetId: sessionId,
+                projectId: null,
+                actorId: parseInt(userId, 10) || undefined,
+                metadata: clampMetadataSize({ userId, sessionId, deletedCount })
+            });
             res.status(200).json({ 
                 message: "會話訊息已成功刪除", 
                 deletedCount: deletedCount 
@@ -209,6 +219,21 @@ exports.createNewSession = async (req, res) => {
         });
 
         console.log("新會話創建成功，ID:", newMessage.id);
+        try {
+            await logAudit(req, {
+                action: 'ASSISTANT_SESSION_OPEN',
+                targetType: 'assistant_session',
+                targetId: sessionId,
+                projectId: projectId || null,
+                actorId: parseInt(userId, 10) || undefined,
+                metadata: clampMetadataSize({
+                    userId,
+                    userName,
+                    sessionId,
+                    opening: summarizeText(openingMessage)
+                })
+            });
+        } catch (_) {}
         res.status(200).json({ 
             message: "新會話創建成功", 
             sessionId: sessionId,

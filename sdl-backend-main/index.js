@@ -12,8 +12,10 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { upload } = require('./middlewares/uploadMiddleware'); // 引用上傳中介軟體
 const { uploadToMinio } = require('./middlewares/minioUploadMiddleware'); // 引用 MinIO 中介軟體
+const { logAudit, clampMetadataSize, summarizeText } = require('./services/auditService');
 const { Socket } = require('dgram');
 const server = http.createServer(app);
+// const { validateToken } = require('./middlewares/AuthMiddleware');
 const Task = require('./models/task');
 const Comment = require('./models/comment');
 const Column = require('./models/column');
@@ -202,12 +204,19 @@ app.use(cors({
 }));
 
 app.options('*', cors()); // 處理所有路由的預檢請求
+// 信任反向代理以取得正確的 req.ip（配合 Nginx X-Forwarded-*）
+try { app.set('trust proxy', 1); } catch (_) {}
 app.set('io', io); // 確保在 socket.io 初始化後掛載
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 // 👇 確保 Express 解析 JSON
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
+// HTTP Logging (Pino)
+try {
+  const { httpLogger } = require('./middlewares/logging');
+  app.use(httpLogger);
+} catch (_) {}
 // 靜態資源服務
 app.use('/api/daily_file', express.static(path.join(__dirname, 'daily_file')));
 console.log('Static file directory:', path.join(__dirname, 'daily_file'));
@@ -340,6 +349,7 @@ io.on("connection", (socket) => {
             // 優先使用 socket 中的用戶資訊，如果沒有則使用 data 中的
             const currentUser = socket.user || user;
             const extractedOwner = currentUser?.username || "未知";
+            const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
             
             // 權限檢查
             const permissionCheck = await checkSocketWritePermission(socket.userId || user?.id, projectId, socket);
@@ -361,7 +371,7 @@ io.on("connection", (socket) => {
                 assignees: item.assignees || [],
                 owner: extractedOwner,  // 確保 owner 存在
                 columnId: columnId,
-            });
+            }, { req: reqCtx });
             console.log("creatTask", creatTask)
             
             const addIntoTaskArray = await Column.findByPk(creatTask.columnId)
@@ -376,7 +386,9 @@ io.on("connection", (socket) => {
             }, {
                 where: {
                     id: projectId
-                }
+                },
+                individualHooks: true,
+                req: reqCtx
             });
 
             // 廣播任務創建事件 - 只是告知任務已創建，讓前端刷新數據
@@ -410,6 +422,7 @@ io.on("connection", (socket) => {
         try {
             const currentUser = getCurrentUser(socket, data);
             const changedBy = currentUser?.username || cardData.owner || "未知";
+            const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
             
             // 權限檢查
             const permissionCheck = await checkSocketWritePermission(getCurrentUserId(socket, data), projectId, socket);
@@ -435,7 +448,9 @@ io.on("connection", (socket) => {
                     images: cardData.images || [] // 確保 images 欄位存在
                 }, {
                     where: { id: cardData.id },
-                    transaction: t
+                    transaction: t,
+                    individualHooks: true,
+                    req: reqCtx
                 });
 
                 // 若標題或內容有變更，同步更新關聯評論的反正規化快照
@@ -468,7 +483,9 @@ io.on("connection", (socket) => {
             }, {
                 where: {
                     id: projectId
-                }
+                },
+                individualHooks: true,
+                req: reqCtx
             });
             
             // 廣播任務更新事件與活動更新
@@ -585,14 +602,18 @@ io.on("connection", (socket) => {
                 const updateTask = await Task.destroy({
                     where: {
                         id: cardData.id
-                    }
+                    },
+                    individualHooks: true,
+                    req: reqCtx
                 });
                 await Project.update({
                     id: projectId
                 }, {
                     where: {
                         id: projectId
-                    }
+                    },
+                    individualHooks: true,
+                    req: reqCtx
                 });
                 
                 console.log(`✅ 任務 ${cardData.id} 刪除完成`);
@@ -704,14 +725,15 @@ io.on("connection", (socket) => {
         // 更新數據庫 - 使用實際的 column ID
         try {
             // 更新來源與目標欄位的排序
-            await Column.update({ task: sourceTasks }, { where: { id: sourceColumnId } });
+            const reqCtx = { userId: socket.userId, user: socket.user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
+            await Column.update({ task: sourceTasks }, { where: { id: sourceColumnId }, individualHooks: true, req: reqCtx });
             if (sourceColumnId !== destColumnId) {
-                await Column.update({ task: destTasks }, { where: { id: destColumnId } });
-                await Task.update({ columnId: destColumnId }, { where: { id: taskId } });
+                await Column.update({ task: destTasks }, { where: { id: destColumnId }, individualHooks: true, req: reqCtx });
+                await Task.update({ columnId: destColumnId }, { where: { id: taskId }, individualHooks: true, req: reqCtx });
                 console.log(`✅ 任務 ${taskId} 的 columnId 已更新為 ${destColumnId}`);
             } else {
                 // 同欄位內移動
-                await Column.update({ task: destTasks }, { where: { id: destColumnId } });
+                await Column.update({ task: destTasks }, { where: { id: destColumnId }, individualHooks: true, req: reqCtx });
             }
             
             // 更新專案時間戳
@@ -720,7 +742,9 @@ io.on("connection", (socket) => {
             }, {
                 where: {
                     id: projectId
-                }
+                },
+                individualHooks: true,
+                req: reqCtx
             });
             
             console.log(`✅ 拖拽操作完成: 任務 ${taskId}`);
@@ -751,6 +775,7 @@ io.on("connection", (socket) => {
         try {
             const { projectId, newGroupName, user } = data;
             const createdBy = user?.username || "未知";
+            const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
             
             // 權限檢查
             const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
@@ -786,7 +811,9 @@ io.on("connection", (socket) => {
             }, {
                 where: {
                     id: projectId
-                }
+                },
+                individualHooks: true,
+                req: reqCtx
             });
 
             io.to(projectId).emit("ColumnCreatedSuccess", kanbanRowForCreate);
@@ -807,6 +834,7 @@ io.on("connection", (socket) => {
     ensureListener(socket, "columnOrderChanged", async (data) => {
         const { projectId, columnOrder, kanbanData, kanbanId, user } = data;
         const changedBy = user?.username || "未知";
+        const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
         
         // 權限檢查
         const roomProjectId = projectId || kanbanId; // backward compat
@@ -832,7 +860,7 @@ io.on("connection", (socket) => {
             const kanbanRow = await Kanban.findOne({ where: { projectId: roomProjectId } });
             if (!kanbanRow) throw new Error('Kanban not found');
             await Kanban.update({ column: newOrder }, { where: { id: kanbanRow.id } });
-            await Project.update({ id: roomProjectId }, { where: { id: roomProjectId } });
+            await Project.update({ id: roomProjectId }, { where: { id: roomProjectId }, individualHooks: true, req: reqCtx });
 
             // Emit latest full data
             const latest = await buildKanbanData(roomProjectId);
@@ -856,6 +884,7 @@ io.on("connection", (socket) => {
         // 從 socket 或傳入資料取得目前使用者
         const currentUser = getCurrentUser(socket, data);
         const deletedBy = currentUser?.username || "未知";
+        const reqCtx = { userId: socket.userId || currentUser?.id, user: socket.user || currentUser, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
         
         // 權限檢查（優先使用 socket 上的 userId）
         const permissionCheck = await checkSocketWritePermission(getCurrentUserId(socket, data), kanbanId, socket);
@@ -921,7 +950,9 @@ io.on("connection", (socket) => {
                             id: {
                                 [Op.in]: taskIds // 使用 Op.in 来指定一组 ID
                             }
-                        }
+                        },
+                        individualHooks: true,
+                        req: reqCtx
                     });
 
                     console.log(`✅ 已成功删除任務，任務ID:`, taskIds);
@@ -940,7 +971,9 @@ io.on("connection", (socket) => {
                 }, {
                     where: {
                         id: kanbanId
-                    }
+                    },
+                    individualHooks: true,
+                    req: reqCtx
                 });
                 // Emit the updated kanban and column info to all clients
                 // io.sockets.emit("columnDeleted", { kanbanId, updatedColumns, deletedColumnId: columnData.id });
@@ -968,6 +1001,7 @@ io.on("connection", (socket) => {
     ensureListener(socket, "nodeCreate", async (data) => {
         const { title, content, ideaWallId, owner, from_id, projectId, colorindex, user } = data;
         const createdBy = user?.username || owner || "未知";
+        const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
         
         // 權限檢查
         const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
@@ -986,7 +1020,7 @@ io.on("connection", (socket) => {
                 ideaWallId: ideaWallId,
                 owner: owner,
                 colorindex: colorindex
-            });
+            }, { req: reqCtx });
 
             // 記錄節點創建
             try {
@@ -1006,7 +1040,7 @@ io.on("connection", (socket) => {
                     from_id: from_id,
                     to_id: createdNode.id,
                     ideaWallId: ideaWallId
-                });
+                }, { req: reqCtx });
             }
 
             await Project.update({
@@ -1014,7 +1048,9 @@ io.on("connection", (socket) => {
             }, {
                 where: {
                     id: projectId
-                }
+                },
+                individualHooks: true,
+                req: reqCtx
             });
 
             // 廣播新節點到所有相關的客戶端
@@ -1028,6 +1064,7 @@ io.on("connection", (socket) => {
     ensureListener(socket, "nodeUpdate", async (data) => {
         const { title, content, id, projectId, owner, user } = data;
         const updatedBy = user?.username || owner || "未知";
+        const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
         
         // 權限檢查
         const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
@@ -1051,7 +1088,9 @@ io.on("connection", (socket) => {
                 {
                     where: {
                         id: id
-                    }
+                    },
+                    individualHooks: true,
+                    req: reqCtx
                 }
             );
 
@@ -1075,7 +1114,9 @@ io.on("connection", (socket) => {
             }, {
                 where: {
                     id: projectId
-                }
+                },
+                individualHooks: true,
+                req: reqCtx
             });
             // io.sockets.emit("nodeUpdated", createdNode);
             io.to(projectId).emit("nodeUpdated", createdNode);
@@ -1088,6 +1129,7 @@ io.on("connection", (socket) => {
     ensureListener(socket, "nodeDelete", async (data) => {
         const { id, projectId, owner, title, user } = data;
         const deletedBy = user?.username || owner || "未知";
+        const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
         
         // 權限檢查
         const permissionCheck = await checkSocketWritePermission(user?.id, projectId);
@@ -1105,7 +1147,9 @@ io.on("connection", (socket) => {
                 {
                     where: {
                         id: id
-                    }
+                    },
+                    individualHooks: true,
+                    req: reqCtx
                 }
             );
             await Project.update({
@@ -1155,6 +1199,22 @@ io.on("connection", (socket) => {
     });    
 });
 
+// Register Sequelize audit hooks (server start)
+try {
+  const { registerAuditHooks } = require('./hooks/registerAuditHooks');
+  registerAuditHooks();
+} catch (e) {
+  console.warn('Audit hooks registration failed or skipped:', e?.message);
+}
+
+// Install graceful flush for audit aggregation buffer
+try {
+  const { installAuditShutdownHooks } = require('./services/auditService');
+  installAuditShutdownHooks();
+} catch (e) {
+  console.warn('Audit shutdown hooks not installed:', e?.message);
+}
+
 // 檔案上傳路由 - 使用 MinIO
 app.post('/api/upload', uploadToMinio('files', 10), (req, res) => {
     console.log('MinIO uploaded files:', req.uploadedFiles);
@@ -1170,6 +1230,15 @@ app.post('/api/upload', uploadToMinio('files', 10), (req, res) => {
             mimeType: file.mimeType,
             size: file.size
         }));
+
+        // Audit: generic file upload (batch)
+        logAudit(req, {
+            action: 'FILE_UPLOAD',
+            targetType: 'upload',
+            targetId: (files.length === 1 ? files[0].fileName : undefined) || null,
+            projectId: null,
+            metadata: clampMetadataSize({ files: files.map(f => ({ name: f.originalName || f.fileName, size: f.size, mimeType: f.mimeType })) })
+        });
 
         res.status(200).json({ 
             message: '檔案上傳成功',
@@ -1200,6 +1269,19 @@ app.post('/proxy/api/v1/chats/:chatId/sessions', async (req, res) => {
         );
         console.log("response", response)
         console.log("-----------------------------")
+        try {
+            await logAudit(req, {
+                action: 'ASSISTANT_SESSION_CREATE',
+                targetType: 'assistant_session',
+                targetId: response?.data?.id || null,
+                projectId: null,
+                metadata: clampMetadataSize({
+                    chatId,
+                    request: { body: summarizeText(JSON.stringify(req.body || {})) },
+                    response: { hasData: !!response?.data }
+                })
+            });
+        } catch (_) {}
         res.json(response.data);
     } catch (error) {
         console.error("代理請求失敗 (sessions):", error.message);
@@ -1221,6 +1303,19 @@ app.post('/proxy/api/v1/chats/:chatId/completions', async (req, res) => {
                 httpsAgent: agent, // 忽略證書驗證
             }
         );
+        try {
+            await logAudit(req, {
+                action: 'ASSISTANT_COMPLETION',
+                targetType: 'assistant',
+                targetId: chatId,
+                projectId: null,
+                metadata: clampMetadataSize({
+                    chatId,
+                    prompt: summarizeText(JSON.stringify(req.body || {})),
+                    response: { hasData: !!response?.data }
+                })
+            });
+        } catch (_) {}
         res.json(response.data);
     } catch (error) {
         console.error("代理請求失敗 (completions):", error.message);
@@ -1246,6 +1341,15 @@ app.delete('/proxy/api/v1/chats/:chatId/sessions/:sessionId', async (req, res) =
         );
         
         console.log("RAGFlow 會話刪除成功:", response.data);
+        try {
+            await logAudit(req, {
+                action: 'ASSISTANT_SESSION_DELETE',
+                targetType: 'assistant_session',
+                targetId: sessionId,
+                projectId: null,
+                metadata: clampMetadataSize({ chatId, sessionId })
+            });
+        } catch (_) {}
         res.json(response.data);
     } catch (error) {
         console.error("代理請求失敗 (delete sessions):", error.message);
@@ -1273,6 +1377,7 @@ app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/llm', require('./routes/llm'));
 app.use('/api/file', require('./routes/file'));  // MinIO 檔案管理路由
+app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));
 app.use('/api', require('./routes/projectComments'));   // 專案評論/按讚
 app.use('/api', require('./routes/comments'));   // 任務評論/附件/按讚

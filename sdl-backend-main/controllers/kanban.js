@@ -29,7 +29,7 @@ const cleanupColumnTasks = async (columnItem) => {
         console.log(`清理 Column ${columnItem.id}: 移除了 ${columnItem.task.length - cleanedTaskIds.length} 個無效的任務 ID`);
         await Column.update(
             { task: cleanedTaskIds },
-            { where: { id: columnItem.id } }
+            { where: { id: columnItem.id }, individualHooks: true }
         );
     }
 
@@ -419,4 +419,3 @@ exports.createKanban = async ( projectId ) => {
         return kanban.save();
     })
 }
-

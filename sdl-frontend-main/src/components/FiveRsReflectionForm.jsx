@@ -15,7 +15,9 @@ const FiveRsReflectionForm = ({
   title = "",
   onTitleChange,
   attachFile = null,
-  onFileChange 
+  onFileChange,
+  existingRecord = null,
+  onRemoveAttachment = null
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [expandedSections, setExpandedSections] = useState({ 0: true });
@@ -314,6 +316,40 @@ const FiveRsReflectionForm = ({
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
           accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
         />
+        {/* 現有附件（編輯時） */}
+        {isEditing && existingRecord && (existingRecord.fileName || existingRecord.fileData) && (
+          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="text-sm text-gray-700 break-all">
+              附件：{existingRecord.originalName || existingRecord.filename || existingRecord.fileName}
+            </div>
+            <div className="flex gap-2">
+              <a
+                href={existingRecord.fileName ? `http://localhost/api/file/direct/${existingRecord.fileName}` : undefined}
+                onClick={(e) => {
+                  if (!existingRecord.fileName && existingRecord.fileData) {
+                    e.preventDefault();
+                    const buffer = new Uint8Array(existingRecord.fileData.data);
+                    const blob = new Blob([buffer], { type: "application/octet-stream" });
+                    import('js-file-download').then(({ default: FileDownload }) => {
+                      FileDownload(blob, existingRecord.filename || existingRecord.originalName || 'downloaded-file');
+                    });
+                  }
+                }}
+                className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm text-center"
+              >
+                下載附件
+              </a>
+              {typeof onRemoveAttachment === 'function' && (
+                <button
+                  onClick={onRemoveAttachment}
+                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                >
+                  刪除附件
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {attachFile && attachFile.length > 0 && (
           <div className="mt-2">
             <p className="text-sm text-gray-600">已選擇 {attachFile.length} 個檔案：</p>

@@ -10,6 +10,8 @@ import {
   createTeamDaily,
   updatePersonalDaily,
   updateTeamDaily,
+  removePersonalDailyAttachment,
+  removeTeamDailyAttachment,
 } from "../../api/reflection";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import toast, { Toaster } from "react-hot-toast";
@@ -574,6 +576,40 @@ export default function Reflection() {
     handleEditTeamClick(item);
   };
 
+  // 目前正在編輯的記錄（個人/小組）
+  const currentEditingPersonal = editingId
+    ? personalDaily.find((d) => d.id === editingId)
+    : null;
+  const currentEditingTeam = editingId
+    ? teamDaily.find((d) => d.id === editingId)
+    : null;
+
+  // 刪除附件：個人
+  const handleRemovePersonalAttachment = async () => {
+    if (!editingId) return;
+    try {
+      await removePersonalDailyAttachment(editingId);
+      queryClient.invalidateQueries("personalDaily");
+      toast.success("附件已刪除");
+    } catch (e) {
+      console.error(e);
+      toast.error("刪除附件失敗");
+    }
+  };
+
+  // 刪除附件：小組
+  const handleRemoveTeamAttachment = async () => {
+    if (!editingId) return;
+    try {
+      await removeTeamDailyAttachment(editingId);
+      queryClient.invalidateQueries("teamDaily");
+      toast.success("附件已刪除");
+    } catch (e) {
+      console.error(e);
+      toast.error("刪除附件失敗");
+    }
+  };
+
   return (
     <div className="h-full w-full bg-gray-50">
       {/* 雙欄佈局容器 */}
@@ -809,6 +845,38 @@ export default function Reflection() {
             onChange={handleAddFileChange}
             multiple
           />
+          {/* 現有附件（編輯時） */}
+          {editingId && currentEditingPersonal && (currentEditingPersonal.fileName || currentEditingPersonal.fileData) && (
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-sm text-gray-700 break-all">
+                附件：{currentEditingPersonal.originalName || currentEditingPersonal.filename || currentEditingPersonal.fileName}
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={currentEditingPersonal.fileName ? `http://localhost/api/file/direct/${currentEditingPersonal.fileName}` : undefined}
+                  onClick={(e) => {
+                    if (!currentEditingPersonal.fileName && currentEditingPersonal.fileData) {
+                      e.preventDefault();
+                      const buffer = new Uint8Array(currentEditingPersonal.fileData.data);
+                      const blob = new Blob([buffer], { type: "application/octet-stream" });
+                      import('js-file-download').then(({ default: FileDownload }) => {
+                        FileDownload(blob, currentEditingPersonal.filename || currentEditingPersonal.originalName || 'downloaded-file');
+                      });
+                    }
+                  }}
+                  className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm text-center"
+                >
+                  下載附件
+                </a>
+                <button
+                  onClick={handleRemovePersonalAttachment}
+                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                >
+                  刪除附件
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex justify-end m-2">
             <button
               onClick={() => setPersonalDailyModalOpen(false)}
@@ -898,6 +966,38 @@ export default function Reflection() {
             onChange={handleAddFileChange}
             multiple
           />
+          {/* 現有附件（編輯時） */}
+          {editingId && currentEditingTeam && (currentEditingTeam.fileName || currentEditingTeam.fileData) && (
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-sm text-gray-700 break-all">
+                附件：{currentEditingTeam.originalName || currentEditingTeam.filename || currentEditingTeam.fileName}
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={currentEditingTeam.fileName ? `http://localhost/api/file/direct/${currentEditingTeam.fileName}` : undefined}
+                  onClick={(e) => {
+                    if (!currentEditingTeam.fileName && currentEditingTeam.fileData) {
+                      e.preventDefault();
+                      const buffer = new Uint8Array(currentEditingTeam.fileData.data);
+                      const blob = new Blob([buffer], { type: "application/octet-stream" });
+                      import('js-file-download').then(({ default: FileDownload }) => {
+                        FileDownload(blob, currentEditingTeam.filename || currentEditingTeam.originalName || 'downloaded-file');
+                      });
+                    }
+                  }}
+                  className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm text-center"
+                >
+                  下載附件
+                </a>
+                <button
+                  onClick={handleRemoveTeamAttachment}
+                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                >
+                  刪除附件
+                </button>
+              </div>
+            </div>
+          )}
           <div className="flex justify-end m-2">
             <button
               onClick={() => setTeamDailyModalOpen(false)}
@@ -986,6 +1086,8 @@ export default function Reflection() {
             onTitleChange={setTitle}
             attachFile={attachFile}
             onFileChange={handleAddFileChange}
+            existingRecord={currentEditingPersonal}
+            onRemoveAttachment={handleRemovePersonalAttachment}
           />
         </div>
       </Modal>
@@ -1015,6 +1117,7 @@ export default function Reflection() {
               content={selectedReflectionForView.content}
               showFeedback={true}
               isTeacher={userRole === "teacher"}
+              record={selectedReflectionForView}
             />
           )}
         </div>

@@ -47,7 +47,7 @@ exports.createSubmit = async(req, res) => {
                     fileUrl: file.url,              // MinIO URL
                     mimeType: file.mimeType,        // 檔案類型
                     fileSize: file.size             // 檔案大小
-                });
+                }, { req });
             });
 
             await Promise.all(submitPromises);
@@ -61,7 +61,7 @@ exports.createSubmit = async(req, res) => {
                 content: content,
                 projectId: projectId,
                 userId: req.userId,
-            });
+            }, { req });
             console.log('✅ 創建 Submit 成功 (無檔案)');
         }
 
@@ -80,7 +80,9 @@ exports.createSubmit = async(req, res) => {
             await Project.update({
                 currentSubStage: currentSubStageInt + 1
             }, {
-                where: { id: projectId }
+                where: { id: projectId },
+                individualHooks: true,
+                req
             });
 
             await Idea_wall.create({
@@ -96,7 +98,9 @@ exports.createSubmit = async(req, res) => {
                 currentStage: currentStageInt + 1,
                 currentSubStage: 1
             }, {
-                where: { id: projectId }
+                where: { id: projectId },
+                individualHooks: true,
+                req
             });
 
                 const nextStage = await Stage.findAll({
@@ -117,7 +121,9 @@ exports.createSubmit = async(req, res) => {
                 await Project.update({
                     ProjectEnd: true
                 }, {
-                    where: { id: projectId }
+                    where: { id: projectId },
+                    individualHooks: true,
+                    req
                 });
 
                 await Idea_wall.create({
@@ -280,7 +286,7 @@ exports.updateSubmit = async (req, res) => {
                 fileUrl: file.url,
                 mimeType: file.mimeType,
                 fileSize: file.size
-        });
+        }, { req });
         
         // 記錄檔案變更
         try {
@@ -301,7 +307,7 @@ exports.updateSubmit = async (req, res) => {
   
       // 2. 更新文字內容（如果有）
       if (content !== undefined) {
-        await submit.update({ content });
+        await submit.update({ content }, { req });
         
         // 記錄內容變更
         try {
@@ -395,8 +401,8 @@ exports.deleteSubmit = async (req, res) => {
             console.warn('記錄提交刪除失敗，但不影響主要功能:', logError);
         }
 
-        // 刪除提交記錄
-        await Submit.destroy({ where: { id: submitId } });
+        // 刪除提交記錄（用 instance.destroy 讓 hooks 正常觸發）
+        await submit.destroy({ req });
         console.log(`✅ 提交記錄 ${submitId} 刪除完成`);
         console.log('==================');
         

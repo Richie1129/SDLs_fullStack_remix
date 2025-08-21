@@ -5,6 +5,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+
 exports.generateIdea = async (req, res) => {
   try {
     const { title, content } = req.body;
@@ -73,6 +75,20 @@ exports.generateIdea = async (req, res) => {
       owner: "想法發展助手"
     };
 
+    try {
+      await logAudit(req, {
+        action: 'ASSISTANT_IDEA_GENERATE',
+        targetType: 'assistant',
+        targetId: null,
+        projectId: null,
+        metadata: clampMetadataSize({
+          input: { title: summarizeText(title || ''), content: summarizeText(content || '') },
+          classification: { type, reason: summarizeText(reason || '') },
+          output: { title: summarizeText(responseWithOwner.title || ''), content: summarizeText(responseWithOwner.content || '') },
+          provider: 'openai:gpt-4o-mini'
+        })
+      });
+    } catch (_) {}
     res.status(200).json(responseWithOwner);
   } catch (error) {
     console.error('Error in generateIdea:', error);
