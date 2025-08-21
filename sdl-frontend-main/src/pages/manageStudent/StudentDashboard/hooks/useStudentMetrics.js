@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { formatRelativeTime } from "../utils";
 import { calculateProgress } from "../utils";
+import { is5RsFormat, extract5RsText, calculate5RsCompleteness } from "@/utils/5RsUtils.js";
 
 /**
  * 自定義 Hook 用於計算學生相關指標
@@ -34,9 +35,15 @@ export function useStudentMetrics(data, userName, projectId, userId) {
 
   // 計算小組統計數據
   const teamStats = useMemo(() => {
+    const projectIdStr = String(projectId || '');
+    const teamAiInteractionsInProject = (Array.isArray(teamAiInteractions) ? teamAiInteractions : []).filter(a => {
+        const pid = String(a?.projectId ?? a?.project_id ?? '');
+        return pid && pid === projectIdStr;
+    });
+
     return {
       // 1. 專案中所有成員對科學助手使用次數
-      teamAiInteractions: teamAiInteractions.length,
+      teamAiInteractions: teamAiInteractionsInProject.length,
       
       // 2. 想法節點數
       ideaNodes: ideaNodes.length,
@@ -50,7 +57,7 @@ export function useStudentMetrics(data, userName, projectId, userId) {
       // 5. 反思日誌總計(團隊)
       teamReflections: teamReflections.length
     };
-  }, [teamAiInteractions, ideaNodes, kanbanTasks, personalReflections, teamReflections]);
+  }, [teamAiInteractions, ideaNodes, kanbanTasks, personalReflections, teamReflections, projectId]);
 
   // 學生個人資料（基於真實資料計算）
   const personalData = useMemo(() => {
@@ -125,6 +132,7 @@ export function useStudentMetrics(data, userName, projectId, userId) {
       const stage = Number(projectInfo?.currentStage) || 0;
       const subStage = Number(projectInfo?.currentSubStage) || 0;
       const progressPct = calculateProgress(stage, subStage);
+      const projectIdStr = String(projectId || '');
 
       // 計算最後活動時間（多來源取最大值）
       const timestamps = [];
@@ -132,13 +140,22 @@ export function useStudentMetrics(data, userName, projectId, userId) {
       (Array.isArray(personalReflections) ? personalReflections : []).forEach(r => pushTime(r?.updatedAt || r?.createdAt));
       (Array.isArray(kanbanTasks) ? kanbanTasks : []).forEach(t => pushTime(t?.updatedAt || t?.createdAt));
       (Array.isArray(chatHistory) ? chatHistory : []).forEach(m => pushTime(m?.createdAt));
-      (Array.isArray(aiInteractions) ? aiInteractions : []).forEach(a => pushTime(a?.createdAt));
+      (Array.isArray(aiInteractions) ? aiInteractions : []).forEach(a => {
+        const pid = String(a?.projectId ?? a?.project_id ?? '');
+        if (pid && pid === projectIdStr) pushTime(a?.createdAt);
+      });
       (Array.isArray(projectActivities) ? projectActivities : []).forEach(a => pushTime(a?.createdAt));
       (Array.isArray(ideaNodes) ? ideaNodes : []).forEach(n => pushTime(n?.createdAt));
       const lastActivityTs = timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : null;
 
       // QA 問題數：以聊天歷史中屬於自己的訊息數為估計（同專案）
       const qaCount = getChatMessages();
+
+      // 篩選出屬於當前專案的個人 AI 互動
+      const personalAiInteractionsInProject = safeFilter(aiInteractions, a => {
+        const pid = String(a?.projectId ?? a?.project_id ?? '');
+        return pid && pid === projectIdStr;
+      });
 
       // 依活動紀錄近似估算學習時長與平均每次
       const normalizeId = (x) => (x == null ? null : String(x));
@@ -174,10 +191,12 @@ export function useStudentMetrics(data, userName, projectId, userId) {
         if ((uid && uid === meId) || (uname && uname === meName)) pushEvent(c?.createdAt);
       });
       // AI 互動
-      (Array.isArray(aiInteractions) ? aiInteractions : []).forEach(a => {
+      (Array.isArray(personalAiInteractionsInProject) ? personalAiInteractionsInProject : []).forEach(a => {
         const uid = normalizeId(a?.userId ?? a?.uid);
         const uname = a?.userName ?? a?.username ?? a?.author ?? '';
-        if ((uid && uid === meId) || (uname && uname === meName)) pushEvent(a?.createdAt);
+        if (((uid && uid === meId) || (uname && uname === meName))) {
+          pushEvent(a?.createdAt);
+        }
       });
       // 專案活動
       (Array.isArray(projectActivities) ? projectActivities : []).forEach(a => {
@@ -249,7 +268,7 @@ export function useStudentMetrics(data, userName, projectId, userId) {
         teamRole: "組員",
         chatMessages: getChatMessages(),
         qaQuestions: qaCount,
-        aiInteractions: Array.isArray(aiInteractions) ? aiInteractions.length : 0,
+        aiInteractions: personalAiInteractionsInProject.length,
         totalStudyTime,
         averageSessionTime,
         
@@ -312,10 +331,27 @@ export function useStudentMetrics(data, userName, projectId, userId) {
         personalReflections.slice(0, 10).forEach(reflection => {
           if (!reflection || !reflection.createdAt) return;
           
-          const contentPreview = reflection.content ? 
-            (reflection.content.length > 50 ? 
-              reflection.content.substring(0, 50) + '...' : 
-              reflection.content) : '無內容預覽';
+          // 產生內容預覽：若為 5Rs JSON，提取純文字而非原始物件字串
+          let contentPreview = '無內容預覽';
+          if (typeof reflection.content === 'string' && reflection.content.trim()) {
+            try {
+              if (is5RsFormat(reflection.content)) {
+                const plain = extract5RsText(reflection.content) || '';
+                const preview = plain.length > 50 ? (plain.substring(0, 50) + '...') : (plain || '');
+                const comp = calculate5RsCompleteness(reflection.content);
+                contentPreview = `5Rs 反思（完成度 ${comp.completed}/${comp.total}）- ${preview || '（尚無可顯示內容）'}`;
+              } else {
+                contentPreview = reflection.content.length > 50
+                  ? reflection.content.substring(0, 50) + '...'
+                  : reflection.content;
+              }
+            } catch (_) {
+              // 後備：直接截斷原字串
+              contentPreview = reflection.content.length > 50
+                ? reflection.content.substring(0, 50) + '...'
+                : reflection.content;
+            }
+          }
           
           activities.push({
             date: new Date(reflection.createdAt).toISOString().split('T')[0],
@@ -417,27 +453,34 @@ export function useStudentMetrics(data, userName, projectId, userId) {
 
       // 安全處理 AI 互動活動 - 顯示問題內容
       if (Array.isArray(aiInteractions) && aiInteractions.length > 0) {
-        aiInteractions.slice(0, 8).forEach(interaction => {
-          if (!interaction || !interaction.createdAt) return;
+        aiInteractions
+          .filter(interaction => {
+            if (!interaction || !interaction.createdAt) return false;
+            const pid = String(interaction?.projectId ?? interaction?.project_id ?? '');
+            return pid && pid === String(projectId);
+          })
+          .slice(0, 8)
+          .forEach(interaction => {
+            if (!interaction || !interaction.createdAt) return;
           
-          const questionPreview = interaction.input_message ? 
-            (interaction.input_message.length > 40 ? 
-              interaction.input_message.substring(0, 40) + '...' : 
-              interaction.input_message) : '向AI助手提問';
+            const questionPreview = interaction.input_message ? 
+              (interaction.input_message.length > 40 ? 
+                interaction.input_message.substring(0, 40) + '...' : 
+                interaction.input_message) : '向AI助手提問';
           
-          activities.push({
-            date: new Date(interaction.createdAt).toISOString().split('T')[0],
-            time: new Date(interaction.createdAt).toLocaleTimeString('zh-TW', { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            }),
-            action: `諮詢AI助手`,
-            detail: `問題：「${questionPreview}」`,
-            author: interaction.userName || userName || '匿名',
-            type: 'ai',
-            createdAt: interaction.createdAt
+            activities.push({
+              date: new Date(interaction.createdAt).toISOString().split('T')[0],
+              time: new Date(interaction.createdAt).toLocaleTimeString('zh-TW', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              }),
+              action: `諮詢AI助手`,
+              detail: `問題：「${questionPreview}」`,
+              author: interaction.userName || userName || '匿名',
+              type: 'ai',
+              createdAt: interaction.createdAt
+            });
           });
-        });
       }
 
       // 安全處理專案活動記錄 - 顯示具體變更
@@ -694,8 +737,8 @@ export function useStudentMetrics(data, userName, projectId, userId) {
       const pid = normalizeId(it?.projectId ?? it?.project_id);
       const uid = normalizeId(it?.userId ?? it?.uid);
       const uname = it?.userName ?? it?.username ?? it?.author ?? '';
-      const pidMatch = pid == null || pid === projectIdStr; // 若無 pid，視為同專案
-      return pidMatch && ((uid && uid === meId) || (uname && uname === meName));
+      // 必須嚴格匹配專案 ID
+      return pid === projectIdStr && ((uid && uid === meId) || (uname && uname === meName));
     }).length;
 
     const personalChatCount = Array.isArray(chatHistory)
