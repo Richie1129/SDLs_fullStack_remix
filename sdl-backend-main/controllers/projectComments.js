@@ -4,6 +4,7 @@ const ProjectCommentAttachment = require('../models/project_comment_attachment')
 const Project = require('../models/project');
 const User = require('../models/user');
 const { deleteFileFromMinio } = require('../config/minio');
+const { logAudit, summarizeText, clampMetadataSize } = require('../services/auditService');
 
 // GET /api/projects/:projectId/comments
 exports.listByProject = async (req, res) => {
@@ -87,6 +88,15 @@ exports.create = async (req, res) => {
       username: author?.username || null,
       reply_to_username: replyToUsername,
       reply_to_content: replyToContent,
+    }, { req });
+
+    // Audit: project comment created
+    await logAudit(req, {
+      action: 'PROJECT_COMMENT_CREATE',
+      targetType: 'project_comment',
+      targetId: created.id,
+      projectId: parseInt(projectId, 10) || null,
+      metadata: clampMetadataSize({ after: { content: summarizeText(content || '') } })
     });
 
     const enriched = await ProjectComment.findByPk(created.id, {
@@ -123,9 +133,24 @@ exports.update = async (req, res) => {
       return res.status(400).json({ message: '內容不可為空' });
     }
 
-    await comment.update({ content: content.trim() });
+    const beforeContent = comment.content;
+    await comment.update({ content: content.trim() }, { req });
     const updated = await ProjectComment.findByPk(comment.id, {
       include: [{ model: User, attributes: ['id', 'username'] }],
+    });
+
+    // Audit: project comment updated
+    await logAudit(req, {
+      action: 'PROJECT_COMMENT_UPDATE',
+      targetType: 'project_comment',
+      targetId: comment.id,
+      projectId: comment.projectId || null,
+      metadata: clampMetadataSize({
+        changed: ['content'],
+        diff: {
+          content: { before: summarizeText(beforeContent || ''), after: summarizeText(content || '') }
+        }
+      })
     });
     res.json({ item: updated });
   } catch (err) {
@@ -145,7 +170,16 @@ exports.remove = async (req, res) => {
       return res.status(403).json({ message: '僅能刪除自己的評論' });
     }
 
-    await comment.destroy();
+    // Audit: project comment delete (capture before)
+    await logAudit(req, {
+      action: 'PROJECT_COMMENT_DELETE',
+      targetType: 'project_comment',
+      targetId: comment.id,
+      projectId: comment.projectId || null,
+      metadata: clampMetadataSize({ before: { content: summarizeText(comment.content || '') } })
+    });
+
+    await comment.destroy({ req });
     res.json({ message: '已刪除' });
   } catch (err) {
     console.error('remove project comment error:', err);
@@ -198,6 +232,15 @@ exports.addAttachments = async (req, res) => {
 
     await ProjectCommentAttachment.bulkCreate(rows);
 
+    // Audit: attachments added to a project comment (batch)
+    await logAudit(req, {
+      action: 'PROJECT_COMMENT_ADD_ATTACHMENTS',
+      targetType: 'project_comment',
+      targetId: comment.id,
+      projectId: comment.projectId || null,
+      metadata: clampMetadataSize({ files: files.map(f => ({ name: f.originalName || f.fileName, size: f.size, mimeType: f.mimeType })) })
+    });
+
     const updated = await ProjectComment.findByPk(comment.id, {
       include: [
         { model: User, attributes: ['id', 'username'] },
@@ -238,7 +281,16 @@ exports.removeAttachment = async (req, res) => {
       console.warn('刪除 MinIO 檔案失敗，僅刪除資料庫記錄:', err?.message || err);
     }
 
-    await attachment.destroy();
+    // Audit: single attachment removed
+    await logAudit(req, {
+      action: 'PROJECT_COMMENT_ATTACHMENT_DELETE',
+      targetType: 'project_comment_attachment',
+      targetId: attachment.id,
+      projectId: comment.projectId || null,
+      metadata: clampMetadataSize({ file: { name: attachment.originalName || attachment.fileName, size: attachment.fileSize || null, mimeType: attachment.mimeType || null } })
+    });
+
+    await attachment.destroy({ req });
     res.json({ message: '附件已刪除' });
   } catch (err) {
     console.error('remove project comment attachment error:', err);

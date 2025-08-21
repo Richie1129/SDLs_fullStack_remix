@@ -107,7 +107,7 @@ exports.createProject = async (req, res) => {
         referral_code: referral_code,
         currentStage: 1,
         currentSubStage: 1
-    });
+    }, { req });
     const userId = req.body.userId;
     const creater = await User.findByPk(userId);
     const userProjectAssociations = await createdProject.addUser(creater);
@@ -584,7 +584,7 @@ exports.deleteProject = async (req, res) => {
         console.log('🗄️ 開始清理資料庫記錄...');
         await User_project.destroy({ where: { projectId } });
         await Kanban.destroy({ where: { projectId } });
-        await Project.destroy({ where: { id: projectId } });
+        await Project.destroy({ where: { id: projectId }, individualHooks: true, req });
 
         console.log(`✅ 專案 ${projectId} 刪除完成`);
         return res.status(200).json({ message: "專案刪除成功！" });

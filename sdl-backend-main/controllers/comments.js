@@ -4,6 +4,7 @@ const CommentLike = require('../models/comment_like');
 const CommentAttachment = require('../models/comment_attachment');
 const Task = require('../models/task');
 const User = require('../models/user');
+const { logAudit, clampMetadataSize } = require('../services/auditService');
 
 // GET /api/tasks/:taskId/comments
 exports.listByTask = async (req, res) => {
@@ -66,7 +67,7 @@ exports.create = async (req, res) => {
       parentId: parentId || null,
       task_title: task?.title || null,
       task_content: task?.content || null,
-    });
+    }, { req });
 
     // Attachments from MinIO upload middleware
     const files = req.uploadedFiles || [];
@@ -80,6 +81,15 @@ exports.create = async (req, res) => {
         comment_content: comment.content,
       }));
       await CommentAttachment.bulkCreate(rows);
+
+      // Audit: attachments added to a task comment
+      await logAudit(req, {
+        action: 'COMMENT_ADD_ATTACHMENTS',
+        targetType: 'comment',
+        targetId: comment.id,
+        projectId: req.body.projectId || null,
+        metadata: clampMetadataSize({ files: files.map(f => ({ name: f.originalName || f.fileName, size: f.size, mimeType: f.mimeType })) })
+      });
     }
 
     // Return enriched record
@@ -114,7 +124,7 @@ exports.update = async (req, res) => {
       return res.status(400).json({ message: '內容不可為空' });
     }
 
-    await comment.update({ content: content.trim() });
+    await comment.update({ content: content.trim() }, { req });
     const updated = await Comment.findByPk(comment.id, {
       include: [
         { model: User, attributes: ['id', 'username'] },
@@ -141,7 +151,7 @@ exports.remove = async (req, res) => {
       // 這裡不再做額外角色檢查
     }
 
-    await comment.destroy();
+    await comment.destroy({ req });
     res.json({ message: '已刪除' });
   } catch (err) {
     console.error('remove comment error:', err);

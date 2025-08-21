@@ -11,7 +11,7 @@ exports.createNode = async(req, res) => {
         title:title,
         content:content,
         ideaWallId:ideaWallId
-    }).then(result =>{
+    }, { req }).then(result =>{
         res.status(200).json(result)
     })
     .catch(err => console.log(err));

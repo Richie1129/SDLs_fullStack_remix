@@ -1,6 +1,7 @@
 //controllers/daily.js
 const Daily_personal = require('../models/daily_personal');
 const Daily_team = require('../models/daily_team');
+const { logAudit, summarizeText, clampMetadataSize } = require('../services/auditService');
 
 exports.getPersonalDaily = async (req, res) => {
     const { userId, projectId, isTeacher } = req.query;
@@ -70,6 +71,21 @@ exports.createPersonalDaily = async (req, res) => {
                     fileUrl: file.url,              // MinIO URL
                     mimeType: file.mimeType,        // 檔案類型
                     fileSize: file.size             // 檔案大小
+                        }, { req }).then(async (created) => {
+                            await logAudit(req, {
+                                action: 'DAILY_PERSONAL_CREATE',
+                                targetType: 'daily_personal',
+                                targetId: created.id,
+                                projectId: parseInt(projectId, 10) || null,
+                                metadata: clampMetadataSize({
+                                    after: {
+                                        title: summarizeText(title || ''),
+                                        content: summarizeText(content || ''),
+                                        file: { name: file.originalName || file.fileName, size: file.size, mimeType: file.mimeType }
+                                    }
+                                })
+                            });
+                            return created;
                         });
             });
 
@@ -79,11 +95,18 @@ exports.createPersonalDaily = async (req, res) => {
     } else {
             console.log('📝 無檔案上傳，創建純文字日誌');
             // 沒有檔案上傳
-        await Daily_personal.create({
+        const created = await Daily_personal.create({
             userId: userId,
             projectId: projectId,
             title: title,
             content: content,
+            }, { req });
+            await logAudit(req, {
+                action: 'DAILY_PERSONAL_CREATE',
+                targetType: 'daily_personal',
+                targetId: created.id,
+                projectId: parseInt(projectId, 10) || null,
+                metadata: clampMetadataSize({ after: { title: summarizeText(title || ''), content: summarizeText(content || '') } })
             });
             console.log('✅ 創建個人日誌成功 (無檔案)');
         }
@@ -194,6 +217,7 @@ exports.updatePersonalDaily = async (req, res) => {
         if (!daily) {
             return res.status(404).json({ message: "日誌未找到" });
         }
+        const before = { title: daily.title, content: daily.content, fileName: daily.fileName, mimeType: daily.mimeType, fileSize: daily.fileSize };
 
         console.log('=== 更新個人日誌 ===');
         console.log('日誌ID:', id);
@@ -222,7 +246,24 @@ exports.updatePersonalDaily = async (req, res) => {
                 fileSize: firstFile.size
             };
             
-            await daily.update(updateData);
+            await daily.update(updateData, { req });
+            await logAudit(req, {
+                action: 'DAILY_PERSONAL_UPDATE',
+                targetType: 'daily_personal',
+                targetId: daily.id,
+                projectId: daily.projectId || null,
+                metadata: clampMetadataSize({
+                    changed: Object.keys(updateData),
+                    diff: {
+                        title: { before: summarizeText(before.title || ''), after: summarizeText(title || '') },
+                        content: { before: summarizeText(before.content || ''), after: summarizeText(content || '') },
+                        file: {
+                            before: { name: before.fileName || null, size: before.fileSize || null, mimeType: before.mimeType || null },
+                            after: { name: firstFile.fileName, size: firstFile.size, mimeType: firstFile.mimeType }
+                        }
+                    }
+                })
+            });
             console.log(`✅ 更新個人日誌成功: ${id} (包含檔案: ${firstFile.originalName})`);
             
             // 如果有其他檔案，創建新的記錄
@@ -241,6 +282,15 @@ exports.updatePersonalDaily = async (req, res) => {
                         fileUrl: file.url,
                         mimeType: file.mimeType,
                         fileSize: file.size
+                    }, { req }).then(async (created) => {
+                        await logAudit(req, {
+                            action: 'DAILY_PERSONAL_CREATE',
+                            targetType: 'daily_personal',
+                            targetId: created.id,
+                            projectId: daily.projectId || null,
+                            metadata: clampMetadataSize({ after: { title: summarizeText(created.title || ''), content: summarizeText(content || ''), file: { name: file.originalName || file.fileName, size: file.size, mimeType: file.mimeType } } })
+                        });
+                        return created;
                     });
                 });
                 
@@ -252,7 +302,20 @@ exports.updatePersonalDaily = async (req, res) => {
             console.log('📝 無檔案上傳，僅更新文字內容');
             let updateData = { title, content };
             
-            await daily.update(updateData);
+            await daily.update(updateData, { req });
+            await logAudit(req, {
+                action: 'DAILY_PERSONAL_UPDATE',
+                targetType: 'daily_personal',
+                targetId: daily.id,
+                projectId: daily.projectId || null,
+                metadata: clampMetadataSize({
+                    changed: Object.keys(updateData),
+                    diff: {
+                        title: { before: summarizeText(before.title || ''), after: summarizeText(title || '') },
+                        content: { before: summarizeText(before.content || '') },
+                    }
+                })
+            });
             console.log(`✅ 更新個人日誌成功: ${id}`);
         }
         
@@ -303,7 +366,22 @@ exports.updateTeamDaily = async (req, res) => {
             updateData.fileSize = req.uploadedFile.size;
         }
 
-        await daily.update(updateData);
+        const before = { title: daily.title, content: daily.content, fileName: daily.fileName, mimeType: daily.mimeType, fileSize: daily.fileSize };
+        await daily.update(updateData, { req });
+        await logAudit(req, {
+            action: 'DAILY_TEAM_UPDATE',
+            targetType: 'daily_team',
+            targetId: daily.id,
+            projectId: daily.projectId || null,
+            metadata: clampMetadataSize({
+                changed: Object.keys(updateData),
+                diff: {
+                    title: { before: summarizeText(before.title || ''), after: summarizeText(title || '') },
+                    content: { before: summarizeText(before.content || ''), after: summarizeText(content || '') },
+                    ...(req.uploadedFile ? { file: { before: { name: before.fileName || null, size: before.fileSize || null, mimeType: before.mimeType || null }, after: { name: req.uploadedFile.fileName, size: req.uploadedFile.size, mimeType: req.uploadedFile.mimeType } } } : {})
+                }
+            })
+        });
         console.log(`✅ 更新團隊日誌成功: ${id}`);
         console.log('==================');
         
@@ -344,8 +422,17 @@ exports.deletePersonalDaily = async (req, res) => {
             console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除日誌:', fileCleanupError.message);
         }
 
-        // 刪除日誌記錄
-        await Daily_personal.destroy({ where: { id } });
+        // Audit: delete daily personal (before)
+        await logAudit(req, {
+            action: 'DAILY_PERSONAL_DELETE',
+            targetType: 'daily_personal',
+            targetId: daily.id,
+            projectId: daily.projectId || null,
+            metadata: clampMetadataSize({ before: { title: summarizeText(daily.title || ''), content: summarizeText(daily.content || ''), files: fileNames } })
+        });
+
+        // 刪除日誌記錄（用 instance.destroy 讓 hooks/一致行為）
+        await daily.destroy({ req });
         console.log(`✅ 個人日誌 ${id} 刪除完成`);
         console.log('==================');
         
@@ -387,8 +474,17 @@ exports.deleteTeamDaily = async (req, res) => {
             console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除日誌:', fileCleanupError.message);
         }
 
-        // 刪除日誌記錄
-        await Daily_team.destroy({ where: { id } });
+        // Audit: delete daily team (before)
+        await logAudit(req, {
+            action: 'DAILY_TEAM_DELETE',
+            targetType: 'daily_team',
+            targetId: daily.id,
+            projectId: daily.projectId || null,
+            metadata: clampMetadataSize({ before: { title: summarizeText(daily.title || ''), content: summarizeText(daily.content || ''), files: fileNames } })
+        });
+
+        // 刪除日誌記錄（用 instance.destroy 讓 hooks/一致行為）
+        await daily.destroy({ req });
         console.log(`✅ 團隊日誌 ${id} 刪除完成`);
         console.log('==================');
         

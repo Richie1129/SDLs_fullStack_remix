@@ -240,6 +240,8 @@ async function callGeminiAPI(prompt) {
   }
 }
 
+const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+
 // 主要的 5Rs 分析功能 (作為 Express.js 路由處理器)
 exports.analyze5RsReflection = async (req, res) => {
   try {
@@ -373,6 +375,19 @@ exports.analyze5RsReflection = async (req, res) => {
     console.log('回應資料:', JSON.stringify(finalResponse, null, 2));
     console.log('=== 5Rs AI 分析結束 ===');
 
+    try {
+      await logAudit(req, {
+        action: 'ASSISTANT_5RS_ANALYZE',
+        targetType: 'assistant',
+        targetId: null,
+        projectId: null,
+        metadata: clampMetadataSize({
+          input: Object.fromEntries(Object.entries(studentContent || {}).map(([k, v]) => [k, summarizeText(String(v || ''))])),
+          provider: result.provider
+        })
+      });
+    } catch (_) {}
+
     res.status(200).json(finalResponse);
 
   } catch (error) {
@@ -409,7 +424,7 @@ exports.validate5RsContent = (req, res) => {
       const requiredFields = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
       const missingFields = requiredFields.filter(field => !parsed.data[field]);
 
-      res.status(200).json({
+      const resp = {
         success: true,
         is5RsFormat: true,
         completeness: {
@@ -418,19 +433,37 @@ exports.validate5RsContent = (req, res) => {
           missing: missingFields
         },
         data: parsed.data
-      });
+      };
+      try {
+        logAudit(req, {
+          action: 'ASSISTANT_5RS_VALIDATE',
+          targetType: 'assistant',
+          targetId: null,
+          projectId: null,
+          metadata: clampMetadataSize({
+            is5RsFormat: true,
+            missing: missingFields,
+            sample: Object.fromEntries(Object.entries(parsed.data || {}).slice(0, 2).map(([k, v]) => [k, summarizeText(String(v || ''))]))
+          })
+        });
+      } catch (_) {}
+      res.status(200).json(resp);
     } else {
-      res.status(200).json({
+      const resp = {
         success: true,
         is5RsFormat: false,
         message: '內容不是 5Rs 反思格式'
-      });
+      };
+      try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false }) }); } catch (_) {}
+      res.status(200).json(resp);
     }
   } catch (error) {
-    res.status(200).json({
+    const resp = {
       success: true,
       is5RsFormat: false,
       message: '內容不是有效的 JSON 格式，可能是傳統文字格式'
-    });
+    };
+    try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false, parseError: true }) }); } catch (_) {}
+    res.status(200).json(resp);
   }
 };

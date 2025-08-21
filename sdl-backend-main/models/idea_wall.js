@@ -14,6 +14,10 @@ const Idea_wall = sequelize.define('idea_wall', {
     stage:{
         type: DataTypes.TEXT,
         allowNull:true
+    },
+    projectId: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 }, {
     tableName: 'idea_walls'
