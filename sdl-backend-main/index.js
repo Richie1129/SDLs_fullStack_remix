@@ -1382,6 +1382,16 @@ app.use('/api/usage', require('./routes/usage'));
 app.use('/api', require('./routes/projectComments'));   // 專案評論/按讚
 app.use('/api', require('./routes/comments'));   // 任務評論/附件/按讚
 
+// Simple health check endpoint for load balancers/nginx debugging
+app.get('/api/health', async (req, res) => {
+    try {
+        await sequelize.authenticate();
+        return res.status(200).json({ status: 'ok', db: 'connected' });
+    } catch (e) {
+        return res.status(500).json({ status: 'error', db: 'disconnected', error: e.message });
+    }
+});
+
 //error handling
 app.use((error, req, res, next) => {
     console.log(error);
