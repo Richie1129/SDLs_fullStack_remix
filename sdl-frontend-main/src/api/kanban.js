@@ -1,50 +1,28 @@
-import axios from "axios";
-
-axios.defaults.withCredentials = true; 
-const kanbanApi = axios.create({
-    baseURL: "http://localhost/api/kanbans",
-    headers:{
-        "Content-Type":" application/json"
-    },
-})
-
-// 添加請求攔截器以自動添加 token
-kanbanApi.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            config.headers['accessToken'] = token;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
+import apiClient from './client';
 
 export const getKanbanColumns = async (projectId) => {
-    const response = await kanbanApi.get(`/${projectId}`)
+    const response = await apiClient.get(`/kanbans/${projectId}`)
     return response.data
 }
 
 export const getKanbanTasks = async (columnId) => {
-    const response = await kanbanApi.get(`/columns/${columnId}`)
+    const response = await apiClient.get(`/kanbans/columns/${columnId}`)
     return response.data
 }
 
 export const getTaskChangeLogs = async (taskId) => {
-    const response = await kanbanApi.get(`/tasks/${taskId}/changes`)
+    const response = await apiClient.get(`/kanbans/tasks/${taskId}/changes`)
     return response.data
 }
 
 // 取得節點變更記錄
 export const getNodeChangeLogs = async (nodeId) => {
-    const response = await axios.get(`http://localhost/api/node/changes/${nodeId}`);
+    const response = await apiClient.get(`/node/changes/${nodeId}`);
     return response.data;
 };
 
 export const getProjectActivity = async (projectId, params = {}) => {
-    const response = await kanbanApi.get(`/projects/${projectId}/activity`, { params })
+    const response = await apiClient.get(`/kanbans/projects/${projectId}/activity`, { params })
     return response.data
 }
 
@@ -56,10 +34,10 @@ export const addCardItem = async (cardItem) => {
 }
 
 export const updateCardItem = async (cardItem) => {
-    const response = await kanbanApi.put("/", cardItem)
+    const response = await apiClient.put(`/kanbans`, cardItem)
     return response.data
 }
 
 export const deleteCardItem = async (config) => {
-    const response = await kanbanApi.delete("/",config)
+    const response = await apiClient.delete(`/kanbans`,config)
 }

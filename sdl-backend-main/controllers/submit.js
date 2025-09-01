@@ -4,6 +4,7 @@ const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
 const Stage = require('../models/stage');
 const { logSubmitChange, logSubmitFieldChanges } = require('../utils/submitChangeLogger');
+const sequelize = require('../util/database');
 
 exports.createSubmit = async(req, res) => {
     const { currentStage, currentSubStage, content, projectId } = req.body;
@@ -22,6 +23,7 @@ exports.createSubmit = async(req, res) => {
         return res.status(400).send({ message: '請填寫表單!' });
     }
 
+    const t = await sequelize.transaction();
     try {
         // 如果有檔案上傳（來自 MinIO 中介軟體）
         if (req.uploadedFiles && req.uploadedFiles.length > 0) {
@@ -47,7 +49,7 @@ exports.createSubmit = async(req, res) => {
                     fileUrl: file.url,              // MinIO URL
                     mimeType: file.mimeType,        // 檔案類型
                     fileSize: file.size             // 檔案大小
-                }, { req });
+                }, { req, transaction: t });
             });
 
             await Promise.all(submitPromises);
@@ -61,19 +63,21 @@ exports.createSubmit = async(req, res) => {
                 content: content,
                 projectId: projectId,
                 userId: req.userId,
-            }, { req });
+            }, { req, transaction: t });
             console.log('✅ 創建 Submit 成功 (無檔案)');
         }
 
         // 檢查並更新到下一階段
         const process = await Process.findAll({
             attributes: ['stage'],
-            where: { projectId: projectId }
+            where: { projectId: projectId },
+            transaction: t
         });
 
         const stage = await Stage.findAll({
             attributes: ['sub_stage'],
-            where: { id: process[0].stage[currentStageInt - 1] }
+            where: { id: process[0].stage[currentStageInt - 1] },
+            transaction: t
         });
 
         if (currentSubStageInt + 1 <= stage[0].sub_stage.length) {
@@ -82,7 +86,8 @@ exports.createSubmit = async(req, res) => {
             }, {
                 where: { id: projectId },
                 individualHooks: true,
-                req
+                req,
+                transaction: t
             });
 
             await Idea_wall.create({
@@ -91,7 +96,7 @@ exports.createSubmit = async(req, res) => {
                 stage: `${currentStageInt}-${currentSubStageInt + 1}`,
                 title: `${stage[0].sub_stage[currentSubStageInt]}`,
                 type: "project"
-            });
+            }, { transaction: t });
         } else {
             if (currentStageInt + 1 <= process[0].stage.length) {
             await Project.update({
@@ -100,12 +105,14 @@ exports.createSubmit = async(req, res) => {
             }, {
                 where: { id: projectId },
                 individualHooks: true,
-                req
+                req,
+                transaction: t
             });
 
                 const nextStage = await Stage.findAll({
                     attributes: ['sub_stage'],
-                    where: { id: process[0].stage[currentStageInt] }
+                    where: { id: process[0].stage[currentStageInt] },
+                    transaction: t
                 });
 
             await Idea_wall.create({
@@ -114,7 +121,7 @@ exports.createSubmit = async(req, res) => {
                     stage: `${currentStageInt + 1}-1`,
                     title: `${nextStage[0].sub_stage[0]}`,
                     type: "project"
-            });
+            }, { transaction: t });
             } else {
                 // 所有階段已完成，標記專案為完成狀態
                 console.log('🎉 所有階段已完成，更新專案狀態為完成');
@@ -123,7 +130,8 @@ exports.createSubmit = async(req, res) => {
                 }, {
                     where: { id: projectId },
                     individualHooks: true,
-                    req
+                    req,
+                    transaction: t
                 });
 
                 await Idea_wall.create({
@@ -132,19 +140,22 @@ exports.createSubmit = async(req, res) => {
                     stage: "completed",
                     title: "專案已完成",
                     type: "project"
-                });
+                }, { transaction: t });
 
                 console.log('==================');
+                await t.commit();
                 console.log('✅ 專案完成處理成功');
                 return res.status(200).send({ message: 'done' });
             }
         }
 
         console.log('==================');
+        await t.commit();
         res.status(200).send({ message: 'create success!' });
 
     } catch (err) {
         console.error("❌ 創建 Submit 失敗:", err);
+        try { await t.rollback(); } catch (_) {}
         return res.status(500).send({ message: 'create failed!', error: err.message });
     }
 };
@@ -250,6 +261,7 @@ exports.updateSubmit = async (req, res) => {
     const submitId = req.params.submitId;
     const { content, changedBy } = req.body;
 
+    const t = await sequelize.transaction();
     try {
         const submit = await Submit.findByPk(submitId);
         if (!submit) {
@@ -286,7 +298,7 @@ exports.updateSubmit = async (req, res) => {
                 fileUrl: file.url,
                 mimeType: file.mimeType,
                 fileSize: file.size
-        }, { req });
+        }, { req, transaction: t });
         
         // 記錄檔案變更
         try {
@@ -307,7 +319,7 @@ exports.updateSubmit = async (req, res) => {
   
       // 2. 更新文字內容（如果有）
       if (content !== undefined) {
-        await submit.update({ content }, { req });
+        await submit.update({ content }, { req, transaction: t });
         
         // 記錄內容變更
         try {
@@ -325,10 +337,12 @@ exports.updateSubmit = async (req, res) => {
   
         console.log(`✅ 更新 Submit 成功: ${submitId}`);
         console.log('==================');
+      await t.commit();
       return res.status(200).json({ message: "更新成功" });
         
     } catch (err) {
         console.error("❌ updateSubmit 錯誤:", err);
+        try { await t.rollback(); } catch (_) {}
         return res.status(500).json({ message: "更新失敗", error: err.message });
     }
   };

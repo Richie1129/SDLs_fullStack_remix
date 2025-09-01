@@ -1,39 +1,21 @@
-import axios from "axios";
-
-const usageApi = axios.create({
-  baseURL: "http://localhost/api/usage",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Attach token if present
-usageApi.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) config.headers['accessToken'] = token;
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+import apiClient from './client';
 
 export const startUsageSession = async ({ userId, projectId }) => {
-  const res = await usageApi.post('/start', { userId, projectId });
+  const res = await apiClient.post('/usage/start', { userId, projectId });
   return res.data;
 };
 
 export const sendHeartbeat = async ({ sessionId, userId, projectId }) => {
-  const res = await usageApi.post('/heartbeat', { sessionId, userId, projectId });
+  const res = await apiClient.post('/usage/heartbeat', { sessionId, userId, projectId });
   return res.data;
 };
 
 export const stopUsageSession = async ({ sessionId, userId, projectId }) => {
-  const res = await usageApi.post('/stop', { sessionId, userId, projectId });
+  const res = await apiClient.post('/usage/stop', { sessionId, userId, projectId });
   return res.data;
 };
 
 export const getUsageSummary = async ({ userId, projectId }) => {
-  const res = await usageApi.get('/summary', { params: { userId, projectId } });
+  const res = await apiClient.get('/usage/summary', { params: { userId, projectId } });
   return res.data;
 };
-

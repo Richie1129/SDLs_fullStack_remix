@@ -5,6 +5,7 @@ const CommentAttachment = require('../models/comment_attachment');
 const Task = require('../models/task');
 const User = require('../models/user');
 const { logAudit, clampMetadataSize } = require('../services/auditService');
+const sequelize = require('../util/database');
 
 // GET /api/tasks/:taskId/comments
 exports.listByTask = async (req, res) => {
@@ -40,6 +41,7 @@ exports.listByTask = async (req, res) => {
 
 // POST /api/tasks/:taskId/comments
 exports.create = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { taskId } = req.params;
     const { content, parentId } = req.body;
@@ -67,7 +69,7 @@ exports.create = async (req, res) => {
       parentId: parentId || null,
       task_title: task?.title || null,
       task_content: task?.content || null,
-    }, { req });
+    }, { req, transaction: t });
 
     // Attachments from MinIO upload middleware
     const files = req.uploadedFiles || [];
@@ -80,7 +82,7 @@ exports.create = async (req, res) => {
         fileUrl: f.url,
         comment_content: comment.content,
       }));
-      await CommentAttachment.bulkCreate(rows);
+      await CommentAttachment.bulkCreate(rows, { transaction: t });
 
       // Audit: attachments added to a task comment
       await logAudit(req, {
@@ -92,6 +94,7 @@ exports.create = async (req, res) => {
       });
     }
 
+    await t.commit();
     // Return enriched record
     const created = await Comment.findByPk(comment.id, {
       include: [
@@ -103,6 +106,7 @@ exports.create = async (req, res) => {
     res.status(201).json({ item: created, likeCount: 0 });
   } catch (err) {
     console.error('create comment error:', err);
+    try { await t.rollback(); } catch (_) {}
     res.status(500).json({ message: '新增評論失敗', error: err.message });
   }
 };

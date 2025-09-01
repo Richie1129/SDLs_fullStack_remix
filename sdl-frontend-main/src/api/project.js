@@ -1,29 +1,8 @@
 // front-end API for project
-import axios from "axios";
-
-const projectApi = axios.create({
-    baseURL: "http://localhost/api/projects",
-    headers:{
-        "Content-Type":" application/json",
-    },
-})
-
-// 添加請求攔截器來自動添加 accessToken
-projectApi.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            config.headers['accessToken'] = token;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
+import apiClient from './client';
 
 export const getProject = async (projectId) => {
-    const response = await projectApi.get(`/${projectId}`)
+    const response = await apiClient.get(`/projects/${projectId}`)
     return response.data
 }
 
@@ -46,33 +25,33 @@ export const getAllProject = async (config) => {
     console.log('- config:', config);
     console.log('- fullConfig:', fullConfig);
     
-    const response = await projectApi.get("/", fullConfig);
+    const response = await apiClient.get(`/projects`, fullConfig);
     console.log('getAllProject API 回應:', response.data);
     return response.data;
 }
 
 export const getProjectsByMentor = async (mentorName) => {
-    const response = await projectApi.get(`/mentor/${mentorName}`);
+    const response = await apiClient.get(`/projects/mentor/${mentorName}`);
     return response.data;
 };
 
 export const createProject = async (data) => {
-    const response = await projectApi.post("/", data)
+    const response = await apiClient.post(`/projects`, data)
     return response.data
 }
 
 export const inviteForProject = async (data) => {
-    const response = await projectApi.post("/referral", data)
+    const response = await apiClient.post(`/projects/referral`, data)
     return response.data
 }
 
 export const updateProject = async (projectId, data) => {
-    const response = await projectApi.put(`/${projectId}`, data);
+    const response = await apiClient.put(`/projects/${projectId}`, data);
     return response.data;
 };
 
 export const deleteProject = async (projectId) => {
-    const response = await projectApi.delete(`/${projectId}`);
+    const response = await apiClient.delete(`/projects/${projectId}`);
     return response.data;
 };
 
@@ -87,7 +66,7 @@ export const deleteProject = async (projectId) => {
  */
 export const updateViewingSettings = async (projectId, data) => {
     const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
-    const response = await projectApi.patch(`/${projectId}/viewing-settings`, data, {
+    const response = await apiClient.patch(`/projects/${projectId}/viewing-settings`, data, {
         headers: {
             'accessToken': token,
             'Content-Type': 'application/json',
@@ -102,7 +81,7 @@ export const updateViewingSettings = async (projectId, data) => {
  */
 export const checkViewingPermission = async (projectId) => {
     const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
-    const response = await projectApi.get(`/${projectId}/viewable`, {
+    const response = await apiClient.get(`/projects/${projectId}/viewable`, {
         headers: {
             'accessToken': token,
         },
@@ -117,10 +96,10 @@ export const getAllClasses = async () => {
     console.log('=== getAllClasses API 被調用 ===');
     const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
     console.log('從 localStorage 取得的 token:', token);
-    console.log('準備發送請求到:', 'http://localhost/api/projects/classes/list');
+    console.log('準備發送請求到 /projects/classes/list');
     
     try {
-        const response = await projectApi.get('/classes/list', {
+        const response = await apiClient.get('/projects/classes/list', {
             headers: {
                 'accessToken': token,
             },
@@ -150,7 +129,7 @@ export const getClassUsersAndProjects = async (className) => {
         const token = localStorage.getItem('accessToken');
         console.log('API: 發送 token:', token);
         
-        const response = await projectApi.get(`/classes/${className}/users-projects`, {
+        const response = await apiClient.get(`/projects/classes/${className}/users-projects`, {
             headers: {
                 'accessToken': token
             }
@@ -176,7 +155,7 @@ export const getClassUsersAndProjects = async (className) => {
  */
 export const getViewableProjects = async (className) => {
     const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
-    const response = await projectApi.get('/', {
+    const response = await apiClient.get('/projects', {
         params: { viewable_by: className },
         headers: {
             'accessToken': token,

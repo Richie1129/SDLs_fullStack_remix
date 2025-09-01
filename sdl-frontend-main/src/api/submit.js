@@ -1,42 +1,4 @@
-import axios from "axios";
-
-axios.defaults.withCredentials = true; 
-const submitApi = axios.create({
-    baseURL: "http://localhost/api/submit",
-    headers:{
-        "Content-Type":" multipart/form-data"
-    },
-})
-
-const getsubmitApi = axios.create({
-    baseURL: "http://localhost/api/submit",
-    headers:{
-        "Content-Type":" application/json"
-    },
-})
-
-// 添加請求攔截器以自動添加 token
-const addTokenInterceptor = (apiInstance) => {
-    apiInstance.interceptors.request.use(
-        (config) => {
-            const token = localStorage.getItem('accessToken');
-            if (token) {
-                config.headers['accessToken'] = token;
-                try {
-                    // Debug: 確認送出時是否有帶 token
-                    console.log('[submitApi] attaching accessToken header:', !!token);
-                } catch {}
-            }
-            return config;
-        },
-        (error) => {
-            return Promise.reject(error);
-        }
-    );
-};
-
-addTokenInterceptor(submitApi);
-addTokenInterceptor(getsubmitApi);
+import apiClient from './client';
 
 export const submitTask = async (data) => {
     const isFormData = data instanceof FormData;
@@ -58,36 +20,36 @@ export const submitTask = async (data) => {
             console.log('JSON payload:', data);
         }
     } catch {}
-    const response = await submitApi.post("/", data, {
+    const response = await apiClient.post(`/submit`, data, {
         params: projectId ? { projectId } : undefined
     })
     return response.data
 }
 
 export const getSubmitAttachment = async (submitId, config) => {
-    const response = await getsubmitApi.get(`/${submitId}`,config)
+    const response = await apiClient.get(`/submit/${submitId}`,config)
     return response.data
 }
 
 export const getAllSubmit = async (config) => {
-    const response = await submitApi.get("/",config)
+    const response = await apiClient.get(`/submit`,config)
     return response.data
 }
 
 export const updateSubmitTask = async (submitId, data) => {
-    const response = await getsubmitApi.put(`/${submitId}`, data);
+    const response = await apiClient.put(`/submit/${submitId}`, data);
     return response.data;
 };
 
 // 上傳檔案用 multipart/form-data
 export const updateSubmitAttachment = async (submitId, formData) => {
-    const response = await submitApi.put(`/${submitId}`, formData);
+    const response = await apiClient.put(`/submit/${submitId}`, formData);
     return response.data;
 };
 
 // 取得提交變更記錄
 export const getSubmitChangeLogs = async (submitId) => {
-    const response = await getsubmitApi.get(`/${submitId}/changes`);
+    const response = await apiClient.get(`/submit/${submitId}/changes`);
     return response.data;
 };
 
