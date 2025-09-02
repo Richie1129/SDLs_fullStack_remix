@@ -41,11 +41,14 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
   }, [autoGreet, projectId, currentStage, currentSubStage, stageKey]);
 
   const send = async () => {
-    if (!input.trim()) return;
-    const text = input.trim();
+    const inputValue = inputRef.current?.value || '';
+    if (!inputValue.trim()) return;
+    const text = inputValue.trim();
     setMessages(prev => [...prev, { role: 'user', content: text }]);
-    setInput('');
-    // 維持焦點，避免看起來像「打完一個字就停住」
+    if (inputRef.current) {
+      inputRef.current.value = ''; 
+    }
+    
     try { inputRef.current?.focus(); } catch {}
     try {
       setIsSubmitting(true);
@@ -183,8 +186,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           ref={inputRef}
           className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
           placeholder="問我下一步怎麼做…"
-          value={input}
-          onChange={e => setInput(e.target.value)}
+          defaultValue=""
           autoFocus={embedded}
         />
         <button
