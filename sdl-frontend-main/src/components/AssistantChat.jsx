@@ -57,7 +57,9 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
         // 清除上一子階段的建議，避免殘留
         setLastData(null);
         setIsSubmitting(true);
-        const data = await getGuidance({ projectId, currentStage, currentSubStage, useLLM: true, provider: 'gemini' });
+        const MAX_HISTORY = 8;
+        const recent = historyMessages.slice(-MAX_HISTORY);
+        const data = await getGuidance({ projectId, currentStage, currentSubStage, useLLM: true, provider: 'gemini', history: recent });
         setLastData(data);
         setMessages(prev => [...prev, { role: 'assistant', content: data.message, followup: data.followup }]);
         try { await createChatTurn({ projectId, body: { assistantContent: data.message, assistantUsername: 'AI 導師' } }); } catch (_) {}
@@ -88,7 +90,11 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
         const turn = await createChatTurn({ projectId, body: { userId, username, userContent: text } });
         lastTurnIdRef.current = turn?.id || null;
       } catch (_) {}
-      const data = await getGuidance({ projectId, currentStage, currentSubStage, userMessage: text, useLLM: true, provider: 'gemini' });
+      // include recent history (last 7 bubbles) + this user message
+      const MAX_HISTORY = 8;
+      const baseHistory = [...historyMessages, ...messages].slice(-Math.max(0, MAX_HISTORY - 1));
+      const convo = [...baseHistory, { role: 'user', content: text }];
+      const data = await getGuidance({ projectId, currentStage, currentSubStage, userMessage: text, useLLM: true, provider: 'gemini', history: convo });
       setLastData(data);
       const payload = [data.message];
       if (data.followup?.questions?.length) {

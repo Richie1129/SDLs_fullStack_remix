@@ -346,7 +346,7 @@ function intentReply({ userMessage, subStageName }) {
 
 exports.getGuidance = async (req, res) => {
   try {
-    const { projectId, currentStage, currentSubStage, userMessage, useLLM } = req.body || {};
+    const { projectId, currentStage, currentSubStage, userMessage, useLLM, history } = req.body || {};
     if (!projectId) return res.status(400).json({ message: '缺少 projectId' });
 
     const project = await Project.findByPk(projectId);
@@ -469,6 +469,9 @@ exports.getGuidance = async (req, res) => {
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
     if (wantLLM && (hasGemini || hasOpenAI)) {
       try {
+        const sanitizedHistory = Array.isArray(history) ? history
+          .filter(m => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
+          .slice(-10) : [];
         const context = {
           project: { id: project.id, name: project.name },
           stage: { s, ss, stageName: stageMeta.stageName, subStageName: stageMeta.subStageName },
@@ -480,9 +483,10 @@ exports.getGuidance = async (req, res) => {
           kanbanSnapshot,
           existingTaskTitles,
           recentActivity,
-          ideaWallSnapshot
+          ideaWallSnapshot,
+          recentChatHistory: sanitizedHistory
         };
-        const llmPrompt = `請根據以下上下文，輸出 JSON 物件：{"message": string, "suggestions": string[], "suggestedTasks": [{"title": string, "content": string, "labels"?: string[]}], "citations": [{"type": "rubric"|"submit", "title": string, "quote": string}] }。上下文：${JSON.stringify(context)}；規則補充：1) 參考 kanbanSnapshot、existingTaskTitles 與 ideaWallSnapshot，避免重複現有卡片，並善用想法牆的節點來拆解具體工作；2) 任務應可直接落地，並對齊當前子階段目標；3) 參考 recentActivity（特別是最近較少活動的列表），提出能解卡/推進的任務；4) 缺失以 suggestions 列示即可，不要建立「補齊缺少欄位/檔案」類卡片。若使用者訊息存在，將其視為追問並融入回覆：${userMessage || ''}`;
+        const llmPrompt = `請根據以下上下文，輸出 JSON 物件：{"message": string, "suggestions": string[], "suggestedTasks": [{"title": string, "content": string, "labels"?: string[]}], "citations": [{"type": "rubric"|"submit", "title": string, "quote": string}] }。上下文：${JSON.stringify(context)}；規則補充：1) 參考 kanbanSnapshot、existingTaskTitles 與 ideaWallSnapshot，避免重複現有卡片，並善用想法牆的節點來拆解具體工作；2) 任務應可直接落地，並對齊當前子階段目標；3) 參考 recentActivity（特別是最近較少活動的列表），提出能解卡/推進的任務；4) 適度參考 recentChatHistory 的上下文維持連貫性；5) 缺失以 suggestions 列示即可，不要建立「補齊缺少欄位/檔案」類卡片。若使用者訊息存在，將其視為追問並融入回覆：${userMessage || ''}`;
 
         let result = null;
         if (preferProvider === 'gemini' && hasGemini) {
