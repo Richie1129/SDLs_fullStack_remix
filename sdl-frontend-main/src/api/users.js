@@ -1,47 +1,24 @@
-import axios from "axios";
-
-axios.defaults.withCredentials = true; 
-//login & register
-const usersApi = axios.create({
-    baseURL: "https://science.sdlswuret.com/api/users",
-    headers:{
-        "Content-Type":" application/json"
-    },
-})
-
-// 添加請求攔截器來自動添加 accessToken
-usersApi.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-            config.headers['accessToken'] = token;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
+import apiClient from './client';
 
 export const userLogin = async (userdata) => {
-    const response = await usersApi.post("/login", userdata)
+    const response = await apiClient.post(`/users/login`, userdata)
     return response;
 }
 
 export const userRegister = async (userdata) => {
-    const response = await usersApi.post("/register", userdata)
+    const response = await apiClient.post(`/users/register`, userdata)
     return response;
 }
 
 export const  getProjectUser = async (projectId) => {
-    const response = await usersApi.get(`/project/${projectId}`)
+    const response = await apiClient.get(`/users/project/${projectId}`)
     return response.data
 }
 
 // get all teachers
 export const getAllTeachers = async () => {
     try {
-        const response = await usersApi.get('/teachers');
+        const response = await apiClient.get('/users/teachers');
         return response.data; // 返回的數據會包含所有角色為 'teacher' 的用戶
     } catch (error) {
         console.error('Failed to fetch teachers:', error);
@@ -53,7 +30,7 @@ export const getAllTeachers = async () => {
 export const getCurrentUser = async () => {
     try {
         const token = localStorage.getItem('authToken');
-        const response = await usersApi.get('/me', {
+        const response = await apiClient.get('/users/me', {
             headers: {
                 'accessToken': token,
             },

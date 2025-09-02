@@ -4,6 +4,7 @@ import { getUserSessions, getRagMessageBySession, testConnection, deleteSession,
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
+import AssistantChat from '../../../components/AssistantChat';
 
 const API_URL = "/proxy/api/v1/chats/a159fe08e2d411efb3910242ac120004"; // 指向後端代理
 const API_KEY = "ragflow-U0ZTc4MzdlZTJjYjExZWZiMzcyMDI0Mm"; // 保持不變，後端已使用此 Key
@@ -11,7 +12,7 @@ const API_KEY = "ragflow-U0ZTc4MzdlZTJjYjExZWZiMzcyMDI0Mm"; // 保持不變，�
 // 提取為常數，避免重複宣告
 const OPENING_MESSAGE = "嗨！我是一位專門輔導高中生科學探究與實作的自然科學導師。我會用適合高中生的語言，保持專業的同時，幫助你探索自然科學的奧秘，並引導你選擇一個有興趣的科展主題，以及更深入了解你的研究問題。什麼可以幫到你的嗎？";
 
-const DraggableImage = ({ containerRef }) => {
+const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage }) => {
   const initialPosition = { x: window.innerWidth - 100, y: window.innerHeight / 2 };
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -33,6 +34,7 @@ const DraggableImage = ({ containerRef }) => {
   const [isFullscreen, setIsFullscreen] = useState(false); // 新增全螢幕模式狀態
   const [screenWidth, setScreenWidth] = useState(window.innerWidth); // 新增螢幕寬度狀態用於響應式設計
   const [isMinimized, setIsMinimized] = useState(false); // 新增最小化狀態
+  const [activeTab, setActiveTab] = useState('science'); // 'science' | 'mentor'
   
   const imgRef = useRef(null);
   const dragStateRef = useRef({ offsetX: 0, offsetY: 0, containerRect: null, imgW: 0, imgH: 0, lastLeft: 0, lastTop: 0 });
@@ -858,7 +860,7 @@ const DraggableImage = ({ containerRef }) => {
           style={isFullscreen ? { left: 0, top: 0 } : computeChatPosition()}
         >
           {/* 側邊欄 */}
-          {showSidebar && (
+{showSidebar && activeTab === 'science' && (
             <div 
               className={`sidebar ${isMinimized ? 'hidden' : ''} ${isFullscreen ? (screenWidth >= 768 ? 'w-[280px] h-full' : 'w-full h-auto min-h-[180px] border-b border-[#e9ecef]') : 'w-[220px] h-full border-r border-[#e9ecef]'} ${isFullscreen ? 'rounded-none' : 'rounded-l-2xl'} bg-[#f8f9fa] p-4 flex flex-col`}
             >
@@ -934,11 +936,16 @@ const DraggableImage = ({ containerRef }) => {
                 </button>
               </div>
 
-              {/* 中央區域 - 圖示與標題 */}
-              <div className="header-center flex items-center justify-center flex-1 gap-3 absolute left-1/2 -translate-x-1/2 max-w-[300px]">
-                <h3 className={`${isFullscreen ? 'text-[18px]' : 'text-[16px]'} font-semibold text-[#343a40] m-0 select-none whitespace-nowrap ${screenWidth < 480 ? 'hidden' : 'block'}`}>
-                  🧑‍🔬科學助手
-                </h3>
+              {/* 中央區域 - 切換分頁 */}
+              <div className="header-center flex items-center justify-center flex-1 gap-2 absolute left-1/2 -translate-x-1/2 max-w-[360px]">
+                <button
+                  className={`px-3 py-1 rounded-full text-sm ${activeTab === 'science' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'}`}
+                  onClick={() => setActiveTab('science')}
+                >🧑‍🔬 科學助手</button>
+                <button
+                  className={`px-3 py-1 rounded-full text-sm ${activeTab === 'mentor' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'}`}
+                  onClick={() => setActiveTab('mentor')}
+                >🧑‍🏫 專案導師</button>
               </div>
 
               {/* 右側控制按鈕區域 */}
@@ -967,7 +974,17 @@ const DraggableImage = ({ containerRef }) => {
             <div 
               className={`chat-content ${isMinimized ? 'hidden' : ''} flex-1 overflow-y-auto ${isFullscreen ? (screenWidth < 768 ? 'p-4' : 'p-6') : (screenWidth < 768 ? 'p-3' : 'p-5')} bg-[#fdfdfd]`}
             >
-              {isLoadingHistory ? (
+              {activeTab === 'mentor' ? (
+                <div className="h-full">
+                  <AssistantChat
+                    embedded
+                    projectId={projectId}
+                    currentStage={currentStage}
+                    currentSubStage={currentSubStage}
+                    autoGreet
+                  />
+                </div>
+              ) : isLoadingHistory ? (
                 <div className="flex items-center justify-center h-full text-[#6c757d] text-[14px]">
                   <div className="flex items-center gap-2">
                     <div className="w-5 h-5 border-2 border-[#5BA491] border-t-transparent rounded-full animate-spin"></div>
@@ -1030,26 +1047,28 @@ const DraggableImage = ({ containerRef }) => {
               )}
             </div>
 
-            {/* 輸入區域 */}
-            <form 
-              onSubmit={handleSubmit} 
-              className={`input-area ${isMinimized ? 'hidden' : ''} ${screenWidth < 768 ? 'px-4 py-3 gap-2' : 'px-5 py-4 gap-3'} border-t border-[#e9ecef] bg-white flex items-center`}
-            >
-              <input
-                type="text"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="輸入您的問題..."
-                className={`flex-1 ${screenWidth < 768 ? 'py-[10px] px-[14px] text-[13px]' : 'py-3 px-4 text-[14px]'} border border-[#dee2e6] rounded-full outline-none transition-all bg-[#f8f9fa] focus:border-[#5BA491] focus:bg-white focus:ring-2 focus:ring-[rgba(91,164,145,0.1)]`}
-              />
-              <button
-                type="submit"
-                className={`${screenWidth < 768 ? 'py-[10px] px-4 text-[13px] min-w-[70px]' : 'py-3 px-5 text-[14px] min-w-[80px]'} rounded-full border-0 font-semibold ${isSubmitting ? 'bg-[#dee2e6] cursor-not-allowed shadow-none' : 'bg-[#5BA491] cursor-pointer shadow-[0_2px_8px_rgba(91,164,145,0.3)] hover:bg-[#4a9076] hover:-translate-y-px'} text-white transition-all`}
-                disabled={isSubmitting}
+            {/* 輸入區域 - 僅在科學助手分頁顯示 */}
+            {activeTab === 'science' && (
+              <form 
+                onSubmit={handleSubmit} 
+                className={`input-area ${isMinimized ? 'hidden' : ''} ${screenWidth < 768 ? 'px-4 py-3 gap-2' : 'px-5 py-4 gap-3'} border-t border-[#e9ecef] bg-white flex items-center`}
               >
-                {isSubmitting ? "送出中..." : "送出"}
-              </button>
-            </form>
+                <input
+                  type="text"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  placeholder="輸入您的問題..."
+                  className={`flex-1 ${screenWidth < 768 ? 'py-[10px] px-[14px] text-[13px]' : 'py-3 px-4 text-[14px]'} border border-[#dee2e6] rounded-full outline-none transition-all bg-[#f8f9fa] focus:border-[#5BA491] focus:bg-white focus:ring-2 focus:ring-[rgba(91,164,145,0.1)]`}
+                />
+                <button
+                  type="submit"
+                  className={`${screenWidth < 768 ? 'py-[10px] px-4 text-[13px] min-w-[70px]' : 'py-3 px-5 text-[14px] min-w-[80px]'} rounded-full border-0 font-semibold ${isSubmitting ? 'bg-[#dee2e6] cursor-not-allowed shadow-none' : 'bg-[#5BA491] cursor-pointer shadow-[0_2px_8px_rgba(91,164,145,0.3)] hover:bg-[#4a9076] hover:-translate-y-px'} text-white transition-all`}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "送出中..." : "送出"}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}

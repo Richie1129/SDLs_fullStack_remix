@@ -355,10 +355,14 @@ io.on("connection", (socket) => {
             const permissionCheck = await checkSocketWritePermission(socket.userId || user?.id, projectId, socket);
             if (!permissionCheck.hasPermission) {
                 console.log(`🚫 用戶 ${extractedOwner} 嘗試創建卡片被拒絕: ${permissionCheck.error}`);
-                socket.emit("taskCreationError", { 
+                const errorPayload = {
                     message: permissionCheck.error,
                     code: permissionCheck.readOnly ? 'READ_ONLY_MODE' : 'INSUFFICIENT_PERMISSIONS'
-                });
+                };
+                // 舊事件名稱（保留相容性）
+                socket.emit("taskCreationError", errorPayload);
+                // 前端新監聽名稱
+                socket.emit("taskItemCreatedError", errorPayload);
                 return;
             }
             
@@ -391,8 +395,14 @@ io.on("connection", (socket) => {
                 req: reqCtx
             });
 
-            // 廣播任務創建事件 - 只是告知任務已創建，讓前端刷新數據
+            // 廣播任務創建事件 - 告知同專案用戶刷新數據
             io.to(projectId).emit("taskItemCreated", {
+                taskId: creatTask.id,
+                columnId: columnId,
+                projectId: projectId
+            });
+            // 同時回傳給當前發送者，避免剛進入頁面尚未成功加入房間時漏接事件
+            socket.emit("taskItemCreated", {
                 taskId: creatTask.id,
                 columnId: columnId,
                 projectId: projectId
@@ -1375,6 +1385,7 @@ app.use('/api/chatroom', require('./routes/chatroom'))
 app.use('/api/question', require('./routes/question'))
 app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
+app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/llm', require('./routes/llm'));
 app.use('/api/file', require('./routes/file'));  // MinIO 檔案管理路由
 app.use('/api/audit', require('./routes/auditClient'));

@@ -13,6 +13,7 @@ const Process = require('../models/process');
 const Stage = require('../models/stage');
 const Sub_stage = require('../models/sub_stage');
 const User_project = require('../models/user_project');
+const sequelize = require('../util/database');
 
 exports.getProject = async (req, res) => {
     const projectId = req.params.projectId;
@@ -92,98 +93,94 @@ exports.getProjectsByMentor = async (req, res) => {
 };
 
 exports.createProject = async (req, res) => {
-    const projectName = req.body.projectName;
-    const projectdescribe = req.body.projectdescribe;
-    const projectMentor = req.body.projectMentor;
-    const referral_code = shortid.generate();
-    const projectMentorId = req.body.projectMentorId;
-    if (!projectName || !projectdescribe || !projectMentor) {
-        return res.status(404).send({ message: '請輸入完整資料!' })
-    }
-    const createdProject = await Project.create({
-        name: projectName,
-        describe: projectdescribe,
-        mentor: projectMentor,
-        referral_code: referral_code,
-        currentStage: 1,
-        currentSubStage: 1
-    }, { req });
-    const userId = req.body.userId;
-    const creater = await User.findByPk(userId);
-    const userProjectAssociations = await createdProject.addUser(creater);
+    const t = await sequelize.transaction();
+    try {
+        const projectName = req.body.projectName;
+        const projectdescribe = req.body.projectdescribe;
+        const projectMentor = req.body.projectMentor;
+        const referral_code = shortid.generate();
+        const projectMentorId = req.body.projectMentorId;
+        if (!projectName || !projectdescribe || !projectMentor) {
+            await t.rollback();
+            return res.status(404).send({ message: '請輸入完整資料!' })
+        }
 
-    //initailize kanban
-    const kanban = await Kanban.create({ column: [], projectId: createdProject.id });
-    const todo = await Column.create({ name: "待處理", task: [], kanbanId: kanban.id });
-    const inProgress = await Column.create({ name: "進行中", task: [], kanbanId: kanban.id });
-    const Completed = await Column.create({ name: "完成", task: [], kanbanId: kanban.id });
-    await Kanban.findByPk(kanban.id)
-        .then(kanban => {
-            kanban.column = [todo.id, inProgress.id, Completed.id];
-            return kanban.save();
-        })
-        .catch(err => console.log(err));
+        const createdProject = await Project.create({
+            name: projectName,
+            describe: projectdescribe,
+            mentor: projectMentor,
+            referral_code: referral_code,
+            currentStage: 1,
+            currentSubStage: 1
+        }, { transaction: t, req });
 
-    await Idea_wall.create({
-        type: "project",
-        projectId: createdProject.id,
-        stage: `${createdProject.currentStage}-${createdProject.currentSubStage}`
-    })
-        .then(() => {
-            res.status(200).send({ message: '活動創建成功!' })
-        })
-        .catch(err => console.log(err));
+        const userId = req.body.userId;
+        const creater = await User.findByPk(userId, { transaction: t });
+        await createdProject.addUser(creater, { transaction: t });
 
-    //initailize process
-    const process = await Process.create({
-        stage: [],
-        projectId: createdProject.id
-    });
+        // initialize kanban
+        const kanban = await Kanban.create({ column: [], projectId: createdProject.id }, { transaction: t });
+        const todo = await Column.create({ name: "待處理", task: [], kanbanId: kanban.id }, { transaction: t });
+        const inProgress = await Column.create({ name: "進行中", task: [], kanbanId: kanban.id }, { transaction: t });
+        const Completed = await Column.create({ name: "完成", task: [], kanbanId: kanban.id }, { transaction: t });
 
-    const stage1 = await Stage.create({
-        name: "定標",
-        sub_stage: [],
-        processId: process.id
-    });
-    const stage2 = await Stage.create({
-        name: "擇策",
-        sub_stage: [],
-        processId: process.id
-    });
-    const stage3 = await Stage.create({
-        name: "監評",
-        sub_stage: [],
-        processId: process.id
-    });
-    const stage4 = await Stage.create({
-        name: "調節",
-        sub_stage: [],
-        processId: process.id
-    });
-    const stage5 = await Stage.create({
-        name: "學習歷程",
-        sub_stage: [],
-        processId: process.id
-    });
+        const kanbanInst = await Kanban.findByPk(kanban.id, { transaction: t });
+        kanbanInst.column = [todo.id, inProgress.id, Completed.id];
+        await kanbanInst.save({ transaction: t });
 
-    await Process.findByPk(process.id)
-        .then(process => {
-            process.stage = [stage1.id, stage2.id, stage3.id, stage4.id, stage5.id];
-            return process.save();
-        })
-        .catch(err => console.log(err));
+        await Idea_wall.create({
+            type: "project",
+            projectId: createdProject.id,
+            stage: `${createdProject.currentStage}-${createdProject.currentSubStage}`
+        }, { transaction: t });
 
-    const sub_stage_1_1 = await Sub_stage.create({
-        name: "提出研究主題",
-        description: "這個階段的目標是為了確定研究的主題範圍，並確保主題具有研究價值和實務意義。在這個階段你可以先進行文獻回顧，識別研究領域中的空白或爭議點，再透過討論和思考縮小研究範圍，最後再和小組成員一起確定出一個具體的研究主題。",
-        userSubmit: {
-            "提議主題": "input",
-            "主題來源": "input",
-            "提議原因": "textarea",
-            "附加檔案": "file",
-        },
+        // initialize process
+        const process = await Process.create({
+            stage: [],
+            projectId: createdProject.id
+        }, { transaction: t });
+
+        const stage1 = await Stage.create({
+            name: "定標",
+            sub_stage: [],
+            processId: process.id
+        }, { transaction: t });
+        const stage2 = await Stage.create({
+            name: "擇策",
+            sub_stage: [],
+            processId: process.id
+        }, { transaction: t });
+        const stage3 = await Stage.create({
+            name: "監評",
+            sub_stage: [],
+            processId: process.id
+        }, { transaction: t });
+        const stage4 = await Stage.create({
+            name: "調節",
+            sub_stage: [],
+            processId: process.id
+        }, { transaction: t });
+        const stage5 = await Stage.create({
+            name: "學習歷程",
+            sub_stage: [],
+            processId: process.id
+        }, { transaction: t });
+
+        const processInst = await Process.findByPk(process.id, { transaction: t });
+        processInst.stage = [stage1.id, stage2.id, stage3.id, stage4.id, stage5.id];
+        await processInst.save({ transaction: t });
+
+        const sub_stage_1_1 = await Sub_stage.create({
+            name: "提出研究主題",
+            description: "這個階段的目標是為了確定研究的主題範圍，並確保主題具有研究價值和實務意義。在這個階段你可以先進行文獻回顧，識別研究領域中的空白或爭議點，再透過討論和思考縮小研究範圍，最後再和小組成員一起確定出一個具體的研究主題。",
+            userSubmit: {
+                "提議主題": "input",
+                "主題來源": "input",
+                "提議原因": "textarea",
+                "附加檔案": "file",
+            },
         stageId: stage1.id
-    })
+    }, { transaction: t })
     const sub_stage_1_2 = await Sub_stage.create({
         name: "提出研究目的",
         description: "這個階段的目標是為了明確研究旨在解決的問題或達到的效果，闡述研究的重要性。在這個階段你可以基於研究主題去細化研究的目標與期望成果，其中也包括了理論與實務層面的貢獻。",
@@ -194,7 +191,7 @@ exports.createProject = async (req, res) => {
             "附加檔案": "file",
         },
         stageId: stage1.id
-    });
+    }, { transaction: t });
     const sub_stage_1_3 = await Sub_stage.create({
         name: "提出研究問題",
         description: "這個階段的目標是為了定義清晰、具體的研究問題，指導研究的方向與範圍。在這個階段你可以根據研究目的，提出可操作的研究問題，同時確保問題具有明確性和可研究性。",
@@ -204,13 +201,10 @@ exports.createProject = async (req, res) => {
             "附加檔案": "file",
         },
         stageId: stage1.id
-    });
-    await Stage.findByPk(stage1.id)
-        .then(stage1 => {
-            stage1.sub_stage = [sub_stage_1_1.id, sub_stage_1_2.id, sub_stage_1_3.id];
-            return stage1.save();
-        })
-        .catch(err => console.log(err));
+    }, { transaction: t });
+    const stage1Inst = await Stage.findByPk(stage1.id, { transaction: t });
+    stage1Inst.sub_stage = [sub_stage_1_1.id, sub_stage_1_2.id, sub_stage_1_3.id];
+    await stage1Inst.save({ transaction: t });
 
     const sub_stage_2_1 = await Sub_stage.create({
         name: "訂定研究構想表",
@@ -222,7 +216,7 @@ exports.createProject = async (req, res) => {
             "附加檔案": "file",
         },
         stageId: stage2.id
-    });
+    }, { transaction: t });
     const sub_stage_2_2 = await Sub_stage.create({
         name: "設計研究記錄表格",
         description: "這個階段的目標是為了為收集資料和記錄研究過程提供標準化工具。在這個階段你可以根據研究問題和方法，設計資料收集表格和記錄表，包括但不限於問卷、訪談記錄和實驗資料表。",
@@ -230,7 +224,7 @@ exports.createProject = async (req, res) => {
             "研究紀錄表格": "file"
         },
         stageId: stage2.id
-    });
+    }, { transaction: t });
     const sub_stage_2_3 = await Sub_stage.create({
         name: "規劃研究排程",
         description: "這個階段的目標是為了合理安排研究活動的時間表，確保研究工作有秩序地進行。在這個階段你可以制定詳細的研究計畫和時間線，包括各階段的開始和結束日期，以及關鍵活動和里程碑。",
@@ -238,14 +232,11 @@ exports.createProject = async (req, res) => {
             "研究時程規劃表": "file",
         },
         stageId: stage2.id
-    });
+    }, { transaction: t });
 
-    await Stage.findByPk(stage2.id)
-        .then(stage2 => {
-            stage2.sub_stage = [sub_stage_2_1.id, sub_stage_2_2.id, sub_stage_2_3.id];
-            return stage2.save();
-        })
-        .catch(err => console.log(err));
+    const stage2Inst = await Stage.findByPk(stage2.id, { transaction: t });
+    stage2Inst.sub_stage = [sub_stage_2_1.id, sub_stage_2_2.id, sub_stage_2_3.id];
+    await stage2Inst.save({ transaction: t });
 
     const sub_stage_3_1 = await Sub_stage.create({
         name: "進行嘗試性研究",
@@ -254,7 +245,7 @@ exports.createProject = async (req, res) => {
             "實驗記錄": "file",
         },
         stageId: stage3.id
-    });
+    }, { transaction: t });
     const sub_stage_3_2 = await Sub_stage.create({
         name: "分析資料與繪圖",
         description: "這個階段的目標是為了對收集到的資料進行系統性分析，透過圖表形式展示研究結果。在這個階段你可以使用統計軟體或手動方法對資料進行分析，包括描述性統計、相關性分析等，並製作圖表來直觀展示分析結果。",
@@ -262,7 +253,7 @@ exports.createProject = async (req, res) => {
             "資料分析檔案": "file",
         },
         stageId: stage3.id
-    });
+    }, { transaction: t });
     const sub_stage_3_3 = await Sub_stage.create({
         name: "撰寫研究成果",
         description: "這個階段的目標是為了詳細記錄研究過程和發現，包括資料分析、討論和結論。在這個階段你可以整理分析數據，撰寫研究報告的各個部分，包括引言、方法、結果、討論和結論。",
@@ -273,14 +264,11 @@ exports.createProject = async (req, res) => {
             "附加檔案": "file",
         },
         stageId: stage3.id
-    });
+    }, { transaction: t });
 
-    await Stage.findByPk(stage3.id)
-        .then(stage3 => {
-            stage3.sub_stage = [sub_stage_3_1.id, sub_stage_3_2.id, sub_stage_3_3.id];
-            return stage3.save();
-        })
-        .catch(err => console.log(err));
+    const stage3Inst = await Stage.findByPk(stage3.id, { transaction: t });
+    stage3Inst.sub_stage = [sub_stage_3_1.id, sub_stage_3_2.id, sub_stage_3_3.id];
+    await stage3Inst.save({ transaction: t });
 
     const sub_stage_4_1 = await Sub_stage.create({
         name: "檢視研究進度",
@@ -290,7 +278,7 @@ exports.createProject = async (req, res) => {
             "如何改進獲改善?": "textarea",
         },
         stageId: stage4.id
-    });
+    }, { transaction: t });
     const sub_stage_4_2 = await Sub_stage.create({
         name: "進行研究討論",
         description: "這個階段的目標是為了與導師、同儕或研究小組討論研究發現和問題，以獲得回饋和建議哦。在這個階段你可以組織研究討論會，呈現研究結果，收集與整合回饋意見，對研究進行深入分析與完善。",
@@ -298,7 +286,7 @@ exports.createProject = async (req, res) => {
             "研究討論": "file",
         },
         stageId: stage4.id
-    });
+    }, { transaction: t });
     const sub_stage_4_3 = await Sub_stage.create({
         name: "撰寫研究結論",
         description: "這個階段的目標是為了總結研究的主要發現，討論研究的意義、限制和未來研究的方向。在這個階段你可以基於研究結果和討論，撰寫結論部分，明確指出研究的貢獻和後續研究的建議。",
@@ -306,13 +294,10 @@ exports.createProject = async (req, res) => {
             "研究結論": "file",
         },
         stageId: stage4.id
-    });
-    await Stage.findByPk(stage4.id)
-        .then(stage4 => {
-            stage4.sub_stage = [sub_stage_4_1.id, sub_stage_4_2.id, sub_stage_4_3.id];
-            return stage4.save();
-        })
-        .catch(err => console.log(err));
+    }, { transaction: t });
+    const stage4Inst = await Stage.findByPk(stage4.id, { transaction: t });
+    stage4Inst.sub_stage = [sub_stage_4_1.id, sub_stage_4_2.id, sub_stage_4_3.id];
+    await stage4Inst.save({ transaction: t });
 
     const sub_stage_5_1 = await Sub_stage.create({
         name: "封面製作",
@@ -321,7 +306,7 @@ exports.createProject = async (req, res) => {
             "封面檔案": "file",
         },
         stageId: stage5.id
-    });
+    }, { transaction: t });
     const sub_stage_5_2 = await Sub_stage.create({
         name: "摘要撰寫",
         description: "摘要的目的是提供一個簡短而全面的學習歷程概述，包括學習目標、主要活動、獲得的學習成果等，讓讀者快速了解整個學習歷程的精髓。",
@@ -329,7 +314,7 @@ exports.createProject = async (req, res) => {
             "歷程摘要": "textarea",
         },
         stageId: stage5.id
-    });
+    }, { transaction: t });
     const sub_stage_5_3 = await Sub_stage.create({
         name: "目錄編制",
         description: "目錄編制的目的是為了提供一個清晰的學習歷程架構概覽，使讀者能夠快速找到感興趣的部分。",
@@ -337,7 +322,7 @@ exports.createProject = async (req, res) => {
             "歷程目錄": "textarea",
         },
         stageId: stage5.id
-    });
+    }, { transaction: t });
     const sub_stage_5_4 = await Sub_stage.create({
         name: "內容撰寫",
         description: "內容撰寫的目的是深入記錄和分析學習過程中的各項活動、發現、思考和反思，以展現學習者的學習深度和廣度。",
@@ -350,7 +335,7 @@ exports.createProject = async (req, res) => {
             "結論": "textarea",
         },
         stageId: stage5.id
-    });
+    }, { transaction: t });
     const sub_stage_5_5 = await Sub_stage.create({
         name: "反思撰寫",
         description: "反思撰寫的目的是促進學習者對自己學習過程的深入思考，包括反思學習成果、過程中的挑戰、學到的課程以及未來的學習計劃。",
@@ -363,14 +348,18 @@ exports.createProject = async (req, res) => {
             "如何應用於未來的學習或實踐中?": "textarea",
         },
         stageId: stage5.id
-    });
-    await Stage.findByPk(stage5.id)
-        .then(stage5 => {
-            stage5.sub_stage = [sub_stage_5_1.id, sub_stage_5_2.id, sub_stage_5_3.id, sub_stage_5_4.id, sub_stage_5_5.id];
-            return stage5.save();
-        })
-        .catch(err => console.log(err));
+    }, { transaction: t });
+    const stage5Inst = await Stage.findByPk(stage5.id, { transaction: t });
+    stage5Inst.sub_stage = [sub_stage_5_1.id, sub_stage_5_2.id, sub_stage_5_3.id, sub_stage_5_4.id, sub_stage_5_5.id];
+    await stage5Inst.save({ transaction: t });
 
+        await t.commit();
+        return res.status(200).send({ message: '活動創建成功!' })
+    } catch (err) {
+        console.error('createProject transaction failed:', err);
+        try { await t.rollback(); } catch (_) {}
+        return res.status(500).json({ message: '活動創建失敗', error: err.message });
+    }
 }
 
 
@@ -455,7 +444,16 @@ exports.assignStudentsToGroup = async (req, res) => {
             return res.status(400).json({ message: '部分學生ID無效或學生不存在' });
         }
 
-        await project.addUsers(students);
+        // 將學生加入專案（使用交易以確保全部或全部不成功）
+        const t = await sequelize.transaction();
+        try {
+            await project.addUsers(students, { transaction: t });
+            await t.commit();
+        } catch (txErr) {
+            await t.rollback();
+            throw txErr;
+        }
+
         return res.status(200).json({ message: '學生成功分配到專案' });
     } catch (err) {
         console.error(err);
@@ -580,14 +578,20 @@ exports.deleteProject = async (req, res) => {
             console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除專案:', fileCleanupError.message);
         }
 
-        // 刪除相關數據庫記錄
+        // 刪除相關數據庫記錄（使用交易以確保一致性）
         console.log('🗄️ 開始清理資料庫記錄...');
-        await User_project.destroy({ where: { projectId } });
-        await Kanban.destroy({ where: { projectId } });
-        await Project.destroy({ where: { id: projectId }, individualHooks: true, req });
-
-        console.log(`✅ 專案 ${projectId} 刪除完成`);
-        return res.status(200).json({ message: "專案刪除成功！" });
+        const t = await sequelize.transaction();
+        try {
+            await User_project.destroy({ where: { projectId }, transaction: t });
+            await Kanban.destroy({ where: { projectId }, transaction: t });
+            await Project.destroy({ where: { id: projectId }, individualHooks: true, req, transaction: t });
+            await t.commit();
+            console.log(`✅ 專案 ${projectId} 刪除完成`);
+            return res.status(200).json({ message: "專案刪除成功！" });
+        } catch (txErr) {
+            await t.rollback();
+            throw txErr;
+        }
     } catch (error) {
         console.error("刪除專案錯誤:", error);
         res.status(500).json({ message: "無法刪除專案！" });

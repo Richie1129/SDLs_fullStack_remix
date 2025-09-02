@@ -225,7 +225,7 @@ async function callGeminiAPI(prompt) {
     const genAI = new GoogleGenerativeAI(apiKey);
 
     // 獲取 Gemini 模型實例
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     // 設定生成配置
     const generationConfig = {

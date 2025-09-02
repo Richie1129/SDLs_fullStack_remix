@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiPlus } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
@@ -13,10 +13,13 @@ import SubStageComponent from '../../components/SubStageBar';
 import Swal from 'sweetalert2';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { getKanbanColumns, getKanbanTasks, addCardItem } from '../../api/kanban';
+import { getProject } from '../../api/project';
 import { getSubStage } from '../../api/stage';
 import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
+import { Context } from '../../context/context';
+// AI 導師已整合到科學助手(DraggableImage)內部的可切換分頁中
 
 
 
@@ -46,8 +49,9 @@ export default function Kanban() {
   const navigate = useNavigate();
   const [showAddGroupInput, setShowAddGroupInput] = useState(false); // 新增狀態
   const [newGroupName, setNewGroupName] = useState('');
-  const [currentStage, setCurrentStage] = useState(() => localStorage.getItem("currentStage"));
-  const [currentSubStage, setCurrentSubStage] = useState(() => localStorage.getItem("currentSubStage"));
+  const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context);
+  const currentStage = currentStageIndex;
+  const currentSubStage = currentSubStageIndex;
   
   // 使用觀摩模式 hook
   const { isObservationMode } = useObservationMode();
@@ -125,6 +129,23 @@ export default function Kanban() {
       // socket.off('refreshKanban');
     };
   }, [socket, queryClient]);
+
+  // 初次載入 Kanban 時，同步一次專案進度到 Context/localStorage，確保導師階段正確
+  useEffect(() => {
+    (async () => {
+      try {
+        const proj = await getProject(projectId);
+        if (proj?.currentStage && proj?.currentSubStage) {
+          localStorage.setItem('currentStage', proj.currentStage);
+          localStorage.setItem('currentSubStage', proj.currentSubStage);
+          setCurrentStageIndex(proj.currentStage);
+          setCurrentSubStageIndex(proj.currentSubStage);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [projectId, setCurrentStageIndex, setCurrentSubStageIndex]);
 
 
   useEffect(() => {
@@ -272,6 +293,25 @@ export default function Kanban() {
       console.log("Socket listeners cleaned up");
     };
   }, [socket, projectId, queryClient]);
+
+  // 當收到提交事件時，重新抓取專案進度並更新 Context 與 localStorage，讓導師自動切換子階段
+  useEffect(() => {
+    const onTaskSubmitted = async (_payload) => {
+      try {
+        const proj = await getProject(projectId);
+        if (proj?.currentStage && proj?.currentSubStage) {
+          localStorage.setItem('currentStage', proj.currentStage);
+          localStorage.setItem('currentSubStage', proj.currentSubStage);
+          setCurrentStageIndex(proj.currentStage);
+          setCurrentSubStageIndex(proj.currentSubStage);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    socket.on('taskSubmitted', onTaskSubmitted);
+    return () => socket.off('taskSubmitted', onTaskSubmitted);
+  }, [socket, projectId, setCurrentStageIndex, setCurrentSubStageIndex]);
 
   // useEffect(() => {
   //   if (!currentStage || !currentSubStage) {
@@ -549,8 +589,16 @@ export default function Kanban() {
 
   return (
     <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
+      {/* AI 導師聊天已內嵌於科學助手中 */}
       {/* 觀摩模式隱藏科學助手 */}
-      {!isObservationMode && <DraggableImage containerRef={kanbanContainerRef} />}
+      {!isObservationMode && (
+        <DraggableImage 
+          containerRef={kanbanContainerRef}
+          projectId={projectId}
+          currentStage={currentStage}
+          currentSubStage={currentSubStage}
+        />
+      )}
       
       {/* 觀摩模式提示 */}
       {isObservationMode && (

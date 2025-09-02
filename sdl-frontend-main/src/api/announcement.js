@@ -1,12 +1,5 @@
 //frontend api for announcement.js
-import axios from "axios";
-
-const announcementApi = axios.create({
-    baseURL: "https://science.sdlswuret.com/api/announcements", // 確保路徑正確
-    headers: {
-        "Content-Type": "application/json",
-    },
-});
+import apiClient from './client';
 
 // 獲取公告列表
 export const getAnnouncements = async (projectId) => {
@@ -24,7 +17,7 @@ export const getAnnouncements = async (projectId) => {
         }
         
         console.log(`正在請求公告列表，projectId: ${projectId || 'all'}, userId: ${userId}`);
-        const response = await announcementApi.get(query);
+        const response = await apiClient.get(`/announcements${query}`);
         console.log("公告列表獲取成功:", response.data);
         return response.data.announcements;
     } catch (error) {
@@ -37,7 +30,7 @@ export const getAnnouncements = async (projectId) => {
 export const createAnnouncement = async (announcementData) => {
     try {
         console.log("即將發送的公告數據:", announcementData);
-        const response = await announcementApi.post("/create", announcementData);
+        const response = await apiClient.post(`/announcements/create`, announcementData);
         console.log("公告發佈成功:", response.data);
         return response.data.announcement;
     } catch (error) {
@@ -50,4 +43,3 @@ export const createAnnouncement = async (announcementData) => {
         throw error;
     }
 };
-

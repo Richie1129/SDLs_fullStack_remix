@@ -1,6 +1,5 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'https://science.sdlswuret.com/api/llm';
+import apiClient from './client';
+const API_BASE_URL = '/llm';
 
 // 分析 5Rs 反思內容
 export const analyze5RsReflection = async (studentContent, preferredProvider = 'auto') => {
@@ -17,7 +16,7 @@ export const analyze5RsReflection = async (studentContent, preferredProvider = '
     
     console.log('請求負載:', requestPayload);
     
-    const response = await axios.post(`${API_BASE_URL}/analyze-5rs`, requestPayload);
+    const response = await apiClient.post(`${API_BASE_URL}/analyze-5rs`, requestPayload);
     
     console.log('API 回應狀態:', response.status);
     console.log('API 回應資料:', response.data);
@@ -37,7 +36,7 @@ export const analyze5RsReflection = async (studentContent, preferredProvider = '
 // 獲取 5Rs 框架資訊
 export const get5RsFramework = async () => {
   try {
-    const response = await axios.get(`${API_BASE_URL}/5rs-framework`);
+    const response = await apiClient.get(`${API_BASE_URL}/5rs-framework`);
     return response.data;
   } catch (error) {
     console.error('獲取 5Rs 框架失敗:', error);
@@ -48,7 +47,7 @@ export const get5RsFramework = async () => {
 // 驗證 5Rs 內容格式
 export const validate5RsContent = async (content) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/validate-5rs`, {
+    const response = await apiClient.post(`${API_BASE_URL}/validate-5rs`, {
       content
     });
     return response.data;
