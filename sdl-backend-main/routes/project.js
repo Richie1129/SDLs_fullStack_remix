@@ -3,6 +3,8 @@ const controller = require('../controllers/project');
 const assistantController = require('../controllers/assistant');
 const router = require('express').Router();
 const { validateToken } = require('../middlewares/AuthMiddleware');
+const chatTurnController = require('../controllers/chatTurns');
+const { checkWritePermission } = require('../middlewares/projectViewingMiddleware');
 const { 
     checkProjectViewingPermission, 
     checkTeacherRole, 
@@ -21,6 +23,11 @@ router.get('/mentor/:mentor', controller.getProjectsByMentor);
 router.get('/:projectId', controller.getProject);
 // Aggregated project content for AI assistant
 router.get('/:projectId/content', assistantController.getProjectContent);
+
+// Project chat history and turns (AssistantChat)
+router.get('/:projectId/chat', validateToken, checkProjectViewingPermission, chatTurnController.listByProject);
+router.post('/:projectId/chat', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.create);
+router.put('/:projectId/chat/:id', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.update);
 router.post('/', controller.createProject);
 router.post('/referral', controller.inviteForProject)
 router.put("/:projectId", controller.updateProject);
