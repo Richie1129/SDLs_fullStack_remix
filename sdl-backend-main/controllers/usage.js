@@ -1,4 +1,7 @@
 const UsageSession = require('../models/usage_session');
+const ObservationLog = require('../models/observation_log');
+const User = require('../models/user');
+const Project = require('../models/project');
 
 // Helper to clamp session duration
 const clamp = (min, max, v) => Math.max(min, Math.min(max, v));
@@ -103,6 +106,58 @@ exports.getSummary = async (req, res) => {
     res.json({ totalSeconds: totalSec, sessionCount: count, averageSeconds: averageSec });
   } catch (err) {
     console.error('getSummary error:', err);
+    res.status(500).json({ message: 'server error' });
+  }
+};
+
+// Record a single observation click event
+exports.recordObservationEvent = async (req, res) => {
+  try {
+    const { targetType, targetId, targetName, projectId } = req.body || {};
+    if (!targetType || !targetId || !projectId) {
+      return res.status(400).json({ message: '缺少必要參數: targetType/targetId/projectId' });
+    }
+
+    // User identity from AuthMiddleware
+    const userId = req.userId || req.user?.id;
+    if (!userId) return res.status(401).json({ message: '未授權：缺少使用者資訊' });
+
+    // Try to get username from token first, then DB fallback
+    let username = req.user?.username;
+    if (!username) {
+      try {
+        const u = await User.findByPk(userId, { attributes: ['username'] });
+        username = u?.username || '';
+      } catch (_) {
+        username = '';
+      }
+    }
+
+    // Resolve projectName (body override > DB > empty)
+    let projectName = req.body?.projectName;
+    if (!projectName && projectId) {
+      try {
+        const p = await Project.findByPk(projectId, { attributes: ['name'] });
+        projectName = p?.name || null;
+      } catch (_) {
+        projectName = null;
+      }
+    }
+
+    await ObservationLog.create({
+      userId,
+      username: username || String(userId),
+      projectId,
+      projectName,
+      targetType,
+      targetId: String(targetId),
+      targetName: targetName || null,
+    });
+
+    // Respond quickly; do not block UI
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('recordObservationEvent error:', err);
     res.status(500).json({ message: 'server error' });
   }
 };

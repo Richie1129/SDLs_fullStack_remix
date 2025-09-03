@@ -20,6 +20,7 @@ import { formatTime } from '../../../utils/timeUtils';
 import { getTaskChangeLogs } from '../../../api/kanban';
 import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
 import useObservationMode from '../../../hooks/useObservationMode'; // 引入觀摩模式 hook
+import { recordObservationEvent } from '../../../api/usage';
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -750,7 +751,20 @@ function Carditem({ data, index, columnIndex }) {
                   {cardData.title}
                 </h3>
                 <button
-                  onClick={() => setOpen(true)}
+                  onClick={() => {
+                    // Record observation click without blocking UI
+                    if (isObservationMode) {
+                      try {
+                        recordObservationEvent({
+                          targetType: 'KANBAN_TASK',
+                          targetId: data?.id,
+                          targetName: data?.title,
+                          projectId,
+                        });
+                      } catch (_) { /* noop */ }
+                    }
+                    setOpen(true);
+                  }}
                   className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                 >
                   <FiEdit size={16} />
