@@ -1,27 +1,31 @@
-import React, { useState, useEffect,useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useNavigate } from 'react-router-dom';
-import { FaEye, FaUsers, FaSearch, FaFilter, FaTimes, FaChalkboardTeacher, FaCog, FaCheck, FaProjectDiagram } from 'react-icons/fa';
+import { FaTimes, FaCog, FaSearch, FaFilter } from 'react-icons/fa';
 import TopBar from '../../components/TopBar';
 import SideBar from '../../components/SideBar';
-import { getProjectsByMentor, getAllClasses, getClassUsersAndProjects, updateViewingSettings } from '../../api/project';
+import { getProjectsByMentor, getAllClasses, updateViewingSettings } from '../../api/project';
+import { getProjectUser } from '../../api/users';
 import Swal from 'sweetalert2';
 
 /**
- * 教師跨班觀摩頁面
+ * 專案分享與權限管理頁面
  */
 const ClassObservationPage = () => {
     const navigate = useNavigate();
-    const [selectedProject, setSelectedProject] = useState('');
-    const [selectedClass, setSelectedClass] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
     const [currentUser, setCurrentUser] = useState(null);
     const [mentorName, setMentorName] = useState('');
-    const [classData, setClassData] = useState(null); // 存儲選中班級的用戶和專案資料
     const [showViewingSettings, setShowViewingSettings] = useState(false); // 控制觀摩設定模態框
     const [selectedProjectForSetting, setSelectedProjectForSetting] = useState(null);
     const [allowedClasses, setAllowedClasses] = useState([]);
     const [classSearch, setClassSearch] = useState('');
+    // 專案列表搜尋與過濾
+    const [projectSearch, setProjectSearch] = useState('');
+    const [filterClass, setFilterClass] = useState('ALL'); // 依「開放的班級」過濾
+    const [filterStatus, setFilterStatus] = useState('ALL'); // ALL | OPEN | CLOSED
+    const [projectClassMap, setProjectClassMap] = useState({}); // projectId -> classes[]
+    const [projectMembersMap, setProjectMembersMap] = useState({}); // projectId -> users[]
+    const [ownedClassOptions, setOwnedClassOptions] = useState([]); // 從專案所屬班級彙整
     
     // 取得當前用戶資訊和指導老師名稱
     useEffect(() => {
@@ -37,7 +41,7 @@ const ClassObservationPage = () => {
         }
     }, []);
 
-    // 取得所有班級列表
+    // 取得所有班級列表（供權限設定 Modal 使用）
     const { data: classesData, isLoading: isLoadingClasses, error: classesError } = useQuery(
         'availableClasses', 
         getAllClasses,
@@ -60,54 +64,6 @@ const ClassObservationPage = () => {
         }
     );
 
-    // 當選擇班級時，獲取該班級的用戶和專案
-    const { data: selectedClassData, isLoading: isLoadingClassData } = useQuery(
-        ['classUsersProjects', selectedClass],
-        () => selectedClass ? getClassUsersAndProjects(selectedClass) : null,
-        {
-            enabled: !!selectedClass,
-            onSuccess: (data) => {
-                console.log(`${selectedClass} 班級資料:`, data);
-                // 正規化資料：將後端的 seat_number 轉為前端使用的 seatNumber
-                const mapUserSeatNumber = (u = {}) => ({
-                    ...u,
-                    seatNumber: u.seatNumber ?? u.seat_number ?? null,
-                });
-
-                const normalizedUsers = Array.isArray(data?.users)
-                    ? data.users.map(mapUserSeatNumber)
-                    : [];
-
-                // 一些版本的後端在 projects 內提供 users 或 classMembers
-                const normalizedProjects = Array.isArray(data?.projects)
-                    ? data.projects.map(p => {
-                        const projectUsers = Array.isArray(p?.users)
-                            ? p.users
-                            : (Array.isArray(p?.classMembers) ? p.classMembers : []);
-                        const mappedUsers = projectUsers.map(mapUserSeatNumber);
-                        return {
-                            ...p,
-                            // 確保前端後續統一讀取 project.users
-                            users: mappedUsers,
-                            classMembers: Array.isArray(p?.classMembers)
-                                ? p.classMembers.map(mapUserSeatNumber)
-                                : undefined,
-                        };
-                    })
-                    : [];
-
-                setClassData({
-                    ...data,
-                    users: normalizedUsers,
-                    projects: normalizedProjects,
-                });
-            },
-            onError: (error) => {
-                console.error(`獲取 ${selectedClass} 班級資料失敗:`, error);
-            }
-        }
-    );
-
     // 取得指導老師的所有專案
     const { 
         data: mentorProjects, 
@@ -125,67 +81,6 @@ const ClassObservationPage = () => {
         }
     );
 
-    // 過濾的專案和用戶
-    const filteredClassProjects = useMemo(() => {
-        if (!classData?.projects) return [];
-        
-        const projects = selectedProject 
-            ? classData.projects.filter(p => p.id === parseInt(selectedProject))
-            : classData.projects;
-            
-        if (!searchTerm) return projects;
-        
-        return projects.filter(project => 
-            project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            project.users?.some(user => 
-                user.username.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-        );
-    }, [classData?.projects, selectedProject, searchTerm]);
-
-    const filteredClassUsers = useMemo(() => {
-        if (!classData?.users) return [];
-        
-        let users = classData.users;
-        
-        if (selectedProject) {
-            const project = classData.projects.find(p => p.id === parseInt(selectedProject));
-            users = project?.users || [];
-        }
-        
-        if (!searchTerm) return users;
-        
-        return users.filter(user => 
-            user.username.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [classData?.users, classData?.projects, selectedProject, searchTerm]);
-
-    // 過濾可觀摩的專案（開放觀摩且允許指定班級）
-    const viewableProjects = mentorProjects?.filter(project => 
-        project.is_open_for_viewing && 
-        project.allowed_classes && 
-        selectedClass && 
-        project.allowed_classes.includes(selectedClass)
-    ) || [];
-
-    // 進一步根據搜尋條件過濾
-    const filteredProjects = viewableProjects.filter(project => 
-        project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.describe.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const handleClassChange = (className) => {
-        console.log('選擇班級:', className);
-        setSelectedClass(className);
-        setSelectedProject('');
-        setSearchTerm('');
-        setClassData(null); // 重置班級資料
-    };
-
-    const handleProjectChange = (projectId) => {
-        setSelectedProject(projectId);
-    };
-
     const handleProjectClick = (projectId) => {
         navigate(`/project/${projectId}/kanban?mode=observation`);
     };
@@ -198,51 +93,36 @@ const ClassObservationPage = () => {
     };
 
     const handleSaveViewingSettings = async () => {
-    if (!selectedProjectForSetting) return;
-    
-    try {
-        await updateViewingSettings(selectedProjectForSetting.id, {
-            is_open_for_viewing: allowedClasses.length > 0,
-            allowed_classes: allowedClasses
-        });
-        
-        // 重新載入專案資料
-        refetchProjects();
+        if (!selectedProjectForSetting) return;
+        try {
+            await updateViewingSettings(selectedProjectForSetting.id, {
+                is_open_for_viewing: allowedClasses.length > 0,
+                allowed_classes: allowedClasses
+            });
 
-        // 同步更新當前班級資料中的該專案，確保再次開啟時顯示正確狀態
-        setClassData(prev => {
-            if (!prev) return prev;
-            const updated = {
-                ...prev,
-                projects: (prev.projects || []).map(p => 
-                    p.id === selectedProjectForSetting.id
-                        ? { ...p, is_open_for_viewing: allowedClasses.length > 0, allowed_classes: allowedClasses }
-                        : p
-                )
-            };
-            return updated;
-        });
+            // 重新載入專案資料
+            refetchProjects();
 
-        setShowViewingSettings(false);
+            setShowViewingSettings(false);
 
-        // ✅ 成功提示
-        Swal.fire({
-            icon: 'success',
-            title: '觀摩設定已更新！',
-            showConfirmButton: false,
-            timer: 1500
-        });
-    } catch (error) {
-        console.error('更新觀摩設定失敗:', error);
+            // ✅ 成功提示
+            Swal.fire({
+                icon: 'success',
+                title: '觀摩設定已更新！',
+                showConfirmButton: false,
+                timer: 1500
+            });
+        } catch (error) {
+            console.error('更新觀摩設定失敗:', error);
 
-        // ❌ 失敗提示
-        Swal.fire({
-            icon: 'error',
-            title: '更新失敗',
-            text: '請重試！'
-        });
-    }
-};
+            // ❌ 失敗提示
+            Swal.fire({
+                icon: 'error',
+                title: '更新失敗',
+                text: '請重試！'
+            });
+        }
+    };
 
     // GitHub Reviewers-like interactions
     const addClassForViewing = (className) => {
@@ -252,6 +132,46 @@ const ClassObservationPage = () => {
     const removeClassForViewing = (className) => {
         setAllowedClasses(prev => prev.filter(c => c !== className));
     };
+
+    // 依據教師專案動態載入每個專案的成員與班級，建立「所屬班級」清單
+    useEffect(() => {
+        const loadProjectClasses = async () => {
+            try {
+                if (!Array.isArray(mentorProjects) || mentorProjects.length === 0) {
+                    setProjectClassMap({});
+                    setProjectMembersMap({});
+                    setOwnedClassOptions([]);
+                    return;
+                }
+                const entries = await Promise.all(
+                    mentorProjects.map(async (p) => {
+                        try {
+                            const users = await getProjectUser(p.id);
+                            const classes = Array.from(new Set((users || []).map(u => u.class).filter(Boolean)));
+                            return [p.id, { classes, users: users || [] }];
+                        } catch (e) {
+                            console.error('載入專案成員失敗', p.id, e);
+                            return [p.id, { classes: [], users: [] }];
+                        }
+                    })
+                );
+                const classMap = Object.fromEntries(entries.map(([id, v]) => [id, v.classes]));
+                const memberMap = Object.fromEntries(entries.map(([id, v]) => [id, v.users]));
+                setProjectClassMap(classMap);
+                setProjectMembersMap(memberMap);
+                const all = Array.from(new Set(entries.flatMap(([, v]) => v.classes))).sort();
+                setOwnedClassOptions(all);
+                // 若目前過濾值在新選項中不存在，重置為 ALL
+                if (filterClass !== 'ALL' && !all.includes(filterClass)) {
+                    setFilterClass('ALL');
+                }
+            } catch (err) {
+                console.error('彙整專案所屬班級失敗:', err);
+            }
+        };
+        loadProjectClasses();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mentorProjects]);
 
     return (
         <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-col">
@@ -265,209 +185,154 @@ const ClassObservationPage = () => {
                             {/* 頁面標題 */}
                             <div className='mb-8'>
                                 <div className='flex items-center space-x-3 mb-4'>
-                                    <FaEye className='text-3xl text-blue-600' />
-                                    <h1 className='text-3xl font-bold text-gray-800'>跨班專案觀摩</h1>
+                                    <FaCog className='text-3xl text-blue-600' />
+                                    <h1 className='text-3xl font-bold text-gray-800'>專案分享與權限管理</h1>
                                 </div>
                                 <p className='text-gray-600 text-lg'>
-                                    讓同學探索 <span className="font-semibold text-blue-600">{mentorName}</span> 老師指導的專案作品，學習不同班級的創意與實作方法
+                                    管理您指導的專案，設定開放給其他班級觀摩的權限。
                                 </p>
                             </div>
 
-                            {/* 篩選與選擇區域 */}
+                            {/* 專案列表：以教師自己的專案為核心 */}
                             <div className='bg-white rounded-lg shadow-md p-6 mb-8'>
-                                <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-                                    {/* 班級選擇 */}
-                                    <div>
-                                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                                            <FaFilter className='inline mr-2' />
-                                            選擇觀摩班級
-                                        </label>
-                                        <select
-                                            value={selectedClass}
-                                            onChange={(e) => handleClassChange(e.target.value)}
-                                            className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                                        >
-                                            <option value="">請選擇班級...</option>
-                                            {classesData?.classes?.map((className) => (
-                                                                                        <option key={className} value={className}>
-                                            {className}
-                                        </option>
-                                            ))}
-                                        </select>
-                                        <p className='text-xs text-gray-500 mt-1'>
-                                            選擇您要觀摩的班級，只會顯示該班級可觀摩的專案
-                                        </p>
+                                <div className='flex flex-col gap-4 mb-4'>
+                                    <div className='flex items-center justify-between'>
+                                        <h2 className='text-xl font-semibold text-gray-800'>
+                                            您指導的專案
+                                        </h2>
                                     </div>
-
-                                    {/* 專案選擇 */}
-                                    <div>
-                                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                                            <FaChalkboardTeacher className='inline mr-2' />
-                                            選擇專案
-                                        </label>
-                                        <select
-                                            value={selectedProject}
-                                            onChange={(e) => handleProjectChange(e.target.value)}
-                                            disabled={!selectedClass || viewableProjects.length === 0}
-                                            className='w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed'
-                                        >
-                                            <option value="">
-                                                {!selectedClass 
-                                                    ? '請先選擇班級...' 
-                                                    : viewableProjects.length === 0 
-                                                        ? '該班級無可觀摩專案...'
-                                                        : '請選擇專案...'
-                                                }
-                                            </option>
-                                            {viewableProjects.map((project) => (
-                                                <option key={project.id} value={project.id}>
-                                                    {project.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <p className='text-xs text-gray-500 mt-1'>
-                                            選擇您要觀摩的具體專案
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* 搜尋框 */}
-                                {selectedClass && viewableProjects.length > 0 && (
-                                    <div className='mt-6'>
-                                        <label className='block text-sm font-medium text-gray-700 mb-2'>
-                                            <FaSearch className='inline mr-2' />
-                                            搜尋專案
-                                        </label>
-                                        <div className='relative'>
+                                    {/* 搜尋與過濾列 */}
+                                    <div className='flex flex-col md:flex-row gap-3'>
+                                        {/* 搜尋 */}
+                                        <div className='relative md:flex-1'>
                                             <input
-                                                type="text"
-                                                placeholder="搜尋專案名稱或描述..."
-                                                value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
-                                                className='w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                                type='text'
+                                                value={projectSearch}
+                                                onChange={(e) => setProjectSearch(e.target.value)}
+                                                placeholder='搜尋專案名稱或描述...'
+                                                className='w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                                             />
-                                            {searchTerm && (
+                                            <FaSearch className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400' />
+                                            {projectSearch && (
                                                 <button
-                                                    onClick={() => setSearchTerm('')}
-                                                    className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
+                                                    onClick={() => setProjectSearch('')}
+                                                    className='absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600'
+                                                    aria-label='清除搜尋'
                                                 >
                                                     <FaTimes />
                                                 </button>
                                             )}
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 班級資料顯示區域 */}
-                            {selectedClass && classData && (
-                                <div className='bg-white rounded-lg shadow-md mb-8'>
-                                    <div className='px-6 py-4 border-b border-gray-200'>
-                                        <h2 className='text-xl font-semibold text-gray-800'>
-                                            {selectedClass} 班級資料
-                                        </h2>
-                                    </div>
-                                    <div className='p-6'>
-                                        <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
-                                            {/* 班級成員 */}
-                                            <div>
-                                                <h3 className='text-lg font-medium text-gray-800 mb-4 flex items-center'>
-                                                    <FaUsers className='mr-2 text-blue-600' />
-                                                    班級成員 ({filteredClassUsers.length} 人)
-                                                </h3>
-                                                <div className='bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto'>
-                                                    {filteredClassUsers.length === 0 ? (
-                                                        <p className='text-gray-500 text-center py-4'>目前沒有成員資料</p>
-                                                    ) : (
-                                                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-2'>
-                                                            {filteredClassUsers.map((user) => (
-                                                                <div key={user.id} className='bg-white rounded-lg p-3 shadow-sm'>
-                                                                    <div className='text-sm font-medium text-gray-800'>{user.username}</div>
-                                                                    <div className='text-xs text-gray-500'>
-                                                                        座號: {user.seatNumber || '未設定'}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* 班級專案 */}
-                                            <div>
-                                                <h3 className='text-lg font-medium text-gray-800 mb-4 flex items-center'>
-                                                    <FaProjectDiagram className='mr-2 text-green-600' />
-                                                    班級專案 ({filteredClassProjects.length} 個)
-                                                </h3>
-                                                <div className='bg-gray-50 rounded-lg p-4 max-h-64 overflow-y-auto'>
-                                                    {filteredClassProjects.length === 0 ? (
-                                                        <p className='text-gray-500 text-center py-4'>目前沒有專案資料</p>
-                                                    ) : (
-                                                        <div className='space-y-3'>
-                                                            {filteredClassProjects.map((project) => (
-                                                                <div key={project.id} className='bg-white rounded-lg p-4 shadow-sm border-l-4 border-blue-500'>
-                                                                    <div className='flex items-start justify-between mb-2'>
-                                                                        <h4 className='font-medium text-gray-800 text-sm'>{project.name}</h4>
-                                                                        <div className='flex space-x-2 ml-2'>
-                                                                            <button
-                                                                                onClick={() => handleOpenViewingSettings(project)}
-                                                                                className='bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs hover:bg-blue-200 transition-colors'
-                                                                            >
-                                                                                設定觀摩權限
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => handleProjectClick(project.id)}
-                                                                                className='bg-green-100 text-green-800 px-2 py-1 rounded text-xs hover:bg-green-200 transition-colors'
-                                                                            >
-                                                                                檢視專案
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                    <p className='text-xs text-gray-600 mb-2'>{project.describe}</p>
-                                                                    <div className='text-xs text-gray-500'>
-                                                                        成員: {project.classMembers?.map(u => u.username).join(', ') || '無'}
-                                                                    </div>
-                                                                    <div className='text-xs text-gray-500 mt-1'>
-                                                                        觀摩狀態: {project.is_open_for_viewing ? '開放' : '關閉'}
-                                                                        {project.allowed_classes?.length > 0 && ` | 允許班級: ${project.allowed_classes.join(', ')}`}
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
+                                        {/* 狀態過濾 */}
+                                        <div className='flex items-center gap-2'>
+                                            <FaFilter className='text-gray-500' />
+                                            <select
+                                                value={filterStatus}
+                                                onChange={(e) => setFilterStatus(e.target.value)}
+                                                className='px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                            >
+                                                <option value='ALL'>全部狀態</option>
+                                                <option value='OPEN'>已開放</option>
+                                                <option value='CLOSED'>未開放</option>
+                                            </select>
+                                        </div>
+                                        {/* 班級過濾（依「專案所屬的班級」） */}
+                                        <div>
+                                            <select
+                                                value={filterClass}
+                                                onChange={(e) => setFilterClass(e.target.value)}
+                                                className='w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                            >
+                                                <option value='ALL'>全部班級</option>
+                                                {ownedClassOptions.map((cls) => (
+                                                    <option key={cls} value={cls}>{cls}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
-                            )}
 
-                            {/* 搜尋框 - 只在有選擇班級時顯示 */}
-                            {selectedClass && (
-                                <div className='bg-white rounded-lg shadow-md p-6 mb-8'>
-                                    <label className='block text-sm font-medium text-gray-700 mb-2'>
-                                        <FaSearch className='inline mr-2' />
-                                        搜尋成員或專案
-                                    </label>
-                                    <div className='relative'>
-                                        <input
-                                            type="text"
-                                            placeholder="搜尋成員姓名或專案名稱..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className='w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                                        />
-                                        {searchTerm && (
-                                            <button
-                                                onClick={() => setSearchTerm('')}
-                                                className='absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600'
-                                            >
-                                                <FaTimes />
-                                            </button>
-                                        )}
+                                {isLoadingProjects ? (
+                                    <p className='text-gray-500'>載入中...</p>
+                                ) : projectsError ? (
+                                    <p className='text-red-500'>無法載入專案，請稍後再試。</p>
+                                ) : !mentorProjects || mentorProjects.length === 0 ? (
+                                    <p className='text-gray-500'>目前沒有您指導的專案。</p>
+                                ) : (
+                                    <div className='space-y-3'>
+                                        {(mentorProjects
+                                            .filter((p) => {
+                                                if (!projectSearch) return true;
+                                                const name = (p.name || '').toLowerCase();
+                                                const desc = (p.describe || '').toLowerCase();
+                                                const q = projectSearch.toLowerCase();
+                                                return name.includes(q) || desc.includes(q);
+                                            })
+                                            .filter((p) => {
+                                                if (filterStatus === 'ALL') return true;
+                                                const allowed = Array.isArray(p.allowed_classes) ? p.allowed_classes : [];
+                                                const open = p.is_open_for_viewing && allowed.length > 0;
+                                                return filterStatus === 'OPEN' ? open : !open;
+                                            })
+                                            .filter((p) => {
+                                                if (filterClass === 'ALL') return true;
+                                                const owned = projectClassMap[p.id] || [];
+                                                return owned.includes(filterClass);
+                                            }))
+                                            .map((project) => {
+                                            const allowed = Array.isArray(project.allowed_classes) ? project.allowed_classes : [];
+                                            const isOpen = project.is_open_for_viewing && allowed.length > 0;
+                                            const statusText = isOpen ? `開放給 ${allowed.length} 個班級` : '未開放';
+                                            return (
+                                                <div key={project.id} className='bg-white rounded-lg p-4 shadow-sm border border-gray-200'>
+                                                    <div className='flex items-start justify-between'>
+                                                        <div className='flex-1 min-w-0'>
+                                                            <div className='flex items-center gap-2'>
+                                                                <h3 className='font-medium text-gray-900 truncate'>{project.name}</h3>
+                                                                <span className={`text-xs px-2 py-0.5 rounded ${isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+                                                                    {statusText}
+                                                                </span>
+                                                            </div>
+                                                            <p className='text-sm text-gray-600 mt-1'>{project.describe || '未提供描述'}</p>
+                                                            {/* 專案成員 */}
+                                                            {(projectMembersMap[project.id] || []).length > 0 && (
+                                                                <div className='text-xs text-gray-600 mt-2'>
+                                                                    成員：{(projectMembersMap[project.id] || []).map(u => u.username).join(', ')}
+                                                                </div>
+                                                            )}
+                                                            {/* 所屬班級 */}
+                                                            {(projectClassMap[project.id] || []).length > 0 && (
+                                                                <div className='text-xs text-gray-500 mt-1'>
+                                                                    所屬班級：{(projectClassMap[project.id] || []).join(', ')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className='ml-4 flex-shrink-0 flex gap-2'>
+                                                            <button
+                                                                onClick={() => handleOpenViewingSettings(project)}
+                                                                className='px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors'
+                                                            >
+                                                                設定觀摩權限
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleProjectClick(project.id)}
+                                                                className='px-3 py-2 bg-gray-100 text-gray-800 text-sm rounded hover:bg-gray-200 transition-colors'
+                                                            >
+                                                                檢視專案
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className='text-xs text-gray-500 mt-2'>
+                                                        {isOpen && allowed.length > 0
+                                                            ? `已開放班級：${allowed.join(', ')}`
+                                                            : '尚未開放給任何班級觀摩'}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
                             {/* 觀摩設定Modal */}
                             {showViewingSettings && selectedProjectForSetting && (

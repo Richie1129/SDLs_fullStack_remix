@@ -193,7 +193,7 @@ exports.registerUser = (req, res) => {
 exports.getProjectUsers = async(req, res) => {
     const projectId = req.params.projectId;
     await User.findAll({
-        attributes: ['id', 'username'],
+        attributes: ['id', 'username', 'class', 'seatNumber'],
         include: [{
             model:Project,
             attributes:[],
