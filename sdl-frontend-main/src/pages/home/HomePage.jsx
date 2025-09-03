@@ -567,6 +567,11 @@ const handleDeleteProject = (projectId) => {
                     <div className='text-sm text-gray-500'>成員：
                       {projectItem.members?.map(member => member.username).join("、") || "無成員資訊"}
                     </div>
+                    <div className='text-sm text-gray-500'>所屬班級：
+                      {Array.from(new Set((projectItem.members || [])
+                        .map(m => m.class)
+                        .filter(Boolean))).join('、') || '無班級資訊'}
+                    </div>
                     <div className='flex justify-between text-sm text-gray-500'>
                       <span className='flex items-center text-gray-500'>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
