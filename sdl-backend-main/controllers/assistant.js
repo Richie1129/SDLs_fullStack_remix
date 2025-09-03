@@ -486,7 +486,55 @@ exports.getGuidance = async (req, res) => {
           ideaWallSnapshot,
           recentChatHistory: sanitizedHistory
         };
-        const llmPrompt = `請根據以下上下文，輸出 JSON 物件：{"message": string, "suggestions": string[], "suggestedTasks": [{"title": string, "content": string, "labels"?: string[]}], "citations": [{"type": "rubric"|"submit", "title": string, "quote": string}] }。上下文：${JSON.stringify(context)}；規則補充：1) 參考 kanbanSnapshot、existingTaskTitles 與 ideaWallSnapshot，避免重複現有卡片，並善用想法牆的節點來拆解具體工作；2) 任務應可直接落地，並對齊當前子階段目標；3) 參考 recentActivity（特別是最近較少活動的列表），提出能解卡/推進的任務；4) 適度參考 recentChatHistory 的上下文維持連貫性；5) 缺失以 suggestions 列示即可，不要建立「補齊缺少欄位/檔案」類卡片。若使用者訊息存在，將其視為追問並融入回覆：${userMessage || ''}`;
+        const llmPrompt = [
+          '【角色】你是熟知本系統「五大階段 × 各子階段」Rubric 的專案導師（Project Mentor）。',
+          '【要求】僅輸出有效 JSON（不可含 Markdown/多餘文字）。所有內容需明確對齊：子階段目標(goal)、必填欄位(requiredFields)、已具備(present)與缺失(missing)。',
+          '【JSON 格式】{ "message": string, "suggestions": string[], "suggestedTasks": [{"title": string, "content": string, "labels"?: string[]}], "citations": [{"type":"rubric"|"submit","title": string, "quote": string}], "stageDiagnosis"?: {"stage": string, "subStage": string, "present": string[], "missing": string[], "goal": string}, "nextMilestones"?: string[], "checklist"?: string[] }',
+          '【規則】',
+          '1) message：先肯定上一子階段（若有），再聚焦當前子階段目標，給出針對缺失的行動方向與1-2個啟發式提問。',
+          '2) suggestions：2-5 條具體且可執行，需對應 present/missing 與 goal。',
+          '3) suggestedTasks：1-3 個可直接落地的任務卡，避免建立「補齊缺少欄位/檔案」這種籠統卡（缺失改在 suggestions 提醒）。',
+          '4) citations：至少引用 1 則與本子階段相關的 Rubric 片段（若可取得），亦可節選最近提交的關鍵內容。',
+          '5) 請避免與現有 Kanban 卡片或 IdeaWall 節點重複（參考 existingTaskTitles 與 ideaWallSnapshot）。',
+          '6) 若有歷史對話，維持語境連貫。',
+          '【上下文 JSON】',
+          JSON.stringify({
+            ...context,
+            requiredFields: stageMeta?.requiredFields || {},
+          }),
+          userMessage ? `【使用者追問】${userMessage}` : ''
+        ].filter(Boolean).join('\n');
+
+        // Console diagnostics: what we send to LLM
+        const intendedProvider = (preferProvider === 'gemini' && hasGemini) ? 'gemini'
+          : (preferProvider === 'openai' && hasOpenAI) ? 'openai'
+          : hasGemini ? 'gemini' : 'openai';
+        const intendedModel = intendedProvider === 'gemini'
+          ? (process.env.GEMINI_MODEL || 'gemini-2.0-flash')
+          : 'gpt-4o-mini';
+        const promptPreview = llmPrompt.slice(0, 800);
+        const contextSummary = {
+          project: context.project,
+          stage: context.stage,
+          goal: (context.goal || '').slice(0, 200),
+          missingCount: Array.isArray(context.missing) ? context.missing.length : 0,
+          presentCount: Array.isArray(context.present) ? context.present.length : 0,
+          kanbanSnapshot: Array.isArray(context.kanbanSnapshot) ? context.kanbanSnapshot.map(c => ({ id: c.id, name: c.name, count: c.count })) : [],
+          existingTaskTitlesCount: Array.isArray(context.existingTaskTitles) ? context.existingTaskTitles.length : 0,
+          ideaWallSnapshot: context.ideaWallSnapshot,
+          recentActivityTotals: context.recentActivity?.totals || {},
+          recentActivityColumns: Array.isArray(context.recentActivity?.columns) ? context.recentActivity.columns.length : 0,
+          historyLength: Array.isArray(context.recentChatHistory) ? context.recentChatHistory.length : 0,
+          userMessage: userMessage || ''
+        };
+        console.log('[LLM_ASSISTANT_REQUEST]', JSON.stringify({
+          ts: new Date().toISOString(),
+          project: { id: project.id, name: project.name },
+          provider: intendedProvider,
+          model: intendedModel,
+          contextSummary,
+          promptPreview
+        }));
 
         let result = null;
         if (preferProvider === 'gemini' && hasGemini) {
@@ -499,6 +547,15 @@ exports.getGuidance = async (req, res) => {
           result = await callGPTAPI(llmPrompt);
         }
         if (result?.success && typeof result.content === 'string' && result.content.trim().length) {
+          // Console diagnostics: basic response meta
+          try {
+            console.log('[LLM_ASSISTANT_RESPONSE]', JSON.stringify({
+              ts: new Date().toISOString(),
+              project: { id: project.id, name: project.name },
+              provider: result.provider,
+              contentLength: result.content.length
+            }));
+          } catch (_) {}
           let parsed = null;
           const raw = result.content.trim();
           try {
