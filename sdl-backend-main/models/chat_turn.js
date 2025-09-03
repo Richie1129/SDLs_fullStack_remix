@@ -8,6 +8,10 @@ const ChatTurn = sequelize.define('chat_turn', {
     allowNull: false,
     references: { model: 'projects', key: 'id' },
   },
+  projectName: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   userId: {
     type: DataTypes.INTEGER,
     allowNull: true,
@@ -36,4 +40,3 @@ const ChatTurn = sequelize.define('chat_turn', {
 });
 
 module.exports = ChatTurn;
-
