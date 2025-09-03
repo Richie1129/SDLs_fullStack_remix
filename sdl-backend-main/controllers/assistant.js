@@ -347,6 +347,8 @@ function intentReply({ userMessage, subStageName }) {
 exports.getGuidance = async (req, res) => {
   try {
     const { projectId, currentStage, currentSubStage, userMessage, useLLM, history } = req.body || {};
+    const tasksMode = (req.body?.tasksMode || req.query?.tasksMode || '').toLowerCase(); // '', 'llm_only'
+    const requestedTaskCount = Math.max(1, Math.min(6, parseInt(req.body?.tasksCount || req.query?.tasksCount || '3', 10) || 3));
     if (!projectId) return res.status(400).json({ message: '缺少 projectId' });
 
     const project = await Project.findByPk(projectId);
@@ -468,10 +470,95 @@ exports.getGuidance = async (req, res) => {
     const hasGemini = !!process.env.GEMINI_API_KEY;
     const hasOpenAI = !!process.env.OPENAI_API_KEY;
     if (wantLLM && (hasGemini || hasOpenAI)) {
-      try {
-        const sanitizedHistory = Array.isArray(history) ? history
-          .filter(m => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
-          .slice(-10) : [];
+      // 1) LLM-only dynamic task generation mode
+      if (tasksMode === 'llm_only') {
+        try {
+          const intendedProvider = (preferProvider === 'gemini' && hasGemini) ? 'gemini'
+            : (preferProvider === 'openai' && hasOpenAI) ? 'openai'
+            : hasGemini ? 'gemini' : 'openai';
+          const intendedModel = intendedProvider === 'gemini'
+            ? (process.env.GEMINI_MODEL || 'gemini-2.0-flash')
+            : 'gpt-4o-mini';
+
+          const taskPrompt = [
+            '【角色】你是熟知「五大階段 × 各子階段」Rubric 的專案導師。請依據提供的上下文為此專案動態生成任務卡。',
+            `【數量】${requestedTaskCount} 個，避免與現有任務重複。`,
+            '【要求】僅輸出有效 JSON：{ "suggestedTasks": [{ "title": string, "content": string, "labels"?: string[], "acceptanceCriteria"?: string[], "priority"?: "low"|"medium"|"high", "dueInDays"?: number }] }',
+            '【準則】任務需：',
+            '1) 明確對齊當前子階段目標(goal)、present/missing 與 requiredFields。',
+            '2) 可以引用 IdeaWall 節點或近期活動來具體化內容；若有缺失，任務內容應針對缺失如何補齊，而非僅寫「補齊缺失」。',
+            '3) 優先分布到最近活動較少的面向（例如：最近少動的列表/主題），以幫助專案推進。',
+            '4) 不要建立與 existingTaskTitles 重複的任務；避免籠統、重複或無法落地的描述。',
+            '【上下文 JSON】',
+            JSON.stringify({
+              project: { id: project.id, name: project.name },
+              stage: { s, ss, stageName: stageMeta.stageName, subStageName: stageMeta.subStageName },
+              goal: currentGoal,
+              requiredFields: stageMeta?.requiredFields || {},
+              missing,
+              present,
+              kanbanSnapshot,
+              existingTaskTitles,
+              ideaWallSnapshot,
+              recentActivity,
+              recentChatHistory: Array.isArray(history) ? history.slice(-10) : []
+            })
+          ].join('\n');
+
+          const promptPreview = taskPrompt.slice(0, 800);
+          console.log('[LLM_TASKS_REQUEST]', JSON.stringify({
+            ts: new Date().toISOString(),
+            project: { id: project.id, name: project.name },
+            provider: intendedProvider,
+            model: intendedModel,
+            requestedTaskCount,
+            promptPreview
+          }));
+
+          let taskResult = null;
+          if (intendedProvider === 'gemini') taskResult = await callGeminiAPI(taskPrompt);
+          else taskResult = await callGPTAPI(taskPrompt);
+
+          let parsedTasks = [];
+          if (taskResult?.success && typeof taskResult.content === 'string' && taskResult.content.trim().length) {
+            try {
+              const raw = taskResult.content.trim();
+              const obj = JSON.parse(raw);
+              if (Array.isArray(obj?.suggestedTasks)) parsedTasks = obj.suggestedTasks;
+            } catch (_) {
+              try {
+                const m = taskResult.content.match(/\{[\s\S]*\}/);
+                if (m) {
+                  const obj = JSON.parse(m[0]);
+                  if (Array.isArray(obj?.suggestedTasks)) parsedTasks = obj.suggestedTasks;
+                }
+              } catch (_) {}
+            }
+          }
+
+          // 後處理：去重、裁切數量
+          const seen = new Set(existingTaskTitles.map(t => (t || '').trim()));
+          const filtered = [];
+          for (const t of (parsedTasks || [])) {
+            const key = (t?.title || '').trim();
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            filtered.push({ title: key, content: t?.content || '', labels: Array.isArray(t?.labels) ? t.labels : ['AI導師'], acceptanceCriteria: Array.isArray(t?.acceptanceCriteria) ? t.acceptanceCriteria : undefined, priority: t?.priority, dueInDays: t?.dueInDays });
+            if (filtered.length >= requestedTaskCount) break;
+          }
+          if (filtered.length) {
+            suggestedTasks.splice(0, suggestedTasks.length, ...filtered);
+            message = `我根據你們的專案現況，為「${s}-${ss} ${stageMeta.subStageName || ''}」動態生成了 ${filtered.length} 個任務，已對齊此階段目標與缺失。`;
+          }
+        } catch (e) {
+          console.warn('LLM dynamic tasks error:', e?.message);
+        }
+      } else {
+        // 2) General LLM enhancement mode (message + merge tasks)
+        try {
+          const sanitizedHistory = Array.isArray(history) ? history
+            .filter(m => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
+            .slice(-10) : [];
         const context = {
           project: { id: project.id, name: project.name },
           stage: { s, ss, stageName: stageMeta.stageName, subStageName: stageMeta.subStageName },
@@ -595,6 +682,7 @@ exports.getGuidance = async (req, res) => {
         }
       } catch (e) {
         // Fallback silently
+      }
       }
     }
 

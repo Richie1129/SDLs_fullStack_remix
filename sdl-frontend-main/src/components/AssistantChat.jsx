@@ -10,6 +10,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
   const [input, setInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastData, setLastData] = useState(null); // store suggestions, tasks, citations
+  const [aiTasksCount, setAiTasksCount] = useState(3);
   const greetedRef = useRef(false);
   const inputRef = useRef(null);
   const lastTurnIdRef = useRef(null);
@@ -114,6 +115,31 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
       } catch (_) {}
     } catch (e) {
       setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，我暫時無法回覆，稍後再試試看。' }]);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const generateDynamicTasks = async () => {
+    if (!projectId) return;
+    try {
+      setIsSubmitting(true);
+      const MAX_HISTORY = 8;
+      const recent = historyMessages.slice(-MAX_HISTORY);
+      const data = await getGuidance({
+        projectId,
+        currentStage,
+        currentSubStage,
+        useLLM: true,
+        provider: 'gemini',
+        history: recent,
+        tasksMode: 'llm_only',
+        tasksCount: aiTasksCount,
+      });
+      setLastData(data);
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message || `已為你產生 ${data?.suggestedTasks?.length || 0} 個客製化任務。` }]);
+    } catch (e) {
+      setMessages(prev => [...prev, { role: 'assistant', content: '產生任務失敗，請稍後再試。' }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -255,7 +281,24 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           </div>
         )}
       </div>
-      <form onSubmit={handleFormSubmit} className="p-2 border-t flex gap-2">
+      <form onSubmit={handleFormSubmit} className="p-2 border-t flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="text-[11px] text-gray-600">AI 產生任務：</div>
+          <select
+            className="border rounded px-1 py-0.5 text-xs"
+            value={aiTasksCount}
+            onChange={e => setAiTasksCount(parseInt(e.target.value) || 3)}
+          >
+            {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} 個</option>)}
+          </select>
+          <button
+            type="button"
+            onClick={generateDynamicTasks}
+            className="px-2 py-1 bg-teal-600 text-white text-xs rounded disabled:opacity-50"
+            disabled={isSubmitting}
+          >{isSubmitting ? '生成中…' : '產生任務'}</button>
+        </div>
+        <div className="flex gap-2">
         <input
           ref={inputRef}
           className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
@@ -268,6 +311,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           type="submit"
           disabled={isSubmitting}
         >{isSubmitting ? '送出中...' : '送出'}</button>
+        </div>
       </form>
     </Container>
   );

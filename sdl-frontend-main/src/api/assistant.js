@@ -5,7 +5,7 @@ export const getProjectContent = async (projectId) => {
   return res.data;
 };
 
-export const getGuidance = async ({ projectId, currentStage, currentSubStage, userMessage, useLLM, provider, history }) => {
+export const getGuidance = async ({ projectId, currentStage, currentSubStage, userMessage, useLLM, provider, history, tasksMode, tasksCount }) => {
   const res = await apiClient.post('/assistant/guidance', {
     projectId,
     currentStage,
@@ -14,6 +14,8 @@ export const getGuidance = async ({ projectId, currentStage, currentSubStage, us
     useLLM,
     provider,
     history,
+    tasksMode,
+    tasksCount,
   });
   return res.data;
 };
