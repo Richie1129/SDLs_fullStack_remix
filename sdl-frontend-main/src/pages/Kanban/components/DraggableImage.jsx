@@ -945,7 +945,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
                 <button
                   className={`px-3 py-1 rounded-full text-sm ${activeTab === 'mentor' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'}`}
                   onClick={() => setActiveTab('mentor')}
-                >🧑‍🏫 專案導師</button>
+                >🧑‍🏫 自主學習助手</button>
               </div>
 
               {/* 右側控制按鈕區域 */}
