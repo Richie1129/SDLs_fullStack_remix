@@ -619,9 +619,10 @@ exports.deletePersonalDaily = async (req, res) => {
         console.log('標題:', daily.title);
         
         // 先清理 MinIO 檔案
+        let fileNames = [];
         try {
             const { extractDailyFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
-            const fileNames = extractDailyFileNames(daily);
+            fileNames = extractDailyFileNames(daily);
             
             if (fileNames.length > 0) {
                 console.log(`📁 個人日誌 ${id} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);
@@ -671,9 +672,10 @@ exports.deleteTeamDaily = async (req, res) => {
         console.log('創建者:', daily.creator);
         
         // 先清理 MinIO 檔案
+        let fileNames = [];
         try {
             const { extractDailyFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
-            const fileNames = extractDailyFileNames(daily);
+            fileNames = extractDailyFileNames(daily);
             
             if (fileNames.length > 0) {
                 console.log(`📁 團隊日誌 ${id} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);

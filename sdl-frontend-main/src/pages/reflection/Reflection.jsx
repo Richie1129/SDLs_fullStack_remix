@@ -12,6 +12,8 @@ import {
   updateTeamDaily,
   removePersonalDailyAttachment,
   removeTeamDailyAttachment,
+  deletePersonalDaily,
+  deleteTeamDaily,
 } from "../../api/reflection";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import toast, { Toaster } from "react-hot-toast";
@@ -602,6 +604,36 @@ export default function Reflection() {
     handleEditTeamClick(item);
   };
 
+  // 刪除：個人日誌
+  const handleDeletePersonal = async (item) => {
+    if (!item?.id) return;
+    const confirm = window.confirm(`確定要刪除「${item.title || '未命名'}」嗎？此動作無法復原。`);
+    if (!confirm) return;
+    try {
+      await deletePersonalDaily(item.id);
+      queryClient.invalidateQueries("personalDaily");
+      toast.success("個人日誌已刪除");
+    } catch (e) {
+      console.error(e);
+      toast.error("刪除個人日誌失敗");
+    }
+  };
+
+  // 刪除：小組日誌
+  const handleDeleteTeam = async (item) => {
+    if (!item?.id) return;
+    const confirm = window.confirm(`確定要刪除小組日誌「${item.title || '未命名'}」嗎？此動作無法復原。`);
+    if (!confirm) return;
+    try {
+      await deleteTeamDaily(item.id);
+      queryClient.invalidateQueries("teamDaily");
+      toast.success("小組日誌已刪除");
+    } catch (e) {
+      console.error(e);
+      toast.error("刪除小組日誌失敗");
+    }
+  };
+
   // 目前正在編輯的記錄（個人/小組）
   const currentEditingPersonal = editingId
     ? personalDaily.find((d) => d.id === editingId)
@@ -685,7 +717,7 @@ export default function Reflection() {
                     setEditingId(null);
                     setIs5RsModalOpen(true);
                   }}
-                  className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491]/80 hover:bg-[#5BA491] text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
+                  className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491] text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
                 >
                   <svg
                     className="w-4 h-4 mr-2"
@@ -725,6 +757,7 @@ export default function Reflection() {
               }}
               buttons={[]}
               onEdit={handlePersonalLogEdit}
+              onDelete={handleDeletePersonal}
               onView5Rs={handleView5Rs}
               onRequestAIAnalysis={handleRequestAIAnalysis}
               showAIAnalysis={true}
@@ -796,6 +829,7 @@ export default function Reflection() {
               }}
               buttons={[]}
               onEdit={handleTeamLogEdit}
+              onDelete={handleDeleteTeam}
               showAIAnalysis={false}
               showCreator={true}
               className="h-full flex flex-col"

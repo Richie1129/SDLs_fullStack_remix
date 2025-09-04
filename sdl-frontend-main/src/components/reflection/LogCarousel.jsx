@@ -13,6 +13,7 @@ const SPRING_OPTIONS = {
 const LogCarousel = ({ 
   items = [], 
   onEdit,
+  onDelete,
   onView5Rs,
   onRequestAIAnalysis,
   showAIAnalysis = true,
@@ -53,6 +54,7 @@ const LogCarousel = ({
             index={index}
             isActive={currentIndex === index}
             onEdit={onEdit}
+            onDelete={onDelete}
             onView5Rs={onView5Rs}
             onRequestAIAnalysis={onRequestAIAnalysis}
             showAIAnalysis={showAIAnalysis}

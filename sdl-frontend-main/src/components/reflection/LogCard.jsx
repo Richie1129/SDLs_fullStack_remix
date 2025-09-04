@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AiOutlineCloudDownload, AiOutlineRobot } from 'react-icons/ai';
+import { FiTrash2 } from 'react-icons/fi';
 import { formatTime } from '../../utils/timeUtils';
 import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.js';
 import FileDownload from 'js-file-download';
@@ -12,6 +13,7 @@ const LogCard = ({
   index, 
   isActive = false,
   onEdit,
+  onDelete,
   onView5Rs,
   onRequestAIAnalysis,
   showAIAnalysis = true,
@@ -123,11 +125,24 @@ const LogCard = ({
           <h5 className="text-lg sm:text-xl font-bold text-customgreen py-2">
             {item.title}
           </h5>
-          {is5Rs && (
-            <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
-              5Rs 反思
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {is5Rs && (
+              <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
+                5Rs 反思
+              </span>
+            )}
+            {typeof onDelete === 'function' && (
+              <button
+                type="button"
+                onClick={() => onDelete(item)}
+                title="刪除這筆日誌"
+                aria-label="刪除日誌"
+                className="p-1 rounded text-gray-400 hover:text-red-600 transition-colors"
+              >
+                <FiTrash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content */}
