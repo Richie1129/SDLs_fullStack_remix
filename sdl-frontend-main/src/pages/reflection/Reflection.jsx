@@ -20,14 +20,14 @@ import { motion } from "framer-motion";
 import { socket } from "../../utils/socket";
 import personalDailyIcon from "../../assets/AnimationPersonalDaily.json";
 import teamDailyIcon from "../../assets/AnimationTeamDaily.json";
-// 5Rs 相關導入
 import FiveRsReflectionForm from "@/components/FiveRsReflectionForm.jsx";
 import FiveRsReflectionDisplay from "@/components/FiveRsReflectionDisplay.jsx";
 import { is5RsFormat, parse5RsContent } from "@/utils/5RsUtils.js";
-
 import { analyze5RsReflection } from "@/api/llm5Rs.js";
-// 新的組件導入
+import { postClientAuditEvent } from "@/api/audit.js";
 import LogSection from "../../components/reflection/LogSection";
+import AuditHistoryPanel from "@/components/reflection/AuditHistoryPanel.jsx";
+import AIAnalysisHistoryPanel from "@/components/reflection/AIAnalysisHistoryPanel.jsx";
 
 // Animation configuration
 const fadeInOut = {
@@ -50,6 +50,15 @@ export default function Reflection() {
   const [teamDailyModalOpen, setTeamDailyModalOpen] = useState(false);
   const [is5RsModalOpen, setIs5RsModalOpen] = useState(false);
   const [viewReflectionModalOpen, setViewReflectionModalOpen] = useState(false);
+  // Modal tab states
+  const [personalTab, setPersonalTab] = useState('edit');
+  const [teamTab, setTeamTab] = useState('edit');
+  const [fiveRsTab, setFiveRsTab] = useState('edit');
+
+  // Reset tabs when opening modals
+  useEffect(() => { if (personalDailyModalOpen) setPersonalTab('edit'); }, [personalDailyModalOpen]);
+  useEffect(() => { if (teamDailyModalOpen) setTeamTab('edit'); }, [teamDailyModalOpen]);
+  useEffect(() => { if (is5RsModalOpen) setFiveRsTab('edit'); }, [is5RsModalOpen]);
 
   // 表單狀態
   const [title, setTitle] = useState("");
@@ -483,15 +492,13 @@ export default function Reflection() {
       return;
     }
 
-    // 檢查是否已有 AI 反饋
+    // 若已有 AI 反饋，仍允許再次分析（將作為歷史紀錄保存）
     if (
       parsedContent.feedback &&
       (parsedContent.feedback.overall ||
         parsedContent.feedback.suggestions?.length > 0)
     ) {
-      console.log("已有 AI 反饋，跳過分析");
-      toast.info("此反思已有 AI 分析結果");
-      return;
+      console.log("已有 AI 反饋，仍將進行再次分析並保存為歷史");
     }
 
     console.log("準備發送的反思資料:", parsedContent.data);
@@ -506,6 +513,25 @@ export default function Reflection() {
       if (result.success) {
         console.log("AI 分析成功，提供者:", result.provider);
         console.log("AI 回饋內容:", result.feedback);
+
+        // 紀錄 AI 分析歷史（審計事件）
+        try {
+          await postClientAuditEvent({
+            action: 'DAILY_PERSONAL_5RS_AI_ANALYSIS',
+            targetType: 'daily_personal',
+            targetId: item.id,
+            projectId: projectId,
+            metadata: {
+              provider: result.provider,
+              analysisDate: result.analysisDate || new Date().toISOString(),
+              title: item.title,
+              inputData: parsedContent.data,
+              feedback: result.feedback,
+            },
+          });
+        } catch (e) {
+          console.warn('送出 AI 分析審計事件失敗（略過，不影響主流程）', e);
+        }
 
         // 將 AI 反饋整合到現有內容中
         const updatedContent = JSON.parse(item.content);
@@ -583,6 +609,7 @@ export default function Reflection() {
   const currentEditingTeam = editingId
     ? teamDaily.find((d) => d.id === editingId)
     : null;
+  const isCurrent5Rs = currentEditingPersonal ? is5RsFormat(currentEditingPersonal.content) : false;
 
   // 刪除附件：個人
   const handleRemovePersonalAttachment = async () => {
@@ -783,6 +810,7 @@ export default function Reflection() {
         onClose={() => setPersonalDailyModalOpen(false)}
         opacity={true}
         position={"justify-center items-center"}
+        custom="w-[80vw] max-w-5xl"
       >
         <button
           onClick={() => setPersonalDailyModalOpen(false)}
@@ -790,7 +818,7 @@ export default function Reflection() {
         >
           <GrFormClose className="w-6 h-6" />
         </button>
-        <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+        <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
           <h3 className="font-bold text-base sm:text-lg mb-3 text-center">
             個人反思日誌
           </h3>
@@ -821,6 +849,31 @@ export default function Reflection() {
               </ul>
             </motion.div>
           )}
+          {/* Tabs for personal modal */}
+          <div className="flex border-b border-gray-200 mb-3">
+            <button
+              onClick={() => setPersonalTab('edit')}
+              className={`px-4 py-2 font-medium text-sm ${personalTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              編輯日誌
+            </button>
+            <button
+              onClick={() => setPersonalTab('history')}
+              className={`px-4 py-2 font-medium text-sm ${personalTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              變更歷史
+            </button>
+            {isCurrent5Rs && (
+              <button
+                onClick={() => setPersonalTab('aiHistory')}
+                className={`px-4 py-2 font-medium text-sm ${personalTab === 'aiHistory' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                AI 分析歷史
+              </button>
+            )}
+          </div>
+          {personalTab === 'edit' && (
+            <>
           <input
             className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
             type="text"
@@ -896,6 +949,30 @@ export default function Reflection() {
               {editingId ? "更新" : "儲存"}
             </button>
           </div>
+            </>
+          )}
+          {personalTab === 'history' && editingId && (
+            isCurrent5Rs ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">變更歷史</h4>
+                  <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">AI 分析歷史</h4>
+                  <AIAnalysisHistoryPanel targetId={editingId} title={title || currentEditingPersonal?.title} />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">變更歷史</h4>
+                <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} />
+              </div>
+            )
+          )}
+          {personalTab === 'aiHistory' && editingId && isCurrent5Rs && (
+            <AIAnalysisHistoryPanel targetId={editingId} title={title || currentEditingPersonal?.title} />
+          )}
         </div>
       </Modal>
       {/* 小組反思日誌 */}
@@ -904,6 +981,7 @@ export default function Reflection() {
         onClose={() => setTeamDailyModalOpen(false)}
         opacity={true}
         position={"justify-center items-center"}
+        custom="w-[80vw] max-w-5xl"
       >
         <button
           onClick={() => setTeamDailyModalOpen(false)}
@@ -911,7 +989,7 @@ export default function Reflection() {
         >
           <GrFormClose className="w-6 h-6" />
         </button>
-        <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+        <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
           <h3 className="font-bold text-base sm:text-lg mb-3 text-center">
             小組反思日誌
           </h3>
@@ -942,6 +1020,23 @@ export default function Reflection() {
               </ul>
             </motion.div>
           )}
+          {/* Tabs for team modal */}
+          <div className="flex border-b border-gray-200 mb-3">
+            <button
+              onClick={() => setTeamTab('edit')}
+              className={`px-4 py-2 font-medium text-sm ${teamTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              編輯日誌
+            </button>
+            <button
+              onClick={() => setTeamTab('history')}
+              className={`px-4 py-2 font-medium text-sm ${teamTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              變更歷史
+            </button>
+          </div>
+          {teamTab === 'edit' && (
+            <>
           <input
             className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
             type="text"
@@ -1017,6 +1112,11 @@ export default function Reflection() {
               {editingId ? "更新" : "儲存"}
             </button>
           </div>
+            </>
+          )}
+          {teamTab === 'history' && editingId && (
+            <AuditHistoryPanel targetType="daily_team" targetId={editingId} defaultOpen={true} />
+          )}
         </div>
       </Modal>
       {/* 檢視 */}
@@ -1076,19 +1176,47 @@ export default function Reflection() {
         position={"justify-center items-center"}
         custom="w-[60vw] max-w-none"
       >
-        <div>
-          <FiveRsReflectionForm
-            initialData={editingReflectionData}
-            onSave={handle5RsSave}
-            onCancel={handle5RsCancel}
-            isEditing={!!editingId}
-            title={title}
-            onTitleChange={setTitle}
-            attachFile={attachFile}
-            onFileChange={handleAddFileChange}
-            existingRecord={currentEditingPersonal}
-            onRemoveAttachment={handleRemovePersonalAttachment}
-          />
+        <button
+          onClick={() => handle5RsCancel()}
+          className="absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200"
+        >
+          <GrFormClose className="w-6 h-6" />
+        </button>
+        <div className="w-full h-[80vh] flex flex-col">
+          {/* Tabs for 5Rs modal */}
+          <div className="flex border-b border-gray-200 mb-3 flex-shrink-0">
+            <button
+              onClick={() => setFiveRsTab('edit')}
+              className={`px-4 py-2 font-medium text-sm ${fiveRsTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              編輯 5Rs 反思
+            </button>
+            <button
+              onClick={() => setFiveRsTab('history')}
+              className={`px-4 py-2 font-medium text-sm ${fiveRsTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              變更歷史
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {fiveRsTab === 'edit' && (
+              <FiveRsReflectionForm
+                initialData={editingReflectionData}
+                onSave={handle5RsSave}
+                onCancel={handle5RsCancel}
+                isEditing={!!editingId}
+                title={title}
+                onTitleChange={setTitle}
+                attachFile={attachFile}
+                onFileChange={handleAddFileChange}
+                existingRecord={currentEditingPersonal}
+                onRemoveAttachment={handleRemovePersonalAttachment}
+              />
+            )}
+            {fiveRsTab === 'history' && editingId && (
+              <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} />
+            )}
+          </div>
         </div>
       </Modal>
 
