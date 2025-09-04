@@ -9,7 +9,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
   const [showHistory, setShowHistory] = useState(false);
   const [input, setInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastData, setLastData] = useState(null); // store suggestions, tasks, citations
+  const [lastData, setLastData] = useState(null); // store suggestions, tasks
   const [aiTasksCount, setAiTasksCount] = useState(3);
   const greetedRef = useRef(false);
   const inputRef = useRef(null);
@@ -219,18 +219,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           </div>
         ))}
         {isSubmitting && <div className="text-xs text-gray-400">正在思考…</div>}
-        {/* Citations */}
-        {lastData?.citations?.length > 0 && (
-          <div className="mt-2 space-y-2">
-            <div className="text-xs text-gray-500">引用片段</div>
-            {lastData.citations.map((c, i) => (
-              <div key={i} className="text-xs p-2 bg-white border rounded">
-                <div className="font-medium text-gray-700">{c.title}</div>
-                <div className="text-gray-600 whitespace-pre-wrap break-words">{c.quote}</div>
-              </div>
-            ))}
-          </div>
-        )}
+
         {/* One-click tasks */}
         {(lastData?.suggestedTasks?.length > 0 || lastData?.suggestions?.length > 0) && (
           <div className="mt-2 space-y-1">
