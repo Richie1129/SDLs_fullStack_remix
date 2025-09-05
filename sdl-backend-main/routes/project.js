@@ -22,7 +22,7 @@ router.get('/', validateToken, controller.getAllProject);  // 添加 validateTok
 router.get('/mentor/:mentor', controller.getProjectsByMentor);
 router.get('/:projectId', controller.getProject);
 // Aggregated project content for AI assistant
-router.get('/:projectId/content', assistantController.getProjectContent);
+// router.get('/:projectId/content', validateToken, checkProjectViewingPermission, assistantController.getProjectContent);
 
 // Project chat history and turns (AssistantChat)
 router.get('/:projectId/chat', validateToken, checkProjectViewingPermission, chatTurnController.listByProject);

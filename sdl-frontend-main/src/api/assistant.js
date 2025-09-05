@@ -1,9 +1,9 @@
 import apiClient from './client';
 
-export const getProjectContent = async (projectId) => {
-  const res = await apiClient.get(`/projects/${projectId}/content`);
-  return res.data;
-};
+// export const getProjectContent = async (projectId) => {
+//   const res = await apiClient.get(`/projects/${projectId}/content`);
+//   return res.data;
+// };
 
 export const getGuidance = async ({ projectId, currentStage, currentSubStage, userMessage, useLLM, provider, history, tasksMode, tasksCount }) => {
   const res = await apiClient.post('/assistant/guidance', {
@@ -38,4 +38,4 @@ export const getChatHistory = async ({ projectId }) => {
   return res.data;
 };
 
-export default { getProjectContent, getGuidance, createChatTurn, completeChatTurn, getChatHistory };
+export default { getGuidance, createChatTurn, completeChatTurn, getChatHistory };
