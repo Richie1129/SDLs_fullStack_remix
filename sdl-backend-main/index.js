@@ -543,6 +543,7 @@ io.on("connection", (socket) => {
         try {
             const currentUser = getCurrentUser(socket, data);
             const deletedBy = currentUser?.username || "未知";
+            const reqCtx = { userId: socket.userId || user?.id, user: socket.user || user, headers: { 'user-agent': 'socket' }, ip: socket.handshake?.address };
             
             // 權限檢查
             const permissionCheck = await checkSocketWritePermission(getCurrentUserId(socket, data), projectId, socket);
@@ -554,12 +555,11 @@ io.on("connection", (socket) => {
                 });
                 return;
             }
-            
-            const column = await Column.findOne({
-                where: {
-                    id: columnIndex
-                }
-            });
+
+            // 以任務自身的 columnId 為準，避免前端傳入的是索引而非 ID
+            const taskRow = await Task.findByPk(cardData.id);
+            let columnIdToUse = taskRow?.columnId || columnIndex;
+            const column = columnIdToUse ? await Column.findByPk(columnIdToUse) : null;
 
             if (column) {
                 console.log(`🗑️ 開始刪除任務 ${cardData.id} 及其相關檔案...`);
@@ -602,34 +602,40 @@ io.on("connection", (socket) => {
                     console.error('⚠️ 任務變更日誌記錄失敗，但繼續處理刪除:', logError.message);
                 }
 
-                // Filter out the task ID from the tasks array
-                const updatedTasks = column.task.filter(taskId => taskId !== cardData.id);
+                // Filter out the task ID from the tasks array（以數值比較避免型別不一致）
+                const updatedTasks = (Array.isArray(column.task) ? column.task : [])
+                    .filter(taskId => Number(taskId) !== Number(cardData.id));
 
                 // Update the column with the new tasks array
                 await column.update({ task: updatedTasks });
 
                 // Step 2: Destroy the task in the Task table after updating the column
-                const updateTask = await Task.destroy({
+                const deletedRowCount = await Task.destroy({
                     where: {
                         id: cardData.id
                     },
                     individualHooks: true,
                     req: reqCtx
                 });
-                await Project.update({
-                    id: projectId
-                }, {
-                    where: {
-                        id: projectId
-                    },
-                    individualHooks: true,
-                    req: reqCtx
-                });
                 
-                console.log(`✅ 任務 ${cardData.id} 刪除完成`);
+                console.log(`✅ 任務 ${cardData.id} 刪除完成，影響 ${deletedRowCount} 行`);
+                
+                // 更新專案的 updatedAt 時間戳
+                await Project.update(
+                    { updatedAt: new Date() },
+                    {
+                        where: { id: projectId },
+                        individualHooks: true,
+                        req: reqCtx
+                    }
+                );
                 
                 // 廣播任務刪除事件與活動更新
-                io.to(projectId).emit("taskItem", updateTask);
+                io.to(projectId).emit("taskDeleted", {
+                    taskId: cardData.id,
+                    columnId: columnIdToUse,
+                    deletedBy: deletedBy
+                });
                 io.to(projectId).emit("activityUpdate", {
                     type: 'delete',
                     taskId: cardData.id,

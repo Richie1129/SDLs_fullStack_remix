@@ -9,10 +9,12 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
   const [showHistory, setShowHistory] = useState(false);
   const [input, setInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastData, setLastData] = useState(null); // store suggestions, tasks, citations
+  const [lastData, setLastData] = useState(null); // store suggestions, tasks
+  const [showQuickTasks, setShowQuickTasks] = useState(false);
   const greetedRef = useRef(false);
   const inputRef = useRef(null);
   const lastTurnIdRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   const handleFormSubmit = (e) => {
     try { e?.preventDefault?.(); } catch {}
@@ -71,6 +73,31 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
     })();
   }, [autoGreet, projectId, currentStage, currentSubStage, stageKey]);
 
+  // 改善的滾輪體驗 - 參考 WhatsApp/Telegram 的平滑滾動
+  const scrollToBottom = (smooth = true) => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto'
+      });
+    }
+  };
+
+  // 監聽 messages 變化，自動滾輪到底部
+  useEffect(() => {
+    // 新訊息出現時使用平滑滾動
+    const timer = setTimeout(() => scrollToBottom(true), 100);
+    return () => clearTimeout(timer);
+  }, [messages, isSubmitting]);
+
+  // 監聽任務建議變化，也需要滾動（因為內容高度改變）
+  useEffect(() => {
+    if (lastData?.suggestedTasks?.length > 0 || lastData?.suggestions?.length > 0) {
+      const timer = setTimeout(() => scrollToBottom(true), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [lastData]);
+
   const send = async () => {
     const inputValue = inputRef.current?.value || '';
     if (!inputValue.trim()) return;
@@ -81,6 +108,8 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
     }
     
     try { inputRef.current?.focus(); } catch {}
+    // 使用者輸入後立即滾動到輸入位置（無動畫，快速響應）
+    scrollToBottom(false);
     try {
       setIsSubmitting(true);
       // create chat turn with user message
@@ -118,6 +147,20 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
       setIsSubmitting(false);
     }
   };
+
+  const ThinkingIndicator = () => {
+    const [dots, setDots] = useState(0); 
+    useEffect(() => {
+      const id = setInterval(() => setDots((d) => (d + 1) % 4), 500);
+      return () => clearInterval(id);
+    }, []);
+    return (
+      <div className="text-xs text-gray-400" aria-live="polite" aria-busy>
+        {`正在思考${'.'.repeat(dots)}`}
+      </div>
+    );
+  };
+
 
   const Container = ({ children }) => (
     embedded ? (
@@ -169,7 +212,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           </button>
         )}
       </div>
-      <div className={`p-3 space-y-2 ${embedded ? 'flex-1 min-h-0' : 'h-64'} overflow-y-auto`}>
+      <div ref={chatContainerRef} className={`p-3 space-y-2 ${embedded ? 'flex-1 min-h-0' : 'h-64'} overflow-y-auto`}>
         {showHistory && historyMessages.length > 0 && (
           <>
             {historyMessages.map((m, idx) => (
@@ -192,37 +235,35 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
             </div>
           </div>
         ))}
-        {isSubmitting && <div className="text-xs text-gray-400">正在思考…</div>}
-        {/* Citations */}
-        {lastData?.citations?.length > 0 && (
-          <div className="mt-2 space-y-2">
-            <div className="text-xs text-gray-500">引用片段</div>
-            {lastData.citations.map((c, i) => (
-              <div key={i} className="text-xs p-2 bg-white border rounded">
-                <div className="font-medium text-gray-700">{c.title}</div>
-                <div className="text-gray-600 whitespace-pre-wrap break-words">{c.quote}</div>
-              </div>
-            ))}
-          </div>
-        )}
-        {/* One-click tasks */}
+        {isSubmitting && <ThinkingIndicator />}
+
+        {/* Collapsible quick tasks */}
         {(lastData?.suggestedTasks?.length > 0 || lastData?.suggestions?.length > 0) && (
-          <div className="mt-2 space-y-1">
-            <div className="text-xs text-gray-500">快速建立任務卡</div>
-            {(lastData?.suggestedTasks || []).map((t, i) => (
-              <div key={`t-${i}`} className="flex items-center justify-between gap-2 text-xs p-2 bg-gray-50 border rounded">
-                <div className="truncate"><span className="font-medium">{t.title}</span></div>
-                <button className="px-2 py-1 bg-teal-600 text-white rounded" onClick={() => handleCreateTaskFromSuggestion(t)}>新增</button>
+          <div className="mt-2">
+            <button 
+              onClick={() => setShowQuickTasks(!showQuickTasks)}
+              className="w-full flex items-center justify-between text-xs text-gray-600 hover:text-gray-800 p-2 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+            >
+              <span>快速建立任務卡</span>
+              <span className={`transform transition-transform ${showQuickTasks ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+            {showQuickTasks && (
+              <div className="mt-1 space-y-1">
+                {(lastData?.suggestedTasks || []).map((t, i) => (
+                  <div key={`t-${i}`} className="flex items-center justify-between gap-2 text-xs p-2 bg-gray-50 border rounded">
+                    <div className="truncate"><span className="font-medium">{t.title}</span></div>
+                    <button className="px-2 py-1 bg-teal-600 text-white rounded" onClick={() => handleCreateTaskFromSuggestion(t)}>新增</button>
+                  </div>
+                ))}
+                {/* Fallback from suggestions (string) */}
+                {(!lastData?.suggestedTasks || lastData?.suggestedTasks?.length === 0) && (lastData?.suggestions || []).map((s, i) => (
+                  <div key={`s-${i}`} className="flex items-center justify-between gap-2 text-xs p-2 bg-gray-50 border rounded">
+                    <div className="truncate"><span className="font-medium">{typeof s === 'string' ? s.slice(0, 24) : 'AI 建議'}</span></div>
+                    <button className="px-2 py-1 bg-teal-600 text-white rounded" onClick={() => handleCreateTaskFromSuggestion({ title: 'AI 建議', content: s })}>新增</button>
+                  </div>
+                ))}
               </div>
-            ))}
-            {/* Fallback from suggestions (string) */}
-            {(!lastData?.suggestedTasks || lastData?.suggestedTasks?.length === 0) && (lastData?.suggestions || []).map((s, i) => (
-              <div key={`s-${i}`} className="flex items-center justify-between gap-2 text-xs p-2 bg-gray-50 border rounded">
-                <div className="truncate"><span className="font-medium">{typeof s === 'string' ? s.slice(0, 24) : 'AI 建議'}</span></div>
-                <button className="px-2 py-1 bg-teal-600 text-white rounded" onClick={() => handleCreateTaskFromSuggestion({ title: 'AI 建議', content: s })}>新增</button>
-              </div>
-            ))}
-            
+            )}
           </div>
         )}
 
@@ -255,7 +296,8 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           </div>
         )}
       </div>
-      <form onSubmit={handleFormSubmit} className="p-2 border-t flex gap-2">
+      <form onSubmit={handleFormSubmit} className="p-2 border-t">
+        <div className="flex gap-2">
         <input
           ref={inputRef}
           className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
@@ -268,6 +310,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           type="submit"
           disabled={isSubmitting}
         >{isSubmitting ? '送出中...' : '送出'}</button>
+        </div>
       </form>
     </Container>
   );

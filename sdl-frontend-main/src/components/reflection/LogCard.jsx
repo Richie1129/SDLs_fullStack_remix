@@ -1,15 +1,19 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AiOutlineCloudDownload, AiOutlineRobot } from 'react-icons/ai';
+import { FiTrash2 } from 'react-icons/fi';
 import { formatTime } from '../../utils/timeUtils';
 import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.js';
 import FileDownload from 'js-file-download';
+import { getAuditEvents } from '@/api/audit.js';
+import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
 
 const LogCard = ({ 
   item, 
   index, 
   isActive = false,
   onEdit,
+  onDelete,
   onView5Rs,
   onRequestAIAnalysis,
   showAIAnalysis = true,
@@ -17,6 +21,10 @@ const LogCard = ({
   SPRING_OPTIONS
 }) => {
   const is5Rs = is5RsFormat(item.content);
+  const inferredTargetType = useMemo(() => (item && Object.prototype.hasOwnProperty.call(item, 'creator')) ? 'daily_team' : 'daily_personal', [item]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyItems, setHistoryItems] = useState([]);
   
   const handleDownload = () => {
     if (item.fileName && item.fileUrl) {
@@ -81,6 +89,25 @@ const LogCard = ({
     );
   };
 
+  const toggleHistory = async () => {
+    const next = !historyOpen;
+    setHistoryOpen(next);
+    if (next && historyItems.length === 0) {
+      try {
+        setHistoryLoading(true);
+        // Fetch both create and update events, newest first (server default)
+        const events = await getAuditEvents({ targetType: inferredTargetType, targetId: item.id, limit: 50 });
+        setHistoryItems(events || []);
+      } catch (_) {
+        setHistoryItems([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+  };
+
+  const renderDiff = (ev) => extractAuditDiffLines(ev);
+
   return (
     <motion.div
       key={index}
@@ -98,11 +125,24 @@ const LogCard = ({
           <h5 className="text-lg sm:text-xl font-bold text-customgreen py-2">
             {item.title}
           </h5>
-          {is5Rs && (
-            <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
-              5Rs 反思
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {is5Rs && (
+              <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
+                5Rs 反思
+              </span>
+            )}
+            {typeof onDelete === 'function' && (
+              <button
+                type="button"
+                onClick={() => onDelete(item)}
+                title="刪除這筆日誌"
+                aria-label="刪除日誌"
+                className="p-1 rounded text-gray-400 hover:text-red-600 transition-colors"
+              >
+                <FiTrash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content */}
@@ -128,28 +168,28 @@ const LogCard = ({
             </div>
           )}
 
-          {/* Dates */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
-            <p
-              className="text-sm sm:text-base text-customgreen font-bold"
-              title={formatTime(item.createdAt, "full")}
-            >
-              建立日期: {formatTime(item.createdAt, "date")}
+        {/* Dates */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
+          <p
+            className="text-sm sm:text-base text-customgreen font-bold"
+            title={formatTime(item.createdAt, "full")}
+          >
+            建立日期: {formatTime(item.createdAt, "date")}
+          </p>
+          {showCreator && (
+            <p className="text-xs sm:text-sm text-gray-500">
+              建立者: {item.creator}
             </p>
-            {showCreator && (
-              <p className="text-xs sm:text-sm text-gray-500">
-                建立者: {item.creator}
-              </p>
-            )}
-            {item.updatedAt && item.updatedAt !== item.createdAt && (
-              <p
-                className="text-xs sm:text-sm text-gray-500"
-                title={formatTime(item.updatedAt, "full")}
-              >
-                更新: {formatTime(item.updatedAt, "relative")}
-              </p>
-            )}
-          </div>
+          )}
+          {item.updatedAt && item.updatedAt !== item.createdAt && (
+            <p
+              className="text-xs sm:text-sm text-gray-500"
+              title={formatTime(item.updatedAt, "full")}
+            >
+              更新: {formatTime(item.updatedAt, "relative")}
+            </p>
+          )}
+        </div>
 
           {/* AI Analysis Button for 5Rs */}
           {showAIAnalysis && is5Rs && (() => {

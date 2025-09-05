@@ -75,3 +75,15 @@ export const removeTeamDailyAttachment = async (id) => {
   const response = await apiClient.delete(`/daily/team/${id}/attachment`);
   return response.data;
 };
+
+// 刪除個人日誌
+export const deletePersonalDaily = async (id) => {
+  const response = await apiClient.delete(`/daily/personal/${id}`);
+  return response.data;
+};
+
+// 刪除小組日誌
+export const deleteTeamDaily = async (id) => {
+  const response = await apiClient.delete(`/daily/team/${id}`);
+  return response.data;
+};

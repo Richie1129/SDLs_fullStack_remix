@@ -1,58 +1,70 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Gemini API 呼叫函數（採用與 llm_5R 相同的 SDK 與參數風格）
-async function callGeminiAPI(prompt) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error('GEMINI_API_KEY not found in environment variables');
+async function callGeminiAPI(prompt, options = {}) {
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: modelName });
+  // Build key candidates: primary then secondary
+  const primaryKey = process.env.GEMINI_API_KEY;
+  const secondaryKey = process.env.GEMINI_API_KEY_2;
+  const keyCandidates = [primaryKey, secondaryKey].filter(Boolean);
 
-    const generationConfig = {
-      temperature: 0.7,
-      topP: 1,
-      topK: 1,
-      maxOutputTokens: 2048,
-    };
-
-    const safetySettings = [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-    ];
-
-    const systemInstruction = [
-      '你是一位友善、專業且循循善誘的專案導師（Project Mentor）。',
-      '溝通風格：主動關懷、鼓勵性、啟發式提問；避免直接給答案，提供明確且可執行的下一步。',
-      '核心價值：幫助學生理解「現在在哪裡」、「該做什麼」以及「下一步往哪走」。',
-      '請全程使用繁體中文回覆。',
-      '',
-      '請根據提供的上下文輸出嚴格 JSON（不可含 Markdown 或多餘文字），格式：',
-      '{',
-      '  "message": string,',
-      '  "suggestions": string[],',
-      '  "suggestedTasks": [{"title": string, "content": string, "labels"?: string[]}],',
-      '  "citations": [{"type": "rubric"|"submit", "title": string, "quote": string}]',
-      '}',
-      '規則：訊息先肯定，再聚焦子階段目標，最後給路徑；建議具體可執行且帶啟發式提問。',
-      '另外：避免輸出題為「補齊缺少欄位/檔案」或類似語意的任務卡；若有缺失，僅在 suggestions 文字列出提醒，不要放入 suggestedTasks。'
-    ].join('\n');
-
-    const result = await model.generateContent({
-      contents: [{ parts: [{ text: systemInstruction + '\n\n上下文：' + prompt }] }],
-      generationConfig,
-      safetySettings,
-    });
-
-    const text = result?.response?.text?.() || result?.response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return { success: true, provider: modelName, content: text };
-  } catch (error) {
-    console.error('Gemini API 呼叫失敗:', error?.response?.data || error.message);
-    throw new Error(`Gemini API 呼叫失敗: ${error?.response?.data?.error?.message || error.message}`);
+  if (keyCandidates.length === 0) {
+    throw new Error('GEMINI_API_KEY 或 GEMINI_API_KEY_2 未設定');
   }
+
+  const generationConfig = {
+    temperature: 0.7,
+    topP: 1,
+    topK: 1,
+    maxOutputTokens: 2048,
+    ...(options.generationConfig || {}),
+  };
+
+  const safetySettings = options.safetySettings || [
+    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+  ];
+
+  const systemInstruction = options.systemInstruction
+    || '你是專業的AI助手，請使用繁體中文回覆用戶的問題。';
+
+  let lastError = null;
+
+  for (let i = 0; i < keyCandidates.length; i++) {
+    const apiKey = keyCandidates[i];
+    const keyAlias = i === 0 ? 'GEMINI_API_KEY' : 'GEMINI_API_KEY_2';
+    try {
+      console.log(`[Gemini] 使用金鑰別名: ${keyAlias}`);
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: modelName });
+
+      const result = await model.generateContent({
+        contents: [{ parts: [{ text: systemInstruction + '\n\n上下文：' + prompt }] }],
+        generationConfig,
+        safetySettings,
+      });
+
+      const text = result?.response?.text?.() || result?.response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!text) throw new Error('空回應');
+      console.log(`[Gemini] 呼叫成功（模型: ${modelName}，金鑰: ${keyAlias}）`);
+      return { success: true, provider: modelName, content: text, usedKey: keyAlias };
+    } catch (error) {
+      // Keep the last error, then try next key if available
+      const errMsg = error?.response?.data?.error?.message || error?.message || '未知錯誤';
+      console.error(`Gemini API 呼叫失敗（${keyAlias}）:`, error?.response?.data || errMsg);
+      lastError = new Error(`使用 ${keyAlias} 失敗: ${errMsg}`);
+      if (i + 1 < keyCandidates.length) {
+        const nextAlias = i + 1 === 0 ? 'GEMINI_API_KEY' : 'GEMINI_API_KEY_2';
+        console.log(`[Gemini] 嘗試備援金鑰: ${nextAlias}`);
+      }
+      // Continue loop to try secondary key if exists
+    }
+  }
+
+  // All keys failed
+  throw new Error(`Gemini API 呼叫失敗（含備援失敗）: ${lastError?.message || '無可用金鑰或未知錯誤'}`);
 }
 
 module.exports = { callGeminiAPI };

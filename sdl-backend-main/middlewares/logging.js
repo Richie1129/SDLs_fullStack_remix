@@ -14,8 +14,9 @@ const logger = pino({
 
 const httpLogger = pinoHttp({
   logger,
-  customProps: (req, res) => ({ requestId: req.id }),
+  // Ensure reqId is included in chindings without using customProps
+  quietReqLogger: true,
+  // Avoid customProps to prevent incompatibilities with logger stringify symbols.
 });
 
 module.exports = { logger, httpLogger };
-

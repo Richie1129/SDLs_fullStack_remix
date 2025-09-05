@@ -14,6 +14,7 @@ import Swal from "sweetalert2";
 import { Context } from '../../context/context';
 import { formatTime } from '../../utils/timeUtils';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
+import { recordObservationEvent } from '../../api/usage';
 
 export default function Protfolio() {
     const { currentStageIndex } = useContext(Context);
@@ -272,6 +273,17 @@ export default function Protfolio() {
                                                                 setActiveItemId(item.id);
                                                                 setFolderModalOpen(true);
                                                                 setModalData(item);
+                                                                // Record observation click without blocking UI
+                                                                if (isObservationMode) {
+                                                                    try {
+                                                                        recordObservationEvent({
+                                                                            targetType: 'SUBMISSION',
+                                                                            targetId: item.id,
+                                                                            targetName: stageDescriptions[item.stage] || item.stage,
+                                                                            projectId,
+                                                                        });
+                                                                    } catch (_) { /* noop */ }
+                                                                }
                                                             }}
                                                             className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 relative group ${
                                                                 activeItemId === item.id

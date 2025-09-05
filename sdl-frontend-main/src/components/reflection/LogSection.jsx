@@ -14,6 +14,7 @@ const LogSection = ({
   emptyStateConfig = {},
   buttons = [],
   onEdit,
+  onDelete,
   onView5Rs,
   onRequestAIAnalysis,
   showAIAnalysis = true,
@@ -46,6 +47,7 @@ const LogSection = ({
       <LogCarousel
         items={items}
         onEdit={onEdit}
+        onDelete={onDelete}
         onView5Rs={onView5Rs}
         onRequestAIAnalysis={onRequestAIAnalysis}
         showAIAnalysis={showAIAnalysis}

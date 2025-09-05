@@ -20,6 +20,7 @@ import Adding_icon from "../../assets/AnimationAddingNode.json";
 import Timer from './components/Timer';
 import Idea_development from './components/Idea_development';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
+import { recordObservationEvent } from '../../api/usage';
 
 export default function IdeaWall() {
     const container = useRef(null);
@@ -227,8 +228,20 @@ export default function IdeaWall() {
         network?.on("selectNode", ({ nodes: selectNodes }) => {
             setUpdateNodeModalOpen(true);
             let nodeId = selectNodes[0];
-            let nodeInfo = nodes.filter(item => item.id === nodeId)
-            setSelectNodeInfo(nodeInfo[0])
+            let nodeInfo = nodes.filter(item => item.id === nodeId);
+            const info = nodeInfo && nodeInfo[0];
+            // Record observation click without blocking UI
+            if (isObservationMode && nodeId) {
+                try {
+                    recordObservationEvent({
+                        targetType: 'IDEA_WALL_NODE',
+                        targetId: nodeId,
+                        targetName: info?.title,
+                        projectId,
+                    });
+                } catch (_) { /* noop */ }
+            }
+            setSelectNodeInfo(info)
         })
 
         return () => {

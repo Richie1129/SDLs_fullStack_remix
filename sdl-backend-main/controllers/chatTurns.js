@@ -1,4 +1,5 @@
 const ChatTurn = require('../models/chat_turn');
+const Project = require('../models/project');
 
 // GET /api/projects/:projectId/chat
 exports.listByProject = async (req, res) => {
@@ -20,10 +21,21 @@ exports.listByProject = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { userId = null, username = null, userContent = null, assistantContent = null, assistantUsername = 'AI 導師' } = req.body || {};
+    const { userId = null, username = null, userContent = null, assistantContent = null, assistantUsername = 'AI 導師', projectName: bodyProjectName = null } = req.body || {};
+
+    let projectName = bodyProjectName;
+    if (!projectName && projectId) {
+      try {
+        const p = await Project.findByPk(projectId, { attributes: ['name'] });
+        projectName = p?.name || null;
+      } catch (_) {
+        projectName = null;
+      }
+    }
 
     const created = await ChatTurn.create({
       projectId: parseInt(projectId, 10),
+      projectName,
       userId: userId ? parseInt(userId, 10) : null,
       username,
       userContent,
@@ -52,4 +64,3 @@ exports.update = async (req, res) => {
     res.status(500).json({ message: '更新對話回合時發生錯誤', error: error.message });
   }
 };
-

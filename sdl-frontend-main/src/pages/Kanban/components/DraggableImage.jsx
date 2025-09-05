@@ -35,6 +35,8 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
   const [screenWidth, setScreenWidth] = useState(window.innerWidth); // 新增螢幕寬度狀態用於響應式設計
   const [isMinimized, setIsMinimized] = useState(false); // 新增最小化狀態
   const [activeTab, setActiveTab] = useState('science'); // 'science' | 'mentor'
+  // 控制「自主學習助手」是否已由使用者手動啟動，避免自動執行耗用 Token
+  const [mentorStarted, setMentorStarted] = useState(false);
   
   const imgRef = useRef(null);
   const dragStateRef = useRef({ offsetX: 0, offsetY: 0, containerRect: null, imgW: 0, imgH: 0, lastLeft: 0, lastTop: 0 });
@@ -43,6 +45,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
   const chatClosedByDragRef = useRef(false);
   const chatEndRef = useRef(null);
   const messageTimeoutRef = useRef(null);
+  const prevTabRef = useRef('science');
 
   const headers = {
     Authorization: `Bearer ${API_KEY}`,
@@ -114,6 +117,14 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       document.body.style.overflow = 'auto';
     };
   }, [isFullscreen]);
+
+  // 每次從其他分頁切回「自主學習助手」時，強制要求重新點擊開始，避免自動觸發推理
+  useEffect(() => {
+    if (activeTab === 'mentor' && prevTabRef.current !== 'mentor') {
+      setMentorStarted(false);
+    }
+    prevTabRef.current = activeTab;
+  }, [activeTab]);
 
   const handleImageClick = () => {
     if (dragIntentRef.current.moved) return; // 拖曳後不觸發點擊
@@ -246,6 +257,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       // 正在拖曳時關閉已開啟的聊天
       if (!chatClosedByDragRef.current) {
         setShowChat(false);
+        setMentorStarted(false);
         chatClosedByDragRef.current = true;
       }
       // 拖曳中持續隱藏提示泡泡
@@ -942,10 +954,10 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
                   className={`px-3 py-1 rounded-full text-sm ${activeTab === 'science' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'}`}
                   onClick={() => setActiveTab('science')}
                 >🧑‍🔬 科學助手</button>
-                <button
+                {/* <button
                   className={`px-3 py-1 rounded-full text-sm ${activeTab === 'mentor' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'}`}
                   onClick={() => setActiveTab('mentor')}
-                >🧑‍🏫 專案導師</button>
+                >🧑‍🏫 自主學習助手</button> */}
               </div>
 
               {/* 右側控制按鈕區域 */}
@@ -961,7 +973,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
 
                 {/* 關閉按鈕 */}
                 <button 
-                  onClick={() => setShowChat(false)} 
+                  onClick={() => { setShowChat(false); setMentorStarted(false); }} 
                   className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[16px] font-medium transition-all bg-transparent text-[#dc3545] hover:bg-[#f8d7da] hover:scale-110"
                   title="關閉聊天室"
                 >
@@ -975,15 +987,33 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
               className={`chat-content ${isMinimized ? 'hidden' : ''} flex-1 overflow-y-auto ${isFullscreen ? (screenWidth < 768 ? 'p-4' : 'p-6') : (screenWidth < 768 ? 'p-3' : 'p-5')} bg-[#fdfdfd]`}
             >
               {activeTab === 'mentor' ? (
-                <div className="h-full">
-                  <AssistantChat
-                    embedded
-                    projectId={projectId}
-                    currentStage={currentStage}
-                    currentSubStage={currentSubStage}
-                    autoGreet
-                  />
-                </div>
+                mentorStarted ? (
+                  <div className="h-full">
+                    <AssistantChat
+                      embedded
+                      projectId={projectId}
+                      currentStage={currentStage}
+                      currentSubStage={currentSubStage}
+                      autoGreet
+                    />
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center">
+                    <div className={`bg-white border border-[#e9ecef] rounded-xl ${screenWidth < 768 ? 'p-4' : 'p-6'} text-center shadow-[0_4px_16px_rgba(0,0,0,0.06)] max-w-[520px]`}> 
+                      <div className="text-[15px] font-semibold text-[#343a40] mb-2">啟動前確認</div>
+                      <div className="text-[13px] text-[#6c757d] mb-4">
+                        為了避免在科學助手與自主學習助手之間切換時自動觸發推理、耗用 LLM Token，切換到「自主學習助手」後不會自動開始。
+                        請點擊下方按鈕以開始與自主學習助手互動。
+                      </div>
+                      <button
+                        className="px-4 py-2 bg-[#5BA491] text-white rounded-lg border-0 cursor-pointer text-sm font-semibold shadow-[0_2px_8px_rgba(91,164,145,0.3)] hover:bg-[#4a9076] hover:-translate-y-px transition-all"
+                        onClick={() => setMentorStarted(true)}
+                      >
+                        詢問自主學習助手後開始
+                      </button>
+                    </div>
+                  </div>
+                )
               ) : isLoadingHistory ? (
                 <div className="flex items-center justify-center h-full text-[#6c757d] text-[14px]">
                   <div className="flex items-center gap-2">

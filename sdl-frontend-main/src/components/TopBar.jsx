@@ -246,7 +246,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     return (
       <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2 flex-shrink-0">
         <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-2xl">
-          <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-14 w-auto" />
+          <img src="/SDLS_Logo_2.png" alt="Logo" className="h-14 w-auto" />
         </Link>
         <div className="flex items-center">
           {/* 跨班觀摩按鈕 - 只有教師可見 */}
@@ -282,7 +282,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
         <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-lg sm:text-2xl">
-          <img src="/SDLS_LOGOO.jpg" alt="Logo" className="h-10 sm:h-14 w-auto" />
+          <img src="/SDLS_Logo_2.png" alt="Logo" className="h-10 sm:h-14 w-auto" />
         </Link>
         {!isOverviewPage && (
         <p className="font-bold text-sm sm:text-xl text-teal-900 truncate">{projectInfo.name || "專案名稱"}</p>

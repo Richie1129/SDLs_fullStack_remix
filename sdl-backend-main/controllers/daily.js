@@ -73,6 +73,15 @@ exports.createPersonalDaily = async (req, res) => {
                     mimeType: file.mimeType,        // 檔案類型
                     fileSize: file.size             // 檔案大小
                         }, { req }).then(async (created) => {
+                            // 檢查是否為 5Rs 反思，若是則在 after 中附上 5Rs 初始值（僅建立時）
+                            let fiveRsAfter = null;
+                            try {
+                                const parsed = JSON.parse(content || '{}');
+                                if (parsed && parsed.type === '5Rs_reflection' && parsed.data) {
+                                    fiveRsAfter = parsed.data;
+                                }
+                            } catch (_) {}
+
                             await logAudit(req, {
                                 action: 'DAILY_PERSONAL_CREATE',
                                 targetType: 'daily_personal',
@@ -82,7 +91,8 @@ exports.createPersonalDaily = async (req, res) => {
                                     after: {
                                         title: summarizeText(title || ''),
                                         content: summarizeText(content || ''),
-                                        file: { name: file.originalName || file.fileName, size: file.size, mimeType: file.mimeType }
+                                        file: { name: file.originalName || file.fileName, size: file.size, mimeType: file.mimeType },
+                                        ...(fiveRsAfter ? { fiveRs: fiveRsAfter } : {})
                                     }
                                 })
                             });
@@ -102,12 +112,21 @@ exports.createPersonalDaily = async (req, res) => {
             title: title,
             content: content,
             }, { req });
+            // 檢查是否為 5Rs 反思，若是則在 after 中附上 5Rs 初始值（僅建立時）
+            let fiveRsAfterNoFile = null;
+            try {
+                const parsed = JSON.parse(content || '{}');
+                if (parsed && parsed.type === '5Rs_reflection' && parsed.data) {
+                    fiveRsAfterNoFile = parsed.data;
+                }
+            } catch (_) {}
+
             await logAudit(req, {
                 action: 'DAILY_PERSONAL_CREATE',
                 targetType: 'daily_personal',
                 targetId: created.id,
                 projectId: parseInt(projectId, 10) || null,
-                metadata: clampMetadataSize({ after: { title: summarizeText(title || ''), content: summarizeText(content || '') } })
+                metadata: clampMetadataSize({ after: { title: summarizeText(title || ''), content: summarizeText(content || ''), ...(fiveRsAfterNoFile ? { fiveRs: fiveRsAfterNoFile } : {}) } })
             });
             console.log('✅ 創建個人日誌成功 (無檔案)');
         }
@@ -181,6 +200,23 @@ exports.createTeamDaily = async (req, res) => {
                     fileUrl: file.url,              // MinIO URL
                     mimeType: file.mimeType,        // 檔案類型
                     fileSize: file.size             // 檔案大小
+                        }).then(async (created) => {
+                            try {
+                                await logAudit(req, {
+                                    action: 'DAILY_TEAM_CREATE',
+                                    targetType: 'daily_team',
+                                    targetId: created.id,
+                                    projectId: parseInt(projectId, 10) || null,
+                                    metadata: clampMetadataSize({
+                                        after: {
+                                            title: summarizeText(title || ''),
+                                            content: summarizeText(content || ''),
+                                            file: { name: file.originalName || file.fileName, size: file.size, mimeType: file.mimeType }
+                                        }
+                                    })
+                                });
+                            } catch (_) {}
+                            return created;
                         });
             });
 
@@ -190,13 +226,22 @@ exports.createTeamDaily = async (req, res) => {
     } else {
             console.log('📝 無檔案上傳，創建純文字日誌');
             // 沒有檔案上傳
-        await Daily_team.create({
+        const created = await Daily_team.create({
             userId: userId,
             projectId: projectId,
             title: title,
             content: content,
             creator: creator,
             });
+            try {
+                await logAudit(req, {
+                    action: 'DAILY_TEAM_CREATE',
+                    targetType: 'daily_team',
+                    targetId: created.id,
+                    projectId: parseInt(projectId, 10) || null,
+                    metadata: clampMetadataSize({ after: { title: summarizeText(title || ''), content: summarizeText(content || '') } })
+                });
+            } catch (_) {}
             console.log('✅ 創建團隊日誌成功 (無檔案)');
         }
 
@@ -250,6 +295,28 @@ exports.updatePersonalDaily = async (req, res) => {
             };
 
             await daily.update(updateData, { req });
+
+            // 針對 5Rs 反思：解析 before/after，產出欄位級差異
+            let fiveRsDiff = null;
+            try {
+                const beforeJson = JSON.parse(before.content || '{}');
+                const afterJson = JSON.parse(content || '{}');
+                if ((beforeJson && beforeJson.type === '5Rs_reflection') || (afterJson && afterJson.type === '5Rs_reflection')) {
+                    const beforeData = (beforeJson && beforeJson.data) || {};
+                    const afterData = (afterJson && afterJson.data) || {};
+                    const keys = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
+                    const changed = {};
+                    for (const k of keys) {
+                        const b = beforeData?.[k] ?? '';
+                        const a = afterData?.[k] ?? '';
+                        if (String(b) !== String(a)) {
+                            changed[k] = { before: String(b), after: String(a) };
+                        }
+                    }
+                    if (Object.keys(changed).length > 0) fiveRsDiff = changed;
+                }
+            } catch (_) {}
+
             await logAudit(req, {
                 action: 'DAILY_PERSONAL_UPDATE',
                 targetType: 'daily_personal',
@@ -263,7 +330,8 @@ exports.updatePersonalDaily = async (req, res) => {
                         file: {
                             before: { name: before.fileName || null, size: before.fileSize || null, mimeType: before.mimeType || null },
                             after: { name: firstFile.fileName, size: firstFile.size, mimeType: firstFile.mimeType }
-                        }
+                        },
+                        ...(fiveRsDiff ? { fiveRs: fiveRsDiff } : {})
                     }
                 })
             });
@@ -304,8 +372,30 @@ exports.updatePersonalDaily = async (req, res) => {
             // 沒有檔案上傳，只更新文字內容
             console.log('📝 無檔案上傳，僅更新文字內容');
             let updateData = { title, content };
-            
+
             await daily.update(updateData, { req });
+
+            // 針對 5Rs 反思：解析 before/after，產出欄位級差異
+            let fiveRsDiff2 = null;
+            try {
+                const beforeJson = JSON.parse(before.content || '{}');
+                const afterJson = JSON.parse(content || '{}');
+                if ((beforeJson && beforeJson.type === '5Rs_reflection') || (afterJson && afterJson.type === '5Rs_reflection')) {
+                    const beforeData = (beforeJson && beforeJson.data) || {};
+                    const afterData = (afterJson && afterJson.data) || {};
+                    const keys = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
+                    const changed = {};
+                    for (const k of keys) {
+                        const b = beforeData?.[k] ?? '';
+                        const a = afterData?.[k] ?? '';
+                        if (String(b) !== String(a)) {
+                            changed[k] = { before: String(b), after: String(a) };
+                        }
+                    }
+                    if (Object.keys(changed).length > 0) fiveRsDiff2 = changed;
+                }
+            } catch (_) {}
+
             await logAudit(req, {
                 action: 'DAILY_PERSONAL_UPDATE',
                 targetType: 'daily_personal',
@@ -315,7 +405,8 @@ exports.updatePersonalDaily = async (req, res) => {
                     changed: Object.keys(updateData),
                     diff: {
                         title: { before: summarizeText(before.title || ''), after: summarizeText(title || '') },
-                        content: { before: summarizeText(before.content || '') },
+                        content: { before: summarizeText(before.content || ''), after: summarizeText(content || '') },
+                        ...(fiveRsDiff2 ? { fiveRs: fiveRsDiff2 } : {})
                     }
                 })
             });
@@ -528,9 +619,10 @@ exports.deletePersonalDaily = async (req, res) => {
         console.log('標題:', daily.title);
         
         // 先清理 MinIO 檔案
+        let fileNames = [];
         try {
             const { extractDailyFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
-            const fileNames = extractDailyFileNames(daily);
+            fileNames = extractDailyFileNames(daily);
             
             if (fileNames.length > 0) {
                 console.log(`📁 個人日誌 ${id} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);
@@ -580,9 +672,10 @@ exports.deleteTeamDaily = async (req, res) => {
         console.log('創建者:', daily.creator);
         
         // 先清理 MinIO 檔案
+        let fileNames = [];
         try {
             const { extractDailyFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
-            const fileNames = extractDailyFileNames(daily);
+            fileNames = extractDailyFileNames(daily);
             
             if (fileNames.length > 0) {
                 console.log(`📁 團隊日誌 ${id} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);

@@ -20,6 +20,7 @@ import { formatTime } from '../../../utils/timeUtils';
 import { getTaskChangeLogs } from '../../../api/kanban';
 import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
 import useObservationMode from '../../../hooks/useObservationMode'; // 引入觀摩模式 hook
+import { recordObservationEvent } from '../../../api/usage';
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -496,11 +497,20 @@ function Carditem({ data, index, columnIndex }) {
     socket.on('activityUpdate', handleTaskUpdate);
     // 有些後端會在更新後廣播 cardUpdated，這裡一併處理
     socket.on('cardUpdated', handleTaskUpdate);
+    // 處理刪除失敗的情況：回滾為伺服器狀態
+    const handleDeleteError = (err) => {
+      const msg = err?.message || '刪除失敗';
+      toast.error(msg);
+      // 回滾：以伺服器資料為準重新整理
+      queryClient.invalidateQueries(['kanbanDatas', projectId]);
+    };
+    socket.on('taskDeleteError', handleDeleteError);
 
     return () => {
       socket.off('taskItem', handleTaskUpdate);
       socket.off('activityUpdate', handleTaskUpdate);
       socket.off('cardUpdated', handleTaskUpdate);
+      socket.off('taskDeleteError', handleDeleteError);
     };
   }, [cardData.id, queryClient]);
 
@@ -710,6 +720,20 @@ function Carditem({ data, index, columnIndex }) {
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
+        // 1) Optimistically remove from cache so UI updates immediately
+        try {
+          queryClient.setQueryData(['kanbanDatas', projectId], (prev) => {
+            if (!Array.isArray(prev)) return prev;
+            const next = prev.map(col => {
+              if (Number(col.id) !== Number(columnIndex)) return col;
+              const filtered = Array.isArray(col.task) ? col.task.filter(t => t && t.id !== cardData.id) : [];
+              return { ...col, task: filtered };
+            });
+            return next;
+          });
+        } catch (_) {}
+
+        // 2) Emit delete to server; server will broadcast and we will re-sync via invalidate
         socket.emit("cardDelete", { 
           cardData, 
           columnIndex, 
@@ -717,6 +741,8 @@ function Carditem({ data, index, columnIndex }) {
           projectId,
           user: { username: localStorage.getItem("username") }
         });
+        // 3) Revalidate in the background to confirm state with server
+        try { queryClient.invalidateQueries(['kanbanDatas', projectId]); } catch (_) {}
         setOpen(false);
       }
     });
@@ -750,7 +776,20 @@ function Carditem({ data, index, columnIndex }) {
                   {cardData.title}
                 </h3>
                 <button
-                  onClick={() => setOpen(true)}
+                  onClick={() => {
+                    // Record observation click without blocking UI
+                    if (isObservationMode) {
+                      try {
+                        recordObservationEvent({
+                          targetType: 'KANBAN_TASK',
+                          targetId: data?.id,
+                          targetName: data?.title,
+                          projectId,
+                        });
+                      } catch (_) { /* noop */ }
+                    }
+                    setOpen(true);
+                  }}
                   className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                 >
                   <FiEdit size={16} />
