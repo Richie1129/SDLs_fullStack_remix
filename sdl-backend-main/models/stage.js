@@ -14,6 +14,7 @@ const Stage = sequelize.define('stage', {
 }, {
     tableName: 'stages'
 });
-Stage.hasMany(Sub_stage);
+
+Stage.hasMany(Sub_stage, { foreignKey: 'stageId' });
 
 module.exports = Stage;

@@ -1,5 +1,6 @@
 const { DataTypes} = require('sequelize');
 const sequelize = require('../util/database');
+
 const Sub_stage = sequelize.define('sub_stage', {
     name: {
         type: DataTypes.TEXT,
@@ -12,6 +13,14 @@ const Sub_stage = sequelize.define('sub_stage', {
     userSubmit:{
         type: DataTypes.JSON,
         allowNull:false
+    },
+    stageId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+            model: 'stages',
+            key: 'id'
+        }
     }
 }, {
     tableName: 'sub_stages'
