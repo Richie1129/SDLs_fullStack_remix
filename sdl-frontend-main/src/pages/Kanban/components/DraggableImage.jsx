@@ -954,10 +954,10 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
                   className={`px-3 py-1 rounded-full text-sm ${activeTab === 'science' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'}`}
                   onClick={() => setActiveTab('science')}
                 >🧑‍🔬 科學助手</button>
-                <button
+                {/* <button
                   className={`px-3 py-1 rounded-full text-sm ${activeTab === 'mentor' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'}`}
                   onClick={() => setActiveTab('mentor')}
-                >🧑‍🏫 自主學習助手</button>
+                >🧑‍🏫 自主學習助手</button> */}
               </div>
 
               {/* 右側控制按鈕區域 */}
