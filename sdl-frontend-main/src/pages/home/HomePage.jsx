@@ -34,6 +34,9 @@ export default function HomePage() {
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [viewableProjects, setViewableProjects] = useState([]); // 可觀摩的專案
+  const [classFilter, setClassFilter] = useState('all'); // 教師視圖：班級篩選
+  const [completedSearch, setCompletedSearch] = useState(''); // 已結束活動：關鍵字篩選
+  const [doneSearch, setDoneSearch] = useState(''); // 已完成歷程：關鍵字篩選
   const role = localStorage.getItem("role");
   const userName = localStorage.getItem('username');
   const userClass = localStorage.getItem('class'); // 獲取用戶班級
@@ -643,6 +646,14 @@ const handleDeleteProject = (projectId) => {
                       .map(member => member.username)
                       .join("、") || "無成員"}
                     </div>
+                    <div className='text-sm text-gray-500'>所屬班級：
+                    {Array.from(new Set(
+                      member
+                        .filter(m => m.projectId === projectItem.id)
+                        .map(m => m.class)
+                        .filter(Boolean)
+                    )).join('、') || '無班級資訊'}
+                    </div>
                     <div className='flex justify-between text-sm text-gray-500'>
                       <span className='flex items-center text-gray-500'>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -703,9 +714,49 @@ const handleDeleteProject = (projectId) => {
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
             >
-              {/* <h2 className="text-lg font-bold mb-4 mt-10">已完成</h2> */}
+              {/* 篩選列：學生提供搜尋；教師提供班級 + 搜尋 */}
+              <div className='flex flex-wrap items-center gap-3 mb-4 mt-2 pl-4'>
+                {role === 'teacher' && (
+                  <select
+                    value={classFilter}
+                    onChange={(e) => setClassFilter(e.target.value)}
+                    className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                    title="班級篩選"
+                  >
+                    <option value="all">所有班級</option>
+                    {Array.from(new Set(member.map(m => m.class).filter(Boolean))).map(cls => (
+                      <option key={cls} value={cls}>{cls}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  type="text"
+                  value={completedSearch}
+                  onChange={(e) => setCompletedSearch(e.target.value)}
+                  placeholder="搜尋名稱或描述..."
+                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                />
+              </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
-                {completedProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((projectItem, index) => (
+                {completedProjects
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .filter(p => {
+                    // 班級篩選（僅教師）
+                    if (role !== 'teacher' || classFilter === 'all') return true;
+                    const classes = Array.from(new Set(
+                      member.filter(m => m.projectId === p.id).map(m => m.class).filter(Boolean)
+                    ));
+                    return classes.includes(classFilter);
+                  })
+                  .filter(p => {
+                    const q = completedSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      (p.name || '').toLowerCase().includes(q) ||
+                      (p.describe || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((projectItem, index) => (
                   <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center'>
                       <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
@@ -726,6 +777,14 @@ const handleDeleteProject = (projectId) => {
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
+                    </div>
+                    <div className='text-sm text-gray-500'>所屬班級：
+                    {Array.from(new Set(
+                      member
+                        .filter(m => m.projectId === projectItem.id)
+                        .map(m => m.class)
+                        .filter(Boolean)
+                    )).join('、') || '無班級資訊'}
                     </div>
                     <div className='flex justify-between text-sm text-gray-500'>
                       <span className='flex items-center'>
@@ -751,15 +810,52 @@ const handleDeleteProject = (projectId) => {
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
             >
+              <div className='flex flex-wrap items-center gap-3 mb-4 mt-2 pl-4'>
+                {role === 'teacher' && (
+                  <select
+                    value={classFilter}
+                    onChange={(e) => setClassFilter(e.target.value)}
+                    className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                    title="班級篩選"
+                  >
+                    <option value="all">所有班級</option>
+                    {Array.from(new Set(member.map(m => m.class).filter(Boolean))).map(cls => (
+                      <option key={cls} value={cls}>{cls}</option>
+                    ))}
+                  </select>
+                )}
+                <input
+                  type="text"
+                  value={doneSearch}
+                  onChange={(e) => setDoneSearch(e.target.value)}
+                  placeholder="搜尋名稱或描述..."
+                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                />
+              </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
-                {doneProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((projectItem, index) => (
-                  <div key={index} className='bg-gray-300 w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
+                {doneProjects
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .filter(p => {
+                    if (role !== 'teacher' || classFilter === 'all') return true;
+                    const classes = Array.from(new Set(
+                      member.filter(m => m.projectId === p.id).map(m => m.class).filter(Boolean)
+                    ));
+                    return classes.includes(classFilter);
+                  })
+                  .filter(p => {
+                    const q = doneSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      (p.name || '').toLowerCase().includes(q) ||
+                      (p.describe || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((projectItem, index) => (
+                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center'>
                         <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 ml-2 text-[#5BA491]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
                       </div>
                       <button className='ml-2 bg-[#5BA491] text-white px-3 font-bold py-1 rounded hover:bg-[#5BA491]/80 transition duration-150 ease-in-out'>
                         匯出
@@ -778,6 +874,14 @@ const handleDeleteProject = (projectId) => {
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
+                    </div>
+                    <div className='text-sm text-gray-500'>所屬班級：
+                    {Array.from(new Set(
+                      member
+                        .filter(m => m.projectId === projectItem.id)
+                        .map(m => m.class)
+                        .filter(Boolean)
+                    )).join('、') || '無班級資訊'}
                     </div>
                     <div className='flex justify-between text-sm text-gray-500'>
                       <span className='flex items-center'>
@@ -926,7 +1030,7 @@ const handleDeleteProject = (projectId) => {
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
             >
-              <div className='flex justify-start mb-4 mt-2 pl-4' data-tour="teacher-ongoing-projects">
+              <div className='flex justify-start items-center gap-3 mb-4 mt-2 pl-4' data-tour="teacher-ongoing-projects">
                 {/* <h2 className="text-lg font-bold mr-8 pt-5">進行中</h2> */}
                 <button
                   onClick={() => setCreateProjectModalOpen(true)}
@@ -941,9 +1045,29 @@ const handleDeleteProject = (projectId) => {
                 >
                   <MdAddchart className="mr-2" /> 加入活動
                 </button>
+                <select
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  className="ml-2 px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                  title="班級篩選"
+                >
+                  <option value="all">所有班級</option>
+                  {Array.from(new Set(member.map(m => m.class).filter(Boolean))).map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
               </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 place-items-center'>
-                {ongoingProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((projectItem, index) => (
+                {ongoingProjects
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .filter(p => {
+                    if (classFilter === 'all') return true;
+                    const classes = Array.from(new Set(
+                      member.filter(m => m.projectId === p.id).map(m => m.class).filter(Boolean)
+                    ));
+                    return classes.includes(classFilter);
+                  })
+                  .map((projectItem, index) => (
                   <div key={index} className='bg-white w-full rounded-lg shadow-lg hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
                     <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
                     <Tooltip children={"活動描述"} content={`${projectItem.describe}`}>
@@ -959,6 +1083,14 @@ const handleDeleteProject = (projectId) => {
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
+                    </div>
+                    <div className='text-sm text-gray-500'>所屬班級：
+                    {Array.from(new Set(
+                      member
+                        .filter(m => m.projectId === projectItem.id)
+                        .map(m => m.class)
+                        .filter(Boolean)
+                    )).join('、') || '無班級資訊'}
                     </div>
                     <div className='flex justify-between text-sm text-gray-500'>
                       <span className='flex items-center text-gray-500'>
@@ -1006,9 +1138,45 @@ const handleDeleteProject = (projectId) => {
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
             >
-              {/* <h2 className="text-lg font-bold mb-4 mt-10">已完成</h2> */}
+              <div className='flex flex-wrap items-center gap-3 mb-4 mt-2 pl-4'>
+                <select
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                  title="班級篩選"
+                >
+                  <option value="all">所有班級</option>
+                  {Array.from(new Set(member.map(m => m.class).filter(Boolean))).map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={completedSearch}
+                  onChange={(e) => setCompletedSearch(e.target.value)}
+                  placeholder="搜尋名稱或描述..."
+                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                />
+              </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
-                {completedProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((projectItem, index) => (
+                {completedProjects
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .filter(p => {
+                    if (classFilter === 'all') return true;
+                    const classes = Array.from(new Set(
+                      member.filter(m => m.projectId === p.id).map(m => m.class).filter(Boolean)
+                    ));
+                    return classes.includes(classFilter);
+                  })
+                  .filter(p => {
+                    const q = completedSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      (p.name || '').toLowerCase().includes(q) ||
+                      (p.describe || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((projectItem, index) => (
                   <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center'>
                       <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
@@ -1029,6 +1197,14 @@ const handleDeleteProject = (projectId) => {
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
+                    </div>
+                    <div className='text-sm text-gray-500'>所屬班級：
+                    {Array.from(new Set(
+                      member
+                        .filter(m => m.projectId === projectItem.id)
+                        .map(m => m.class)
+                        .filter(Boolean)
+                    )).join('、') || '無班級資訊'}
                     </div>
                     <div className='flex justify-between text-sm text-gray-500'>
                       <span className='flex items-center'>
@@ -1054,15 +1230,50 @@ const handleDeleteProject = (projectId) => {
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
             >
+              <div className='flex flex-wrap items-center gap-3 mb-4 mt-2 pl-4'>
+                <select
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                  className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                  title="班級篩選"
+                >
+                  <option value="all">所有班級</option>
+                  {Array.from(new Set(member.map(m => m.class).filter(Boolean))).map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={doneSearch}
+                  onChange={(e) => setDoneSearch(e.target.value)}
+                  placeholder="搜尋名稱或描述..."
+                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                />
+              </div>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
-                {doneProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((projectItem, index) => (
-                  <div key={index} className='bg-gray-300 w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
+                {doneProjects
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .filter(p => {
+                    if (classFilter === 'all') return true;
+                    const classes = Array.from(new Set(
+                      member.filter(m => m.projectId === p.id).map(m => m.class).filter(Boolean)
+                    ));
+                    return classes.includes(classFilter);
+                  })
+                  .filter(p => {
+                    const q = doneSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      (p.name || '').toLowerCase().includes(q) ||
+                      (p.describe || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .map((projectItem, index) => (
+                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center'>
                         <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 ml-2 text-[#5BA491]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
                       </div>
                       <button className='ml-2 bg-[#5BA491] text-white px-3 font-bold py-1 rounded hover:bg-[#5BA491]/80 transition duration-150 ease-in-out'>
                         匯出
@@ -1081,6 +1292,14 @@ const handleDeleteProject = (projectId) => {
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
+                    </div>
+                    <div className='text-sm text-gray-500'>所屬班級：
+                    {Array.from(new Set(
+                      member
+                        .filter(m => m.projectId === projectItem.id)
+                        .map(m => m.class)
+                        .filter(Boolean)
+                    )).join('、') || '無班級資訊'}
                     </div>
                     <div className='flex justify-between text-sm text-gray-500'>
                       <span className='flex items-center'>
