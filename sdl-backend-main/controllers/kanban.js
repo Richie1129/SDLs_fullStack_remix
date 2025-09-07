@@ -3,6 +3,7 @@ const Column = require('../models/column');
 const Task = require('../models/task');
 const Project = require('../models/project');
 const TaskChangeLog = require('../models/task_change_log');
+const ColumnChangeLog = require('../models/column_change_log');
 const { Op } = require('sequelize');
 
 // 清理函數：移除 Column 中不存在的任務 ID
@@ -223,17 +224,39 @@ exports.getProjectActivity = async (req, res) => {
             };
         }
         
-        const activities = await TaskChangeLog.findAll({
-            where: whereCondition,
-            include: [{
-                model: Task,
-                attributes: ['id', 'title'],
-                required: false
-            }],
-            order: [['createdAt', 'DESC']],
-            limit: parseInt(limit),
-            offset: parseInt(offset)
-        });
+        // 同時查詢任務和列表的變更記錄
+        const [taskActivities, columnActivities] = await Promise.all([
+            TaskChangeLog.findAll({
+                where: whereCondition,
+                include: [{
+                    model: Task,
+                    attributes: ['id', 'title'],
+                    required: false
+                }],
+                order: [['createdAt', 'DESC']],
+                limit: parseInt(limit) * 2 // 取更多記錄以確保合併後有足夠的資料
+            }),
+            ColumnChangeLog.findAll({
+                where: whereCondition,
+                include: [{
+                    model: Column,
+                    as: 'Column',
+                    attributes: ['id', 'name'],
+                    required: false
+                }],
+                order: [['createdAt', 'DESC']],
+                limit: parseInt(limit) * 2
+            })
+        ]);
+
+        // 合併並按時間排序
+        const allActivities = [
+            ...taskActivities.map(activity => ({ ...activity.toJSON(), source: 'task' })),
+            ...columnActivities.map(activity => ({ ...activity.toJSON(), source: 'column' }))
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+         .slice(parseInt(offset), parseInt(offset) + parseInt(limit)); // 應用分頁
+
+        const activities = allActivities;
         
         // 組合活動資料，包含詳細的變更資訊
         const formattedActivities = await Promise.all(activities.map(async (activity) => {
@@ -243,11 +266,21 @@ exports.getProjectActivity = async (req, res) => {
                 changedBy: activity.changedBy,
                 createdAt: activity.createdAt,
                 description: activity.description,
-                task: activity.Task ? {
+                source: activity.source
+            };
+
+            // 根據來源添加相應的資料
+            if (activity.source === 'task') {
+                baseActivity.task = activity.Task ? {
                     id: activity.Task.id,
                     title: activity.Task.title
-                } : null
-            };
+                } : null;
+            } else if (activity.source === 'column') {
+                baseActivity.column = activity.Column ? {
+                    id: activity.Column.id,
+                    name: activity.Column.name
+                } : null;
+            }
 
             // 如果是移動操作，添加 from 和 to 屬性
             if (activity.changeType === 'move') {
@@ -267,7 +300,7 @@ exports.getProjectActivity = async (req, res) => {
             }
 
             // 如果是更新操作，獲取相關的所有變更記錄
-            if (activity.changeType === 'update' && activity.taskId) {
+            if (activity.changeType === 'update' && activity.source === 'task' && activity.taskId) {
                 const relatedChanges = await TaskChangeLog.findAll({
                     where: { 
                         taskId: activity.taskId,
@@ -290,6 +323,20 @@ exports.getProjectActivity = async (req, res) => {
                     newValue: change.newValue,
                     description: change.description
                 }));
+            }
+
+            // 處理列表重新排序操作
+            if (activity.changeType === 'reorder' && activity.source === 'column') {
+                try {
+                    const oldOrder = JSON.parse(activity.oldValue || '[]');
+                    const newOrder = JSON.parse(activity.newValue || '[]');
+                    baseActivity.orderChange = {
+                        from: oldOrder,
+                        to: newOrder
+                    };
+                } catch (e) {
+                    // 如果解析失敗，忽略順序詳情
+                }
             }
 
             return baseActivity;

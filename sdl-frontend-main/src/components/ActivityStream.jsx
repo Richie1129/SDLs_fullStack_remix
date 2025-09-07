@@ -3,7 +3,7 @@ import { useQuery } from 'react-query';
 import { getProjectActivity } from '../api/kanban';
 import { formatTime } from '../utils/timeUtils';
 import { socket } from '../utils/socket';
-import { FiActivity, FiEdit, FiTrash2, FiMove, FiPlus } from 'react-icons/fi';
+import { FiActivity, FiEdit, FiTrash2, FiMove, FiPlus, FiColumns, FiShuffle } from 'react-icons/fi';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const ActivityStream = ({ projectId, isOpen, onClose }) => {
@@ -12,7 +12,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasMore, setHasMore] = useState(true);
 
-    const { data: activityData, refetch } = useQuery(
+    const { refetch } = useQuery(
         ['projectActivity', projectId],
         () => getProjectActivity(projectId, { limit: 20 }),
         {
@@ -20,19 +20,34 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                 setActivities(data);
                 setHasMore(data && data.length === 20);
             },
-            enabled: !!projectId && isOpen
+            enabled: !!projectId && isOpen,
+            refetchOnWindowFocus: false,
+            staleTime: 0 // 確保每次開啟都會重新載入最新資料
         }
     );
 
-    // 監聽實時活動更新
+    // 當視窗重新開啟時，重新載入活動資料
     useEffect(() => {
-        if (!isOpen) return;
+        if (isOpen && projectId) {
+            refetch();
+        }
+    }, [isOpen, projectId, refetch]);
+
+    // 監聽實時活動更新（不依賴視窗開啟狀態）
+    useEffect(() => {
+        if (!projectId) return;
 
         const handleActivityUpdate = (activity) => {
             console.log('收到新活動:', activity);
-            setNewActivity(activity);
             
-            // 添加新活動到列表頂部，保持最多20條記錄
+            // 只有當視窗開啟時才設置新活動高亮
+            if (isOpen) {
+                setNewActivity(activity);
+                // 3秒後清除新活動高亮
+                setTimeout(() => setNewActivity(null), 3000);
+            }
+            
+            // 無論視窗是否開啟都更新活動列表
             setActivities(prev => [
                 {
                     id: Date.now(),
@@ -50,9 +65,6 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                 },
                 ...prev.slice(0, 19) // 只保留前19條舊記錄，總共20條
             ]);
-
-            // 3秒後清除新活動高亮
-            setTimeout(() => setNewActivity(null), 3000);
         };
 
         socket.on('activityUpdate', handleActivityUpdate);
@@ -60,7 +72,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
         return () => {
             socket.off('activityUpdate', handleActivityUpdate);
         };
-    }, [isOpen]);
+    }, [projectId, isOpen]);
 
     // 載入更多活動記錄
     const loadMoreActivities = async () => {
@@ -103,6 +115,30 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
     const getActivityDescription = (activity) => {
         // 統一處理 activity.type (Socket事件) 和 activity.changeType (資料庫記錄)
         const changeType = activity.type || activity.changeType;
+        const source = activity.source; // 'task' 或 'column'
+        
+        // 如果已經有描述且不是移動操作，直接使用
+        if (activity.description && changeType !== 'move') {
+            return activity.description;
+        }
+        
+        // 處理列表活動
+        if (source === 'column') {
+            const columnName = activity.column?.name || '未知列表';
+            
+            switch (changeType) {
+                case 'create':
+                    return `創建了新列表「${columnName}」`;
+                case 'delete':
+                    return `刪除了列表「${columnName}」`;
+                case 'reorder':
+                    return `調整了列表順序`;
+                default:
+                    return `列表「${columnName}」進行了${changeType}操作`;
+            }
+        }
+        
+        // 處理任務活動
         let taskTitle = activity.taskTitle || (activity.task && activity.task.title);
         
         // 如果沒有任務標題，嘗試從描述中提取
@@ -204,7 +240,22 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
         }
     };
 
-    const getActivityIcon = (changeType) => {
+    const getActivityIcon = (changeType, source) => {
+        // 列表活動的特殊圖示
+        if (source === 'column') {
+            switch (changeType) {
+                case 'create':
+                    return <FiColumns className="text-green-500" />;
+                case 'delete':
+                    return <FiTrash2 className="text-red-500" />;
+                case 'reorder':
+                    return <FiShuffle className="text-orange-500" />;
+                default:
+                    return <FiColumns className="text-gray-500" />;
+            }
+        }
+        
+        // 任務活動的圖示
         switch (changeType) {
             case 'create':
                 return <FiPlus className="text-green-500" />;
@@ -219,7 +270,22 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
         }
     };
 
-    const getActivityColor = (changeType) => {
+    const getActivityColor = (changeType, source) => {
+        // 列表活動的特殊顏色
+        if (source === 'column') {
+            switch (changeType) {
+                case 'create':
+                    return 'border-l-green-500 bg-green-50';
+                case 'delete':
+                    return 'border-l-red-500 bg-red-50';
+                case 'reorder':
+                    return 'border-l-orange-500 bg-orange-50';
+                default:
+                    return 'border-l-gray-500 bg-gray-50';
+            }
+        }
+        
+        // 任務活動的顏色
         switch (changeType) {
             case 'create':
                 return 'border-l-green-500 bg-green-50';
@@ -312,13 +378,13 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                         }}
                                         className={`
                                             p-2 sm:p-3 rounded-lg border-l-4 transition-all duration-300
-                                            ${getActivityColor(activity.changeType || activity.type)}
+                                            ${getActivityColor(activity.changeType || activity.type, activity.source)}
                                             ${isNew ? 'ring-2 ring-blue-300 shadow-lg' : 'hover:shadow-md'}
                                         `}
                                     >
                                         <div className="flex items-start space-x-2 sm:space-x-3">
                                             <div className="flex-shrink-0 mt-0.5">
-                                                {getActivityIcon(activity.changeType || activity.type)}
+                                                {getActivityIcon(activity.changeType || activity.type, activity.source)}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-1">
@@ -432,30 +498,63 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                 
                                                 <div className="flex items-center justify-between mt-2">
                                                     <span className="text-xs text-gray-500">
-                                                        {(activity.changeType === 'create' || activity.type === 'create') && activity.columnName && (
-                                                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                                                                {activity.columnName}
-                                                            </span>
+                                                        {/* 列表活動標籤 */}
+                                                        {activity.source === 'column' && (
+                                                            <>
+                                                                {(activity.changeType === 'create' || activity.type === 'create') && (
+                                                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                                                        列表
+                                                                    </span>
+                                                                )}
+                                                                {(activity.changeType === 'delete' || activity.type === 'delete') && (
+                                                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                                                                        列表
+                                                                    </span>
+                                                                )}
+                                                                {(activity.changeType === 'reorder' || activity.type === 'reorder') && (
+                                                                    <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
+                                                                        列表順序
+                                                                    </span>
+                                                                )}
+                                                            </>
                                                         )}
-                                                        {(activity.changeType === 'update' || activity.type === 'update') && activity.columnName && (
-                                                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
-                                                                {activity.columnName}
-                                                            </span>
-                                                        )}
-                                                        {(activity.changeType === 'move' || activity.type === 'move') && activity.from && activity.to && (
-                                                            <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
-                                                                {activity.from} → {activity.to}
-                                                            </span>
-                                                        )}
-                                                        {(activity.changeType === 'delete' || activity.type === 'delete') && activity.columnName && (
-                                                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-                                                                來自 {activity.columnName}
-                                                            </span>
+                                                        
+                                                        {/* 任務活動標籤 */}
+                                                        {activity.source !== 'column' && (
+                                                            <>
+                                                                {(activity.changeType === 'create' || activity.type === 'create') && activity.columnName && (
+                                                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                                                        {activity.columnName}
+                                                                    </span>
+                                                                )}
+                                                                {(activity.changeType === 'update' || activity.type === 'update') && activity.columnName && (
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                        {activity.columnName}
+                                                                    </span>
+                                                                )}
+                                                                {(activity.changeType === 'move' || activity.type === 'move') && activity.from && activity.to && (
+                                                                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
+                                                                        {activity.from} → {activity.to}
+                                                                    </span>
+                                                                )}
+                                                                {(activity.changeType === 'delete' || activity.type === 'delete') && activity.columnName && (
+                                                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                                                                        來自 {activity.columnName}
+                                                                    </span>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </span>
+                                                    
+                                                    {/* 右側ID標籤 */}
                                                     {activity.task && (
                                                         <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
                                                             #{activity.task.id}
+                                                        </span>
+                                                    )}
+                                                    {activity.column && activity.source === 'column' && (
+                                                        <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
+                                                            #{activity.column.id}
                                                         </span>
                                                     )}
                                                 </div>
