@@ -30,9 +30,11 @@ const Announcement = require('./models/announcement');
 const TaskChangeLog = require('./models/task_change_log');
 const NodeChangeLog = require('./models/node_change_log');
 const SubmitChangeLog = require('./models/submit_change_log');
+const ColumnChangeLog = require('./models/column_change_log');
 const { logTaskChange, logFieldChanges } = require('./utils/taskChangeLogger');
 const { logNodeChange, logNodeFieldChanges } = require('./utils/nodeChangeLogger');
 const { logSubmitChange, logSubmitFieldChanges } = require('./utils/submitChangeLogger');
+const { logColumnChange, logColumnReorder } = require('./utils/columnChangeLogger');
 const axios = require('axios');
 const https = require('https');
 const { rm } = require('fs');
@@ -384,6 +386,19 @@ io.on("connection", (socket) => {
 
             await addIntoTaskArray.save()
                 .then(() => console.log("success"))
+
+            // 記錄任務創建到變更日誌
+            try {
+                await logTaskChange({
+                    taskId: creatTask.id,
+                    changeType: 'create',
+                    changedBy: extractedOwner,
+                    projectId: projectId,
+                    description: `在「${kanbanData[selectedcolumn]?.name || '未知列表'}」中創建了任務「${creatTask.title}」`
+                });
+            } catch (logError) {
+                console.error('⚠️ 任務創建日誌記錄失敗，但不影響主要功能:', logError.message);
+            }
 
             await Project.update({
                 id: projectId
@@ -818,6 +833,19 @@ io.on("connection", (socket) => {
                 kanbanId: kanbanRowForCreate.id
             })
 
+            // 記錄列表創建到變更日誌
+            try {
+                await logColumnChange({
+                    columnId: createColumn.id,
+                    changeType: 'create',
+                    changedBy: createdBy,
+                    projectId: projectId,
+                    description: `創建了新列表「${newGroupName}」`
+                });
+            } catch (logError) {
+                console.error('⚠️ 列表創建日誌記錄失敗，但不影響主要功能:', logError.message);
+            }
+
             kanbanRowForCreate.column = [...(kanbanRowForCreate.column || []), createColumn.id];
             await kanbanRowForCreate.save()
                 .then(() => console.log("success"))
@@ -875,6 +903,15 @@ io.on("connection", (socket) => {
         try {
             const kanbanRow = await Kanban.findOne({ where: { projectId: roomProjectId } });
             if (!kanbanRow) throw new Error('Kanban not found');
+            
+            // 記錄列表重新排序
+            const oldOrder = kanbanRow.column;
+            try {
+                await logColumnReorder(oldOrder, newOrder, changedBy, roomProjectId);
+            } catch (logError) {
+                console.error('⚠️ 列表重新排序日誌記錄失敗，但不影響主要功能:', logError.message);
+            }
+            
             await Kanban.update({ column: newOrder }, { where: { id: kanbanRow.id } });
             await Project.update({ id: roomProjectId }, { where: { id: roomProjectId }, individualHooks: true, req: reqCtx });
 
@@ -977,7 +1014,20 @@ io.on("connection", (socket) => {
                 }
 
                 // Step 3: Delete the column itself
-                const deleteColumn = await Column.destroy({
+                // 記錄列表刪除到變更日誌
+                try {
+                    await logColumnChange({
+                        columnId: columnData.id,
+                        changeType: 'delete',
+                        changedBy: deletedBy,
+                        projectId: kanbanId, // 注意：這裡的 kanbanId 實際上是 projectId
+                        description: `刪除了列表「${columnData.name}」及其包含的 ${taskIds.length} 個任務`
+                    });
+                } catch (logError) {
+                    console.error('⚠️ 列表刪除日誌記錄失敗，但不影響主要功能:', logError.message);
+                }
+
+                await Column.destroy({
                     where: {
                         id: columnData.id
                     }
@@ -1159,6 +1209,19 @@ io.on("connection", (socket) => {
         }
         
         try {
+            // 記錄節點刪除到變更日誌
+            try {
+                await logNodeChange({
+                    nodeId: id,
+                    changeType: 'delete',
+                    changedBy: deletedBy,
+                    projectId: projectId,
+                    description: `刪除了節點「${title || '未知標題'}」`
+                });
+            } catch (logError) {
+                console.error('⚠️ 節點刪除日誌記錄失敗，但不影響主要功能:', logError.message);
+            }
+
             const deleteNode = await Node.destroy(
                 {
                     where: {
