@@ -17,6 +17,12 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
         () => getProjectActivity(projectId, { limit: 20 }),
         {
             onSuccess: (data) => {
+                console.log('ActivityStream 載入活動記錄:', data);
+                // Debug: 檢查是否包含節點刪除記錄
+                const nodeDeleteActivities = data?.filter(act => act.source === 'node' && act.changeType === 'delete');
+                if (nodeDeleteActivities?.length > 0) {
+                    console.log('發現節點刪除記錄:', nodeDeleteActivities);
+                }
                 setActivities(data);
                 setHasMore(data && data.length === 20);
             },
@@ -278,7 +284,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                     }
                     return `更新了節點「${nodeTitle}」`;
                 case 'delete':
-                    return `刪除了節點「${nodeTitle}」（${nodeType}）`;
+                    return `刪除了節點「${nodeTitle}」`;
                 case 'move':
                     return `移動了節點「${nodeTitle}」的位置`;
                 case 'connect':

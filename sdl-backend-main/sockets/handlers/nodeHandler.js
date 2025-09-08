@@ -167,42 +167,86 @@ class NodeHandler {
         const deletedBy = this.getCurrentUsername(data) || owner || "未知";
         
         try {
-            // 記錄節點刪除到變更日誌
-            try {
-                await logNodeChange({
-                    nodeId: id,
-                    changeType: 'delete',
-                    changedBy: deletedBy,
-                    projectId: projectId,
-                    description: `刪除了節點「${title || '未知標題'}」`
-                });
-            } catch (logError) {
-                console.warn('節點刪除日誌記錄失敗:', logError.message);
-            }
+            // 先記錄節點刪除日誌（在刪除前保存完整資訊）
+            console.log('🔍 記錄節點刪除日誌:', { id, projectId, title, deletedBy });
+            const changeLogResult = await logNodeChange({
+                nodeId: id, // 先使用真實的節點ID記錄
+                changeType: 'delete',
+                changedBy: deletedBy,
+                projectId: projectId,
+                description: `刪除了節點「${title || '未知標題'}」`
+            });
+            console.log('✅ 節點刪除記錄已保存:', changeLogResult.id);
 
+            // 先清理節點關聯（避免外鍵約束錯誤）
+            console.log('🔍 清理節點關聯關係...');
+            await Node_relation.destroy({
+                where: {
+                    [require('sequelize').Op.or]: [
+                        { from_id: id },
+                        { to_id: id }
+                    ]
+                }
+            });
+            console.log('✅ 節點關聯已清理');
+
+            // 執行節點刪除（資料庫會自動將 changeLog 的 nodeId 設為 NULL）
+            console.log('🔍 開始刪除節點...');
             const deleteResult = await Node.destroy({
                 where: { id: id },
                 individualHooks: true,
                 req: data._reqContext
             });
+            console.log('✅ 節點刪除結果:', deleteResult);
+
+            if (deleteResult === 0) {
+                console.warn('警告：節點可能已不存在，但刪除記錄已保存');
+            }
 
             // 更新專案時間戳
             await Project.update({ id: projectId }, {
                 where: { id: projectId }
             });
 
-            // 廣播節點刪除
-            // 注意：這裡使用 io.sockets.emit 是因為原始代碼如此
-            // 可能需要根據實際需求調整為 broadcastToProject
-            this.io.sockets.emit("nodeUpdated", deleteResult);
+            // 廣播節點刪除 - 觸發節點列表刷新
+            this.broadcastToProject(projectId, "nodeUpdated", null);
+            
+            // 廣播活動流更新 - 觸發活動記錄顯示
+            this.broadcastToProject(projectId, 'activityUpdate', {
+                type: 'delete',
+                source: 'node',
+                nodeId: id,
+                nodeTitle: title || '未知標題',
+                user: deletedBy,
+                timestamp: new Date().toISOString(),
+                projectId: projectId
+            });
             
             console.log(`✅ 節點刪除成功: ${id} - ${title}`);
+            
+            // 發送成功事件給前端
+            this.emitSuccess('nodeDelete', {
+                message: '節點刪除成功',
+                code: 'NODE_DELETE_SUCCESS',
+                nodeId: id,
+                nodeTitle: title || '未知標題'
+            });
 
         } catch (error) {
-            console.error("刪除節點時發生錯誤:", error);
+            console.error("❌ 刪除節點時發生錯誤:");
+            console.error("錯誤類型:", error.name);
+            console.error("錯誤訊息:", error.message);
+            console.error("錯誤堆疊:", error.stack);
+            console.error("節點資料:", { id, projectId, title, owner });
+            
             this.emitError('nodeDelete', { 
-                message: '刪除節點時發生錯誤',
-                code: 'NODE_DELETE_ERROR'
+                message: `刪除節點時發生錯誤: ${error.message}`,
+                code: 'NODE_DELETE_ERROR',
+                details: {
+                    errorType: error.name,
+                    nodeId: id,
+                    projectId: projectId
+                }
             });
         }
     }

@@ -300,7 +300,7 @@ exports.getProjectActivity = async (req, res) => {
                     title: activity.Node.title,
                     content: activity.Node.content
                 } : {
-                    id: activity.nodeId,
+                    id: activity.nodeId || '已刪除',  // 處理 nodeId 為 null 的情況
                     title: '節點已刪除' // 如果節點已被刪除
                 };
                 // 為節點活動添加更多資訊

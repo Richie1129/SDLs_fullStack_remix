@@ -148,12 +148,10 @@ export default function IdeaWall() {
     // socket
     useEffect(() => {
         function nodeUpdateEvent(data) {
-            if (data) {
-                console.log("收到節點更新事件:", data);
-                // 立即重新獲取所有節點和關係數據
-                getNodesQuery.refetch();
-                getNodeRelationQuery.refetch();
-            }
+            console.log("收到節點更新事件:", data);
+            // 無論資料為何都重新載入節點 - 確保UI與資料庫同步
+            getNodesQuery.refetch();
+            getNodeRelationQuery.refetch();
         }
 
         socket.connect();
@@ -176,18 +174,40 @@ export default function IdeaWall() {
             }
         };
 
+        // 成功處理事件：節點操作成功
+        const handleNodeSuccess = (result) => {
+            console.log('節點操作成功:', result);
+            // Show success message only after server confirmation
+            if (result?.code === 'NODE_DELETE_SUCCESS') {
+                toast.success(`✅ ${result.nodeTitle || '節點'} 刪除成功！`);
+            } else if (result?.message) {
+                toast.success(result.message);
+            }
+        };
+
         socket.off('nodeCreateError', handleNodeError);
         socket.off('nodeUpdateError', handleNodeError);
         socket.off('nodeDeleteError', handleNodeError);
         socket.on('nodeCreateError', handleNodeError);
         socket.on('nodeUpdateError', handleNodeError);
         socket.on('nodeDeleteError', handleNodeError);
+        
+        // 監聽成功事件
+        socket.off('nodeCreateSuccess', handleNodeSuccess);
+        socket.off('nodeUpdateSuccess', handleNodeSuccess);
+        socket.off('nodeDeleteSuccess', handleNodeSuccess);
+        socket.on('nodeCreateSuccess', handleNodeSuccess);
+        socket.on('nodeUpdateSuccess', handleNodeSuccess);
+        socket.on('nodeDeleteSuccess', handleNodeSuccess);
 
         return () => {
             socket.off("nodeUpdated", nodeUpdateEvent);
             socket.off('nodeCreateError', handleNodeError);
             socket.off('nodeUpdateError', handleNodeError);
             socket.off('nodeDeleteError', handleNodeError);
+            socket.off('nodeCreateSuccess', handleNodeSuccess);
+            socket.off('nodeUpdateSuccess', handleNodeSuccess);
+            socket.off('nodeDeleteSuccess', handleNodeSuccess);
         }
     }, [socket, projectId, getNodesQuery, getNodeRelationQuery]);
 

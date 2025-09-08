@@ -4,7 +4,7 @@ const sequelize = require('../util/database');
 const NodeChangeLog = sequelize.define('node_change_log', {
     nodeId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,  // 改為允許為 null
         references: {
             model: 'nodes',
             key: 'id'
@@ -43,11 +43,12 @@ const NodeChangeLog = sequelize.define('node_change_log', {
     tableName: 'node_change_logs'
 });
 
-// 建立模型關聯
+// 建立模型關聯 - 設定為非必須，以支援節點刪除後的記錄保留
 NodeChangeLog.belongsTo(require('./node'), { 
     foreignKey: 'nodeId',
     as: 'Node',
-    required: false
+    required: false,  // 明確設定為非必須關聯
+    constraints: false  // 不強制外鍵約束，避免級聯刪除
 });
 
 module.exports = NodeChangeLog; 
