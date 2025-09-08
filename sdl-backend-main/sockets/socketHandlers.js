@@ -68,6 +68,23 @@ class BaseSocketHandler {
     }
 
     /**
+     * 統一的成功發送方法
+     */
+    emitSuccess(eventType, successPayload) {
+        // 支援多種成功事件名稱格式
+        const successEvents = [
+            `${eventType}Success`,
+            `${eventType}CreatedSuccess`,  // 向後相容
+            `${eventType}UpdateSuccess`,
+            `${eventType}DeleteSuccess`
+        ];
+
+        successEvents.forEach(event => {
+            this.socket.emit(event, successPayload);
+        });
+    }
+
+    /**
      * 廣播到專案房間
      */
     broadcastToProject(projectId, event, data) {
