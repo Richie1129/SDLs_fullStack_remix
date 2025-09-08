@@ -136,3 +136,4 @@ daily_file/
 *.md
 *.txt
 *.sh
+*.example

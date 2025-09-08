@@ -249,6 +249,47 @@ export default function Kanban() {
       });
     }
 
+    // Handler for successful column deletion
+    function handleColumnDeleted(serverData) {
+      console.log("🗑️ Server confirmed column deletion:", serverData);
+      
+      // Show success message only after server confirmation
+      Swal.fire({
+        title: '已刪除！',
+        text: '看板列表已被刪除。',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+      
+      // Ensure data consistency
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
+        console.log("✅ Column deletion confirmed by server, data synchronized");
+      }).catch(error => {
+        console.error("❌ Failed to sync column deletion:", error);
+      });
+    }
+
+    // Handler for column deletion failures
+    function handleColumnDeleteError(errorData) {
+      console.error("❌ Server column deletion failed:", errorData);
+      
+      // Show error message
+      Swal.fire({
+        title: '刪除失敗',
+        text: errorData.message || '刪除列表時發生錯誤，請重試。',
+        icon: 'error',
+        confirmButtonColor: '#5BA491'
+      });
+      
+      // Rollback by refreshing data from server
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
+        console.log("🔄 Rolled back column deletion due to server error");
+      }).catch(error => {
+        console.error("❌ Failed to rollback column deletion:", error);
+      });
+    }
+
     // Ensure socket is connected before setting up listeners
     if (!socket.connected) {
       socket.connect();
@@ -265,7 +306,7 @@ export default function Kanban() {
     socket.on("dragtaskItem", kanbanDragEvent);
     socket.on("columnOrderUpdated", kanbanDragEvent);
     socket.on("ColumnCreatedSuccess", handleColumnCreated); // Use specific handler
-    socket.on("columnDeleted", KanbanUpdateEvent);
+    socket.on("columnDeleted", handleColumnDeleted); // Use specific handler for deletion
     // 一些後端可能直接廣播 cardUpdated，為安全起見一併監聽
     socket.on("cardUpdated", KanbanUpdateEvent);
     
@@ -273,6 +314,8 @@ export default function Kanban() {
     socket.on("ColumnCreatedError", handleCreationError);
     // Also handle backend's actual error event name
     socket.on("columnCreateError", handleCreationError);
+    socket.on("columnDeleteError", handleColumnDeleteError); // Add deletion error handler
+    socket.on("ColumnDeleteError", handleColumnDeleteError); // Handle backend variations
     socket.on("taskItemCreatedError", handleCreationError);
     socket.on("error", handleCreationError);
 
@@ -284,10 +327,12 @@ export default function Kanban() {
       socket.off("dragtaskItem", kanbanDragEvent);
       socket.off("columnOrderUpdated", kanbanDragEvent);
       socket.off('ColumnCreatedSuccess', handleColumnCreated);
-      socket.off('columnDeleted', KanbanUpdateEvent);
+      socket.off('columnDeleted', handleColumnDeleted);
       socket.off('cardUpdated', KanbanUpdateEvent);
       socket.off("ColumnCreatedError", handleCreationError);
       socket.off("columnCreateError", handleCreationError);
+      socket.off("columnDeleteError", handleColumnDeleteError);
+      socket.off("ColumnDeleteError", handleColumnDeleteError);
       socket.off("taskItemCreatedError", handleCreationError);
       socket.off("error", handleCreationError);
       console.log("Socket listeners cleaned up");
@@ -571,16 +616,26 @@ export default function Kanban() {
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
-        console.log(columnData)
+        console.log(`🗑️ Optimistically deleting column: ${columnData.name}`);
+        
+        // 1. 樂觀更新：立即從本地狀態移除列表
+        const updatedKanbanData = kanbanData.filter(column => column.id !== columnData.id);
+        setKanbanData(updatedKanbanData);
+        
+        // 2. 更新 React Query 緩存
+        queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
+        
+        // 3. 發送到服務器
         socket.emit("ColumnDelete", {
           columnData,
-          kanbanId: projectId
+          kanbanId: projectId,
+          user: {
+            username: localStorage.getItem('username'),
+            id: parseInt(localStorage.getItem('id')) || null
+          }
         });
-        Swal.fire(
-          '已刪除！',
-          '看板列表已被刪除。',
-          'success'
-      );
+        
+        console.log("✅ Column deleted optimistically, server sync in progress...");
       }
     });
   }
