@@ -43,4 +43,11 @@ const NodeChangeLog = sequelize.define('node_change_log', {
     tableName: 'node_change_logs'
 });
 
+// 建立模型關聯
+NodeChangeLog.belongsTo(require('./node'), { 
+    foreignKey: 'nodeId',
+    as: 'Node',
+    required: false
+});
+
 module.exports = NodeChangeLog; 

@@ -53,14 +53,18 @@ class NodeHandler {
                 colorindex: colorindex
             }, { req: data._reqContext });
 
-            // 記錄節點創建
+            // 記錄節點創建，根據是否有來源節點區分描述
             try {
+                const description = from_id ? 
+                    `延伸了節點「${createdNode.title}」` : 
+                    `創建了新節點「${createdNode.title}」`;
+                
                 await logNodeChange({
                     nodeId: createdNode.id,
                     changeType: 'create',
                     changedBy: createdBy,
                     projectId: projectId,
-                    description: `創建新節點「${createdNode.title}」`
+                    description: description
                 });
             } catch (logError) {
                 console.warn('記錄節點創建失敗:', logError.message);

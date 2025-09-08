@@ -4,6 +4,8 @@ const Task = require('../models/task');
 const Project = require('../models/project');
 const TaskChangeLog = require('../models/task_change_log');
 const ColumnChangeLog = require('../models/column_change_log');
+const NodeChangeLog = require('../models/node_change_log');
+const Node = require('../models/node');
 const { Op } = require('sequelize');
 
 // 清理函數：移除 Column 中不存在的任務 ID
@@ -224,8 +226,8 @@ exports.getProjectActivity = async (req, res) => {
             };
         }
         
-        // 同時查詢任務和列表的變更記錄
-        const [taskActivities, columnActivities] = await Promise.all([
+        // 同時查詢任務、列表和節點的變更記錄
+        const [taskActivities, columnActivities, nodeActivities] = await Promise.all([
             TaskChangeLog.findAll({
                 where: whereCondition,
                 include: [{
@@ -246,13 +248,25 @@ exports.getProjectActivity = async (req, res) => {
                 }],
                 order: [['createdAt', 'DESC']],
                 limit: parseInt(limit) * 2
+            }),
+            NodeChangeLog.findAll({
+                where: whereCondition,
+                include: [{
+                    model: Node,
+                    as: 'Node',
+                    attributes: ['id', 'title', 'content'],
+                    required: false
+                }],
+                order: [['createdAt', 'DESC']],
+                limit: parseInt(limit) * 2
             })
         ]);
 
         // 合併並按時間排序
         const allActivities = [
             ...taskActivities.map(activity => ({ ...activity.toJSON(), source: 'task' })),
-            ...columnActivities.map(activity => ({ ...activity.toJSON(), source: 'column' }))
+            ...columnActivities.map(activity => ({ ...activity.toJSON(), source: 'column' })),
+            ...nodeActivities.map(activity => ({ ...activity.toJSON(), source: 'node' }))
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
          .slice(parseInt(offset), parseInt(offset) + parseInt(limit)); // 應用分頁
 
@@ -280,6 +294,24 @@ exports.getProjectActivity = async (req, res) => {
                     id: activity.Column.id,
                     name: activity.Column.name
                 } : null;
+            } else if (activity.source === 'node') {
+                baseActivity.node = activity.Node ? {
+                    id: activity.Node.id,
+                    title: activity.Node.title,
+                    content: activity.Node.content
+                } : {
+                    id: activity.nodeId,
+                    title: '節點已刪除' // 如果節點已被刪除
+                };
+                // 為節點活動添加更多資訊
+                if (activity.changeType === 'update' && activity.fieldName) {
+                    baseActivity.changes = [{
+                        fieldName: activity.fieldName,
+                        oldValue: activity.oldValue,
+                        newValue: activity.newValue,
+                        description: activity.description
+                    }];
+                }
             }
 
             // 如果是移動操作，添加 from 和 to 屬性

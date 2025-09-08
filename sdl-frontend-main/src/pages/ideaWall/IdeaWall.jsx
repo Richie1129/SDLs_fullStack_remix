@@ -296,6 +296,37 @@ export default function IdeaWall() {
                 return;
             }
             setCreateNodeModalOpen(false);
+            
+            // 保存完整節點資料供活動流使用
+            const completeNodeData = {
+                ...nodeData,
+                title,
+                content,
+                ideaWallId: ideaWallInfo.id,
+                projectId,
+                from_id: buildOnNodeId,
+                owner: localStorage.getItem('username'),
+                colorindex: userId
+            };
+            
+            // 立即觸發活動流更新 - 在發送 Socket 事件前就顯示
+            const activityData = {
+                type: 'create',
+                source: 'node',
+                nodeId: Date.now(), // 臨時 ID，後端會返回真正的 ID
+                nodeTitle: title,
+                nodeType: buildOnNodeId ? 'extension' : 'idea', // 如果有來源節點就是延伸想法
+                nodeData: completeNodeData,
+                user: localStorage.getItem('username') || 'Unknown',
+                timestamp: new Date().toISOString(),
+                projectId: projectId
+            };
+            
+            // 觸發自定義事件
+            window.dispatchEvent(new CustomEvent('nodeCreated', {
+                detail: activityData
+            }));
+            
             socket.emit('nodeCreate', {
                 ...nodeData,
                 ideaWallId: ideaWallInfo.id,
@@ -316,6 +347,29 @@ export default function IdeaWall() {
         e.preventDefault()
         if (selectNodeInfo.title.trim() !== "" && selectNodeInfo.content.trim() !== "") {
             setUpdateNodeModalOpen(false)
+            
+            // 立即觸發活動流更新
+            const activityData = {
+                type: 'update',
+                source: 'node',
+                nodeId: selectNodeInfo.id,
+                nodeTitle: selectNodeInfo.title,
+                nodeData: selectNodeInfo,
+                user: localStorage.getItem('username') || 'Unknown',
+                timestamp: new Date().toISOString(),
+                projectId: projectId,
+                // 簡化的變更資訊
+                changes: [{
+                    fieldName: 'title',
+                    newValue: selectNodeInfo.title
+                }]
+            };
+            
+            // 觸發自定義事件
+            window.dispatchEvent(new CustomEvent('nodeUpdated', {
+                detail: activityData
+            }));
+            
             socket.emit('nodeUpdate', { 
                 ...selectNodeInfo, 
                 owner: localStorage.getItem("username"),
@@ -333,6 +387,25 @@ export default function IdeaWall() {
     const handleDelete = (e) => {
         e.preventDefault()
         setUpdateNodeModalOpen(false)
+        
+        // 立即觸發活動流更新
+        const activityData = {
+            type: 'delete',
+            source: 'node',
+            nodeId: selectNodeInfo.id,
+            nodeTitle: selectNodeInfo.title,
+            nodeType: 'unknown', // 我們可能需要從節點資料中取得類型
+            nodeData: selectNodeInfo,
+            user: localStorage.getItem('username') || 'Unknown',
+            timestamp: new Date().toISOString(),
+            projectId: projectId
+        };
+        
+        // 觸發自定義事件
+        window.dispatchEvent(new CustomEvent('nodeDeleted', {
+            detail: activityData
+        }));
+        
         socket.emit('nodeDelete', { 
             ...selectNodeInfo, 
             owner: localStorage.getItem("username"),
