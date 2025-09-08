@@ -253,6 +253,8 @@ export default function Kanban() {
     function handleColumnDeleted(serverData) {
       console.log("🗑️ Server confirmed column deletion:", serverData);
       
+      // 不再在這裡派發活動事件，因為已經在樂觀更新時派發了
+      
       // Show success message only after server confirmation
       Swal.fire({
         title: '已刪除！',
@@ -618,6 +620,32 @@ export default function Kanban() {
       if (result.isConfirmed) {
         console.log(`🗑️ Optimistically deleting column: ${columnData.name}`);
         
+        // 保存完整的列表資料，包括任務數量等詳細資訊
+        const completeColumnData = {
+          ...columnData,
+          taskCount: columnData.task ? columnData.task.length : 0
+        };
+        
+        // 立即觸發活動流更新 - 在樂觀更新時就顯示
+        const activityData = {
+          type: 'delete',
+          source: 'column',
+          columnId: columnData.id,
+          columnName: columnData.name,
+          columnData: completeColumnData,
+          user: localStorage.getItem('username') || 'Unknown',
+          timestamp: new Date().toISOString(),
+          projectId: projectId
+        };
+        
+        console.log("📡 Dispatching immediate column deletion activity:", activityData);
+        
+        // 立即派發活動事件，不等服務器確認
+        const event = new CustomEvent('columnDeleted', { 
+          detail: activityData 
+        });
+        window.dispatchEvent(event);
+        
         // 1. 樂觀更新：立即從本地狀態移除列表
         const updatedKanbanData = kanbanData.filter(column => column.id !== columnData.id);
         setKanbanData(updatedKanbanData);
@@ -627,7 +655,7 @@ export default function Kanban() {
         
         // 3. 發送到服務器
         socket.emit("ColumnDelete", {
-          columnData,
+          columnData: completeColumnData,
           kanbanId: projectId,
           user: {
             username: localStorage.getItem('username'),

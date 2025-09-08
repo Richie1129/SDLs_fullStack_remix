@@ -48,29 +48,104 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
             }
             
             // 無論視窗是否開啟都更新活動列表
-            setActivities(prev => [
-                {
+            setActivities(prev => {
+                // 創建去重鍵，避免短時間內的重複活動
+                const createDedupeKey = (act) => {
+                    if (act.source === 'column') {
+                        return `column_${act.type}_${act.columnId || act.columnName}_${act.user}_${Math.floor(new Date(act.timestamp).getTime() / 10000)}`;
+                    } else {
+                        return `task_${act.type}_${act.taskId}_${act.user}_${Math.floor(new Date(act.timestamp).getTime() / 10000)}`;
+                    }
+                };
+
+                const newActivityKey = createDedupeKey(activity);
+                
+                // 檢查最近10秒內是否有相同的活動（避免重複）
+                const isDuplicate = prev.slice(0, 5).some(existingActivity => {
+                    const existingKey = createDedupeKey({
+                        source: existingActivity.source,
+                        type: existingActivity.changeType,
+                        columnId: existingActivity.column?.id,
+                        columnName: existingActivity.columnName,
+                        taskId: existingActivity.task?.id,
+                        user: existingActivity.changedBy,
+                        timestamp: existingActivity.createdAt
+                    });
+                    
+                    return existingKey === newActivityKey;
+                });
+
+                if (isDuplicate) {
+                    console.log('跳過重複活動:', newActivityKey);
+                    return prev; // 不添加重複的活動
+                }
+
+                // 準備活動記錄資料結構
+                const activityRecord = {
                     id: Date.now(),
                     changeType: activity.type,
                     description: getActivityDescription(activity),
                     changedBy: activity.user,
                     createdAt: activity.timestamp,
-                    task: { id: activity.taskId, title: activity.taskTitle },
                     // 包含新的詳細資訊
                     changes: activity.changes || [],
                     columnName: activity.columnName,
                     from: activity.from,
                     to: activity.to,
-                    taskDetails: activity.taskDetails
-                },
-                ...prev.slice(0, 19) // 只保留前19條舊記錄，總共20條
-            ]);
+                    taskDetails: activity.taskDetails,
+                    source: activity.source
+                };
+
+                // 根據活動類型設定對應的資料
+                if (activity.source === 'column') {
+                    // 列表活動
+                    activityRecord.column = {
+                        id: activity.columnId,
+                        name: activity.columnName || activity.column?.name
+                    };
+                    // 保存完整的列表資料（用於顯示刪除的任務數量等詳細資訊）
+                    if (activity.columnData) {
+                        activityRecord.columnData = activity.columnData;
+                    }
+                } else {
+                    // 任務活動
+                    activityRecord.task = { 
+                        id: activity.taskId, 
+                        title: activity.taskTitle 
+                    };
+                }
+                
+                console.log('添加新活動:', newActivityKey);
+                return [
+                    activityRecord,
+                    ...prev.slice(0, 19) // 只保留前19條舊記錄，總共20條
+                ];
+            });
         };
 
+        // 監聽 Socket 活動更新
         socket.on('activityUpdate', handleActivityUpdate);
+
+        // 監聽自定義事件（用於前端直接觸發的活動更新，如列表刪除）
+        const handleCustomColumnDeleted = (event) => {
+            console.log('收到自定義列表刪除事件:', event.detail);
+            
+            // 只處理當前專案的事件
+            if (event.detail.projectId === projectId) {
+                handleActivityUpdate(event.detail);
+            }
+        };
+
+        // 只在當前專案的情況下監聽自定義事件
+        if (projectId) {
+            window.addEventListener('columnDeleted', handleCustomColumnDeleted);
+        }
 
         return () => {
             socket.off('activityUpdate', handleActivityUpdate);
+            if (projectId) {
+                window.removeEventListener('columnDeleted', handleCustomColumnDeleted);
+            }
         };
     }, [projectId, isOpen]);
 
@@ -124,13 +199,30 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
         
         // 處理列表活動
         if (source === 'column') {
-            const columnName = activity.column?.name || '未知列表';
+            // 優先從多個可能的來源獲取列表名稱
+            const columnName = activity.column?.name || 
+                              activity.columnName || 
+                              activity.columnData?.name ||
+                              '未知列表';
             
             switch (changeType) {
                 case 'create':
                     return `創建了新列表「${columnName}」`;
                 case 'delete':
-                    return `刪除了列表「${columnName}」`;
+                    // 列表刪除時顯示更詳細的資訊
+                    let deleteMessage = `刪除了列表「${columnName}」`;
+                    
+                    // 檢查多種可能的任務數量來源
+                    const taskCount = activity.columnData?.taskCount || 
+                                     (activity.columnData?.task ? activity.columnData.task.length : 0);
+                    
+                    if (taskCount > 0) {
+                        deleteMessage += ` (包含 ${taskCount} 個任務)`;
+                    } else if (taskCount === 0) {
+                        deleteMessage += ` (空列表)`;
+                    }
+                    
+                    return deleteMessage;
                 case 'reorder':
                     return `調整了列表順序`;
                 default:
@@ -357,10 +449,18 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                     <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 pb-16 sm:pb-20 lg:pb-24">
                         <AnimatePresence>
                             {activities.map((activity, index) => {
+                                // 判斷是否為新活動 - 支援任務和列表活動
                                 const isNew = newActivity && 
-                                    activity.task?.id === newActivity.taskId && 
                                     (activity.changeType === newActivity.type || activity.type === newActivity.type) &&
-                                    Math.abs(new Date(activity.createdAt) - new Date(newActivity.timestamp)) < 5000; // 5秒內的活動視為新活動
+                                    Math.abs(new Date(activity.createdAt) - new Date(newActivity.timestamp)) < 5000 && // 5秒內的活動視為新活動
+                                    (
+                                        // 任務活動：比較任務ID
+                                        (activity.task?.id === newActivity.taskId && newActivity.taskId) ||
+                                        // 列表活動：比較列表ID
+                                        (activity.column?.id === newActivity.columnId && newActivity.columnId) ||
+                                        // 列表順序活動：比較專案ID
+                                        (newActivity.type === 'reorder' && activity.source === 'column')
+                                    );
                                 
                                 return (
                                     <motion.div
