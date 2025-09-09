@@ -17,7 +17,6 @@ import Protfolio from './pages/protfolio/Protfolio';
 import ManageIdeaWall from "./pages/manageIdeaWall/ManageIdeaWall";
 import IdeaWall from "./pages/ideaWall/IdeaWall";
 import NotFound from "./pages/notFound/NotFound";
-import Rag from './pages/Rag/Rag';
 import TeacherManagementDashboard from './pages/teacher-dashboard';
 import ManagementOverview from './pages/overview/ManagementOverview';
 import StudentDashboard from './pages/student-dashboard';
@@ -49,7 +48,6 @@ export default function App() {
             <Route path="protfolio" element={<Protfolio />} />
             <Route path="manageIdeaWall" element={<ManageIdeaWall />} />
             <Route path="ideaWall" element={<IdeaWall />} />
-            <Route path="rag" element={<Rag />} />
             <Route path="teacherDashboard" element={<TeacherManagementDashboard />} />
             <Route path="studentDashboard" element={<StudentDashboard />} />
           </Route>
