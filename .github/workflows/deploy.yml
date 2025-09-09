@@ -55,69 +55,57 @@ jobs:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
-          command_timeout: 300s  # ✅ 修正：時間需加單位
+          command_timeout: 300s
           script: |
-            cd /home/hsueh/SDLs_fullStack_remix_v3 || { echo "❌ 專案目錄不存在"; exit 1; }
+            # 定義部署目標
+            DEPLOY_TARGETS=(
+              "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
+              "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
+            )
 
-            if [ -f .env ]; then
-              cp .env .env.backup
-              echo "✅ 已備份 .env 檔案"
-            fi
-
+            # 全域拉取映像檔一次即可
             echo "📦 拉取最新映像檔..."
             docker pull stone881129/sdl-api:sdls-v3
             docker pull stone881129/sdl-front:sdls-v3
 
-            echo "🛑 停止舊服務..."
-            docker-compose -f docker-compose.v3.yml down || true
+            # 遍歷部署目標
+            for target in "${DEPLOY_TARGETS[@]}"; do
+              IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
+              
+              echo "🎯 部署 $service_name 到 $deploy_dir"
+              cd "$deploy_dir" || { echo "❌ 目錄 $deploy_dir 不存在"; exit 1; }
 
+              # 備份 .env
+              if [ -f .env ]; then
+                cp .env .env.backup
+                echo "✅ 已備份 $service_name .env 檔案"
+              fi
+
+              # 停止舊服務
+              echo "🛑 停止 $service_name 舊服務..."
+              docker-compose -f "$compose_file" down || true
+
+              # 啟動新服務
+              echo "🚀 啟動 $service_name 新服務..."
+              docker-compose -f "$compose_file" up -d
+
+              # 等待啟動
+              echo "⏳ 等待 $service_name 服務啟動..."
+              sleep 30
+
+              # 執行 migration
+              echo "🧬 執行 $service_name Sequelize migration..."
+              docker-compose -f "$compose_file" exec -T api npx sequelize-cli db:migrate || { 
+                echo "❌ $service_name Migration 失敗"; 
+                exit 1; 
+              }
+
+              echo "✅ $service_name 部署完成！"
+            done
+
+            # 統一清理映像檔
             echo "🧹 清理舊映像檔..."
             docker image prune -f
-
-            echo "🚀 啟動新服務..."
-            docker-compose -f docker-compose.v3.yml up -d
-
-            echo "⏳ 等待服務啟動..."
-            sleep 30
-
-            echo "🧬 執行 Sequelize migration..."
-            docker-compose -f docker-compose.v3.yml exec -T api npx sequelize-cli db:migrate || { echo '❌ Migration 失敗'; exit 1; }
-
-            echo "🪵 顯示最近容器 logs..."
-            docker-compose logs --tail=50
-
-            echo "🎉 部署完成！"
-
-            cd ~/SDLs_fullStack_remix_v3_lazyinwork || { echo "❌ 專案目錄不存在"; exit 1; }
-
-            if [ -f .env ]; then
-              cp .env .env.backup
-              echo "✅ 已備份 .env 檔案"
-            fi
-
-            echo "📦 拉取最新映像檔..."
-            docker pull stone881129/sdl-api:sdls-v3
-            docker pull stone881129/sdl-front:sdls-v3
-
-            echo "🛑 停止舊服務..."
-            docker-compose down || true
-
-            echo "🧹 清理舊映像檔..."
-            docker image prune -f
-
-            echo "🚀 啟動新服務..."
-            docker-compose up -d
-
-            echo "⏳ 等待服務啟動..."
-            sleep 30
-
-            echo "🧬 執行 Sequelize migration..."
-            docker-compose exec -T api npx sequelize-cli db:migrate || { echo '❌ Migration 失敗'; exit 1; }
-
-            echo "🪵 顯示最近容器 logs..."
-            docker-compose logs --tail=50
-
-            echo "🎉 部署 lazyinwork 完成！"
 
       - name: 🎯 Verify deployment
         uses: appleboy/ssh-action@v1.0.3
@@ -127,36 +115,29 @@ jobs:
           key: ${{ env.SERVER_SSH_KEY }}
           command_timeout: 180s
           script: |
-            cd /home/hsueh/SDLs_fullStack_remix_v3
+            # 驗證部署目標 (復用相同數據結構)
+            VERIFY_TARGETS=(
+              "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
+              "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
+            )
 
-            echo "📊 最終容器狀態檢查..."
-            docker-compose -f docker-compose.v3.yml ps
+            # 遍歷驗證每個服務
+            for target in "${VERIFY_TARGETS[@]}"; do
+              IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
+              
+              echo "🔍 驗證 $service_name 部署狀態..."
+              cd "$deploy_dir" || { echo "❌ 無法進入 $deploy_dir"; exit 1; }
 
-            echo "🔍 檢查是否所有容器皆為 Up 或 Up (healthy)..."
-            INVALID=$(docker-compose -f docker-compose.v3.yml ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
+              docker-compose -f "$compose_file" ps
 
-            if [ -n "$INVALID" ]; then
-              echo "❌ 以下容器未正常運行："
-              echo "$INVALID"
-              docker-compose -f docker-compose.v3.yml logs --tail=100
-              exit 1
-            else
-              echo "✅ 所有容器皆正常運行"
-            fi
+              INVALID=$(docker-compose -f "$compose_file" ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
 
-            cd ~/SDLs_fullStack_remix_v3_lazyinwork
-
-            echo "📊 最終容器狀態檢查..."
-            docker-compose ps
-
-            echo "🔍 檢查是否所有容器皆為 Up 或 Up (healthy)..."
-            INVALID=$(docker-compose ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
-
-            if [ -n "$INVALID" ]; then
-              echo "❌ 以下容器未正常運行："
-              echo "$INVALID"
-              docker-compose logs --tail=100
-              exit 1
-            else
-              echo "✅ 所有容器皆正常運行"
-            fi
+              if [ -n "$INVALID" ]; then
+                echo "❌ $service_name 以下容器未正常運行："
+                echo "$INVALID"
+                docker-compose -f "$compose_file" logs --tail=100
+                exit 1
+              else
+                echo "✅ $service_name 所有容器皆正常運行"
+              fi
+            done

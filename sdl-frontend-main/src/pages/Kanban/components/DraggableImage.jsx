@@ -6,8 +6,8 @@ import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
 import AssistantChat from '../../../components/AssistantChat';
 
-const API_URL = "/proxy/api/v1/chats/a159fe08e2d411efb3910242ac120004"; // 指向後端代理
-const API_KEY = "ragflow-U0ZTc4MzdlZTJjYjExZWZiMzcyMDI0Mm"; // 保持不變，後端已使用此 Key
+// 使用後端代理 API，避免直接調用 RAGFlow
+const API_URL = "/proxy/a159fe08e2d411efb3910242ac120004";
 
 // 提取為常數，避免重複宣告
 const OPENING_MESSAGE = "嗨！我是一位專門輔導高中生科學探究與實作的自然科學導師。我會用適合高中生的語言，保持專業的同時，幫助你探索自然科學的奧秘，並引導你選擇一個有興趣的科展主題，以及更深入了解你的研究問題。什麼可以幫到你的嗎？";
@@ -48,7 +48,6 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
   const prevTabRef = useRef('science');
 
   const headers = {
-    Authorization: `Bearer ${API_KEY}`,
     "Content-Type": "application/json",
   };
 
@@ -473,10 +472,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       
       const response = await fetch(`${API_URL}/sessions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
+        headers,
         body: JSON.stringify(sessionPayload),
       });
       
@@ -536,10 +532,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
 
       const response = await fetch(`${API_URL}/completions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-        },
+        headers,
         body: JSON.stringify(payload),
       });
       
