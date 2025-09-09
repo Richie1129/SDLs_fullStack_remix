@@ -111,6 +111,9 @@ jobs:
             echo "⏳ 等待服務啟動..."
             sleep 30
 
+            echo "🧬 執行 Sequelize migration..."
+            docker-compose exec -T api npx sequelize-cli db:migrate || { echo '❌ Migration 失敗'; exit 1; }
+
             echo "🪵 顯示最近容器 logs..."
             docker-compose logs --tail=50
 
