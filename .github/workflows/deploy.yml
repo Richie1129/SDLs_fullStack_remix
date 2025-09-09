@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - rwd-layout-clean
+
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
@@ -79,6 +80,9 @@ jobs:
             echo "⏳ 等待服務啟動..."
             sleep 30
 
+            echo "🧬 執行 Sequelize migration..."
+            docker-compose -f docker-compose.v3.yml exec -T api npx sequelize-cli db:migrate || { echo '❌ Migration 失敗'; exit 1; }
+
             echo "🪵 顯示最近容器 logs..."
             docker-compose logs --tail=50
 
@@ -106,6 +110,9 @@ jobs:
 
             echo "⏳ 等待服務啟動..."
             sleep 30
+
+            echo "🧬 執行 Sequelize migration..."
+            docker-compose exec -T api npx sequelize-cli db:migrate || { echo '❌ Migration 失敗'; exit 1; }
 
             echo "🪵 顯示最近容器 logs..."
             docker-compose logs --tail=50
