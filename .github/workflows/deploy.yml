@@ -88,6 +88,34 @@ jobs:
 
             echo "🎉 部署完成！"
 
+            cd ~/SDLs_fullStack_remix_v3_lazyinwork || { echo "❌ 專案目錄不存在"; exit 1; }
+
+            if [ -f .env ]; then
+              cp .env .env.backup
+              echo "✅ 已備份 .env 檔案"
+            fi
+
+            echo "📦 拉取最新映像檔..."
+            docker pull stone881129/sdl-api:sdls-v3
+            docker pull stone881129/sdl-front:sdls-v3
+
+            echo "🛑 停止舊服務..."
+            docker-compose down || true
+
+            echo "🧹 清理舊映像檔..."
+            docker image prune -f
+
+            echo "🚀 啟動新服務..."
+            docker-compose up -d
+
+            echo "⏳ 等待服務啟動..."
+            sleep 30
+
+            echo "🪵 顯示最近容器 logs..."
+            docker-compose logs --tail=50
+
+            echo "🎉 部署 lazyinwork 完成！"
+
       - name: 🎯 Verify deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -108,6 +136,23 @@ jobs:
               echo "❌ 以下容器未正常運行："
               echo "$INVALID"
               docker-compose -f docker-compose.v3.yml logs --tail=100
+              exit 1
+            else
+              echo "✅ 所有容器皆正常運行"
+            fi
+
+            cd ~/SDLs_fullStack_remix_v3_lazyinwork
+
+            echo "📊 最終容器狀態檢查..."
+            docker-compose ps
+
+            echo "🔍 檢查是否所有容器皆為 Up 或 Up (healthy)..."
+            INVALID=$(docker-compose ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
+
+            if [ -n "$INVALID" ]; then
+              echo "❌ 以下容器未正常運行："
+              echo "$INVALID"
+              docker-compose logs --tail=100
               exit 1
             else
               echo "✅ 所有容器皆正常運行"
