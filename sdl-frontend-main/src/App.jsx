@@ -2,7 +2,6 @@ import React from 'react';
 import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route } from "react-router-dom";
 import { ProtectedLogin, ProtectedRoute } from "./utils/ProtectedRoute";
 import { AuthProvider } from "./utils/AuthContext";
-import { ContextProvider } from './context/context';
 import HomePage from "./pages/home/HomePage";
 import Login from "./pages/login/Login";
 import Register from "./pages/login/Register";
@@ -53,7 +52,6 @@ export default function App() {
             <Route path="rag" element={<Rag />} />
             <Route path="manageStudent" element={<TeacherManagementDashboard />} />
             <Route path="studentDashboard" element={<StudentDashboard />} />
-            <Route path="teacherDashboard" element={<TeacherManagementDashboard />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />}></Route>
@@ -63,11 +61,9 @@ export default function App() {
   )
 
   return (
-    <ContextProvider>
-      <AuthProvider>
-        <RouterProvider router={router} />
-      </AuthProvider>
-    </ContextProvider>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   )
 }
 

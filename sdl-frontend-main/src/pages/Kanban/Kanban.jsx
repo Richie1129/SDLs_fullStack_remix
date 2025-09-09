@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiPlus } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
@@ -18,7 +18,7 @@ import { getSubStage } from '../../api/stage';
 import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
-import { Context } from '../../context/context';
+import { useStageIndex, useSubStageIndex } from '../../hooks/useStageIndex';
 // AI 導師已整合到科學助手(DraggableImage)內部的可切換分頁中
 
 
@@ -49,7 +49,8 @@ export default function Kanban() {
   const navigate = useNavigate();
   const [showAddGroupInput, setShowAddGroupInput] = useState(false); // 新增狀態
   const [newGroupName, setNewGroupName] = useState('');
-  const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context);
+  const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
+  const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
   const currentStage = currentStageIndex;
   const currentSubStage = currentSubStageIndex;
   

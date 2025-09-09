@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import { FaRegLightbulb } from "react-icons/fa";
 import { MdOutlineViewKanban } from "react-icons/md";
@@ -10,7 +10,7 @@ import { BsChatDots } from "react-icons/bs";
 import { TbMessageQuestion } from "react-icons/tb";
 import { RiDashboardLine } from "react-icons/ri";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import { Context } from "../context/context";
+import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import ChatRoom from "./ChatRoom";
 import useObservationMode from "../hooks/useObservationMode"; // 引入觀摩模式 hook
 
@@ -134,12 +134,8 @@ export default function SideBar() {
   const [open, setOpen] = useState(false);
   const [chatRoomOpen, setChatRoomOpen] = useState(false);
   const { projectId } = useParams();
-  const {
-    currentStageIndex,
-    setCurrentStageIndex,
-    currentSubStageIndex,
-    setCurrentSubStageIndex,
-  } = useContext(Context);
+  const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
+  const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
   const role = localStorage.getItem("role");
 
   // 使用觀摩模式 hook
