@@ -1,6 +1,7 @@
 const { SocketHandlerFactory } = require('../socketHandlers');
 const Task = require('../../models/task');
 const Column = require('../../models/column');
+const Kanban = require('../../models/kanban');
 const Project = require('../../models/project');
 const { logTaskChange, logFieldChanges } = require('../../utils/taskChangeLogger');
 const { Op } = require('sequelize');
@@ -246,6 +247,9 @@ class TaskHandler {
                 return;
             }
 
+            // 獲取列表名稱用於記錄
+            const columnName = column.name || '未知列表';
+
             console.log(`🗑️ 開始刪除任務 ${cardData.id}...`);
 
             // 清理 MinIO 檔案
@@ -269,7 +273,7 @@ class TaskHandler {
                     changeType: 'delete',
                     changedBy: deletedBy,
                     projectId: projectId,
-                    description: `刪除任務「${cardData.title}」`
+                    description: `在「${columnName}」中刪除任務「${cardData.title}」`
                 });
             } catch (logError) {
                 console.warn('任務刪除日誌記錄失敗:', logError.message);
