@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { startUsageSession, sendHeartbeat, stopUsageSession, getUsageSummary } from '../../../../api/usage';
-import { HEARTBEAT_INTERVAL_MS } from '../../../../config/usage';
+import { startUsageSession, sendHeartbeat, stopUsageSession, getUsageSummary } from '../../../api/usage';
+import { HEARTBEAT_INTERVAL_MS } from '../../../config/usage';
 
 export function useUsageSession(projectId, userId) {
   const sessionRef = useRef(null);

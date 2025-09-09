@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
 import { useParams } from 'react-router-dom'
 import { getProject } from '../api/project';
 
 import { socket } from '../utils/socket';
 // import { useQuery } from 'react-query';
-import { Context } from '../context/context'
+import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 
 const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     const [animationClass, setAnimationClass] = useState('');
@@ -158,7 +158,8 @@ const stageInfo = [
 export default function SubStageComponent() {
     // State hooks for stage indices
 
-    const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context)
+    const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
+    const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
     const [stages, setStages] = useState([]);
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [imageSrc, setImageSrc] = useState('/robot.png');

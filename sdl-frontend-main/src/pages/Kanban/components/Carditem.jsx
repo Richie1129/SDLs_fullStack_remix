@@ -497,6 +497,26 @@ function Carditem({ data, index, columnIndex }) {
     socket.on('activityUpdate', handleTaskUpdate);
     // 有些後端會在更新後廣播 cardUpdated，這裡一併處理
     socket.on('cardUpdated', handleTaskUpdate);
+    // 伺服器確認刪除成功
+    const handleTaskDeleted = (payload) => {
+      if (!payload) return;
+      const sameTask = Number(payload.taskId) === Number(cardData.id);
+      if (sameTask) {
+        console.log(`🗑️ 卡片刪除成功: ${cardData.title} (${cardData.id})`);
+        try {
+          Swal.fire({
+            title: '已刪除！',
+            text: '卡片已刪除。',
+            icon: 'success',
+            timer: 1800,
+            showConfirmButton: false
+          });
+        } catch (_) {}
+        // 以防不同步，強制刷新看板資料
+        queryClient.invalidateQueries(['kanbanDatas', projectId]);
+      }
+    };
+    socket.on('taskDeleted', handleTaskDeleted);
     // 處理刪除失敗的情況：回滾為伺服器狀態
     const handleDeleteError = (err) => {
       const msg = err?.message || '刪除失敗';
@@ -510,6 +530,7 @@ function Carditem({ data, index, columnIndex }) {
       socket.off('taskItem', handleTaskUpdate);
       socket.off('activityUpdate', handleTaskUpdate);
       socket.off('cardUpdated', handleTaskUpdate);
+      socket.off('taskDeleted', handleTaskDeleted);
       socket.off('taskDeleteError', handleDeleteError);
     };
   }, [cardData.id, queryClient]);
@@ -690,11 +711,15 @@ function Carditem({ data, index, columnIndex }) {
         images: Array.isArray(cardData.images) ? cardData.images : []
       };
       socket.emit("cardUpdated", { 
+        eventType: 'taskUpdate',
         cardData: updatedCardData, 
         columnIndex, 
         index, 
         projectId,
-        user: { username: localStorage.getItem("username") }
+        user: { 
+          username: localStorage.getItem("username"),
+          id: parseInt(localStorage.getItem('id')) || null
+        }
       });
       
       // 失效變更記錄的緩存，強制重新獲取
@@ -735,11 +760,15 @@ function Carditem({ data, index, columnIndex }) {
 
         // 2) Emit delete to server; server will broadcast and we will re-sync via invalidate
         socket.emit("cardDelete", { 
+          eventType: 'taskDelete',
           cardData, 
           columnIndex, 
           index, 
           projectId,
-          user: { username: localStorage.getItem("username") }
+          user: { 
+            username: localStorage.getItem("username"),
+            id: parseInt(localStorage.getItem('id')) || null
+          }
         });
         // 3) Revalidate in the background to confirm state with server
         try { queryClient.invalidateQueries(['kanbanDatas', projectId]); } catch (_) {}

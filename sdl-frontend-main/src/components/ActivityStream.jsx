@@ -241,7 +241,8 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
         const source = activity.source; // 'task' 或 'column'
         
         // 如果已經有描述且不是移動操作，直接使用
-        if (activity.description && changeType !== 'move') {
+        // 對於刪除操作，始終優先使用 description（包含列表資訊）
+        if (activity.description && (changeType === 'delete' || changeType !== 'move')) {
             return activity.description;
         }
         
@@ -416,6 +417,11 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                 return `更新了任務「${taskTitle}」`;
             
             case 'delete':
+                // 如果有現成的描述，直接使用（已包含列表資訊）
+                if (activity.description) {
+                    return activity.description;
+                }
+                // 備用邏輯（用於沒有描述的舊記錄）
                 let deleteDesc = `刪除了任務「${taskTitle}」`;
                 if (activity.columnName) {
                     deleteDesc += `（來自「${activity.columnName}」）`;

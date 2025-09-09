@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AiTwotoneFolderAdd, AiOutlineCloudDownload, AiOutlineUpload } from "react-icons/ai";
 import { GrFormClose } from "react-icons/gr";
 import { useQuery, useQueryClient } from 'react-query';
@@ -11,13 +11,13 @@ import { socket } from '../../utils/socket';
 import FileDownload from 'js-file-download';
 import { BiSave } from "react-icons/bi";
 import Swal from "sweetalert2";
-import { Context } from '../../context/context';
+import { useStageIndex } from '../../hooks/useStageIndex';
 import { formatTime } from '../../utils/timeUtils';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
 
 export default function Protfolio() {
-    const { currentStageIndex } = useContext(Context);
+    const [currentStageIndex] = useStageIndex();
     const [stagePortfolio, setStagePortfolio] = useState([]);
     const [portfolioItemsWithTitles, setPortfolioItemsWithTitles] = useState([]);
     const [folderModalOpen, setFolderModalOpen] = useState(false);

@@ -4,7 +4,7 @@ const sequelize = require('../util/database');
 const TaskChangeLog = sequelize.define('task_change_log', {
     taskId: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true, 
         references: {
             model: 'tasks',
             key: 'id'

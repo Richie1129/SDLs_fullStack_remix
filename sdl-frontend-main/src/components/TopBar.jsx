@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IoIosNotificationsOutline } from "react-icons/io";
 import { BsChevronDown, BsPlusCircleDotted } from "react-icons/bs";
 import { FiActivity } from "react-icons/fi"; // 引入活動圖示
@@ -13,7 +13,7 @@ import { GrFormClose } from "react-icons/gr";
 import Modal from './Modal';
 import Swal from 'sweetalert2';
 import { socket } from '../utils/socket';
-import { Context } from '../context/context';
+import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import Announcement from './Announcement'; // 引入新的 Announcement 元件
 import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
 
@@ -36,7 +36,8 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   ];
 
   const role = localStorage.getItem("role") || "guest"; // 預設值為 "guest"，避免空值
-  const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context);
+  const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
+  const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
 
   // 使用觀摩模式 hook
   const { isObservationMode, isLoading: isObservationLoading } = useObservationMode();

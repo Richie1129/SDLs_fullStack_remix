@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiPlus } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
@@ -18,7 +18,7 @@ import { getSubStage } from '../../api/stage';
 import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
-import { Context } from '../../context/context';
+import { useStageIndex, useSubStageIndex } from '../../hooks/useStageIndex';
 // AI 導師已整合到科學助手(DraggableImage)內部的可切換分頁中
 
 
@@ -49,7 +49,8 @@ export default function Kanban() {
   const navigate = useNavigate();
   const [showAddGroupInput, setShowAddGroupInput] = useState(false); // 新增狀態
   const [newGroupName, setNewGroupName] = useState('');
-  const { currentStageIndex, setCurrentStageIndex, currentSubStageIndex, setCurrentSubStageIndex } = useContext(Context);
+  const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
+  const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
   const currentStage = currentStageIndex;
   const currentSubStage = currentSubStageIndex;
   
@@ -305,6 +306,21 @@ export default function Kanban() {
     socket.on("taskItems", KanbanUpdateEvent);
     socket.on("taskItem", KanbanUpdateEvent);
     socket.on("taskItemCreated", handleTaskItemCreated); // Use specific handler
+    // Also react to task deletions broadcast by server
+    function handleTaskDeleted(data) {
+      try {
+        console.log('🗑️ 成功刪除卡片，ID:', data?.taskId);
+        Swal.fire({
+          title: '已刪除！',
+          text: '卡片已刪除。',
+          icon: 'success',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } catch (_) {}
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(() => {});
+    }
+    socket.on("taskDeleted", handleTaskDeleted);
     socket.on("dragtaskItem", kanbanDragEvent);
     socket.on("columnOrderUpdated", kanbanDragEvent);
     socket.on("ColumnCreatedSuccess", handleColumnCreated); // Use specific handler
@@ -327,6 +343,7 @@ export default function Kanban() {
       socket.off('taskItem', KanbanUpdateEvent);
       socket.off("taskItemCreated", handleTaskItemCreated);
       socket.off("dragtaskItem", kanbanDragEvent);
+      socket.off("taskDeleted", handleTaskDeleted);
       socket.off("columnOrderUpdated", kanbanDragEvent);
       socket.off('ColumnCreatedSuccess', handleColumnCreated);
       socket.off('columnDeleted', handleColumnDeleted);
@@ -462,6 +479,7 @@ export default function Kanban() {
       
       // Emit minimal payload for card move
       socket.emit('cardItemDragged', {
+        eventType: 'taskDrag',
         projectId,
         taskId: movedTask.id,
         source: { columnId: sourceColumnId, index: source.index },
@@ -528,6 +546,7 @@ export default function Kanban() {
 
     // 5. Send to server (will broadcast to other users)
     socket.emit("taskItemCreated", {
+      eventType: 'taskItemCreated',
       selectedcolumn,
       item: {
         title: newCard.trim(),
@@ -585,6 +604,7 @@ export default function Kanban() {
       // 4. Send to server (will broadcast to other users)
       // Include user info for backend permission checks
       socket.emit("ColumnCreated", {
+        eventType: 'columnCreate',
         projectId,
         newGroupName: newGroupName.trim(),
         user: {
@@ -655,6 +675,7 @@ export default function Kanban() {
         
         // 3. 發送到服務器
         socket.emit("ColumnDelete", {
+          eventType: 'columnDelete',
           columnData: completeColumnData,
           kanbanId: projectId,
           user: {
