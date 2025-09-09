@@ -306,6 +306,21 @@ export default function Kanban() {
     socket.on("taskItems", KanbanUpdateEvent);
     socket.on("taskItem", KanbanUpdateEvent);
     socket.on("taskItemCreated", handleTaskItemCreated); // Use specific handler
+    // Also react to task deletions broadcast by server
+    function handleTaskDeleted(data) {
+      try {
+        console.log('🗑️ 成功刪除卡片，ID:', data?.taskId);
+        Swal.fire({
+          title: '已刪除！',
+          text: '卡片已刪除。',
+          icon: 'success',
+          timer: 1800,
+          showConfirmButton: false
+        });
+      } catch (_) {}
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(() => {});
+    }
+    socket.on("taskDeleted", handleTaskDeleted);
     socket.on("dragtaskItem", kanbanDragEvent);
     socket.on("columnOrderUpdated", kanbanDragEvent);
     socket.on("ColumnCreatedSuccess", handleColumnCreated); // Use specific handler
@@ -328,6 +343,7 @@ export default function Kanban() {
       socket.off('taskItem', KanbanUpdateEvent);
       socket.off("taskItemCreated", handleTaskItemCreated);
       socket.off("dragtaskItem", kanbanDragEvent);
+      socket.off("taskDeleted", handleTaskDeleted);
       socket.off("columnOrderUpdated", kanbanDragEvent);
       socket.off('ColumnCreatedSuccess', handleColumnCreated);
       socket.off('columnDeleted', handleColumnDeleted);
@@ -463,6 +479,7 @@ export default function Kanban() {
       
       // Emit minimal payload for card move
       socket.emit('cardItemDragged', {
+        eventType: 'taskDrag',
         projectId,
         taskId: movedTask.id,
         source: { columnId: sourceColumnId, index: source.index },
@@ -529,6 +546,7 @@ export default function Kanban() {
 
     // 5. Send to server (will broadcast to other users)
     socket.emit("taskItemCreated", {
+      eventType: 'taskItemCreated',
       selectedcolumn,
       item: {
         title: newCard.trim(),
@@ -586,6 +604,7 @@ export default function Kanban() {
       // 4. Send to server (will broadcast to other users)
       // Include user info for backend permission checks
       socket.emit("ColumnCreated", {
+        eventType: 'columnCreate',
         projectId,
         newGroupName: newGroupName.trim(),
         user: {
@@ -656,6 +675,7 @@ export default function Kanban() {
         
         // 3. 發送到服務器
         socket.emit("ColumnDelete", {
+          eventType: 'columnDelete',
           columnData: completeColumnData,
           kanbanId: projectId,
           user: {
