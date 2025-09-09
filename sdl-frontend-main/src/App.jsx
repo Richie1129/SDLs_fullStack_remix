@@ -18,9 +18,9 @@ import ManageIdeaWall from "./pages/manageIdeaWall/ManageIdeaWall";
 import IdeaWall from "./pages/ideaWall/IdeaWall";
 import NotFound from "./pages/notFound/NotFound";
 import Rag from './pages/Rag/Rag';
-import TeacherManagementDashboard from './pages/manageStudent/TeacherManagementDashboard';
-import OverView from './pages/manageStudent/OverView';
-import StudentDashboard from './pages/manageStudent/StudentDashboard';
+import TeacherManagementDashboard from './pages/teacher-dashboard';
+import ManagementOverview from './pages/overview/ManagementOverview';
+import StudentDashboard from './pages/student-dashboard';
 import StudentOverview from './pages/overview/StudentOverview';
 import TeacherOverview from './pages/overview/TeacherOverview';
 import ClassObservationPage from './pages/observation/ClassObservationPage';
@@ -37,7 +37,7 @@ export default function App() {
           <Route path="homepage" element={<HomePage />} />
           <Route path="bulletin" element={<Bulletin />} />
           <Route path="List" element={<List />} />
-          <Route path="overView" element={<OverView />} />
+          <Route path="overView" element={<ManagementOverview />} />
           <Route path="student-overview" element={<StudentOverview />} />
           <Route path="teacher-overview" element={<TeacherOverview />} />
           <Route path="observation" element={<ClassObservationPage />} />
@@ -50,7 +50,7 @@ export default function App() {
             <Route path="manageIdeaWall" element={<ManageIdeaWall />} />
             <Route path="ideaWall" element={<IdeaWall />} />
             <Route path="rag" element={<Rag />} />
-            <Route path="manageStudent" element={<TeacherManagementDashboard />} />
+            <Route path="teacherDashboard" element={<TeacherManagementDashboard />} />
             <Route path="studentDashboard" element={<StudentDashboard />} />
           </Route>
         </Route>

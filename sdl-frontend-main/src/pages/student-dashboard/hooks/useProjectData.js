@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { getKanbanColumns, getProjectActivity } from "../../../../api/kanban";
-import { getNodes } from "../../../../api/nodes";
-import { getIdeaWall } from "../../../../api/ideaWall";
-import { getAllPersonalDaily, getAllTeamDaily } from "../../../../api/reflection";
-import { getChatroomHistory } from "../../../../api/chatroom";
-import { getRagMessageHistory } from "../../../../api/rag";
-import { getProjectUser } from "../../../../api/users";
-import { getProject } from "../../../../api/project";
-import { fetchComments } from "../../../../api/comments";
-import { getUsageSummary } from "../../../../api/usage";
-import { getAllSubmit } from "../../../../api/submit";
+import { getKanbanColumns, getProjectActivity } from "../../../api/kanban";
+import { getNodes } from "../../../api/nodes";
+import { getIdeaWall } from "../../../api/ideaWall";
+import { getAllPersonalDaily, getAllTeamDaily } from "../../../api/reflection";
+import { getChatroomHistory } from "../../../api/chatroom";
+import { getRagMessageHistory } from "../../../api/rag";
+import { getProjectUser } from "../../../api/users";
+import { getProject } from "../../../api/project";
+import { fetchComments } from "../../../api/comments";
+import { getUsageSummary } from "../../../api/usage";
+import { getAllSubmit } from "../../../api/submit";
 
 /**
  * 自定義 Hook 用於獲取專案相關數據

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { formatRelativeTime } from "../utils";
 import { calculateProgress } from "../utils";
-import { is5RsFormat, extract5RsText, calculate5RsCompleteness } from "@/utils/5RsUtils.js";
+import { is5RsFormat, extract5RsText, calculate5RsCompleteness } from "../../../utils/5RsUtils.js";
 
 /**
  * 自定義 Hook 用於計算學生相關指標
