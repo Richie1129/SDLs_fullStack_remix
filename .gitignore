@@ -1,5 +1,6 @@
 letsencrypt/
 history_file.txt
+sql/
 # Logs
 logs
 *.log
