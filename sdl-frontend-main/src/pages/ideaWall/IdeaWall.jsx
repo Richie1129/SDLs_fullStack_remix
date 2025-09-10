@@ -77,14 +77,19 @@ export default function IdeaWall() {
         ['ideaWallInfo', projectId, currentStage, currentSubStage],
         async () => {
             const stageString = `${currentStage}-${currentSubStage}`;
+            console.log(`🔍 查詢想法牆: projectId=${projectId}, stage=${stageString}`);
+            
             try {
                 // 首先嘗試獲取現有的想法牆
                 const ideaWall = await getIdeaWall(projectId, stageString);
+                console.log(`✅ 找到想法牆:`, ideaWall);
                 return ideaWall;
             } catch (error) {
+                console.log(`⚠️ 想法牆查詢失敗:`, error.response?.status, error.message);
+                
                 if (error.response?.status === 404) {
                     // 如果不存在，創建新的想法牆
-                    console.log(`創建新的想法牆，階段: ${stageString}`);
+                    console.log(`🔨 創建新的想法牆，階段: ${stageString}`);
                     try {
                         const newIdeaWall = await createIdeaWall({
                             name: `專案想法牆-${stageString}`,
@@ -92,9 +97,10 @@ export default function IdeaWall() {
                             projectId: projectId,
                             stage: stageString
                         });
+                        console.log(`✅ 想法牆創建成功:`, newIdeaWall);
                         return newIdeaWall;
                     } catch (createError) {
-                        console.error('創建想法牆失敗:', createError);
+                        console.error('❌ 創建想法牆失敗:', createError);
                         toast.error(`創建想法牆失敗: ${createError.message || '未知錯誤'}`);
                         // 返回一個基本的想法牆物件以防止整個流程中斷
                         return {
@@ -107,7 +113,7 @@ export default function IdeaWall() {
                         };
                     }
                 } else {
-                    console.error('查詢想法牆失敗:', error);
+                    console.error('❌ 查詢想法牆失敗:', error);
                     toast.error(`查詢想法牆失敗: ${error.message || '未知錯誤'}`);
                     throw error;
                 }
@@ -116,6 +122,7 @@ export default function IdeaWall() {
         {
             enabled: !!projectId && !!currentStage && !!currentSubStage,
             onSuccess: (data) => {
+                console.log(`🎯 想法牆信息設置完成:`, data);
                 setIdealWallInfo(data)
                 if (data) {
                     const { id } = data
