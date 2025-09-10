@@ -940,7 +940,7 @@ export default function Reflection() {
               </div>
               <div className="flex gap-2">
                 <a
-                  href={currentEditingPersonal.fileName ? `https://science.sdlswuret.com/api/file/direct/${currentEditingPersonal.fileName}` : undefined}
+                  href={currentEditingPersonal.fileName ? `http://localhost/api/file/direct/${currentEditingPersonal.fileName}` : undefined}
                   onClick={(e) => {
                     if (!currentEditingPersonal.fileName && currentEditingPersonal.fileData) {
                       e.preventDefault();
@@ -1103,7 +1103,7 @@ export default function Reflection() {
               </div>
               <div className="flex gap-2">
                 <a
-                  href={currentEditingTeam.fileName ? `https://science.sdlswuret.com/api/file/direct/${currentEditingTeam.fileName}` : undefined}
+                  href={currentEditingTeam.fileName ? `http://localhost/api/file/direct/${currentEditingTeam.fileName}` : undefined}
                   onClick={(e) => {
                     if (!currentEditingTeam.fileName && currentEditingTeam.fileData) {
                       e.preventDefault();

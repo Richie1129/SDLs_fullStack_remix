@@ -1,7 +1,8 @@
 import apiClient from './client';
 
-export const getIdeaWall = async (projectId,stage) => {
-    const response = await apiClient.get(`/ideaWall/${projectId}/${stage}`)
+export const getIdeaWall = async (projectId) => {
+    // stage 參數已廢棄，每個專案只有一個想法牆
+    const response = await apiClient.get(`/ideaWall/${projectId}`)
     return response.data
 }
 

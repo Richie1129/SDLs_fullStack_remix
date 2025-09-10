@@ -34,7 +34,7 @@ export default function IdeaWall() {
     const [createNodeModalOpen, setCreateNodeModalOpen] = useState(false);
     const [updateNodeModalOpen, setUpdateNodeModalOpen] = useState(false);
     const [canvasPosition, setCanvasPosition] = useState({});
-    const [ideaWallInfo, setIdealWallInfo] = useState({ id: "1", name: "", type: "" })
+    const [ideaWallInfo, setIdealWallInfo] = useState({ id: "", name: "", type: "" })
     const [selectNodeInfo, setSelectNodeInfo] = useState({ id: "", title: "", content: "", owner: "", createdAt: "", ideaWallId: "", projectId: projectId });
     const [buildOnNodeId, setBuildOnId] = useState("")
     const [tempid, setTempId] = useState("")
@@ -73,54 +73,16 @@ export default function IdeaWall() {
         }
     );
 
+    // 簡化：不再需要複雜的想法牆查詢邏輯，每個專案只有一個想法牆
     const ideaWallInfoQuery = useQuery(
-        ['ideaWallInfo', projectId, currentStage, currentSubStage],
+        ['ideaWallInfo', projectId],
         async () => {
-            const stageString = `${currentStage}-${currentSubStage}`;
-            console.log(`🔍 查詢想法牆: projectId=${projectId}, stage=${stageString}`);
-            
-            try {
-                // 首先嘗試獲取現有的想法牆
-                const ideaWall = await getIdeaWall(projectId, stageString);
-                console.log(`✅ 找到想法牆:`, ideaWall);
-                return ideaWall;
-            } catch (error) {
-                console.log(`⚠️ 想法牆查詢失敗:`, error.response?.status, error.message);
-                
-                if (error.response?.status === 404) {
-                    // 如果不存在，創建新的想法牆
-                    console.log(`🔨 創建新的想法牆，階段: ${stageString}`);
-                    try {
-                        const newIdeaWall = await createIdeaWall({
-                            name: `專案想法牆-${stageString}`,
-                            type: "project",
-                            projectId: projectId,
-                            stage: stageString
-                        });
-                        console.log(`✅ 想法牆創建成功:`, newIdeaWall);
-                        return newIdeaWall;
-                    } catch (createError) {
-                        console.error('❌ 創建想法牆失敗:', createError);
-                        toast.error(`創建想法牆失敗: ${createError.message || '未知錯誤'}`);
-                        // 返回一個基本的想法牆物件以防止整個流程中斷
-                        return {
-                            id: null,
-                            name: `專案想法牆-${stageString}`,
-                            type: "project",
-                            projectId: projectId,
-                            stage: stageString,
-                            _createFailed: true
-                        };
-                    }
-                } else {
-                    console.error('❌ 查詢想法牆失敗:', error);
-                    toast.error(`查詢想法牆失敗: ${error.message || '未知錯誤'}`);
-                    throw error;
-                }
-            }
+            // 使用新的API，不需要stage參數
+            const ideaWall = await getIdeaWall(projectId);
+            return ideaWall;
         },
         {
-            enabled: !!projectId && !!currentStage && !!currentSubStage,
+            enabled: !!projectId,
             onSuccess: (data) => {
                 console.log(`🎯 想法牆信息設置完成:`, data);
                 setIdealWallInfo(data)
@@ -302,89 +264,120 @@ export default function IdeaWall() {
         }
 
 
-        setNodeData((prevData) => ({
-            ...prevData,
-            [name]: value,
-            ideaWallId: ideaWallInfo.id,
-            owner: localStorage.getItem("username"),
-            from_id: buildOnNodeId,
-            projectId: projectId,
-            colorindex: userId
-        }));
+        // 只有當 ideaWallInfo.id 有效時才設置 nodeData
+        if (ideaWallInfo?.id && ideaWallInfo.id !== "") {
+            setNodeData((prevData) => ({
+                ...prevData,
+                [name]: value,
+                ideaWallId: ideaWallInfo.id,
+                owner: localStorage.getItem("username"),
+                from_id: buildOnNodeId,
+                projectId: projectId,
+                colorindex: userId
+            }));
+        } else {
+            console.warn('ideaWallInfo 尚未載入，跳過設置 nodeData');
+        }
     };
 
     const handleUpdataChange = (e) => {
         const { name, value } = e.target;
-        setSelectNodeInfo((prevData) => ({
-            ...prevData,
+        // 只有當 ideaWallInfo.id 有效時才更新 ideaWallId
+        const updatedData = {
+            ...selectNodeInfo,
             [name]: value,
-            ideaWallId: ideaWallInfo.id,
             owner: localStorage.getItem("username"),
             projectId: projectId,
             colorindex: userId
-        }));
+        };
+        
+        // 只有在 ideaWallInfo 有效時才設置 ideaWallId
+        if (ideaWallInfo?.id && ideaWallInfo.id !== "") {
+            updatedData.ideaWallId = ideaWallInfo.id;
+        }
+        
+        setSelectNodeInfo(updatedData);
     };
 
-    const handleCreateSubmit = (e) => {
+    const handleCreateSubmit = async (e) => {
         e.preventDefault();
         if (title.trim() !== "" && content.trim() !== "") {
-            // 基本校驗：需有 ideaWallId 與 projectId
-            if (!ideaWallInfo?.id || !projectId) {
-                if (ideaWallInfo?._createFailed) {
-                    toast.error('想法牆創建失敗，無法新增節點');
-                } else {
-                    toast.error('想法牆尚未就緒，請稍後再試');
-                }
+            if (!projectId) {
+                toast.error('專案資訊尚未載入，請稍後再試');
                 return;
             }
-            
+
+            // 確保有有效的 ideaWallId：優先使用既有狀態，否則即時抓取/建立
+            let wallId = ideaWallInfo?.id;
+            if (!wallId || wallId === "") {
+                try {
+                    // 以專案目前階段格式嘗試（若後端忽略，仍會回此專案第一個牆）
+                    const stageFormat = `${currentStage}-${currentSubStage}`;
+                    let wall = null;
+                    try {
+                        wall = await getIdeaWall(projectId, stageFormat);
+                    } catch (_) { /* ignore and fallback */ }
+                    if (!wall || !wall.id) {
+                        wall = await createIdeaWall({ projectId, stage: stageFormat, name: '' });
+                    }
+                    if (wall && wall.id) {
+                        wallId = wall.id;
+                        setIdealWallInfo(wall);
+                    }
+                } catch (err) {
+                    console.warn('即時取得/建立想法牆失敗:', err);
+                }
+            }
+
+            if (!wallId) {
+                toast.error('想法牆資訊尚未載入完成，請稍後再試');
+                return;
+            }
+
+            setCreateNodeModalOpen(false);
+
             // 保存完整節點資料供活動流使用
             const completeNodeData = {
                 ...nodeData,
                 title,
                 content,
-                ideaWallId: ideaWallInfo.id,
+                ideaWallId: wallId,
                 projectId,
                 from_id: buildOnNodeId,
                 owner: localStorage.getItem('username'),
                 colorindex: userId
             };
-            
-            // 立即觸發活動流更新 - 在發送 Socket 事件前就顯示
+
+            // 立即觸發活動流更新
             const activityData = {
                 type: 'create',
                 source: 'node',
-                nodeId: Date.now(), // 臨時 ID，後端會返回真正的 ID
+                nodeId: Date.now(),
                 nodeTitle: title,
-                nodeType: buildOnNodeId ? 'extension' : 'idea', // 如果有來源節點就是延伸想法
+                nodeType: buildOnNodeId ? 'extension' : 'idea',
                 nodeData: completeNodeData,
                 user: localStorage.getItem('username') || 'Unknown',
                 timestamp: new Date().toISOString(),
                 projectId: projectId
             };
-            
-            // 觸發自定義事件
-            window.dispatchEvent(new CustomEvent('nodeCreated', {
-                detail: activityData
-            }));
-            
+            window.dispatchEvent(new CustomEvent('nodeCreated', { detail: activityData }));
+
+            // 送出建立節點（帶上 ideaWallId + projectId）
             socket.emit('nodeCreate', {
                 ...nodeData,
                 title,
                 content,
-                ideaWallId: ideaWallInfo.id,
+                ideaWallId: wallId,
                 projectId,
-                from_id: buildOnNodeId, // 設定來源節點 ID（如果是延伸想法）
+                from_id: buildOnNodeId,
+                owner: localStorage.getItem('username'),
+                colorindex: userId,
                 user: {
                     username: localStorage.getItem('username'),
                     id: parseInt(localStorage.getItem('id')) || null,
                 },
             });
-            setBuildOnId(""); // 清空，以免影響其他新建節點
-            
-            // 只在發送後關閉模態框，讓後端成功回應來觸發UI更新
-            setCreateNodeModalOpen(false);
-            
+            setBuildOnId("");
         } else {
             toast.error("標題及內容請填寫完整!");
         }

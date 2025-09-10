@@ -91,7 +91,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
 
                 // 準備活動記錄資料結構
                 const activityRecord = {
-                    id: Date.now(),
+                    id: `${activity.source}_${activity.type}_${activity.taskId || activity.columnId || activity.nodeId}_${Date.now()}`,
                     changeType: activity.type,
                     description: getActivityDescription(activity),
                     changedBy: activity.user,
@@ -611,7 +611,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                 
                                 return (
                                     <motion.div
-                                        key={activity.id || index}
+                                        key={`activity-${activity.id || index}-${activity.createdAt || index}`}
                                         initial={{ opacity: 0, y: -20 }}
                                         animate={{ 
                                             opacity: 1, 
@@ -654,7 +654,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                 {(activity.changeType === 'update' || activity.type === 'update') && activity.changes && activity.changes.length > 0 && (
                                                     <div className="mt-2 space-y-1">
                                                         {activity.changes.map((change, idx) => (
-                                                            <div key={idx} className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                            <div key={`activity-${activity.id || index}-${activity.createdAt || index}-change-${idx}-${change.fieldName}`} className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                                                 <span className="font-medium text-gray-600">
                                                                     {change.fieldName === 'title' && '標題'}
                                                                     {change.fieldName === 'content' && '內容'}

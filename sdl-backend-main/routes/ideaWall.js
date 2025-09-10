@@ -45,7 +45,8 @@ const optionalProjectPermission = async (req, res, next) => {
 };
 
 // 只讀路由 - 允許觀摩者存取
-router.get('/:projectId/:stage', optionalAuth, optionalProjectPermission, controller.getIdeaWall);
+router.get('/:projectId/:stage', optionalAuth, optionalProjectPermission, controller.getIdeaWall); // 向後相容
+router.get('/:projectId', optionalAuth, optionalProjectPermission, controller.getIdeaWall); // 新的簡化路由
 router.get('/', optionalAuth, optionalProjectPermission, controller.getAllIdeaWall);
 
 // 寫入路由 - 需要完整權限，禁止觀摩者操作

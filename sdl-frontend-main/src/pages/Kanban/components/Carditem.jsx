@@ -364,7 +364,7 @@ function Carditem({ data, index, columnIndex }) {
   const [commentImageList, setCommentImageList] = useState([]);
   const [selectedCommentImageIndex, setSelectedCommentImageIndex] = useState(null);
   const openCommentImageModal = (imageAttachments, index) => {
-    const urls = (imageAttachments || []).map(att => `https://science.sdlswuret.com/api/file/image/${att.fileName}`);
+    const urls = (imageAttachments || []).map(att => `http://localhost/api/file/image/${att.fileName}`);
     setCommentImageList(urls);
     setSelectedCommentImageIndex(index || 0);
   };
@@ -419,8 +419,8 @@ function Carditem({ data, index, columnIndex }) {
   const handleCommentAttachmentDownload = async (attachment) => {
     try {
       const fileName = attachment.fileName;
-      const resp = await axios.get(`https://science.sdlswuret.com/api/file/download/${fileName}`);
-      const url = resp.data?.downloadUrl || `https://science.sdlswuret.com/api/file/direct/${fileName}`;
+      const resp = await axios.get(`http://localhost/api/file/download/${fileName}`);
+      const url = resp.data?.downloadUrl || `http://localhost/api/file/direct/${fileName}`;
       // 直接打開下載 URL
       window.open(url, '_blank');
     } catch (err) {
@@ -467,7 +467,7 @@ function Carditem({ data, index, columnIndex }) {
     const processedImages = (data.images || []).map(imageUrl => {
       if (imageUrl.includes('sdls-files/')) {
         const fileName = imageUrl.split('/').pop();
-        return `https://science.sdlswuret.com/api/file/image/${fileName}`;
+        return `http://localhost/api/file/image/${fileName}`;
       }
       return imageUrl;
     });
@@ -544,7 +544,7 @@ function Carditem({ data, index, columnIndex }) {
     });
 
     try {
-      const response = await axios.post('https://science.sdlswuret.com/api/upload', formData, {
+      const response = await axios.post('http://localhost/api/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -555,7 +555,7 @@ function Carditem({ data, index, columnIndex }) {
         .filter((file) => !file.mimeType.startsWith("image/"))
         .map((file) => ({
           // 如果是完整 URL (MinIO)，直接使用；否則拼接本地路徑
-          url: file.url.startsWith('http') ? file.url : `https://science.sdlswuret.com/api${file.url}`,
+          url: file.url.startsWith('http') ? file.url : `http://localhost/api${file.url}`,
           originalName: file.originalName,
           mimeType: file.mimeType,
           fileName: file.fileName // 保存 MinIO 檔名
@@ -567,10 +567,10 @@ function Carditem({ data, index, columnIndex }) {
           // 如果是 MinIO URL，提取檔名並使用代理 API
           if (file.url.includes('sdls-files/')) {
             const fileName = file.fileName || file.url.split('/').pop();
-            return `https://science.sdlswuret.com/api/file/image/${fileName}`;
+            return `http://localhost/api/file/image/${fileName}`;
           }
           // 本地檔案使用原來的邏輯
-          return file.url.startsWith('http') ? file.url : `https://science.sdlswuret.com/api${file.url}`;
+          return file.url.startsWith('http') ? file.url : `http://localhost/api${file.url}`;
         });
 
       setCardData((prev) => ({
@@ -595,7 +595,7 @@ function Carditem({ data, index, columnIndex }) {
       // 檢查是否為 MinIO URL (完整 URL)
       const downloadUrl = file.url.startsWith('http') 
         ? file.url  // MinIO 完整 URL
-        : `https://science.sdlswuret.com/api${file.url}`; // 本地相對路徑
+        : `http://localhost/api${file.url}`; // 本地相對路徑
       
       console.log('下載檔案 URL:', downloadUrl);
       
@@ -625,7 +625,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(`https://science.sdlswuret.com/api/file/${fileName}`);
+        await axios.delete(`http://localhost/api/file/${fileName}`);
         console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
       }
 
@@ -670,7 +670,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(`https://science.sdlswuret.com/api/file/${fileName}`);
+        await axios.delete(`http://localhost/api/file/${fileName}`);
         console.log(`✅ MinIO 圖片刪除成功: ${fileName}`);
       }
 
@@ -1209,7 +1209,7 @@ function Carditem({ data, index, columnIndex }) {
                           {c.attachments.map((a, i) => {
                             const isImage = (a.mimeType || '').startsWith('image/');
                             if (isImage) {
-                              const imgUrl = `https://science.sdlswuret.com/api/file/image/${a.fileName}`;
+                              const imgUrl = `http://localhost/api/file/image/${a.fileName}`;
                               return (
                                 <div key={i}>
                                   <img
@@ -1221,7 +1221,7 @@ function Carditem({ data, index, columnIndex }) {
                                 </div>
                               );
                             }
-                            const dlUrl = `https://science.sdlswuret.com/api/file/direct/${a.fileName}`;
+                            const dlUrl = `http://localhost/api/file/direct/${a.fileName}`;
                             return (
                               <div key={i} className='text-xs flex items-center gap-2'>
                                 <a href={dlUrl} target='_blank' rel='noreferrer' className='text-blue-600 hover:underline'>
