@@ -64,8 +64,8 @@ export default function IdeaWall() {
         {
             onSuccess: (data) => {
                 if (data) {
-                    setCurrentStage(data.currentStage || "1");
-                    setCurrentSubStage(data.currentSubStage || "1");
+                    setCurrentStage(data.currentStage ? String(data.currentStage) : "1");
+                    setCurrentSubStage(data.currentSubStage ? String(data.currentSubStage) : "1");
                 }
             },
             refetchOnMount: false,
@@ -95,9 +95,20 @@ export default function IdeaWall() {
                         return newIdeaWall;
                     } catch (createError) {
                         console.error('創建想法牆失敗:', createError);
-                        throw createError;
+                        toast.error(`創建想法牆失敗: ${createError.message || '未知錯誤'}`);
+                        // 返回一個基本的想法牆物件以防止整個流程中斷
+                        return {
+                            id: null,
+                            name: `專案想法牆-${stageString}`,
+                            type: "project",
+                            projectId: projectId,
+                            stage: stageString,
+                            _createFailed: true
+                        };
                     }
                 } else {
+                    console.error('查詢想法牆失敗:', error);
+                    toast.error(`查詢想法牆失敗: ${error.message || '未知錯誤'}`);
                     throw error;
                 }
             }
@@ -312,10 +323,13 @@ export default function IdeaWall() {
         if (title.trim() !== "" && content.trim() !== "") {
             // 基本校驗：需有 ideaWallId 與 projectId
             if (!ideaWallInfo?.id || !projectId) {
-                toast.error('想法牆尚未就緒，請稍後再試');
+                if (ideaWallInfo?._createFailed) {
+                    toast.error('想法牆創建失敗，無法新增節點');
+                } else {
+                    toast.error('想法牆尚未就緒，請稍後再試');
+                }
                 return;
             }
-            setCreateNodeModalOpen(false);
             
             // 保存完整節點資料供活動流使用
             const completeNodeData = {
@@ -349,6 +363,8 @@ export default function IdeaWall() {
             
             socket.emit('nodeCreate', {
                 ...nodeData,
+                title,
+                content,
                 ideaWallId: ideaWallInfo.id,
                 projectId,
                 from_id: buildOnNodeId, // 設定來源節點 ID（如果是延伸想法）
@@ -358,6 +374,10 @@ export default function IdeaWall() {
                 },
             });
             setBuildOnId(""); // 清空，以免影響其他新建節點
+            
+            // 只在發送後關閉模態框，讓後端成功回應來觸發UI更新
+            setCreateNodeModalOpen(false);
+            
         } else {
             toast.error("標題及內容請填寫完整!");
         }

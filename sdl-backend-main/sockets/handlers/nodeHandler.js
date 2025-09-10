@@ -89,6 +89,14 @@ class NodeHandler {
             // 廣播新節點到所有相關客戶端
             this.broadcastToProject(projectId, "nodeUpdated", createdNode);
             
+            // 發送成功事件給創建者
+            this.emitSuccess('nodeCreate', {
+                message: '節點創建成功',
+                code: 'NODE_CREATE_SUCCESS',
+                nodeId: createdNode.id,
+                nodeTitle: createdNode.title
+            });
+            
             console.log(`✅ 節點創建成功: ${createdNode.id} - ${createdNode.title}`);
 
         } catch (error) {
