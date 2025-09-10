@@ -23,7 +23,7 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
   const handleDownload = () => {
     if (!record) return;
     if (record.fileName) {
-      window.open(`http:localhost/api/file/direct/${record.fileName}`, "_blank");
+      window.open(`http://localhost/api/file/direct/${record.fileName}`, "_blank");
     } else if (record.fileData && record.fileData.data) {
       const buffer = new Uint8Array(record.fileData.data);
       const blob = new Blob([buffer], { type: "application/octet-stream" });

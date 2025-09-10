@@ -166,7 +166,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const [commentImageList, setCommentImageList] = useState([]);
   const [selectedCommentImageIndex, setSelectedCommentImageIndex] = useState(null);
   const openCommentImageModal = (imageAttachments, index) => {
-    const urls = (imageAttachments || []).map(att => `http:localhost/api/file/image/${att.fileName}`);
+    const urls = (imageAttachments || []).map(att => `http://localhost/api/file/image/${att.fileName}`);
     setCommentImageList(urls);
     setSelectedCommentImageIndex(index || 0);
   };
@@ -191,9 +191,9 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const handleAttachmentDownload = async (attachment) => {
     try {
       const fileName = attachment.fileName;
-      const resp = await fetch(`http:localhost/api/file/download/${fileName}`);
+      const resp = await fetch(`http://localhost/api/file/download/${fileName}`);
       const data = await resp.json().catch(() => ({}));
-      const url = data?.downloadUrl || `http:localhost/api/file/direct/${fileName}`;
+      const url = data?.downloadUrl || `http://localhost/api/file/direct/${fileName}`;
       window.open(url, '_blank');
     } catch (err) {
       console.error('下載附件失敗:', err);
@@ -254,7 +254,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
             {imgs.map(a => (
               <div key={a.id} className="relative group">
                 <img
-                  src={`http:localhost/api/file/image/${a.fileName}`}
+                  src={`http://localhost/api/file/image/${a.fileName}`}
                   alt={a.originalName}
                   className="w-full h-24 object-cover rounded border cursor-pointer"
                   onClick={() => openCommentImageModal(imgs, imgs.indexOf(a))}
@@ -282,7 +282,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
                   {pickFileIcon(a.mimeType)}
                 </span>
                 <a
-                  href={`http:localhost/api/file/direct/${a.fileName}`}
+                  href={`http://localhost/api/file/direct/${a.fileName}`}
                   target="_blank"
                   rel="noreferrer"
                   className="truncate text-blue-600 hover:underline"
