@@ -137,7 +137,9 @@ exports.getKanban = async ( req, res ) => {
     //     })
     // })
     // sortedColumnData[2].task = sortTaskData3;
-    const sortedColumnData = column.map(columnId => columnData.find(item => item.id === columnId));
+    const sortedColumnData = column
+    .map(columnId => columnData.find(item => item.id === columnId))
+    .filter(item => item !== undefined); 
 
     // 對於每個排序後的列，取得並排序其任務
     await Promise.all(sortedColumnData.map(async (columnItem, columnIndex) => {
