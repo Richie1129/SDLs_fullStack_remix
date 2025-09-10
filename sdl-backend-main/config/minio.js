@@ -3,8 +3,8 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // 📦 MinIO 配置
 const minioConfig = {
-    endpoint: process.env.MINIO_ENDPOINT || 'https://science.sdlswuret.com:9000',
-    publicEndpoint: process.env.MINIO_PUBLIC_ENDPOINT || 'https://science.sdlswuret.com:9000', // 前端可訪問的地址
+    endpoint: process.env.MINIO_ENDPOINT || 'http:localhost:9000',
+    publicEndpoint: process.env.MINIO_PUBLIC_ENDPOINT || 'http:localhost:9000', // 前端可訪問的地址
     accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
     secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
     bucketName: process.env.MINIO_BUCKET_NAME || 'sdl-files',
