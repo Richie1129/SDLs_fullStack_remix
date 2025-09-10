@@ -324,7 +324,7 @@ const FiveRsReflectionForm = ({
             </div>
             <div className="flex gap-2">
               <a
-                href={existingRecord.fileName ? `http://localhost/api/file/direct/${existingRecord.fileName}` : undefined}
+                href={existingRecord.fileName ? `https://science.lazyinwork.com/api/file/direct/${existingRecord.fileName}` : undefined}
                 onClick={(e) => {
                   if (!existingRecord.fileName && existingRecord.fileData) {
                     e.preventDefault();
