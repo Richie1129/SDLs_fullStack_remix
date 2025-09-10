@@ -45,10 +45,27 @@ class NodeHandler {
         const createdBy = this.getCurrentUsername(data) || owner || "未知";
 
         try {
+            // 簡化：每個專案只有一個想法牆，直接根據 projectId 查找
+            let actualIdeaWallId = ideaWallId;
+            if (!actualIdeaWallId && projectId) {
+                const IdeaWall = require('../../models/idea_wall');
+                const ideaWall = await IdeaWall.findOne({
+                    where: { projectId: projectId },
+                    order: [['id', 'ASC']] // 確保使用第一個想法牆
+                });
+                
+                if (ideaWall) {
+                    actualIdeaWallId = ideaWall.id;
+                    console.log(`🔍 找到專案想法牆: projectId=${projectId} -> ideaWallId=${actualIdeaWallId}`);
+                } else {
+                    throw new Error(`專案 ${projectId} 沒有對應的想法牆`);
+                }
+            }
+
             const createdNode = await Node.create({
                 title: title,
                 content: content,
-                ideaWallId: ideaWallId,
+                ideaWallId: actualIdeaWallId,
                 owner: owner,
                 colorindex: colorindex
             }, { req: data._reqContext });
@@ -75,7 +92,7 @@ class NodeHandler {
                 await Node_relation.create({
                     from_id: from_id,
                     to_id: createdNode.id,
-                    ideaWallId: ideaWallId
+                    ideaWallId: actualIdeaWallId
                 }, { req: data._reqContext });
             }
 

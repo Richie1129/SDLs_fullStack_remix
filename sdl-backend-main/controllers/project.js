@@ -128,10 +128,12 @@ exports.createProject = async (req, res) => {
         kanbanInst.column = [todo.id, inProgress.id, Completed.id];
         await kanbanInst.save({ transaction: t });
 
+        // 簡化：每個專案只需要一個想法牆，不分階段
         await Idea_wall.create({
+            name: `${createdProject.name}-想法牆`,
             type: "project",
             projectId: createdProject.id,
-            stage: `${createdProject.currentStage}-${createdProject.currentSubStage}`
+            stage: null // 不再使用階段概念
         }, { transaction: t });
 
         // initialize process
