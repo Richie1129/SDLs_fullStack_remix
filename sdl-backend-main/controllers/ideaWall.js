@@ -4,31 +4,34 @@ const { Op } = require("sequelize");
 //to do name change to stage substage
 exports.getIdeaWall = async(req, res) =>{
     const projectId = req.params.projectId;
-    const stage = req.params.stage;
-    console.log("=== getIdeaWall Debug ===");
+    // stage 參數已廢棄，每個專案只有一個想法牆
+    console.log("=== getIdeaWall Debug (簡化版) ===");
     console.log("projectId:", projectId);
-    console.log("stage:", stage);
     
-    await Idea_wall.findOne({
-        where:{
-            [Op.and]: [
-                { projectId:projectId },
-                { stage:stage }
-            ]   
-        }
-    })
-    .then(result =>{
+    try {
+        // 直接查找專案的想法牆（應該只有一個）
+        const result = await Idea_wall.findOne({
+            where: { projectId: projectId },
+            order: [['id', 'ASC']] // 確保一致性
+        });
+        
         console.log("找到的想法牆:", result);
         if (result) {
             console.log("想法牆 ID:", result.id);
             console.log("想法牆名稱:", result.name);
+        } else {
+            console.log("未找到專案想法牆，projectId:", projectId);
+            return res.status(404).json({ 
+                error: `專案 ${projectId} 沒有想法牆`,
+                code: 'IDEA_WALL_NOT_FOUND' 
+            });
         }
-        res.status(200).json(result)
-    })
-    .catch(err => {
+        
+        res.status(200).json(result);
+    } catch (err) {
         console.error("getIdeaWall 錯誤:", err);
         res.status(500).json({ error: err.message });
-    });
+    }
 }
 
 exports.getAllIdeaWall = async(req, res) =>{
