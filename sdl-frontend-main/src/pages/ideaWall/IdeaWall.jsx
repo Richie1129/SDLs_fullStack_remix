@@ -64,8 +64,8 @@ export default function IdeaWall() {
         {
             onSuccess: (data) => {
                 if (data) {
-                    setCurrentStage(data.currentStage || "1");
-                    setCurrentSubStage(data.currentSubStage || "1");
+                    setCurrentStage(data.currentStage ? String(data.currentStage) : "1");
+                    setCurrentSubStage(data.currentSubStage ? String(data.currentSubStage) : "1");
                 }
             },
             refetchOnMount: false,
@@ -84,6 +84,7 @@ export default function IdeaWall() {
         {
             enabled: !!projectId,
             onSuccess: (data) => {
+                console.log(`🎯 想法牆信息設置完成:`, data);
                 setIdealWallInfo(data)
                 if (data) {
                     const { id } = data
