@@ -170,13 +170,35 @@ exports.remove = async (req, res) => {
       return res.status(403).json({ message: '僅能刪除自己的評論' });
     }
 
-    // Audit: project comment delete (capture before)
+    // Audit: project comment delete (capture before with project info)
+    let enhancedMetadata = { 
+      before: { content: summarizeText(comment.content || '') }
+    };
+    
+    // 為已刪除的專案評論保存專案名稱
+    try {
+      const project = await Project.findByPk(comment.projectId, {
+        attributes: ['id', 'name']
+      });
+      if (project) {
+        enhancedMetadata.projectName = project.name;
+        enhancedMetadata.projectId = project.id;
+        console.log('專案評論刪除 - 已保存專案資訊到 metadata:', {
+          projectName: project.name,
+          projectId: project.id,
+          commentId: comment.id
+        });
+      }
+    } catch (e) {
+      console.warn('專案評論刪除時獲取專案資訊失敗:', e.message);
+    }
+    
     await logAudit(req, {
       action: 'PROJECT_COMMENT_DELETE',
       targetType: 'project_comment',
       targetId: comment.id,
       projectId: comment.projectId || null,
-      metadata: clampMetadataSize({ before: { content: summarizeText(comment.content || '') } })
+      metadata: clampMetadataSize(enhancedMetadata)
     });
 
     await comment.destroy({ req });

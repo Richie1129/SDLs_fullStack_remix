@@ -63,12 +63,35 @@ function attachHooks(model, { createAction, updateAction, deleteAction, targetTy
     const projectId = await resolveProjectId(instance);
     const before = instance.dataValues || {};
     if (typeof before.content === 'string') before.content = summarizeText(before.content);
+    
+    // 針對評論刪除，增強 metadata 以包含任務/專案資訊
+    let enhancedMetadata = { before };
+    
+    if (targetType === 'comment' && instance.taskId) {
+      try {
+        const task = await Task.findByPk(instance.taskId, {
+          attributes: ['id', 'title']
+        });
+        if (task) {
+          enhancedMetadata.taskTitle = task.title;
+          enhancedMetadata.taskId = task.id;
+          console.log('評論刪除 - 已保存任務資訊到 metadata:', {
+            taskTitle: task.title,
+            taskId: task.id,
+            commentId: instance.id
+          });
+        }
+      } catch (e) {
+        console.warn('評論刪除時獲取任務資訊失敗:', e.message);
+      }
+    }
+    
     await logAudit(req, {
       action: deleteAction,
       targetType,
       targetId: instance.id,
       projectId,
-      metadata: clampMetadataSize({ before })
+      metadata: clampMetadataSize(enhancedMetadata)
     });
   });
 }
