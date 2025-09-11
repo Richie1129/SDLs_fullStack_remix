@@ -25,25 +25,35 @@ exports.startSession = async (req, res) => {
     
     if (!userId || !projectId) return res.status(400).json({ message: '缺少 userId 或 projectId' });
 
-    // 使用原子化 UPSERT 操作消除競態條件
-    // PostgreSQL ON CONFLICT 語法，確保只有一個未結束的 session
-    const [result] = await UsageSession.sequelize.query(`
-      INSERT INTO usage_sessions("userId", "projectId", "startedAt", "lastActiveAt", "totalSeconds", "createdAt", "updatedAt")
-      VALUES (:userId, :projectId, NOW(), NOW(), 0, NOW(), NOW())
-      ON CONFLICT ("userId", "projectId") WHERE "endedAt" IS NULL
-      DO UPDATE SET "lastActiveAt" = GREATEST(usage_sessions."lastActiveAt", NOW()),
-                    "updatedAt" = NOW()
-      RETURNING id, "startedAt", "lastActiveAt";
-    `, {
-      replacements: { userId, projectId },
-      type: UsageSession.sequelize.QueryTypes.SELECT
+    // 先嘗試查找現有的未結束 session
+    let session = await UsageSession.findOne({ 
+      where: { userId, projectId, endedAt: null },
+      attributes: ['id', 'startedAt', 'lastActiveAt', 'updatedAt']
     });
-
-    if (!result || result.length === 0) {
-      throw new Error('UPSERT operation failed');
+    
+    const now = new Date();
+    
+    if (session) {
+      // 更新現有 session 的 lastActiveAt
+      session.lastActiveAt = now;
+      await session.save();
+      return res.json({ 
+        sessionId: session.id, 
+        startedAt: session.startedAt, 
+        lastActiveAt: session.lastActiveAt 
+      });
     }
 
-    const session = result[0];
+    // 如果沒有現有 session，創建新的
+    session = await UsageSession.create({
+      userId,
+      projectId,
+      startedAt: now,
+      lastActiveAt: now,
+      endedAt: null,
+      totalSeconds: 0,
+    });
+
     return res.json({ 
       sessionId: session.id, 
       startedAt: session.startedAt, 
@@ -51,25 +61,6 @@ exports.startSession = async (req, res) => {
     });
   } catch (err) {
     console.error('startSession error:', err);
-    
-    // 如果是唯一性約束錯誤，嘗試查找現有 session
-    if (err.name === 'SequelizeUniqueConstraintError' || err.code === '23505') {
-      try {
-        const session = await UsageSession.findOne({ 
-          where: { userId: req.userId || req.user?.id, projectId: req.body.projectId, endedAt: null } 
-        });
-        if (session) {
-          return res.json({ 
-            sessionId: session.id, 
-            startedAt: session.startedAt, 
-            lastActiveAt: session.lastActiveAt 
-          });
-        }
-      } catch (fallbackErr) {
-        console.error('Fallback query error:', fallbackErr);
-      }
-    }
-    
     res.status(500).json({ message: 'server error' });
   }
 };
