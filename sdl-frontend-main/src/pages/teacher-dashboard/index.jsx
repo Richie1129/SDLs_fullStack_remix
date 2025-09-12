@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 
 // Hooks
-import { useTeacherDashboardData } from "./hooks/useTeacherDashboardData";
-import { useTeacherMetrics } from "./hooks/useTeacherMetrics";
+import { useTeacherDashboard } from "./hooks/useTeacherDashboard";
 
 // Components
 import ViewModeButtons from "./components/ViewModeButtons";
@@ -26,18 +25,50 @@ const TeacherManagementDashboard = () => {
   // 用戶角色
   const userRole = localStorage.getItem("role");
   
-  // 獲取資料
-  const { realData, allProjectMembers } = useTeacherDashboardData(parsedProjectId, userRole);
-  const { enhancedStudents, groupData, classStats } = useTeacherMetrics(realData, allProjectMembers);
+  // 使用新的統合Hook獲取資料
+  const {
+    realData,
+    allProjectMembers,
+    enhancedStudents,
+    groupData,
+    classStats,
+    loading,
+    error,
+    dataIntegrity
+  } = useTeacherDashboard(parsedProjectId, userRole);
 
   // 載入狀態
-  if (realData.loading) {
+  if (loading) {
     return (
       <div className="h-full w-full bg-gray-50 overflow-hidden">
         <div className="h-full flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600 mx-auto"></div>
             <p className="mt-4 text-lg text-gray-600">載入中...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 錯誤狀態
+  if (error) {
+    return (
+      <div className="h-full w-full bg-gray-50 overflow-hidden">
+        <div className="h-full flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">載入失敗</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            {dataIntegrity?.issues && dataIntegrity.issues.length > 0 && (
+              <div className="text-sm text-gray-500">
+                <p>資料問題：{dataIntegrity.issues.join(', ')}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
