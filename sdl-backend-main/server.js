@@ -127,6 +127,15 @@ try {
     console.warn('Audit hooks registration failed:', e?.message);
 }
 
+// 啟動使用會話清理服務
+let stopUsageCleanup;
+try {
+    const { startPeriodicCleanup } = require('./services/usageCleanupService');
+    stopUsageCleanup = startPeriodicCleanup();
+} catch (e) {
+    console.warn('Usage cleanup service not started:', e?.message);
+}
+
 // 安裝優雅關閉處理器
 try {
     const { installAuditShutdownHooks } = require('./services/auditService');
@@ -155,12 +164,21 @@ server.listen(PORT, () => {
 console.log('Models loaded:', Object.keys(sequelize.models));
 
 // 優雅關閉處理
-process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully');
+const gracefulShutdown = (signal) => {
+    console.log(`${signal} received, shutting down gracefully`);
+    
+    // 停止使用會話清理服務
+    if (stopUsageCleanup) {
+        stopUsageCleanup();
+    }
+    
     server.close(() => {
         console.log('HTTP server closed');
         process.exit(0);
     });
-});
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT')); // Ctrl+C 處理
 
 module.exports = { app, server, io, socketManager };

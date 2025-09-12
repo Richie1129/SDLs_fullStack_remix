@@ -1,22 +1,22 @@
 import apiClient from './client';
 
-export const startUsageSession = async ({ userId, projectId }) => {
-  const res = await apiClient.post('/usage/start', { userId, projectId });
+export const startUsageSession = async ({ projectId }) => {
+  const res = await apiClient.post('/usage/start', { projectId });
   return res.data;
 };
 
-export const sendHeartbeat = async ({ sessionId, userId, projectId }) => {
-  const res = await apiClient.post('/usage/heartbeat', { sessionId, userId, projectId });
+export const sendHeartbeat = async ({ sessionId, projectId }) => {
+  const res = await apiClient.post('/usage/heartbeat', { sessionId, projectId });
   return res.data;
 };
 
-export const stopUsageSession = async ({ sessionId, userId, projectId }) => {
-  const res = await apiClient.post('/usage/stop', { sessionId, userId, projectId });
+export const stopUsageSession = async ({ sessionId, projectId }) => {
+  const res = await apiClient.post('/usage/stop', { sessionId, projectId });
   return res.data;
 };
 
-export const getUsageSummary = async ({ userId, projectId }) => {
-  const res = await apiClient.get('/usage/summary', { params: { userId, projectId } });
+export const getUsageSummary = async ({ projectId }) => {
+  const res = await apiClient.get('/usage/summary', { params: { projectId } });
   return res.data;
 };
 

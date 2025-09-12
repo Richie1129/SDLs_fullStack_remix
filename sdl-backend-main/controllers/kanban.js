@@ -6,6 +6,8 @@ const TaskChangeLog = require('../models/task_change_log');
 const ColumnChangeLog = require('../models/column_change_log');
 const NodeChangeLog = require('../models/node_change_log');
 const Node = require('../models/node');
+const AuditEvent = require('../models/audit_event');
+const Comment = require('../models/comment');
 const { Op } = require('sequelize');
 
 // 清理函數：移除 Column 中不存在的任務 ID
@@ -228,8 +230,8 @@ exports.getProjectActivity = async (req, res) => {
             };
         }
         
-        // 同時查詢任務、列表和節點的變更記錄
-        const [taskActivities, columnActivities, nodeActivities] = await Promise.all([
+        // 同時查詢任務、列表、節點和評論的變更記錄
+        const [taskActivities, columnActivities, nodeActivities, commentActivities] = await Promise.all([
             TaskChangeLog.findAll({
                 where: whereCondition,
                 include: [{
@@ -261,15 +263,78 @@ exports.getProjectActivity = async (req, res) => {
                 }],
                 order: [['createdAt', 'DESC']],
                 limit: parseInt(limit) * 2
+            }),
+            AuditEvent.findAll({
+                where: {
+                    projectId: parseInt(projectId),
+                    action: {
+                        [Op.in]: ['COMMENT_CREATE', 'COMMENT_UPDATE', 'COMMENT_DELETE',
+                                 'PROJECT_COMMENT_CREATE', 'PROJECT_COMMENT_UPDATE', 'PROJECT_COMMENT_DELETE']
+                    },
+                    ...(before && { timestamp: { [Op.lt]: new Date(before) } })
+                },
+                order: [['timestamp', 'DESC']],
+                limit: parseInt(limit) * 2
             })
         ]);
+
+        // 格式化評論活動的輔助函數
+        const formatCommentActivity = (auditEvent) => {
+            const activity = auditEvent.toJSON();
+            let changeType, source;
+            
+            // 映射評論活動類型
+            switch (activity.action) {
+                case 'COMMENT_CREATE':
+                    changeType = 'comment_create';
+                    source = 'comment';
+                    break;
+                case 'COMMENT_UPDATE':
+                    changeType = 'comment_update';
+                    source = 'comment';
+                    break;
+                case 'COMMENT_DELETE':
+                    changeType = 'comment_delete';
+                    source = 'comment';
+                    break;
+                case 'PROJECT_COMMENT_CREATE':
+                    changeType = 'project_comment_create';
+                    source = 'project_comment';
+                    break;
+                case 'PROJECT_COMMENT_UPDATE':
+                    changeType = 'project_comment_update';
+                    source = 'project_comment';
+                    break;
+                case 'PROJECT_COMMENT_DELETE':
+                    changeType = 'project_comment_delete';
+                    source = 'project_comment';
+                    break;
+                default:
+                    changeType = activity.action.toLowerCase();
+                    source = 'comment';
+            }
+
+            return {
+                id: activity.id,
+                changeType,
+                changedBy: activity.actorName || '未知用戶',
+                createdAt: activity.timestamp,
+                description: null, // 將由前端的 getActivityDescription 生成
+                source,
+                // 保存原始的 audit 資料以便前端使用
+                targetType: activity.targetType,
+                targetId: activity.targetId,
+                metadata: activity.metadata
+            };
+        };
 
         // 合併並按時間排序
         const allActivities = [
             ...taskActivities.map(activity => ({ ...activity.toJSON(), source: 'task' })),
             ...columnActivities.map(activity => ({ ...activity.toJSON(), source: 'column' })),
-            ...nodeActivities.map(activity => ({ ...activity.toJSON(), source: 'node' }))
-        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            ...nodeActivities.map(activity => ({ ...activity.toJSON(), source: 'node' })),
+            ...commentActivities.map(activity => formatCommentActivity(activity))
+        ].sort((a, b) => new Date(b.createdAt || b.timestamp) - new Date(a.createdAt || a.timestamp))
          .slice(parseInt(offset), parseInt(offset) + parseInt(limit)); // 應用分頁
 
         const activities = allActivities;
@@ -313,6 +378,348 @@ exports.getProjectActivity = async (req, res) => {
                         newValue: activity.newValue,
                         description: activity.description
                     }];
+                }
+            } else if (activity.source === 'comment' || activity.source === 'project_comment') {
+                // 處理評論活動
+                baseActivity.comment = {
+                    id: activity.targetId,
+                    type: activity.targetType
+                };
+                
+                // 查詢專案名稱或任務標題 - 使用多重備用策略
+                if (activity.source === 'project_comment') {
+                    // 專案評論診斷：輸出完整資料結構
+                    console.log('=== 專案評論資料結構診斷 ===');
+                    console.log('完整 activity 物件:', JSON.stringify(activity, null, 2));
+                    console.log('metadata 結構:', JSON.stringify(activity.metadata, null, 2));
+                    console.log('targetId:', activity.targetId);
+                    console.log('targetType:', activity.targetType);
+                    console.log('=============================');
+                    
+                    // 專案評論：查詢專案名稱 - 多重策略
+                    let projectName = '未知專案';
+                    let projectId = activity.projectId;
+                    
+                    console.log('步驟1 - 原始 projectId:', projectId, 'type:', typeof projectId);
+                    
+                    try {
+                        // 策略1: 從 metadata 中提取 projectId
+                        if (!projectId && activity.metadata) {
+                            try {
+                                const metadata = typeof activity.metadata === 'string' 
+                                    ? JSON.parse(activity.metadata) 
+                                    : activity.metadata;
+                                
+                                // 檢查多種可能的專案 ID 位置
+                                projectId = metadata.projectId || 
+                                           metadata.after?.projectId || 
+                                           metadata.before?.projectId ||
+                                           metadata.context?.projectId;
+                                           
+                                console.log('步驟2 - 從 metadata 提取的 projectId:', projectId);
+                            } catch (e) {
+                                console.warn('metadata 解析失敗:', e.message);
+                            }
+                        }
+                        
+                        // 策略2: 從 ProjectComment 模型中查詢
+                        if (!projectId && activity.targetId) {
+                            try {
+                                const ProjectComment = require('../models/project_comment');
+                                const projectComment = await ProjectComment.findByPk(activity.targetId, {
+                                    attributes: ['id', 'projectId'],
+                                    include: [{
+                                        model: Project,
+                                        attributes: ['id', 'name'],
+                                        required: false
+                                    }]
+                                });
+                                
+                                console.log('步驟3 - ProjectComment 查詢結果:', projectComment ? {
+                                    id: projectComment.id,
+                                    projectId: projectComment.projectId,
+                                    project: projectComment.Project ? {
+                                        id: projectComment.Project.id,
+                                        name: projectComment.Project.name
+                                    } : null
+                                } : 'null');
+                                
+                                if (projectComment?.projectId) {
+                                    projectId = projectComment.projectId;
+                                    console.log('從 ProjectComment 獲取 projectId:', projectId);
+                                    
+                                    // 如果有關聯的專案資料，直接使用
+                                    if (projectComment.Project?.name) {
+                                        projectName = projectComment.Project.name;
+                                        console.log('直接從 ProjectComment.Project 獲取專案名稱:', projectName);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('ProjectComment 查詢失敗:', e.message);
+                            }
+                        }
+                        
+                        console.log('步驟4 - 最終確定的 projectId:', projectId, 'type:', typeof projectId);
+                        
+                        // 策略3: 查詢專案名稱（如果還沒有獲得）
+                        if (projectName === '未知專案' && projectId) {
+                            const numericProjectId = parseInt(projectId);
+                            console.log('步驟5 - 查詢專案名稱，ID:', numericProjectId);
+                            
+                            const project = await Project.findByPk(numericProjectId, {
+                                attributes: ['id', 'name']
+                            });
+                            
+                            console.log('專案查詢結果:', project ? {id: project.id, name: project.name} : 'null');
+                            
+                            if (project?.name) {
+                                projectName = project.name;
+                                console.log('成功獲取專案名稱:', projectName);
+                            }
+                        }
+                        
+                        // 策略4: 從 metadata 中提取專案名稱（最終備用）
+                        if (projectName === '未知專案' && activity.metadata) {
+                            try {
+                                const metadata = typeof activity.metadata === 'string' 
+                                    ? JSON.parse(activity.metadata) 
+                                    : activity.metadata;
+                                
+                                const metadataProjectName = metadata.projectName || 
+                                                           metadata.after?.projectName || 
+                                                           metadata.before?.projectName ||
+                                                           metadata.context?.projectName;
+                                                           
+                                if (metadataProjectName) {
+                                    projectName = metadataProjectName;
+                                    console.log('步驟6 - 從 metadata 獲取專案名稱:', projectName);
+                                }
+                            } catch (e) {
+                                console.warn('metadata 解析錯誤:', e.message);
+                            }
+                        }
+                        
+                    } catch (e) {
+                        console.error('專案查詢失敗:', e);
+                    }
+                    
+                    console.log('最終專案名稱:', projectName);
+                    
+                    baseActivity.project = {
+                        id: projectId,
+                        name: projectName
+                    };
+                    
+                } else if (activity.source === 'comment') {
+                    // 任務評論：查詢相關任務標題 - 支援已刪除評論
+                    let taskTitle = '未知任務';
+                    let taskId = null;
+                    
+                    console.log('=== 任務評論查詢診斷 ===');
+                    console.log('targetId:', activity.targetId);
+                    console.log('changeType:', activity.changeType);
+                    
+                    try {
+                        // 策略1: 查詢評論關聯的任務（適用於未刪除的評論）
+                        if (activity.targetId && activity.changeType !== 'comment_delete') {
+                            const comment = await Comment.findByPk(activity.targetId, {
+                                include: [{
+                                    model: Task,
+                                    attributes: ['id', 'title'],
+                                    required: false
+                                }]
+                            });
+                            
+                            console.log('Comment 查詢結果:', comment ? {
+                                id: comment.id,
+                                taskId: comment.taskId,
+                                task_title: comment.task_title,
+                                hasTask: !!comment.Task
+                            } : 'null');
+                            
+                            if (comment) {
+                                // 優先使用關聯的 Task
+                                if (comment.Task?.title) {
+                                    taskTitle = comment.Task.title;
+                                    taskId = comment.Task.id;
+                                }
+                                // 備用1: 使用 denormalized task_title
+                                else if (comment.task_title) {
+                                    taskTitle = comment.task_title;
+                                    taskId = comment.taskId;
+                                }
+                                // 備用2: 使用 taskId 查詢
+                                else if (comment.taskId) {
+                                    const task = await Task.findByPk(comment.taskId, {
+                                        attributes: ['id', 'title']
+                                    });
+                                    if (task?.title) {
+                                        taskTitle = task.title;
+                                        taskId = task.id;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 策略2: 對於已刪除的評論，優先從 metadata 中提取任務資訊
+                        if ((taskTitle === '未知任務' || activity.changeType === 'comment_delete') && activity.metadata) {
+                            try {
+                                const metadata = typeof activity.metadata === 'string' 
+                                    ? JSON.parse(activity.metadata) 
+                                    : activity.metadata;
+                                
+                                console.log('從 metadata 提取任務資訊:', {
+                                    before: metadata.before,
+                                    after: metadata.after,
+                                    taskTitle: metadata.taskTitle,
+                                    taskId: metadata.taskId
+                                });
+                                
+                                // 檢查多種可能的任務資訊位置
+                                const metadataTaskTitle = metadata.taskTitle || 
+                                                         metadata.before?.taskTitle ||
+                                                         metadata.after?.taskTitle ||
+                                                         metadata.context?.taskTitle;
+                                                         
+                                const metadataTaskId = metadata.taskId || 
+                                                      metadata.before?.taskId ||
+                                                      metadata.after?.taskId ||
+                                                      metadata.context?.taskId;
+                                
+                                if (metadataTaskTitle) {
+                                    taskTitle = metadataTaskTitle;
+                                    taskId = metadataTaskId;
+                                    console.log('成功從 metadata 獲取任務資訊:', { taskTitle, taskId });
+                                }
+                                
+                                // 備用：檢查是否有任務快照
+                                if (taskTitle === '未知任務' && metadata.taskSnapshot) {
+                                    taskTitle = metadata.taskSnapshot.title || taskTitle;
+                                    taskId = metadata.taskSnapshot.id || taskId;
+                                    console.log('從 taskSnapshot 獲取:', { taskTitle, taskId });
+                                }
+                                
+                            } catch (e) {
+                                console.warn('任務評論 metadata 解析錯誤:', e.message);
+                            }
+                        }
+                        
+                        console.log('最終任務查詢結果:', { taskTitle, taskId });
+                        
+                    } catch (e) {
+                        console.warn('任務評論查詢失敗，使用備用顯示:', e.message);
+                    }
+                    
+                    baseActivity.task = {
+                        id: taskId,
+                        title: taskTitle
+                    };
+                }
+                
+                // 從 metadata 中提取評論相關資訊 - 增強多格式支援
+                if (activity.metadata) {
+                    try {
+                        const metadata = typeof activity.metadata === 'string' 
+                            ? JSON.parse(activity.metadata) 
+                            : activity.metadata;
+                        
+                        console.log('評論活動 metadata 解析:', JSON.stringify(metadata, null, 2));
+                        
+                        let afterContent = null;
+                        let beforeContent = null;
+                        
+                        // 針對專案評論和任務評論使用不同的解析策略
+                        if (activity.source === 'project_comment') {
+                            console.log('=== 專案評論內容解析 ===');
+                            
+                            // 專案評論專用解析策略
+                            // 策略1: 標準結構 - 針對專案評論的 audit log 格式
+                            if (metadata.after && typeof metadata.after === 'object') {
+                                if (metadata.after.content) {
+                                    afterContent = metadata.after.content.textPreview || metadata.after.content;
+                                } else if (typeof metadata.after === 'string') {
+                                    afterContent = metadata.after;
+                                }
+                            }
+                            
+                            if (metadata.before && typeof metadata.before === 'object') {
+                                if (metadata.before.content) {
+                                    beforeContent = metadata.before.content.textPreview || metadata.before.content;
+                                } else if (typeof metadata.before === 'string') {
+                                    beforeContent = metadata.before;
+                                }
+                            }
+                            
+                            // 策略2: 檢查是否有直接的 content 欄位
+                            if (!afterContent && metadata.content) {
+                                afterContent = metadata.content.textPreview || metadata.content;
+                            }
+                            
+                            // 策略3: 檢查是否使用 newValue/oldValue 格式
+                            if (!afterContent && metadata.newValue) {
+                                afterContent = metadata.newValue;
+                            }
+                            if (!beforeContent && metadata.oldValue) {
+                                beforeContent = metadata.oldValue;
+                            }
+                            
+                            console.log('專案評論內容解析結果:', {
+                                before: beforeContent,
+                                after: afterContent
+                            });
+                            
+                        } else {
+                            // 任務評論的原有邏輯
+                            // 策略1: 標準的 before/after 結構
+                            if (metadata.after && metadata.after.content) {
+                                const contentInfo = metadata.after.content;
+                                afterContent = contentInfo.textPreview || contentInfo;
+                            }
+                            
+                            if (metadata.before && metadata.before.content) {
+                                const beforeContentInfo = metadata.before.content;
+                                beforeContent = beforeContentInfo.textPreview || beforeContentInfo;
+                            }
+                        }
+                        
+                        // 策略2: diff 結構
+                        if (!afterContent && metadata.diff && metadata.diff.content) {
+                            afterContent = metadata.diff.content.after || null;
+                            beforeContent = metadata.diff.content.before || null;
+                        }
+                        
+                        // 策略3: 簡單的 oldValue/newValue 結構
+                        if (!afterContent && metadata.newValue) {
+                            afterContent = metadata.newValue;
+                        }
+                        if (!beforeContent && metadata.oldValue) {
+                            beforeContent = metadata.oldValue;
+                        }
+                        
+                        // 策略4: changed 數組結構 (針對不同的 audit 格式)
+                        if (metadata.changed && metadata.changed.includes('content')) {
+                            // 可能需要根據實際的 audit 格式調整
+                            if (metadata.after) afterContent = metadata.after;
+                            if (metadata.before) beforeContent = metadata.before;
+                        }
+                        
+                        // 統一的內容處理和驗證
+                        const processedAfterContent = afterContent && typeof afterContent === 'string' ? afterContent.trim() : null;
+                        const processedBeforeContent = beforeContent && typeof beforeContent === 'string' ? beforeContent.trim() : null;
+                        
+                        baseActivity.comment.contentPreview = processedAfterContent;
+                        baseActivity.comment.beforeContentPreview = processedBeforeContent;
+                        
+                        console.log('最終評論內容處理結果:', {
+                            source: activity.source,
+                            before: processedBeforeContent,
+                            after: processedAfterContent,
+                            commentId: activity.targetId
+                        });
+                        
+                    } catch (e) {
+                        console.warn('無法解析評論 metadata:', e);
+                    }
                 }
             }
 

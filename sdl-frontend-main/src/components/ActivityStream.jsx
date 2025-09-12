@@ -3,7 +3,7 @@ import { useQuery } from 'react-query';
 import { getProjectActivity } from '../api/kanban';
 import { formatTime } from '../utils/timeUtils';
 import { socket } from '../utils/socket';
-import { FiActivity, FiEdit, FiTrash2, FiMove, FiPlus, FiColumns, FiShuffle, FiCircle, FiGitBranch } from 'react-icons/fi';
+import { FiActivity, FiEdit, FiTrash2, FiMove, FiPlus, FiColumns, FiShuffle, FiCircle, FiGitBranch, FiMessageCircle } from 'react-icons/fi';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const ActivityStream = ({ projectId, isOpen, onClose }) => {
@@ -235,15 +235,93 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
         }
     };
 
+    // 內容截取輔助函數
+    const truncateContent = (content, maxLength = 30) => {
+        if (!content || typeof content !== 'string') return '';
+        return content.length > maxLength ? content.substring(0, maxLength) + '...' : content;
+    };
+
     const getActivityDescription = (activity) => {
         // 統一處理 activity.type (Socket事件) 和 activity.changeType (資料庫記錄)
         const changeType = activity.type || activity.changeType;
-        const source = activity.source; // 'task' 或 'column'
+        const source = activity.source; // 'task', 'column', 'node', 'comment', 'project_comment'
         
         // 如果已經有描述且不是移動操作，直接使用
         // 對於刪除操作，始終優先使用 description（包含列表資訊）
         if (activity.description && (changeType === 'delete' || changeType !== 'move')) {
             return activity.description;
+        }
+
+        // 處理評論活動
+        if (source === 'comment') {
+            const commentPreview = activity.comment?.contentPreview || '評論內容';
+            const taskTitle = activity.task?.title || '未知任務';
+            
+            switch (changeType) {
+                case 'comment_create':
+                    return `在任務「${taskTitle}」中新增了評論: "${commentPreview}"`;
+                case 'comment_update':
+                    const commentId = activity.comment?.id;
+                    const beforeContent = activity.comment?.beforeContentPreview;
+                    const afterContent = activity.comment?.contentPreview;
+                    
+                    // 數據驗證和處理
+                    const hasValidContent = beforeContent && afterContent && 
+                        typeof beforeContent === 'string' && typeof afterContent === 'string' && 
+                        beforeContent.trim() !== afterContent.trim();
+                    
+                    if (hasValidContent) {
+                        const beforeTruncated = truncateContent(beforeContent);
+                        const afterTruncated = truncateContent(afterContent);
+                        return `在任務「${taskTitle}」中更新了評論${commentId ? ` #${commentId}` : ''}: "${beforeTruncated}" → "${afterTruncated}"`;
+                    }
+                    
+                    // 回退邏輯
+                    const displayContent = afterContent || commentPreview;
+                    const truncatedContent = truncateContent(displayContent);
+                    return `在任務「${taskTitle}」中更新了評論${commentId ? ` #${commentId}` : ''}: "${truncatedContent}"`;
+                    
+                case 'comment_delete':
+                    return `在任務「${taskTitle}」中刪除了評論: "${commentPreview}"`;
+                default:
+                    return `在任務「${taskTitle}」中對評論進行了${changeType}操作`;
+            }
+        }
+        
+        // 處理專案評論活動
+        if (source === 'project_comment') {
+            const commentPreview = activity.comment?.contentPreview || '評論內容';
+            const projectName = activity.project?.name || '未知專案';
+            
+            switch (changeType) {
+                case 'project_comment_create':
+                    return `在專案「${projectName}」中新增了評論: "${commentPreview}"`;
+                case 'project_comment_update':
+                    const projectCommentId = activity.comment?.id;
+                    const projectBeforeContent = activity.comment?.beforeContentPreview;
+                    const projectAfterContent = activity.comment?.contentPreview;
+                    
+                    // 驗證專案評論更新內容
+                    const hasValidProjectContent = projectBeforeContent && projectAfterContent && 
+                        typeof projectBeforeContent === 'string' && typeof projectAfterContent === 'string' && 
+                        projectBeforeContent.trim() !== projectAfterContent.trim();
+                    
+                    if (hasValidProjectContent) {
+                        const beforeTruncated = truncateContent(projectBeforeContent);
+                        const afterTruncated = truncateContent(projectAfterContent);
+                        return `在專案「${projectName}」中更新了評論${projectCommentId ? ` #${projectCommentId}` : ''}: "${beforeTruncated}" → "${afterTruncated}"`;
+                    }
+                    
+                    // 回退邏輯
+                    const displayContent = projectAfterContent || commentPreview;
+                    const truncatedContent = truncateContent(displayContent);
+                    return `在專案「${projectName}」中更新了評論${projectCommentId ? ` #${projectCommentId}` : ''}: "${truncatedContent}"`;
+                    
+                case 'project_comment_delete':
+                    return `在專案「${projectName}」中刪除了評論: "${commentPreview}"`;
+                default:
+                    return `在專案「${projectName}」中對評論進行了${changeType}操作`;
+            }
         }
         
         // 處理節點活動
@@ -440,6 +518,23 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
     };
 
     const getActivityIcon = (changeType, source) => {
+        // 評論活動的圖示
+        if (source === 'comment' || source === 'project_comment') {
+            switch (changeType) {
+                case 'comment_create':
+                case 'project_comment_create':
+                    return <FiMessageCircle className="text-blue-500" />;
+                case 'comment_update':
+                case 'project_comment_update':
+                    return <FiEdit className="text-blue-500" />;
+                case 'comment_delete':
+                case 'project_comment_delete':
+                    return <FiTrash2 className="text-blue-500" />;
+                default:
+                    return <FiMessageCircle className="text-blue-500" />;
+            }
+        }
+
         // 節點活動的特殊圖示
         if (source === 'node') {
             switch (changeType) {
@@ -489,6 +584,23 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
     };
 
     const getActivityColor = (changeType, source) => {
+        // 評論活動的顏色 - 使用藍色系
+        if (source === 'comment' || source === 'project_comment') {
+            switch (changeType) {
+                case 'comment_create':
+                case 'project_comment_create':
+                    return 'border-l-blue-500 bg-blue-50';
+                case 'comment_update':
+                case 'project_comment_update':
+                    return 'border-l-blue-500 bg-blue-50';
+                case 'comment_delete':
+                case 'project_comment_delete':
+                    return 'border-l-blue-600 bg-blue-100';
+                default:
+                    return 'border-l-blue-500 bg-blue-50';
+            }
+        }
+
         // 節點活動的特殊顏色 - 使用靛青色系
         if (source === 'node') {
             switch (changeType) {
@@ -798,8 +910,29 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                             </>
                                                         )}
                                                         
+                                                        {/* 評論活動標籤 */}
+                                                        {(activity.source === 'comment' || activity.source === 'project_comment') && (
+                                                            <>
+                                                                {(activity.changeType === 'comment_create' || activity.changeType === 'project_comment_create') && (
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                        {activity.source === 'project_comment' ? '專案評論' : '任務評論'}
+                                                                    </span>
+                                                                )}
+                                                                {(activity.changeType === 'comment_update' || activity.changeType === 'project_comment_update') && (
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                        {activity.source === 'project_comment' ? '專案評論' : '任務評論'}
+                                                                    </span>
+                                                                )}
+                                                                {(activity.changeType === 'comment_delete' || activity.changeType === 'project_comment_delete') && (
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                        {activity.source === 'project_comment' ? '專案評論' : '任務評論'}
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                        
                                                         {/* 任務活動標籤 */}
-                                                        {activity.source !== 'column' && (
+                                                        {(activity.source === 'task' || (activity.source !== 'column' && activity.source !== 'comment' && activity.source !== 'project_comment' && activity.source !== 'node')) && (
                                                             <>
                                                                 {(activity.changeType === 'create' || activity.type === 'create') && activity.columnName && (
                                                                     <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
@@ -825,20 +958,25 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                         )}
                                                     </span>
                                                     
-                                                    {/* 右側ID標籤 */}
-                                                    {activity.node && activity.source === 'node' && (
+                                                    {/* 右側ID標籤 - 按優先級顯示，避免重複 */}
+                                                    {activity.source === 'node' && activity.node && (
                                                         <span className="text-xs text-indigo-600 bg-indigo-50 px-1 sm:px-2 py-1 rounded border border-indigo-200">
                                                             #{activity.node.id}
                                                         </span>
                                                     )}
-                                                    {activity.task && (
-                                                        <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
-                                                            #{activity.task.id}
-                                                        </span>
-                                                    )}
-                                                    {activity.column && activity.source === 'column' && (
+                                                    {activity.source === 'column' && activity.column && (
                                                         <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
                                                             #{activity.column.id}
+                                                        </span>
+                                                    )}
+                                                    {(activity.source === 'comment' || activity.source === 'project_comment') && activity.comment && (
+                                                        <span className="text-xs text-blue-600 bg-blue-50 px-1 sm:px-2 py-1 rounded border border-blue-200">
+                                                            #{activity.comment.id}
+                                                        </span>
+                                                    )}
+                                                    {activity.source === 'task' && activity.task && (
+                                                        <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
+                                                            #{activity.task.id}
                                                         </span>
                                                     )}
                                                 </div>
