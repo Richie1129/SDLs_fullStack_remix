@@ -28,6 +28,21 @@ export const getCurrentUserClass = () => {
   return localStorage.getItem('class') || '';
 };
 
+// 獲取用戶顯示名稱（優先順序：有效用戶名 > 用戶ID > null）
+export const getUserDisplayName = () => {
+  const username = getCurrentUsername();
+  const userId = getCurrentUserId();
+
+  // 檢查 username 是否有效且不是預設值
+  if (username && username.trim() && username !== '未知用戶') {
+    return username;
+  } else if (userId) {
+    return `用戶${userId}`;
+  } else {
+    return null; // 讓呼叫端處理
+  }
+};
+
 // 獲取完整的用戶資訊物件
 export const getCurrentUserInfo = () => {
   return {

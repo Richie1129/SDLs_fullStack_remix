@@ -322,11 +322,25 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       } else {
         console.log(`找到 ${sessions.length} 個歷史對話`);
         
-        // 轉換數據格式以符合 UI 需求
-        const formattedSessions = sessions.map((session, index) => ({
-          id: session.sessionId,
-          name: `對話 ${index + 1} - ${session.userName || '未知用戶'}`
-        }));
+        // 轉換數據格式以符合 UI 需求，使用更智慧的命名邏輯
+        const formattedSessions = sessions.map((session, index) => {
+          let displayName;
+
+          // 優先使用後端已處理過的 userName
+          if (session.userName && session.userName !== '未知用戶') {
+            displayName = session.userName;
+          } else if (session.userId) {
+            displayName = `用戶${session.userId}`;
+          } else {
+            // 最後手段：使用 sessionId 的前8位作為識別
+            displayName = `對話${session.sessionId.substring(0, 8)}`;
+          }
+
+          return {
+            id: session.sessionId,
+            name: `對話 ${index + 1} - ${displayName}`
+          };
+        });
         
         setChatSessions(formattedSessions);
         // 設置第一個對話為當前對話（只有在沒有設置時）
@@ -801,11 +815,25 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       const userId = localStorage.getItem('id') || '1';
       const sessions = await getUserSessions(userId);
       
-      // 轉換數據格式
-      const formattedSessions = sessions.map((session, index) => ({
-        id: session.sessionId,
-        name: `對話 ${index + 1} - ${session.userName || '未知用戶'}`
-      }));
+      // 轉換數據格式，使用一致的命名邏輯
+      const formattedSessions = sessions.map((session, index) => {
+        let displayName;
+
+        // 優先使用後端已處理過的 userName
+        if (session.userName && session.userName !== '未知用戶') {
+          displayName = session.userName;
+        } else if (session.userId) {
+          displayName = `用戶${session.userId}`;
+        } else {
+          // 最後手段：使用 sessionId 的前8位作為識別
+          displayName = `對話${session.sessionId.substring(0, 8)}`;
+        }
+
+        return {
+          id: session.sessionId,
+          name: `對話 ${index + 1} - ${displayName}`
+        };
+      });
       
       setChatSessions(formattedSessions);
       console.log(`對話歷史列表已更新，共 ${formattedSessions.length} 個對話`);

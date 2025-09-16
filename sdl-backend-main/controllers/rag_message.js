@@ -79,12 +79,19 @@ exports.getUserSessions = async (req, res) => {
 
         // 在 JavaScript 中進行去重處理
         const sessionMap = new Map();
-        
+
         messages.forEach(message => {
             if (!sessionMap.has(message.sessionId)) {
+                // 改善用戶名稱顯示邏輯
+                let displayName = message.userName;
+                if (!displayName || displayName.trim() === '' || displayName === '未知用戶') {
+                    displayName = userId ? `用戶${userId}` : '未知用戶';
+                }
+
                 sessionMap.set(message.sessionId, {
                     sessionId: message.sessionId,
-                    userName: message.userName,
+                    userName: displayName,
+                    userId: userId,
                     lastActivity: message.createdAt
                 });
             }
