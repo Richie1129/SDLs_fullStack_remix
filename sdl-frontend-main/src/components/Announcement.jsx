@@ -8,6 +8,7 @@ import { getAnnouncements, createAnnouncement } from '../api/announcement';
 import { getProjectUser } from '../api/users';
 import { getProjectsByMentor } from '../api/project'; // 新增引入
 import { socket } from '../utils/socket';
+import { getCurrentUsername, addUserUpdateListener } from '../utils/userUtils';
 
 // 日期格式化工具函式
 const formatDistanceToNow = (dateString) => {
@@ -92,7 +93,7 @@ export default function Announcement({ projectId, role, projectList }) {
         const fetchTeacherData = async () => {
             if (role !== 'teacher') return;
             
-            const userName = localStorage.getItem('username');
+            const userName = getCurrentUsername();
             if (!userName) {
                 console.error("未找到教師名稱");
                 return;
@@ -195,7 +196,7 @@ export default function Announcement({ projectId, role, projectList }) {
             payload = {
                 title: newTitle,
                 content: newDescription,
-                author: localStorage.getItem('username') || 'Unknown Author',
+                author: getCurrentUsername() || 'Unknown Author',
                 projectId: selectedTarget === 'all' ? null : selectedTarget,
             };
         } else {
@@ -204,7 +205,7 @@ export default function Announcement({ projectId, role, projectList }) {
             payload = {
                 title: newTitle,
                 content: newDescription,
-                author: localStorage.getItem('username') || 'Unknown Author',
+                author: getCurrentUsername() || 'Unknown Author',
                 projectId: `student_${selectedTarget}`, // 用前綴標識這是學生模式
             };
         }

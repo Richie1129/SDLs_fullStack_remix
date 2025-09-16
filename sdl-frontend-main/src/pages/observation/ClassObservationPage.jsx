@@ -7,6 +7,7 @@ import SideBar from '../../components/SideBar';
 import { getProjectsByMentor, getAllClasses, updateViewingSettings } from '../../api/project';
 import { getProjectUser } from '../../api/users';
 import Swal from 'sweetalert2';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 /**
  * 專案分享與權限管理頁面
@@ -30,7 +31,7 @@ const ClassObservationPage = () => {
     // 取得當前用戶資訊和指導老師名稱
     useEffect(() => {
         // 教師直接用自己的名稱作為指導老師
-        const userName = localStorage.getItem('username');
+        const userName = getCurrentUsername();
         const userRole = localStorage.getItem('role');
         
         if (userRole === 'teacher') {

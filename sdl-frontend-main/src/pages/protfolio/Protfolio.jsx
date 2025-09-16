@@ -15,6 +15,7 @@ import { useStageIndex } from '../../hooks/useStageIndex';
 import { formatTime } from '../../utils/timeUtils';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 export default function Protfolio() {
     const [currentStageIndex] = useStageIndex();
@@ -79,11 +80,11 @@ export default function Protfolio() {
         try {
             const updateData = { 
                 content: JSON.stringify(editableContent),
-                changedBy: localStorage.getItem("username") // 添加用戶名稱
+                changedBy: getCurrentUsername() // 添加用戶名稱
             };
             
             console.log('🔧 前端發送的更新數據:', updateData);
-            console.log('🔧 用戶名稱:', localStorage.getItem("username"));
+            console.log('🔧 用戶名稱:', getCurrentUsername());
             
             await updateSubmitTask(modalData.id, updateData);
     
@@ -174,7 +175,7 @@ export default function Protfolio() {
     if (!file) return;
     const formData = new FormData();
     formData.append('attachFile', file);  // 欄位名稱要跟後端 upload.array 的 key 一致
-    formData.append('changedBy', localStorage.getItem("username")); // 添加用戶名稱
+    formData.append('changedBy', getCurrentUsername()); // 添加用戶名稱
     try {
       await updateSubmitAttachment(modalData.id, formData);      
       // 刷新變更記錄

@@ -16,19 +16,47 @@ import { socket } from '../utils/socket';
 import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import Announcement from './Announcement'; // 引入新的 Announcement 元件
 import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
+import { getCurrentUsername, addUserUpdateListener } from '../utils/userUtils'; // 引入用戶資訊工具
 
 export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer }) {
   const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
   const [projectInfo, setProjectInfo] = useState({});
   const [referralCodeModalOpen, setReferralCodeModalOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const { projectId } = useParams();
+
+  // 點擊外部關閉下拉選單
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userDropdownOpen && !event.target.closest('.relative')) {
+        setUserDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userDropdownOpen]);
+
+  // useUsername hook 已經處理用戶資料更新事件
   const navigate = useNavigate();
   const location = useLocation();
   
   // 檢查是否為overview頁面
   const isOverviewPage = location.pathname === '/student-overview' || location.pathname === '/teacher-overview';
   const [projectList, setProjectList] = useState([]);
-  const userName = localStorage.getItem('username');
+  // 使用全域用戶工具並監聽更新事件
+  const [userName, setUserName] = useState(getCurrentUsername());
+
+  useEffect(() => {
+    // 監聽用戶資料更新
+    const cleanup = addUserUpdateListener((userInfo) => {
+      setUserName(userInfo.username);
+    });
+
+    return cleanup;
+  }, []);
   const personImg = [
     '/person/man1.png', '/person/man2.png', '/person/man3.png',
     '/person/man4.png', '/person/man5.png', '/person/man6.png',
@@ -262,13 +290,39 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
             </button>
           )}
           
-          <h3 
-            className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3 hover:bg-gray-100 transition-colors"
-            onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
-            title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
-          >
-            {localStorage.getItem("username")}
-          </h3>
+          <div className="relative">
+            <div
+              className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3 hover:bg-gray-100 transition-colors flex items-center gap-1"
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              title="用戶選單"
+            >
+              {userName}
+              <BsChevronDown className={`text-xs transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {userDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    navigate('/profile');
+                    setUserDropdownOpen(false);
+                  }}
+                >
+                  個人資料
+                </button>
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  onClick={() => {
+                    navigate(role === "teacher" ? "/teacher-overview" : "/student-overview");
+                    setUserDropdownOpen(false);
+                  }}
+                >
+                  {role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
+                </button>
+              </div>
+            )}
+          </div>
           {/* 移除 dashboard icon 按鈕 */}
           <Announcement projectId={projectId || 'all'} role={role} projectList={projectList} />
           <button onClick={handleLogout} className="ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-2 font-semibold">
@@ -326,7 +380,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
           title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
         >
-          {localStorage.getItem("username")}
+          {userName}
         </h3>
         {/* 將 dashboard icon 按鈕移除 */}
         {/* 專案評論按鈕 - 插在使用者名稱/頭像與活動圖示之間 */}

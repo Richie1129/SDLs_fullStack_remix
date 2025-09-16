@@ -11,11 +11,12 @@ import { useQuery } from "react-query";
 import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
 import TopBar from "../../components/TopBar";
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 const StudentOverview = () => {
   const navigate = useNavigate();
   const userId = localStorage.getItem("id");
-  const userName = localStorage.getItem("username");
+  const userName = getCurrentUsername();
   
   // 狀態管理
   const [allProjects, setAllProjects] = useState([]);

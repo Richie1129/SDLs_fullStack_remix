@@ -14,6 +14,7 @@ import LearningGoals from "./components/LearningGoals";
 import TeammatesList from "./components/TeammatesList";
 import Achievements from "./components/Achievements";
 import QuickStats from "./components/QuickStats";
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 // 載入組件
 const LoadingComponent = () => (
@@ -29,7 +30,7 @@ const StudentDashboard = () => {
   // 確保參數正確獲取
   const { projectId } = useParams();
   const userId = localStorage.getItem("id");
-  const userName = localStorage.getItem("username");
+  const userName = getCurrentUsername();
   
   // 添加防護性檢查
   if (!projectId || !userId) {

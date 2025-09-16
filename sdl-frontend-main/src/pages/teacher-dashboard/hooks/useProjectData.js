@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiAdapter } from "../utils/apiAdapter";
 import { DataNormalizer } from "../utils/DataNormalizer";
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils';
 
 /**
  * 專案和活動資料的專門 Hook
@@ -33,7 +34,7 @@ export const useProjectData = (projectId, userRole) => {
         setProjectData(prev => ({ ...prev, loading: true, error: null }));
 
         const normalizer = new DataNormalizer();
-        const currentUsername = localStorage.getItem("username");
+        const currentUsername = getCurrentUsername();
 
         console.log("🏗️ 開始獲取專案相關資料...", { projectId, userRole });
 

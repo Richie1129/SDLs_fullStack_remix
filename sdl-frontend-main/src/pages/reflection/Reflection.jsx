@@ -30,6 +30,7 @@ import { postClientAuditEvent } from "@/api/audit.js";
 import LogSection from "../../components/reflection/LogSection";
 import AuditHistoryPanel from "@/components/reflection/AuditHistoryPanel.jsx";
 import AIAnalysisHistoryPanel from "@/components/reflection/AIAnalysisHistoryPanel.jsx";
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 // Animation configuration
 const fadeInOut = {
@@ -194,7 +195,7 @@ export default function Reflection() {
     if (title.trim() !== "" && content.trim() !== "") {
       const formData = new FormData();
       formData.append("projectId", projectId);
-      formData.append("creator", localStorage.getItem("username"));
+      formData.append("creator", getCurrentUsername());
       if (attachFile) {
         for (let i = 0; i < attachFile.length; i++) {
           formData.append("attachFile", attachFile[i]);

@@ -165,6 +165,141 @@ exports.registerUser = (req, res) => {
     });
 }
 
+//update user profile (excluding password)
+exports.updateUserProfile = async (req, res) => {
+    try {
+        const userId = req.userId; // 來自 AuthMiddleware
+        const { username, class: classField, seatNumber } = req.body;
+
+        // 驗證輸入
+        if (!username || username.trim() === '') {
+            return res.status(400).json({ message: '姓名不能為空' });
+        }
+
+        // 獲取用戶的舊 username
+        const currentUser = await User.findByPk(userId, {
+            attributes: ['username']
+        });
+
+        if (!currentUser) {
+            return res.status(404).json({ message: '用戶未找到' });
+        }
+
+        const oldUsername = currentUser.username;
+        const newUsername = username.trim();
+
+        // 更新用戶資料
+        const [updatedRowsCount] = await User.update({
+            username: newUsername,
+            class: classField || '',
+            seatNumber: seatNumber || ''
+        }, {
+            where: { id: userId }
+        });
+
+        if (updatedRowsCount === 0) {
+            return res.status(400).json({ message: '用戶資料更新失敗' });
+        }
+
+        // 如果 username 有變更，同步更新所有該用戶建立的卡片和節點的 owner 欄位
+        if (oldUsername !== newUsername) {
+            // 更新卡片 owner
+            const Task = require('../models/task');
+            const taskUpdateResult = await Task.update({
+                owner: newUsername
+            }, {
+                where: { owner: oldUsername }
+            });
+
+            // 更新節點 owner
+            const Node = require('../models/node');
+            const nodeUpdateResult = await Node.update({
+                owner: newUsername
+            }, {
+                where: { owner: oldUsername }
+            });
+
+            console.log(`已將用戶 ${oldUsername} 的所有資料更新為 ${newUsername}:`);
+            console.log(`- 卡片: ${taskUpdateResult[0]} 筆`);
+            console.log(`- 節點: ${nodeUpdateResult[0]} 筆`);
+        }
+
+        // 返回更新後的用戶資料
+        const updatedUser = await User.findByPk(userId, {
+            attributes: ['id', 'username', 'account', 'role', 'class', 'seatNumber']
+        });
+
+        res.status(200).json({
+            message: '個人資料更新成功',
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('更新用戶資料失敗:', error);
+        res.status(500).json({ message: '伺服器內部錯誤' });
+    }
+};
+
+//update user password
+exports.updateUserPassword = async (req, res) => {
+    try {
+        const userId = req.userId; // 來自 AuthMiddleware
+        const { currentPassword, newPassword } = req.body;
+
+        // 驗證輸入
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: '當前密碼和新密碼都是必需的' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: '新密碼長度不能少於6個字符' });
+        }
+
+        // 查找用戶
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: '用戶未找到' });
+        }
+
+        // 驗證當前密碼
+        const isCurrentPasswordValid = await new Promise((resolve, reject) => {
+            bcypt.compare(currentPassword, user.password, (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            });
+        });
+
+        if (!isCurrentPasswordValid) {
+            return res.status(400).json({ message: '當前密碼不正確' });
+        }
+
+        // 加密新密碼
+        const hashedNewPassword = await new Promise((resolve, reject) => {
+            bcypt.hash(newPassword, saltRounds, (err, hash) => {
+                if (err) reject(err);
+                else resolve(hash);
+            });
+        });
+
+        // 更新密碼
+        const [updatedRowsCount] = await User.update({
+            password: hashedNewPassword
+        }, {
+            where: { id: userId }
+        });
+
+        if (updatedRowsCount === 0) {
+            return res.status(404).json({ message: '密碼更新失敗' });
+        }
+
+        res.status(200).json({ message: '密碼更新成功' });
+
+    } catch (error) {
+        console.error('更新密碼失敗:', error);
+        res.status(500).json({ message: '伺服器內部錯誤' });
+    }
+};
+
 //update user
 // exports.updateUser = (req, res) => {
 //     const userId = req.body.userId;

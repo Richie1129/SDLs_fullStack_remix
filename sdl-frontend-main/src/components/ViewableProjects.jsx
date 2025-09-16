@@ -5,6 +5,7 @@ import { getAllProject } from '../../api/project';
 import { useNavigate } from 'react-router-dom';
 import dateFormat from 'dateformat';
 import Loader from '../Loader';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../utils/userUtils';
 
 /**
  * 學生端觀摩專案區塊組件
@@ -81,7 +82,7 @@ const ViewableProjects = () => {
 
     // 過濾掉使用者自己參與的專案
     const meId = String(localStorage.getItem('id') || '');
-    const meName = localStorage.getItem('username') || '';
+    const meName = getCurrentUsername() || '';
     const safeProjects = Array.isArray(viewableProjects?.projects) ? viewableProjects.projects : [];
     const filteredProjects = safeProjects.filter(p => {
         if (!Array.isArray(p?.members)) return true; // 若無成員資訊，保留顯示（後端可補強）

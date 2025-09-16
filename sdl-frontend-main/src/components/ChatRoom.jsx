@@ -6,10 +6,12 @@ import { TbSend } from "react-icons/tb";
 import { useLocation } from 'react-router-dom';
 import { getChatroomHistory } from '../api/chatroom';  // 引入API函数
 import { formatTime } from '../utils/timeUtils';  // 使用統一的時間格式化函數
+import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
 
 export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
     const [currentMessage, setCurrentMessage] = useState("");
     const { projectId } = useParams();
+    const currentUsername = useUsername(); // 取得當前使用者名稱
     const [messageList, setMessageList] = useState([]);
     const bottomRef = useRef(null);
     const personImg = [
@@ -25,7 +27,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
         if (currentMessage.trim() !== "") {
             const messageData = {
                 room: projectId,
-                author: localStorage.getItem("username"),
+                author: currentUsername,
                 creator: localStorage.getItem("id"),
                 message: currentMessage.trim(),  // 也可以在这里直接发送去除空格后的消息
                 createdAt: formatTime(new Date(), 'full')  // 使用格式化函数
@@ -91,7 +93,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                         const currentImgIndex = parseInt(messages.creator) % 9;
                         const userImg = personImg[imgIndex];
                         const currentUserImg = personImg[currentImgIndex];
-                        const isCurrentUser = messages.author === localStorage.getItem("username");
+                        const isCurrentUser = messages.author === currentUsername;
 
                         return (
                             <div key={index} className={`flex h-auto p-1 ${isCurrentUser ? "justify-end" : "justify-start"}`}>
@@ -135,7 +137,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                     const currentImgIndex = parseInt(messages.creator) % 9;
                     const userImg = personImg[imgIndex];
                     const currentUserImg = personImg[currentImgIndex];
-                    const isCurrentUser = messages.author === localStorage.getItem("username");
+                    const isCurrentUser = messages.author === currentUsername;
                     if (isNewDay) {
                         acc.elements.push(
                             <div key={`date-${dateString}`} className="text-center font-semibold py-2 my-1 text-sm">
@@ -145,7 +147,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                     }
                     acc.lastDate = dateString;
                     acc.elements.push(
-                        <div key={index} className={`flex h-auto p-1 ${messages.author === localStorage.getItem("username") ? "justify-end" : "justify-start"}`}>
+                        <div key={index} className={`flex h-auto p-1 ${messages.author === currentUsername ? "justify-end" : "justify-start"}`}>
                             <div className={`flex items-center ${isCurrentUser ? "flex-row-reverse" : "flex-row"}`}>
                                 <img src={currentUserImg ? currentUserImg : userImg} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full mx-1 sm:mx-2" />
                                 <div className={`flex flex-col ${isCurrentUser ? "items-end" : "items-start"}`}>

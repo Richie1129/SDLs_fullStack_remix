@@ -21,6 +21,7 @@ import { getTaskChangeLogs } from '../../../api/kanban';
 import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
 import useObservationMode from '../../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../../api/usage';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils'; // 引入用戶資訊 hook
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -328,9 +329,24 @@ function Carditem({ data, index, columnIndex }) {
   const { projectId } = useParams();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  
+
   // 使用觀摩模式 hook
   const { isObservationMode } = useObservationMode();
+
+  // 使用最新的用戶名稱
+  // 使用全域工具函數取得用戶資訊
+  const currentUsername = getCurrentUsername();
+  const currentUserId = parseInt(localStorage.getItem('id')) || 0;
+
+  // 計算卡片建立者顯示名稱（如果是當前用戶，顯示最新名稱；否則顯示資料庫中的名稱）
+  const getDisplayOwnerName = (owner) => {
+    // 如果卡片建立者就是當前用戶，使用最新的username
+    if (isCurrentUser(owner) ||
+        owner === currentUsername) {
+      return currentUsername;
+    }
+    return owner; // 其他用戶顯示資料庫中的名稱
+  };
   
   const [cardData, setCardData] = useState({
     id: "",
@@ -716,10 +732,7 @@ function Carditem({ data, index, columnIndex }) {
         columnIndex, 
         index, 
         projectId,
-        user: { 
-          username: localStorage.getItem("username"),
-          id: parseInt(localStorage.getItem('id')) || null
-        }
+        user: getUserForSocket()
       });
       
       // 失效變更記錄的緩存，強制重新獲取
@@ -765,10 +778,7 @@ function Carditem({ data, index, columnIndex }) {
           columnIndex, 
           index, 
           projectId,
-          user: { 
-            username: localStorage.getItem("username"),
-            id: parseInt(localStorage.getItem('id')) || null
-          }
+          user: getUserForSocket()
         });
         // 3) Revalidate in the background to confirm state with server
         try { queryClient.invalidateQueries(['kanbanDatas', projectId]); } catch (_) {}
@@ -1054,7 +1064,7 @@ function Carditem({ data, index, columnIndex }) {
                 <MemberAssignment
                   cardData={cardData}
                   setAssignMemberModalOpen={setAssignMemberModalOpen}
-                  owner={cardData.owner}
+                  owner={getDisplayOwnerName(cardData.owner)}
                   personImg={personImg}
                   Tooltip={Tooltip}
                   isObservationMode={isObservationMode}

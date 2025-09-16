@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
 import AssistantChat from '../../../components/AssistantChat';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils';
 
 // 使用後端代理 API，避免直接調用 RAGFlow
 const API_URL = "/proxy/api/v1/chats/a159fe08e2d411efb3910242ac120004";
@@ -437,7 +438,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       // 將開場白保存到資料庫，確保新會話會出現在歷史記錄中
       try {
         const userId = localStorage.getItem('id') || '1';
-        const userName = localStorage.getItem('username') || '未知用戶';
+        const userName = getCurrentUsername() || '未知用戶';
         
         // 使用新的 API 來創建會話記錄
         await createNewSessionInDB(userId, newSessionId, userName);
@@ -552,7 +553,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       // 從 localStorage 獲取用戶與專案資訊並做型別/有效性檢查
       const userIdRaw = localStorage.getItem('id') ?? localStorage.getItem('userId');
       const userId = Number(userIdRaw);
-      const userName = localStorage.getItem('username') || '未知用戶';
+      const userName = getCurrentUsername() || '未知用戶';
       let projectIdRaw = localStorage.getItem('projectId');
       // 後備：從 URL 提取 projectId
       if (!projectIdRaw) {

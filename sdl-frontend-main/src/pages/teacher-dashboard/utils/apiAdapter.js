@@ -9,6 +9,7 @@ import { getAllSubmit } from "../../../api/submit";
 import { getProjectsByMentor } from "../../../api/project";
 import { getUsageSummary } from "../../../api/usage";
 import { getRagMessageHistory } from "../../../api/rag";
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils';
 
 /**
  * API 適配器 - 統一處理所有API呼叫
@@ -257,7 +258,7 @@ export class ApiAdapter {
 
     // 獲取當前使用者資訊
     const currentUserId = localStorage.getItem("userId");
-    const currentUsername = localStorage.getItem("username");
+    const currentUsername = getCurrentUsername();
     const isTeacher = userRole === 'teacher';
 
     console.log("🚀 開始獲取儀表板資料...", { projectId, userRole, currentUserId });

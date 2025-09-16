@@ -2,8 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getGuidance, createChatTurn, completeChatTurn, getChatHistory } from '../api/assistant';
 import { getKanbanColumns } from '../api/kanban';
 import { socket } from '../utils/socket';
+import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
 
 export default function AssistantChat({ projectId, currentStage, currentSubStage, autoGreet = true, embedded = false }) {
+  const currentUsername = useUsername(); // 取得當前使用者名稱
   const [messages, setMessages] = useState([]);
   const [historyMessages, setHistoryMessages] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -115,7 +117,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
       // create chat turn with user message
       try {
         const userId = parseInt(localStorage.getItem('id')) || null;
-        const username = localStorage.getItem('username') || '未知';
+        const username = currentUsername || '未知';
         const turn = await createChatTurn({ projectId, body: { userId, username, userContent: text } });
         lastTurnIdRef.current = turn?.id || null;
       } catch (_) {}
@@ -173,7 +175,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
   async function handleCreateTaskFromSuggestion(suggest, preferColumnName = '待處理') {
     try {
       const userId = parseInt(localStorage.getItem('id')) || null;
-      const username = localStorage.getItem('username') || '未知';
+      const username = currentUsername || '未知';
       const kanbanData = await getKanbanColumns(projectId);
       // find column index by name; fallback to first column
       let selectedIdx = 0;
