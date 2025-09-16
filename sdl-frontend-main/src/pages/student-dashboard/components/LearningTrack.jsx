@@ -8,13 +8,16 @@ import { getActivityColor } from '../utils';
  */
 const LearningTrack = ({ learningTrack }) => {
   return (
-    <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">近期學習軌跡</h2>
-      <div className="space-y-4 sm:space-y-6 max-h-96 overflow-y-auto">
+    <div className="bg-white p-3 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 flex items-center">
+        <span className="w-1 h-6 bg-gradient-to-b from-customgreen to-teal-600 rounded-full mr-3"></span>
+        近期學習軌跡
+      </h2>
+      <div className="space-y-4 sm:space-y-6 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
         {learningTrack && Array.isArray(learningTrack) && learningTrack.map((day, dayIndex) => (
           <div key={dayIndex}>
             <div className="flex items-center mb-3">
-              <div className="bg-teal-100 text-teal-800 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
+              <div className="bg-gradient-to-r from-customgreen to-teal-600 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium shadow-sm">
                 {new Date(day.date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
               </div>
             </div>

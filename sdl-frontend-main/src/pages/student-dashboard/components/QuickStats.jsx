@@ -18,9 +18,12 @@ const QuickStats = ({ personalData }) => {
           <span className="text-gray-600 text-xs sm:text-sm">Q&A 提問</span>
           <span className="font-bold text-green-600">{personalData?.qaQuestions || 0}</span>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-xs sm:text-sm">AI 諮詢</span>
-          <span className="font-bold text-purple-600">{personalData?.aiInteractions || 0}</span>
+        <div className="flex justify-between items-center bg-gradient-to-r from-purple-50 to-purple-100/50 p-2 rounded-lg border border-purple-200 hover:border-purple-300 transition-colors duration-300">
+          <span className="text-teal-700 text-xs sm:text-sm flex items-center">
+            <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+            AI 諮詢
+          </span>
+          <span className="font-bold text-purple-700 bg-white/50 px-2 py-1 rounded">{personalData?.aiInteractions || 0}</span>
         </div>
       </div>
     </div>

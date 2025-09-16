@@ -67,29 +67,30 @@ const Achievements = ({ achievements }) => {
   }
 
   return (
-    <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm">
+    <div className="bg-white p-3 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-800 flex items-center">
+          <span className="w-1 h-6 bg-gradient-to-b from-customgreen to-teal-600 rounded-full mr-3"></span>
           <FaTrophy className="text-yellow-500 mr-2" />
           近期成就
         </h2>
         {/* Toggle */}
-        <div className="flex items-center bg-gray-100 rounded-lg p-1 text-xs">
+        <div className="flex items-center bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg p-1 text-xs shadow-inner">
           <button
-            className={`px-3 py-1 rounded ${mode === 'team' ? 'bg-white shadow text-gray-800' : 'text-gray-600'}`}
+            className={`px-3 py-1 rounded transition-all duration-200 ${mode === 'team' ? 'bg-gradient-to-r from-customgreen to-teal-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
             onClick={() => setMode('team')}
           >
             團隊
           </button>
           <button
-            className={`px-3 py-1 rounded ${mode === 'personal' ? 'bg-white shadow text-gray-800' : 'text-gray-600'}`}
+            className={`px-3 py-1 rounded transition-all duration-200 ${mode === 'personal' ? 'bg-gradient-to-r from-customgreen to-teal-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
             onClick={() => setMode('personal')}
           >
             個人
           </button>
         </div>
       </div>
-      <div className="space-y-3 max-h-72 overflow-y-auto">
+      <div className="space-y-3 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
         {list.map((a) => {
           const style = levelStyles[a.level] || levelStyles.none;
           const totalForGold = a?.thresholds?.gold || 1;
@@ -97,7 +98,7 @@ const Achievements = ({ achievements }) => {
             ? `距離${levelLabel(a.nextLevel)}還差 ${Math.max(0, (a.nextTarget || 0) - (a.current || 0))}`
             : '已達最高等級';
           return (
-            <div key={a.key} className="p-3 rounded-lg border border-gray-100 bg-gray-50">
+            <div key={a.key} className="p-3 rounded-lg border border-teal-100 bg-gradient-to-r from-teal-50/50 to-gray-50 hover:border-teal-200 transition-colors duration-300">
               <div className="flex items-start gap-3">
                 <div className="text-xl sm:text-2xl flex-shrink-0">{typeIcon(a.type)}</div>
                 <div className="flex-1 min-w-0">

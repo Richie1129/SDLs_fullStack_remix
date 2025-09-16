@@ -34,17 +34,30 @@ const StatsCards = ({ classStats }) => {
     }
   ];
 
+  const cardStyles = [
+    'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-lg hover:shadow-xl',
+    'bg-gradient-to-br from-teal-400 to-teal-500 text-white shadow-lg hover:shadow-xl',
+    'bg-gradient-to-br from-customgreen to-teal-600 text-white shadow-lg hover:shadow-xl',
+    'bg-gradient-to-br from-teal-600 to-teal-700 text-white shadow-lg hover:shadow-xl',
+    'bg-gradient-to-br from-teal-500 via-customgreen to-teal-600 text-white shadow-lg hover:shadow-xl'
+  ];
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6 mb-6">
       {cards.map((card, index) => (
-        <div key={index} className="bg-white p-3 sm:p-6 rounded-lg shadow-md">
-          <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-1 sm:mb-2">
-            {card.title}
-          </h3>
-          <p className={`text-lg sm:text-3xl font-bold ${card.color}`}>
+        <div key={index} className={`${cardStyles[index % cardStyles.length]} p-3 sm:p-6 rounded-xl transition-all duration-300 hover:scale-105 border border-white/20`}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs sm:text-sm font-medium text-white/90 mb-1 sm:mb-2">
+              {card.title}
+            </h3>
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white text-sm">
+              {index === 0 ? '👥' : index === 1 ? '📊' : index === 2 ? '📝' : index === 3 ? '💡' : '⏱️'}
+            </div>
+          </div>
+          <p className="text-lg sm:text-3xl font-bold text-white mb-1">
             {card.value}
           </p>
-          <p className="text-xs text-gray-400 mt-1">{card.subtitle}</p>
+          <p className="text-xs text-white/80">{card.subtitle}</p>
         </div>
       ))}
     </div>
