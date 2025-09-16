@@ -1,8 +1,9 @@
 const User = require('../models/user');
 const Project = require('../models/project');
-const bcypt  = require('bcrypt');
+const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const {sign} = require('jsonwebtoken');
+const sequelize = require('../util/database'); // 引入 Sequelize 實例以支援事務
 
 //get all users
 exports.getUsers = (req, res) =>{
@@ -74,7 +75,7 @@ exports.loginUser = (req, res) => {
         })
         .then(result => {
             if(result){
-                bcypt.compare(password, result[0].password, (err, response) =>{
+                bcrypt.compare(password, result[0].password, (err, response) =>{
                     console.log(response);
                     if(response){
                         const account = result[0].account;
@@ -128,7 +129,7 @@ exports.registerUser = (req, res) => {
             return res.status(400).json({ message: '該用戶已存在，請嘗試其他用戶名稱。' });
         } else {
             // 如果用戶不存在，則創建新用戶
-            bcypt.hash(password, saltRounds, (err, hash) => {
+            bcrypt.hash(password, saltRounds, (err, hash) => {
                 if (err) {
                     console.log(err);
                     res.status(500).json({ message: '內部錯誤，無法創建新用戶。' });
@@ -201,27 +202,37 @@ exports.updateUserProfile = async (req, res) => {
             return res.status(400).json({ message: '用戶資料更新失敗' });
         }
 
-        // 如果 username 有變更，同步更新所有該用戶建立的卡片和節點的 owner 欄位
+        // 如果 username 有變更，使用事務同步更新所有該用戶建立的卡片和節點的 owner 欄位
         if (oldUsername !== newUsername) {
-            // 更新卡片 owner
-            const Task = require('../models/task');
-            const taskUpdateResult = await Task.update({
-                owner: newUsername
-            }, {
-                where: { owner: oldUsername }
-            });
+            const transaction = await sequelize.transaction();
+            try {
+                // 更新卡片 owner
+                const Task = require('../models/task');
+                const taskUpdateResult = await Task.update({
+                    owner: newUsername
+                }, {
+                    where: { owner: oldUsername },
+                    transaction
+                });
 
-            // 更新節點 owner
-            const Node = require('../models/node');
-            const nodeUpdateResult = await Node.update({
-                owner: newUsername
-            }, {
-                where: { owner: oldUsername }
-            });
+                // 更新節點 owner
+                const Node = require('../models/node');
+                const nodeUpdateResult = await Node.update({
+                    owner: newUsername
+                }, {
+                    where: { owner: oldUsername },
+                    transaction
+                });
 
-            console.log(`已將用戶 ${oldUsername} 的所有資料更新為 ${newUsername}:`);
-            console.log(`- 卡片: ${taskUpdateResult[0]} 筆`);
-            console.log(`- 節點: ${nodeUpdateResult[0]} 筆`);
+                await transaction.commit();
+                console.log(`已將用戶 ${oldUsername} 的所有資料更新為 ${newUsername}:`);
+                console.log(`- 卡片: ${taskUpdateResult[0]} 筆`);
+                console.log(`- 節點: ${nodeUpdateResult[0]} 筆`);
+            } catch (error) {
+                await transaction.rollback();
+                console.error('更新相關資料失敗，已回滾事務:', error);
+                throw new Error('用戶名稱更新失敗：無法同步更新相關資料');
+            }
         }
 
         // 返回更新後的用戶資料
@@ -263,7 +274,7 @@ exports.updateUserPassword = async (req, res) => {
 
         // 驗證當前密碼
         const isCurrentPasswordValid = await new Promise((resolve, reject) => {
-            bcypt.compare(currentPassword, user.password, (err, result) => {
+            bcrypt.compare(currentPassword, user.password, (err, result) => {
                 if (err) reject(err);
                 else resolve(result);
             });
@@ -275,7 +286,7 @@ exports.updateUserPassword = async (req, res) => {
 
         // 加密新密碼
         const hashedNewPassword = await new Promise((resolve, reject) => {
-            bcypt.hash(newPassword, saltRounds, (err, hash) => {
+            bcrypt.hash(newPassword, saltRounds, (err, hash) => {
                 if (err) reject(err);
                 else resolve(hash);
             });
@@ -305,7 +316,7 @@ exports.updateUserPassword = async (req, res) => {
 //     const userId = req.body.userId;
 //     const updatedaccount = req.body.account;
 //     const updatedpassword = req.body.password;
-//     bcypt.hash(updatedpassword, saltRounds, (err, hash) => {
+//     bcrypt.hash(updatedpassword, saltRounds, (err, hash) => {
 //         if(err){
 //             console.log(err)
 //         };

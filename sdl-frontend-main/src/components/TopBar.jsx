@@ -25,7 +25,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const { projectId } = useParams();
 
-  // 點擊外部關閉下拉選單
+  // 點擊外部關閉下拉選單和鍵盤支持
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userDropdownOpen && !event.target.closest('.relative')) {
@@ -33,9 +33,17 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
       }
     };
 
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && userDropdownOpen) {
+        setUserDropdownOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [userDropdownOpen]);
 

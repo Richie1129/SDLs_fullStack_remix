@@ -82,8 +82,11 @@ export default function Profile() {
 
       await updateUserProfile(updateData);
 
-      // 同步更新 localStorage
+      // 等待後端確認成功後，再更新 localStorage
       localStorage.setItem('username', user.username);
+      if (user.class_name) {
+        localStorage.setItem('class', user.class_name);
+      }
 
       // 觸發用戶資料更新事件
       triggerUserUpdate({
@@ -103,6 +106,8 @@ export default function Profile() {
       });
     } catch (error) {
       console.error('更新用戶資料失敗:', error);
+      // 發生錯誤時，恢復原始資料
+      setUser(originalUser);
       Swal.fire({
         icon: 'error',
         title: '錯誤',
