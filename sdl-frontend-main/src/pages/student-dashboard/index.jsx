@@ -14,13 +14,15 @@ import LearningGoals from "./components/LearningGoals";
 import TeammatesList from "./components/TeammatesList";
 import Achievements from "./components/Achievements";
 import QuickStats from "./components/QuickStats";
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 // 載入組件
 const LoadingComponent = () => (
-  <div className="min-h-screen bg-gray-50 p-3 sm:p-6 flex items-center justify-center">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-      <p className="text-gray-600">載入學習資料中...</p>
+  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-6 flex items-center justify-center">
+    <div className="text-center bg-white p-8 rounded-xl shadow-lg">
+      <div className="animate-spin rounded-full h-16 w-16 border-4 border-gray-200 border-t-customgreen mx-auto mb-4"></div>
+      <p className="text-lg text-gray-700 font-medium">載入學習資料中...</p>
+      <p className="mt-2 text-sm text-gray-500">正在分析學習進度</p>
     </div>
   </div>
 );
@@ -29,14 +31,22 @@ const StudentDashboard = () => {
   // 確保參數正確獲取
   const { projectId } = useParams();
   const userId = localStorage.getItem("id");
-  const userName = localStorage.getItem("username");
+  const userName = getCurrentUsername();
   
   // 添加防護性檢查
   if (!projectId || !userId) {
     return (
-      <div className="min-h-screen bg-gray-50 p-3 sm:p-6 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">缺少必要參數，請重新載入頁面</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-3 sm:p-6 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-xl shadow-lg border border-red-100">
+          <div className="text-red-500 mb-4">
+            <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-3">參數錯誤</h3>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-700 text-sm font-medium">缺少必要參數，請重新載入頁面</p>
+          </div>
         </div>
       </div>
     );

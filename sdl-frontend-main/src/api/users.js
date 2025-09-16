@@ -41,3 +41,25 @@ export const getCurrentUser = async () => {
         throw error;
     }
 }
+
+// update user profile
+export const updateUserProfile = async (userData) => {
+    try {
+        const response = await apiClient.put('/users/profile', userData);
+        return response.data;
+    } catch (error) {
+        console.error('Failed to update user profile:', error);
+        throw error;
+    }
+}
+
+// update user password
+export const updateUserPassword = async (passwordData) => {
+    try {
+        const response = await apiClient.put('/users/password', passwordData);
+        return response.data;
+    } catch (error) {
+        console.error('Failed to update user password:', error);
+        throw error;
+    }
+}

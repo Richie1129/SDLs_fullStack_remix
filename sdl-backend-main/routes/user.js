@@ -10,5 +10,7 @@ router.get('/:userId', controller.getUser);
 router.get('/project/:projectId', controller.getProjectUsers)
 router.post('/login', controller.loginUser);
 router.post('/register', controller.registerUser);
+router.put('/profile', validateToken, controller.updateUserProfile);
+router.put('/password', validateToken, controller.updateUserPassword);
 
 module.exports = router;

@@ -7,6 +7,7 @@ import { getAllTeachers, getProjectUser } from '../../api/users';
 import { useNavigate } from 'react-router-dom';
 import dateFormat from 'dateformat';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';  // 引入Font Awesome圖標
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 export default function ManagementOverview() {
   const [projectData, setProjectData] = useState([]);
@@ -22,7 +23,7 @@ export default function ManagementOverview() {
   const [completedSearch, setCompletedSearch] = useState(''); // 已結束活動搜尋
   const [doneSearch, setDoneSearch] = useState(''); // 已完成歷程搜尋
   const role = localStorage.getItem("role");
-  const userName = localStorage.getItem('username');
+  const userName = getCurrentUsername();
   const {
     isLoading,
     isError,
@@ -45,7 +46,7 @@ export default function ManagementOverview() {
   useEffect(() => {
     async function fetchMembers() {
         try {
-            const mentorName = localStorage.getItem("username");
+            const mentorName = getCurrentUsername();
             console.log("當前老師名稱:", mentorName);
 
             if (!mentorName) {

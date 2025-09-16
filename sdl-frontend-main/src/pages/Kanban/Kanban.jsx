@@ -19,6 +19,7 @@ import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { useStageIndex, useSubStageIndex } from '../../hooks/useStageIndex';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 // AI 導師已整合到科學助手(DraggableImage)內部的可切換分頁中
 
 
@@ -414,7 +415,7 @@ export default function Kanban() {
         projectId,
         columnOrder,
         user: {
-          username: localStorage.getItem('username'),
+          username: getCurrentUsername(),
           id: parseInt(localStorage.getItem('id')) || null,
         },
       });
@@ -485,7 +486,7 @@ export default function Kanban() {
         source: { columnId: sourceColumnId, index: source.index },
         destination: { columnId: destColumnId, index: destination.index },
         user: {
-          username: localStorage.getItem('username'),
+          username: getCurrentUsername(),
           id: parseInt(localStorage.getItem('id')) || null,
         },
       });
@@ -512,7 +513,7 @@ export default function Kanban() {
       return;
     }
 
-    const username = localStorage.getItem("username");
+    const username = getCurrentUsername();
     const userId = localStorage.getItem("id"); // 獲取用戶ID，注意是 "id" 不是 "userId"
     console.log("🚀 Optimistically creating new task:", newCard, "in column:", selectedcolumn);
 
@@ -608,7 +609,7 @@ export default function Kanban() {
         projectId,
         newGroupName: newGroupName.trim(),
         user: {
-          username: localStorage.getItem("username"),
+          username: getCurrentUsername(),
           id: parseInt(localStorage.getItem("id")) || null
         }
       });
@@ -653,7 +654,7 @@ export default function Kanban() {
           columnId: columnData.id,
           columnName: columnData.name,
           columnData: completeColumnData,
-          user: localStorage.getItem('username') || 'Unknown',
+          user: getCurrentUsername() || 'Unknown',
           timestamp: new Date().toISOString(),
           projectId: projectId
         };
@@ -679,7 +680,7 @@ export default function Kanban() {
           columnData: completeColumnData,
           kanbanId: projectId,
           user: {
-            username: localStorage.getItem('username'),
+            username: getCurrentUsername(),
             id: parseInt(localStorage.getItem('id')) || null
           }
         });

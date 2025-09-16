@@ -16,6 +16,8 @@ import { GrFormAdd } from "react-icons/gr";
 import { MdAddchart } from "react-icons/md";
 import dateFormat from 'dateformat';
 import { FaChevronDown, FaChevronUp, FaEye } from 'react-icons/fa';  // 引入Font Awesome圖標和觀摩圖標
+import { useUsername } from '../../hooks/useUserInfo'; // 引入用戶資訊 hook
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 
 export default function HomePage() {
   const [projectData, setProjectData] = useState([]);
@@ -38,7 +40,7 @@ export default function HomePage() {
   const [completedSearch, setCompletedSearch] = useState(''); // 已結束活動：關鍵字篩選
   const [doneSearch, setDoneSearch] = useState(''); // 已完成歷程：關鍵字篩選
   const role = localStorage.getItem("role");
-  const userName = localStorage.getItem('username');
+  const userName = useUsername(); // 使用自定義Hook
   const userClass = localStorage.getItem('class'); // 獲取用戶班級
   const [member, setMembers] = useState([]);
   const {
@@ -143,7 +145,7 @@ const { mutate: updateMutate } = useMutation(
   // useEffect(() => {
   //     async function fetchMembers() {
   //         try {
-  //             const mentorName = localStorage.getItem("username");
+  //             const mentorName = getCurrentUsername();
   //             console.log("當前老師名稱:", mentorName);
   
   //             if (!mentorName) {
@@ -193,7 +195,7 @@ const { mutate: updateMutate } = useMutation(
   useEffect(() => {
     async function fetchTeacherMembers() {
         try {
-            const mentorName = localStorage.getItem("username");
+            const mentorName = getCurrentUsername();
             if (!mentorName) {
                 console.error("未找到老師名稱，無法獲取專案用戶資訊");
                 return;
@@ -298,7 +300,7 @@ useEffect(() => {
 
         // 過濾掉使用者自己參與的專案
         const myId = String(localStorage.getItem('id') || '');
-        const myName = localStorage.getItem('username') || '';
+        const myName = getCurrentUsername() || '';
         projects = projects.filter(p => {
           if (!Array.isArray(p?.members)) return true; // 若無成員資訊則保留（後端可回補）
           return !p.members.some(m => String(m?.id ?? '') === myId || (m?.username || '') === myName);

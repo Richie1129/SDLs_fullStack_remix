@@ -23,6 +23,7 @@ import StudentDashboard from './pages/student-dashboard';
 import StudentOverview from './pages/overview/StudentOverview';
 import TeacherOverview from './pages/overview/TeacherOverview';
 import ClassObservationPage from './pages/observation/ClassObservationPage';
+import Profile from './pages/profile/Profile';
 
 export default function App() {
   const router = createBrowserRouter(
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="student-overview" element={<StudentOverview />} />
           <Route path="teacher-overview" element={<TeacherOverview />} />
           <Route path="observation" element={<ClassObservationPage />} />
+          <Route path="profile" element={<Profile />} />
           <Route path="project/:projectId" element={<ProjectLayout />}>
             <Route path="kanban" element={<Kanban />} />
             <Route path="submitTask" element={<SubmitTask />} />

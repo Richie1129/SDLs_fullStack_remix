@@ -9,19 +9,28 @@ const ViewModeButtons = ({ viewMode, setViewMode }) => {
     { key: 'analytics', label: '數據分析' }
   ];
 
+  const buttonIcons = {
+    'overview': '🏠',
+    'all-students': '👥',
+    'groups': '🔗',
+    'individual': '👤',
+    'analytics': '📊'
+  };
+
   return (
-    <div className="flex flex-wrap gap-1 sm:gap-2">
+    <div className="flex flex-wrap gap-1 sm:gap-2 p-1 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl shadow-inner">
       {modes.map(({ key, label }) => (
         <button
           key={key}
           onClick={() => setViewMode(key)}
-          className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
-            viewMode === key 
-              ? 'bg-teal-600 text-white' 
-              : 'bg-white text-teal-600 border border-teal-600 hover:bg-teal-50'
+          className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 flex items-center space-x-1 sm:space-x-2 ${
+            viewMode === key
+              ? 'bg-gradient-to-r from-customgreen to-teal-600 text-white shadow-md'
+              : 'bg-white text-teal-700 border border-teal-200 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800'
           }`}
         >
-          {label}
+          <span className="text-sm">{buttonIcons[key]}</span>
+          <span>{label}</span>
         </button>
       ))}
     </div>

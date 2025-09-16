@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { GrFormClose, GrSend } from "react-icons/gr";
 import { useParams } from 'react-router-dom';
 import { socket } from '../utils/socket';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../utils/userUtils';
 
 export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
     const [ currentMessage, setCurrentMessage ] = useState("");
@@ -13,7 +14,7 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
         if(currentMessage !== ""){
             const messageData = {
                 room: projectId,
-                author: localStorage.getItem("username"),
+                author: getCurrentUsername(),
                 message: currentMessage,
                 time: new Date(Date.now()).getHours() + ":" + new Date(Date.now()).getMinutes(),
             };
@@ -53,9 +54,9 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
                 {
                     messageList.map((messages, index) => {
                         return (
-                            <div key={index} className={`flex h-auto p-1 ${messages.author===localStorage.getItem("username")? "justify-end": "justify-start"}`}> 
+                            <div key={index} className={`flex h-auto p-1 ${messages.author===getCurrentUsername()? "justify-end": "justify-start"}`}> 
                                 <div>
-                                    <div className={`w-fit max-w-[120px] rounded text-white flex items-center break-all px-[5px] mx-[5px] ${messages.author===localStorage.getItem("username")? "bg-[#5BA491]": "bg-sky-700"}`}>
+                                    <div className={`w-fit max-w-[120px] rounded text-white flex items-center break-all px-[5px] mx-[5px] ${messages.author===getCurrentUsername()? "bg-[#5BA491]": "bg-sky-700"}`}>
                                         {messages.message}
                                     </div>
                                     <div className='flex justify-end text-xs mx-[5px]'>

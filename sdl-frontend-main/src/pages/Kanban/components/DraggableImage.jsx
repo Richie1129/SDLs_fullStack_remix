@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Swal from 'sweetalert2';
 import AssistantChat from '../../../components/AssistantChat';
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils';
 
 // 使用後端代理 API，避免直接調用 RAGFlow
 const API_URL = "/proxy/api/v1/chats/a159fe08e2d411efb3910242ac120004";
@@ -321,11 +322,25 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       } else {
         console.log(`找到 ${sessions.length} 個歷史對話`);
         
-        // 轉換數據格式以符合 UI 需求
-        const formattedSessions = sessions.map((session, index) => ({
-          id: session.sessionId,
-          name: `對話 ${index + 1} - ${session.userName || '未知用戶'}`
-        }));
+        // 轉換數據格式以符合 UI 需求，使用更智慧的命名邏輯
+        const formattedSessions = sessions.map((session, index) => {
+          let displayName;
+
+          // 優先使用後端已處理過的 userName
+          if (session.userName && session.userName !== '未知用戶') {
+            displayName = session.userName;
+          } else if (session.userId) {
+            displayName = `用戶${session.userId}`;
+          } else {
+            // 最後手段：使用 sessionId 的前8位作為識別
+            displayName = `對話${session.sessionId.substring(0, 8)}`;
+          }
+
+          return {
+            id: session.sessionId,
+            name: `對話 ${index + 1} - ${displayName}`
+          };
+        });
         
         setChatSessions(formattedSessions);
         // 設置第一個對話為當前對話（只有在沒有設置時）
@@ -437,7 +452,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       // 將開場白保存到資料庫，確保新會話會出現在歷史記錄中
       try {
         const userId = localStorage.getItem('id') || '1';
-        const userName = localStorage.getItem('username') || '未知用戶';
+        const userName = getCurrentUsername() || '未知用戶';
         
         // 使用新的 API 來創建會話記錄
         await createNewSessionInDB(userId, newSessionId, userName);
@@ -552,7 +567,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       // 從 localStorage 獲取用戶與專案資訊並做型別/有效性檢查
       const userIdRaw = localStorage.getItem('id') ?? localStorage.getItem('userId');
       const userId = Number(userIdRaw);
-      const userName = localStorage.getItem('username') || '未知用戶';
+      const userName = getCurrentUsername() || '未知用戶';
       let projectIdRaw = localStorage.getItem('projectId');
       // 後備：從 URL 提取 projectId
       if (!projectIdRaw) {
@@ -800,11 +815,25 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       const userId = localStorage.getItem('id') || '1';
       const sessions = await getUserSessions(userId);
       
-      // 轉換數據格式
-      const formattedSessions = sessions.map((session, index) => ({
-        id: session.sessionId,
-        name: `對話 ${index + 1} - ${session.userName || '未知用戶'}`
-      }));
+      // 轉換數據格式，使用一致的命名邏輯
+      const formattedSessions = sessions.map((session, index) => {
+        let displayName;
+
+        // 優先使用後端已處理過的 userName
+        if (session.userName && session.userName !== '未知用戶') {
+          displayName = session.userName;
+        } else if (session.userId) {
+          displayName = `用戶${session.userId}`;
+        } else {
+          // 最後手段：使用 sessionId 的前8位作為識別
+          displayName = `對話${session.sessionId.substring(0, 8)}`;
+        }
+
+        return {
+          id: session.sessionId,
+          name: `對話 ${index + 1} - ${displayName}`
+        };
+      });
       
       setChatSessions(formattedSessions);
       console.log(`對話歷史列表已更新，共 ${formattedSessions.length} 個對話`);

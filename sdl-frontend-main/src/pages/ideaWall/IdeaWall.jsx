@@ -21,11 +21,23 @@ import Timer from './components/Timer';
 import Idea_development from './components/Idea_development';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
+import { getCurrentUsername, isCurrentUser } from '../../utils/userUtils'; // 引入用戶資訊工具
 
 export default function IdeaWall() {
     const container = useRef(null);
     const url = svgConvertUrl("node");
     const { projectId } = useParams();
+    const currentUsername = getCurrentUsername(); // 取得當前使用者名稱
+
+    // 計算節點建立者顯示名稱（如果是當前用戶，顯示最新名稱；否則顯示資料庫中的名稱）
+    const getDisplayNodeOwnerName = (owner) => {
+        // 如果節點建立者就是當前用戶，使用最新的username
+        if (isCurrentUser(owner) || owner === currentUsername) {
+            return currentUsername;
+        }
+        return owner; // 其他用戶顯示資料庫中的名稱
+    };
+
     const [nodes, setnodes] = useState([]);
     const [nodeData, setNodeData] = useState({});
     const [edges, setEdges] = useState([]);
@@ -270,7 +282,7 @@ export default function IdeaWall() {
                 ...prevData,
                 [name]: value,
                 ideaWallId: ideaWallInfo.id,
-                owner: localStorage.getItem("username"),
+                owner: currentUsername,
                 from_id: buildOnNodeId,
                 projectId: projectId,
                 colorindex: userId
@@ -286,7 +298,7 @@ export default function IdeaWall() {
         const updatedData = {
             ...selectNodeInfo,
             [name]: value,
-            owner: localStorage.getItem("username"),
+            owner: currentUsername,
             projectId: projectId,
             colorindex: userId
         };
@@ -344,7 +356,7 @@ export default function IdeaWall() {
                 ideaWallId: wallId,
                 projectId,
                 from_id: buildOnNodeId,
-                owner: localStorage.getItem('username'),
+                owner: currentUsername,
                 colorindex: userId
             };
 
@@ -356,7 +368,7 @@ export default function IdeaWall() {
                 nodeTitle: title,
                 nodeType: buildOnNodeId ? 'extension' : 'idea',
                 nodeData: completeNodeData,
-                user: localStorage.getItem('username') || 'Unknown',
+                user: currentUsername || 'Unknown',
                 timestamp: new Date().toISOString(),
                 projectId: projectId
             };
@@ -370,10 +382,10 @@ export default function IdeaWall() {
                 ideaWallId: wallId,
                 projectId,
                 from_id: buildOnNodeId,
-                owner: localStorage.getItem('username'),
+                owner: currentUsername,
                 colorindex: userId,
                 user: {
-                    username: localStorage.getItem('username'),
+                    username: currentUsername,
                     id: parseInt(localStorage.getItem('id')) || null,
                 },
             });
@@ -395,7 +407,7 @@ export default function IdeaWall() {
                 nodeId: selectNodeInfo.id,
                 nodeTitle: selectNodeInfo.title,
                 nodeData: selectNodeInfo,
-                user: localStorage.getItem('username') || 'Unknown',
+                user: currentUsername || 'Unknown',
                 timestamp: new Date().toISOString(),
                 projectId: projectId,
                 // 簡化的變更資訊
@@ -412,10 +424,10 @@ export default function IdeaWall() {
             
             socket.emit('nodeUpdate', { 
                 ...selectNodeInfo, 
-                owner: localStorage.getItem("username"),
+                owner: currentUsername,
                 projectId,
                 user: {
-                    username: localStorage.getItem('username'),
+                    username: currentUsername,
                     id: parseInt(localStorage.getItem('id')) || null,
                 },
             })
@@ -436,7 +448,7 @@ export default function IdeaWall() {
             nodeTitle: selectNodeInfo.title,
             nodeType: 'unknown', // 我們可能需要從節點資料中取得類型
             nodeData: selectNodeInfo,
-            user: localStorage.getItem('username') || 'Unknown',
+            user: currentUsername || 'Unknown',
             timestamp: new Date().toISOString(),
             projectId: projectId
         };
@@ -448,11 +460,11 @@ export default function IdeaWall() {
         
         socket.emit('nodeDelete', { 
             ...selectNodeInfo, 
-            owner: localStorage.getItem("username"),
+            owner: currentUsername,
             title: selectNodeInfo.title,
             projectId,
             user: {
-                username: localStorage.getItem('username'),
+                username: currentUsername,
                 id: parseInt(localStorage.getItem('id')) || null,
             },
         })
@@ -476,7 +488,7 @@ export default function IdeaWall() {
             ...nodeData,
             projectId,
             user: {
-                username: localStorage.getItem('username'),
+                username: currentUsername,
                 id: parseInt(localStorage.getItem('id')) || null,
             },
         });
@@ -600,7 +612,7 @@ export default function IdeaWall() {
                                     name='title'
                                     value={selectNodeInfo.title}
                                     onChange={handleUpdataChange}
-                                    disabled={isObservationMode || localStorage.getItem("username") !== selectNodeInfo.owner}
+                                    disabled={isObservationMode || currentUsername !== selectNodeInfo.owner}
                                 />
                                 <p className=' font-bold text-base mb-3'>內容</p>
                                 <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
@@ -609,10 +621,10 @@ export default function IdeaWall() {
                                     name='content'
                                     value={selectNodeInfo.content}
                                     onChange={handleUpdataChange}
-                                    disabled={isObservationMode || localStorage.getItem("username") !== selectNodeInfo.owner}
+                                    disabled={isObservationMode || currentUsername !== selectNodeInfo.owner}
                                 />
                                 <div className='flex justify-between items-center mt-3'>
-                                    <p className=' font-bold text-base'>建立者: {selectNodeInfo.owner}</p>
+                                    <p className=' font-bold text-base'>建立者: {getDisplayNodeOwnerName(selectNodeInfo.owner)}</p>
                                     {selectNodeInfo.createdAt && (
                                         <p className='text-sm text-gray-500' title={formatTime(selectNodeInfo.createdAt, 'full')}>
                                             建立時間: {formatTime(selectNodeInfo.createdAt, 'relative')}
@@ -690,7 +702,7 @@ export default function IdeaWall() {
                     </div>
                     {/* 按鈕區域 */}
                     {!showNodeChangeHistory ? (
-                        localStorage.getItem("username") === selectNodeInfo.owner ? (
+                        currentUsername === selectNodeInfo.owner ? (
                             <div className='flex flex-row justify-between m-2'>
                                 {/* 刪除按鈕 - 觀摩模式隱藏 */}
                                 {!isObservationMode && (
