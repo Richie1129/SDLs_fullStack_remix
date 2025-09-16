@@ -27,6 +27,7 @@ export default function Profile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const role = localStorage.getItem("role");
+  const isTeacher = role === 'teacher';
 
   useEffect(() => {
     fetchUserData();
@@ -241,9 +242,9 @@ export default function Profile() {
                     name="username"
                     value={user.username}
                     onChange={handleInputChange}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isTeacher}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !isEditing ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !isEditing || isTeacher ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
@@ -270,9 +271,9 @@ export default function Profile() {
                     name="class_name"
                     value={user.class_name}
                     onChange={handleInputChange}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isTeacher}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !isEditing ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !isEditing || isTeacher ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
@@ -286,41 +287,58 @@ export default function Profile() {
                     name="seat_number"
                     value={user.seat_number}
                     onChange={handleInputChange}
-                    disabled={!isEditing}
+                    disabled={!isEditing || isTeacher}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !isEditing ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !isEditing || isTeacher ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
 
                 {/* 操作按鈕 */}
-                <div className="pt-4 flex space-x-3">
-                  {!isEditing ? (
-                    <button
-                      onClick={() => setIsEditing(true)}
-                      className="flex items-center space-x-2 px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
-                    >
-                      <FaEdit />
-                      <span>編輯資料</span>
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleSave}
-                        className="flex items-center space-x-2 px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
-                      >
-                        <FaSave />
-                        <span>保存</span>
-                      </button>
-                      <button
-                        onClick={handleCancel}
-                        className="flex items-center space-x-2 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
-                      >
-                        <FaTimes />
-                        <span>取消</span>
-                      </button>
-                    </>
+                <div className="pt-4 flex flex-col space-y-3">
+                  {isTeacher && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                        <p className="text-sm text-yellow-800 font-medium">
+                          教師角色的個人資料無法修改，以確保系統權限的穩定性
+                        </p>
+                      </div>
+                    </div>
                   )}
+                  <div className="flex space-x-3">
+                    {!isEditing ? (
+                      <button
+                        onClick={() => setIsEditing(true)}
+                        disabled={isTeacher}
+                        className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors font-medium ${
+                          isTeacher
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-[#5BA491] text-white hover:bg-[#4A9480]'
+                        }`}
+                      >
+                        <FaEdit />
+                        <span>編輯資料</span>
+                      </button>
+                    ) : (
+                    <>
+                        <button
+                          onClick={handleSave}
+                          className="flex items-center space-x-2 px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
+                        >
+                          <FaSave />
+                          <span>保存</span>
+                        </button>
+                        <button
+                          onClick={handleCancel}
+                          className="flex items-center space-x-2 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                        >
+                          <FaTimes />
+                          <span>取消</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -332,15 +350,30 @@ export default function Profile() {
                 </h3>
 
                 <div className="bg-gray-50 rounded-lg p-4">
+                  {isTeacher && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                        <p className="text-sm text-yellow-800 font-medium">
+                          教師角色無法修改密碼，以確保帳戶安全性
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <button
                     onClick={() => setShowPasswordForm(!showPasswordForm)}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
+                    disabled={isTeacher}
+                    className={`w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium ${
+                      isTeacher
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
                   >
                     <FaLock />
                     <span>{showPasswordForm ? '隱藏密碼表單' : '修改密碼'}</span>
                   </button>
 
-                  {showPasswordForm && (
+                  {showPasswordForm && !isTeacher && (
                     <div className="mt-4 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
