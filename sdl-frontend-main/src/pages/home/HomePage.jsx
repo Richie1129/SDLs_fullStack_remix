@@ -59,6 +59,12 @@ export default function HomePage() {
   setSelectedProjectId(project.id);
   setProjectName(project.name);
   setProjectDescription(project.describe);
+  // 修復：初始化現有的指導老師和 userId
+  setCreateProjectData(prev => ({
+    ...prev,
+    projectMentor: project.mentor,
+    userId: localStorage.getItem("id")
+  }));
   setCreateProjectModalOpen(false); // 確保不會開啟錯誤的 Modal
   setEditProjectModalOpen(true);
 };
@@ -947,13 +953,31 @@ const handleDeleteProject = (projectId) => {
               />
 
               <div className="mt-4">
-                <label className="block text-gray-700 text-base">指導老師</label>
-                <select name="projectMentor" onChange={handleChange} value={createprojectData.projectMentor} 
+                <label className="block text-gray-700 text-base">
+                  指導老師
+                  {editProjectModalOpen && createprojectData.projectMentor &&
+                    <span className="text-sm text-gray-500 ml-2">(目前: {createprojectData.projectMentor})</span>
+                  }
+                </label>
+                <select name="projectMentor" onChange={handleChange} value={createprojectData.projectMentor}
                         className="text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none" required>
-                  <option value="" disabled>- 請選擇指導老師 -</option>
-                  {teachers.map(teacher => (
-                    <option key={teacher.id} value={teacher.username}>{teacher.username}</option>
-                  ))}
+                  {editProjectModalOpen ? (
+                    <>
+                      <option value={createprojectData.projectMentor}>
+                        {createprojectData.projectMentor} (保持不變)
+                      </option>
+                      {teachers.filter(teacher => teacher.username !== createprojectData.projectMentor).map(teacher => (
+                        <option key={teacher.id} value={teacher.username}>{teacher.username}</option>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <option value="" disabled>- 請選擇指導老師 -</option>
+                      {teachers.map(teacher => (
+                        <option key={teacher.id} value={teacher.username}>{teacher.username}</option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -1365,13 +1389,31 @@ const handleDeleteProject = (projectId) => {
               />
 
               <div className="mt-4">
-                <label className="block text-gray-700 text-base">指導老師</label>
-                <select name="projectMentor" onChange={handleChange} value={createprojectData.projectMentor} 
+                <label className="block text-gray-700 text-base">
+                  指導老師
+                  {editProjectModalOpen && createprojectData.projectMentor &&
+                    <span className="text-sm text-gray-500 ml-2">(目前: {createprojectData.projectMentor})</span>
+                  }
+                </label>
+                <select name="projectMentor" onChange={handleChange} value={createprojectData.projectMentor}
                         className="text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none" required>
-                  <option value="" disabled>- 請選擇指導老師 -</option>
-                  {teachers.map(teacher => (
-                    <option key={teacher.id} value={teacher.username}>{teacher.username}</option>
-                  ))}
+                  {editProjectModalOpen ? (
+                    <>
+                      <option value={createprojectData.projectMentor}>
+                        {createprojectData.projectMentor} (保持不變)
+                      </option>
+                      {teachers.filter(teacher => teacher.username !== createprojectData.projectMentor).map(teacher => (
+                        <option key={teacher.id} value={teacher.username}>{teacher.username}</option>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <option value="" disabled>- 請選擇指導老師 -</option>
+                      {teachers.map(teacher => (
+                        <option key={teacher.id} value={teacher.username}>{teacher.username}</option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
             </div>
