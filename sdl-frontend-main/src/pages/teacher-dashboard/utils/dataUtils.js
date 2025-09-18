@@ -64,12 +64,12 @@ export const normalizeTaskData = (task, columnInfo = {}) => {
 export const normalizeNodeData = (node) => {
   const normalized = normalizeUserData(node);
   const timestamped = normalizeTimestamp(normalized);
-  
+
   return {
     ...timestamped,
-    // 統一創建者欄位
-    owner: normalized.username,
-    creator: normalized.username
+    // 統一創建者欄位 - 保留原始 owner，回退到 username
+    owner: node.owner || normalized.username,
+    creator: node.owner || normalized.username
   };
 };
 
