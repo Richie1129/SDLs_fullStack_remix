@@ -28,6 +28,8 @@ export default function Profile() {
 
   const role = localStorage.getItem("role");
   const isTeacher = role === 'teacher';
+  // 禁用所有角色的編輯功能
+  const canEdit = false;
 
   useEffect(() => {
     fetchUserData();
@@ -242,9 +244,9 @@ export default function Profile() {
                     name="username"
                     value={user.username}
                     onChange={handleInputChange}
-                    disabled={!isEditing || isTeacher}
+                    disabled={!canEdit}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !isEditing || isTeacher ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !canEdit ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
@@ -271,9 +273,9 @@ export default function Profile() {
                     name="class_name"
                     value={user.class_name}
                     onChange={handleInputChange}
-                    disabled={!isEditing || isTeacher}
+                    disabled={!canEdit}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !isEditing || isTeacher ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !canEdit ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
@@ -287,21 +289,21 @@ export default function Profile() {
                     name="seat_number"
                     value={user.seat_number}
                     onChange={handleInputChange}
-                    disabled={!isEditing || isTeacher}
+                    disabled={!canEdit}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !isEditing || isTeacher ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !canEdit ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
 
                 {/* 操作按鈕 */}
                 <div className="pt-4 flex flex-col space-y-3">
-                  {isTeacher && (
+                  {!canEdit && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
                         <p className="text-sm text-yellow-800 font-medium">
-                          教師角色的個人資料無法修改，以確保系統權限的穩定性
+                          個人資料無法修改，以確保系統資料的穩定性
                         </p>
                       </div>
                     </div>
@@ -310,9 +312,9 @@ export default function Profile() {
                     {!isEditing ? (
                       <button
                         onClick={() => setIsEditing(true)}
-                        disabled={isTeacher}
+                        disabled={!canEdit}
                         className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors font-medium ${
-                          isTeacher
+                          !canEdit
                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                             : 'bg-[#5BA491] text-white hover:bg-[#4A9480]'
                         }`}
@@ -350,21 +352,21 @@ export default function Profile() {
                 </h3>
 
                 <div className="bg-gray-50 rounded-lg p-4">
-                  {isTeacher && (
+                  {!canEdit && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
                       <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
                         <p className="text-sm text-yellow-800 font-medium">
-                          教師角色無法修改密碼，以確保帳戶安全性
+                          無法修改密碼，以確保帳戶安全性
                         </p>
                       </div>
                     </div>
                   )}
                   <button
                     onClick={() => setShowPasswordForm(!showPasswordForm)}
-                    disabled={isTeacher}
+                    disabled={!canEdit}
                     className={`w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium ${
-                      isTeacher
+                      !canEdit
                         ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200'
                         : 'bg-white text-gray-700 hover:bg-gray-50'
                     }`}
@@ -373,7 +375,7 @@ export default function Profile() {
                     <span>{showPasswordForm ? '隱藏密碼表單' : '修改密碼'}</span>
                   </button>
 
-                  {showPasswordForm && !isTeacher && (
+                  {showPasswordForm && canEdit && (
                     <div className="mt-4 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
