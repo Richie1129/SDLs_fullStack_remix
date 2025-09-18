@@ -278,9 +278,9 @@ const TeacherOverview = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gray-50">
+    <div className="relative h-screen bg-gray-50 overflow-hidden flex flex-col">
       <TopBar />
-      <div className="pt-20 h-screen overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
         <div className="p-3 sm:p-6">
           <div className="max-w-7xl mx-auto">
             {/* 頁面標題與導航 */}
@@ -730,7 +730,7 @@ const TeacherOverview = () => {
             )}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
