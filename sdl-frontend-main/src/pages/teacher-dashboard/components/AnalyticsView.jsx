@@ -20,7 +20,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
     <div className="space-y-4 sm:space-y-6">
       {/* 數據統計卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-customgreen to-teal-600 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">總想法節點</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.nodes.length}</p>
           <p className="text-xs mt-1 opacity-80">
@@ -28,7 +28,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
           </p>
         </div>
         
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">看板任務</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.tasks.length}</p>
           <p className="text-xs mt-1 opacity-80">
@@ -36,7 +36,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
           </p>
         </div>
         
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-customgreen to-customgreen/80 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">節點關聯</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.nodeRelations.length}</p>
           <p className="text-xs mt-1 opacity-80">
@@ -44,7 +44,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
           </p>
         </div>
 
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-teal-600 to-customgreen p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">學習反思</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.reflections.length}</p>
           <p className="text-xs mt-1 opacity-80">

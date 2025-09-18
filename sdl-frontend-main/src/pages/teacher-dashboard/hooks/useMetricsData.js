@@ -132,7 +132,7 @@ export const useMetricsData = (studentData, projectData) => {
 
   // 計算班級統計
   const classStats = useMemo(() => {
-    const { tasks } = projectData;
+    const { tasks, nodes } = projectData;
     const { allProjects, allProjectMembers } = projectData;
 
     const totalStudents = enhancedStudents.length;
@@ -148,7 +148,7 @@ export const useMetricsData = (studentData, projectData) => {
       : 0;
 
     const totalReflections = enhancedStudents.reduce((sum, s) => sum + s.weeklyReflections, 0);
-    const totalIdeaNodes = enhancedStudents.reduce((sum, s) => sum + s.ideaNodes, 0);
+    const totalIdeaNodes = nodes.length;
     const totalTasks = tasks.length;
     const totalProjects = Object.keys(allProjectMembers).length || allProjects.length;
 
