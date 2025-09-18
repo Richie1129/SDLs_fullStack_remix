@@ -54,7 +54,7 @@ const StudentDashboard = () => {
   
   // 獲取專案數據
   const projectData = useProjectData(projectId, userId);
-  const { loading, ideaNodes, kanbanTasks } = projectData;
+  const { loading, ideaNodes, kanbanTasks, teamMembers, personalReflections, teamReflections } = projectData;
   // 啟用精準使用時間記錄（心跳）
   useUsageSession(projectId, userId);
   
@@ -108,7 +108,16 @@ const StudentDashboard = () => {
               <TeammatesList teammates={teammates} personalData={personalData} />
 
               {/* 近期成就 */}
-              <Achievements achievements={achievements} />
+              <Achievements
+                achievements={achievements}
+                enhancedStudents={teamMembers}
+                realData={{
+                  nodes: ideaNodes,
+                  tasks: kanbanTasks,
+                  nodeRelations: [],
+                  reflections: [...personalReflections, ...teamReflections]
+                }}
+              />
 
               {/* 快速統計 */}
               <QuickStats personalData={personalData} />
