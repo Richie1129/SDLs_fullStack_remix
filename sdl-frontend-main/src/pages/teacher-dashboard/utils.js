@@ -73,7 +73,7 @@ export const generateStudentActivityStats = (students, realData) => {
 // 計算創作者統計
 export const calculateCreatorStats = (items, creatorField = 'owner') => {
   return items.reduce((acc, item) => {
-    const creator = item[creatorField] || item.username || item.user_name || '未知';
+    const creator = item[creatorField] || '未知';
     acc[creator] = (acc[creator] || 0) + 1;
     return acc;
   }, {});

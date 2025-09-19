@@ -20,7 +20,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
     <div className="space-y-4 sm:space-y-6">
       {/* 數據統計卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-customgreen to-teal-600 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">總想法節點</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.nodes.length}</p>
           <p className="text-xs mt-1 opacity-80">
@@ -28,7 +28,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
           </p>
         </div>
         
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">看板任務</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.tasks.length}</p>
           <p className="text-xs mt-1 opacity-80">
@@ -36,7 +36,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
           </p>
         </div>
         
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-customgreen to-customgreen/80 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">節點關聯</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.nodeRelations.length}</p>
           <p className="text-xs mt-1 opacity-80">
@@ -44,7 +44,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
           </p>
         </div>
 
-        <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 sm:p-6 rounded-lg text-white">
+        <div className="bg-gradient-to-r from-teal-600 to-customgreen p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">學習反思</h3>
           <p className="text-2xl sm:text-3xl font-bold">{realData.reflections.length}</p>
           <p className="text-xs mt-1 opacity-80">
@@ -97,10 +97,15 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                style={{ scrollBehavior: 'smooth' }}>
             {Object.entries(nodeCreators)
               .sort(([,a], [,b]) => b - a)
-              .slice(0, 9)
+              .slice(0, 3)
               .map(([creator, count], index) => (
-                <div key={creator} className="flex items-center justify-between p-2 bg-purple-50 rounded">
-                  <span className="text-sm font-medium text-purple-800">{creator}</span>
+                <div key={creator} className="relative flex items-center justify-between p-2 bg-purple-50 rounded">
+                  {index < 3 && (
+                    <div className="absolute -top-1 -left-1 text-lg">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                    </div>
+                  )}
+                  <span className={`text-sm font-medium text-purple-800 ${index < 3 ? 'ml-4' : ''}`}>{creator}</span>
                   <span className="text-sm text-purple-600">{count} 個節點</span>
                 </div>
               ))}
@@ -116,6 +121,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 <tr>
                   <th className="border p-2 text-left">擁有者</th>
                   <th className="border p-2 text-left">標題</th>
+                  <th className="border p-2 text-left">內容</th>
                   <th className="border p-2 text-center">建立時間</th>
                   <th className="border p-2 text-center">延伸節點</th>
                 </tr>
@@ -126,14 +132,14 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                     // 計算 rowSpan
                     const ownerRowSpan = {};
                     realData.nodes.forEach((node) => {
-                      const owner = node.owner || node.username || node.user_name || '未知';
+                      const owner = node.owner || '未知';
                       ownerRowSpan[owner] = (ownerRowSpan[owner] || 0) + 1;
                     });
 
                     let processedOwners = new Set();
 
                     return realData.nodes.map((node, index) => {
-                      const owner = node.owner || node.username || node.user_name || '未知';
+                      const owner = node.owner || '未知';
                       const isFirstOccurrence = !processedOwners.has(owner);
                       if (isFirstOccurrence) {
                         processedOwners.add(owner);
@@ -150,6 +156,11 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                             </td>
                           )}
                           <td className="border p-2">{node.title || '無標題'}</td>
+                          <td className="border p-2">
+                            <div className="max-w-xs truncate">
+                              {node.content || '無內容'}
+                            </div>
+                          </td>
                           <td className="border p-2 text-center text-sm">
                             {node.createdAt ? new Date(node.createdAt).toLocaleString('zh-TW') : "無資料"}
                           </td>
@@ -171,7 +182,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                   })()
                 ) : (
                   <tr>
-                    <td colSpan="4" className="border p-4 text-center text-gray-500">無節點數據</td>
+                    <td colSpan="5" className="border p-4 text-center text-gray-500">無節點數據</td>
                   </tr>
                 )}
               </tbody>
@@ -186,11 +197,15 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-medium text-gray-800 text-sm">{node.title || '無標題'}</h3>
                 <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                  {node.owner || node.username || node.user_name || '未知'}
+                  {node.owner || '未知'}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mb-2">
                 {node.createdAt ? new Date(node.createdAt).toLocaleString('zh-TW') : "無資料"}
+              </p>
+              <p className="text-xs text-gray-600 mb-2">
+                <span className="font-medium">內容: </span>
+                <span className="truncate">{node.content || '無內容'}</span>
               </p>
               <div className="text-xs">
                 <span className="text-gray-600">延伸節點: </span>
@@ -223,10 +238,15 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                style={{ scrollBehavior: 'smooth' }}>
             {Object.entries(taskCreators)
               .sort(([,a], [,b]) => b - a)
-              .slice(0, 9)
+              .slice(0, 3)
               .map(([creator, count], index) => (
-                <div key={creator} className="flex items-center justify-between p-2 bg-orange-50 rounded">
-                  <span className="text-sm font-medium text-orange-800">{creator}</span>
+                <div key={creator} className="relative flex items-center justify-between p-2 bg-orange-50 rounded">
+                  {index < 3 && (
+                    <div className="absolute -top-1 -left-1 text-lg">
+                      {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                    </div>
+                  )}
+                  <span className={`text-sm font-medium text-orange-800 ${index < 3 ? 'ml-4' : ''}`}>{creator}</span>
                   <span className="text-sm text-orange-600">{count} 個任務</span>
                 </div>
               ))}

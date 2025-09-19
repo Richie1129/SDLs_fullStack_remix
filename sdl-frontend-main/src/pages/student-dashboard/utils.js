@@ -119,3 +119,60 @@ export const getColumnStyle = (columnName) => {
   
   return { color: 'text-green-600', icon: '📋' };
 };
+
+// 從 teacher-dashboard 提取的共用工具函式
+
+/**
+ * 生成學生活動統計
+ * @param {Array} students - 學生陣列
+ * @param {Object} realData - 真實數據
+ * @returns {Array} 排序後的學生活動統計
+ */
+export const generateStudentActivityStats = (students, realData) => {
+  return students.map(student => ({
+    name: student.username || student.name,
+    reflections: student.weeklyReflections || 0,
+    nodes: student.ideaNodes || 0,
+    tasks: student.kanbanTasks || 0,
+    totalActivity: (student.weeklyReflections || 0) + (student.ideaNodes || 0) + (student.kanbanTasks || 0)
+  })).sort((a, b) => b.totalActivity - a.totalActivity);
+};
+
+/**
+ * 計算創作者統計
+ * @param {Array} items - 項目陣列
+ * @param {string} creatorField - 創作者欄位名稱
+ * @returns {Object} 創作者統計物件
+ */
+export const calculateCreatorStats = (items, creatorField = 'owner') => {
+  return items.reduce((acc, item) => {
+    const creator = item[creatorField] || '未知';
+    acc[creator] = (acc[creator] || 0) + 1;
+    return acc;
+  }, {});
+};
+
+/**
+ * 生成排行榜資料
+ * @param {Array} enhancedStudents - 增強學生資料
+ * @param {Object} realData - 真實數據
+ * @returns {Object|null} 排行榜資料物件
+ */
+export const generateRankingData = (enhancedStudents, realData) => {
+  if (!realData || !enhancedStudents) {
+    return null;
+  }
+
+  // 學生活動排行
+  const studentActivity = generateStudentActivityStats(enhancedStudents, realData);
+
+  // 創作者統計
+  const nodeCreators = calculateCreatorStats(realData.nodes || [], 'owner');
+  const taskCreators = calculateCreatorStats(realData.tasks || [], 'owner');
+
+  return {
+    students: studentActivity,
+    creators: nodeCreators,
+    tasks: taskCreators
+  };
+};
