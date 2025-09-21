@@ -1,20 +1,124 @@
 import React from 'react';
 import { generateStudentActivityStats, calculateCreatorStats } from '../utils';
+import {
+  getSafeArrayData,
+  getSafeDisplayName,
+  getSafeValue
+} from '../../student-dashboard/utils';
+import LoadingState from '../../student-dashboard/components/LoadingState';
 
 const AnalyticsView = ({ enhancedStudents, realData }) => {
-  // 建立關聯對照表
-  const relationMap = {};
-  realData.nodeRelations.forEach(relation => {
-    if (!relationMap[relation.from_node_id]) {
-      relationMap[relation.from_node_id] = [];
-    }
-    relationMap[relation.from_node_id].push(relation.to_node_id);
-  });
+  // 安全資料驗證
+  if (!realData) {
+    return <LoadingState type="loading" message="分析資料載入中..." />;
+  }
 
-  // 計算統計數據
-  const nodeCreators = calculateCreatorStats(realData.nodes, 'owner');
-  const taskCreators = calculateCreatorStats(realData.tasks, 'owner');
-  const studentActivity = generateStudentActivityStats(enhancedStudents, realData);
+  // 安全的資料存取
+  const safeNodes = getSafeArrayData(realData.nodes);
+  const safeTasks = getSafeArrayData(realData.tasks);
+  const safeNodeRelations = getSafeArrayData(realData.nodeRelations);
+  const safeReflections = getSafeArrayData(realData.reflections);
+  const safeEnhancedStudents = getSafeArrayData(enhancedStudents);
+
+  // 建立關聯對照表 - 安全版本
+  const relationMap = {};
+  try {
+    safeNodeRelations.forEach(relation => {
+      if (relation?.from_node_id && relation?.to_node_id) {
+        if (!relationMap[relation.from_node_id]) {
+          relationMap[relation.from_node_id] = [];
+        }
+        relationMap[relation.from_node_id].push(relation.to_node_id);
+      }
+    });
+  } catch (error) {
+    console.warn('建立關聯對照表時發生錯誤:', error);
+  }
+
+  // 計算統計數據 - 安全版本
+  const nodeCreators = calculateCreatorStats(safeNodes, 'owner');
+  const taskCreators = calculateCreatorStats(safeTasks, 'owner');
+  const studentActivity = generateStudentActivityStats(safeEnhancedStudents);
+
+  // 渲染節點表格行 - 抽取成獨立函數
+  const renderNodeTableRows = () => {
+    if (safeNodes.length === 0) {
+      return (
+        <tr>
+          <td colSpan="5" className="border p-4 text-center text-gray-500">無節點數據</td>
+        </tr>
+      );
+    }
+
+    try {
+      // 計算 rowSpan
+      const ownerRowSpan = {};
+      const validNodes = safeNodes.filter(node => node && typeof node === 'object');
+
+      validNodes.forEach((node) => {
+        const owner = getSafeDisplayName(node) || '未知';
+        ownerRowSpan[owner] = (ownerRowSpan[owner] || 0) + 1;
+      });
+
+      let processedOwners = new Set();
+
+      return validNodes.map((node, index) => {
+        const owner = getSafeDisplayName(node) || '未知';
+        const isFirstOccurrence = !processedOwners.has(owner);
+        if (isFirstOccurrence) {
+          processedOwners.add(owner);
+        }
+
+        const safeNodeId = node.id || `node-${index}`;
+        const relatedIds = relationMap[node.id] || [];
+
+        return (
+          <tr key={safeNodeId} className="hover:bg-gray-50">
+            {isFirstOccurrence && (
+              <td
+                className="border p-2 font-medium bg-purple-50 text-purple-800 text-center align-top"
+                rowSpan={ownerRowSpan[owner]}
+              >
+                {owner}
+              </td>
+            )}
+            <td className="border p-2">{node.title || '無標題'}</td>
+            <td className="border p-2">
+              <div className="max-w-xs truncate">
+                {node.content || '無內容'}
+              </div>
+            </td>
+            <td className="border p-2 text-center text-sm">
+              {node.createdAt ?
+                new Date(node.createdAt).toLocaleString('zh-TW') :
+                "無資料"}
+            </td>
+            <td className="border p-2 text-center">
+              <span className={relatedIds.length > 0 ? "text-teal-600 font-medium" : "text-gray-500"}>
+                {relatedIds.length > 0
+                  ? relatedIds
+                      .map(id => {
+                        const targetNode = safeNodes.find(n => n?.id === id);
+                        return targetNode?.title || `節點${id}`;
+                      })
+                      .join(", ")
+                  : "無延伸節點"}
+              </span>
+            </td>
+          </tr>
+        );
+      });
+    } catch (error) {
+      console.warn('渲染節點表格時發生錯誤:', error);
+      return (
+        <tr>
+          <td colSpan="5" className="border p-4 text-center text-red-500">
+            渲染失敗，請重新載入
+          </td>
+        </tr>
+      );
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -22,33 +126,33 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6">
         <div className="bg-gradient-to-r from-customgreen to-teal-600 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">總想法節點</h3>
-          <p className="text-2xl sm:text-3xl font-bold">{realData.nodes.length}</p>
+          <p className="text-2xl sm:text-3xl font-bold">{safeNodes.length}</p>
           <p className="text-xs mt-1 opacity-80">
             活躍創作者: {Object.keys(nodeCreators).length}人
           </p>
         </div>
-        
+
         <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">看板任務</h3>
-          <p className="text-2xl sm:text-3xl font-bold">{realData.tasks.length}</p>
+          <p className="text-2xl sm:text-3xl font-bold">{safeTasks.length}</p>
           <p className="text-xs mt-1 opacity-80">
-            已完成: {realData.tasks.filter(t => t.status === '已完成' || t.status === 'Done').length}
+            已完成: {safeTasks.filter(t => t?.status === '已完成' || t?.status === 'Done').length}
           </p>
         </div>
-        
+
         <div className="bg-gradient-to-r from-customgreen to-customgreen/80 p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">節點關聯</h3>
-          <p className="text-2xl sm:text-3xl font-bold">{realData.nodeRelations.length}</p>
+          <p className="text-2xl sm:text-3xl font-bold">{safeNodeRelations.length}</p>
           <p className="text-xs mt-1 opacity-80">
-            平均每節點: {realData.nodes.length > 0 ? (realData.nodeRelations.length / realData.nodes.length).toFixed(1) : 0} 個連結
+            平均每節點: {safeNodes.length > 0 ? (safeNodeRelations.length / safeNodes.length).toFixed(1) : 0} 個連結
           </p>
         </div>
 
         <div className="bg-gradient-to-r from-teal-600 to-customgreen p-4 sm:p-6 rounded-lg text-white">
           <h3 className="text-sm font-medium mb-2">學習反思</h3>
-          <p className="text-2xl sm:text-3xl font-bold">{realData.reflections.length}</p>
+          <p className="text-2xl sm:text-3xl font-bold">{safeReflections.length}</p>
           <p className="text-xs mt-1 opacity-80">
-            平均每人: {enhancedStudents.length > 0 ? (realData.reflections.length / enhancedStudents.length).toFixed(1) : 0} 篇
+            平均每人: {safeEnhancedStudents.length > 0 ? (safeReflections.length / safeEnhancedStudents.length).toFixed(1) : 0} 篇
           </p>
         </div>
       </div>
@@ -127,64 +231,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 </tr>
               </thead>
               <tbody>
-                {realData.nodes.length > 0 ? (
-                  (() => {
-                    // 計算 rowSpan
-                    const ownerRowSpan = {};
-                    realData.nodes.forEach((node) => {
-                      const owner = node.owner || '未知';
-                      ownerRowSpan[owner] = (ownerRowSpan[owner] || 0) + 1;
-                    });
-
-                    let processedOwners = new Set();
-
-                    return realData.nodes.map((node, index) => {
-                      const owner = node.owner || '未知';
-                      const isFirstOccurrence = !processedOwners.has(owner);
-                      if (isFirstOccurrence) {
-                        processedOwners.add(owner);
-                      }
-
-                      return (
-                        <tr key={node.id || index} className="hover:bg-gray-50">
-                          {isFirstOccurrence && (
-                            <td 
-                              className="border p-2 font-medium bg-purple-50 text-purple-800 text-center align-top" 
-                              rowSpan={ownerRowSpan[owner]}
-                            >
-                              {owner}
-                            </td>
-                          )}
-                          <td className="border p-2">{node.title || '無標題'}</td>
-                          <td className="border p-2">
-                            <div className="max-w-xs truncate">
-                              {node.content || '無內容'}
-                            </div>
-                          </td>
-                          <td className="border p-2 text-center text-sm">
-                            {node.createdAt ? new Date(node.createdAt).toLocaleString('zh-TW') : "無資料"}
-                          </td>
-                          <td className="border p-2 text-center">
-                            <span className={relationMap[node.id]?.length > 0 ? "text-teal-600 font-medium" : "text-gray-500"}>
-                              {relationMap[node.id]?.length > 0
-                                ? relationMap[node.id]
-                                    .map(id => {
-                                      const targetNode = realData.nodes.find(n => n.id === id);
-                                      return targetNode ? targetNode.title : `節點${id}`;
-                                    })
-                                    .join(", ")
-                                : "無延伸節點"}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    });
-                  })()
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="border p-4 text-center text-gray-500">無節點數據</td>
-                  </tr>
-                )}
+                {renderNodeTableRows()}
               </tbody>
             </table>
           </div>
@@ -192,12 +239,14 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
 
         {/* 行動裝置版卡片 */}
         <div className="lg:hidden space-y-3 max-h-96 overflow-y-auto">
-          {realData.nodes.length > 0 ? realData.nodes.map((node, index) => (
+          {safeNodes.length > 0 ? safeNodes.filter(node => node && typeof node === 'object').map((node, index) => {
+            const relatedIds = relationMap[node.id] || [];
+            return (
             <div key={node.id || index} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:bg-gray-50">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-medium text-gray-800 text-sm">{node.title || '無標題'}</h3>
                 <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
-                  {node.owner || '未知'}
+                  {getSafeDisplayName(node) || '未知'}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mb-2">
@@ -209,19 +258,20 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
               </p>
               <div className="text-xs">
                 <span className="text-gray-600">延伸節點: </span>
-                <span className={relationMap[node.id]?.length > 0 ? "font-medium text-teal-600" : "text-gray-500"}>
-                  {relationMap[node.id]?.length > 0
-                    ? relationMap[node.id]
+                <span className={relatedIds.length > 0 ? "font-medium text-teal-600" : "text-gray-500"}>
+                  {relatedIds.length > 0
+                    ? relatedIds
                         .map(id => {
-                          const targetNode = realData.nodes.find(n => n.id === id);
-                          return targetNode ? targetNode.title : `節點${id}`;
+                          const targetNode = safeNodes.find(n => n?.id === id);
+                          return targetNode?.title || `節點${id}`;
                         })
                         .join(", ")
                     : "無延伸節點"}
                 </span>
               </div>
             </div>
-          )) : (
+            );
+          }) : (
             <div className="text-center text-gray-500 py-8">無節點數據</div>
           )}
         </div>
@@ -269,8 +319,8 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 </tr>
               </thead>
               <tbody>
-                {realData.tasks.length > 0 ? (
-                  realData.tasks.sort((a, b) => a.columnId - b.columnId).reduce((acc, task, index, array) => {
+                {safeTasks.length > 0 ? (
+                  safeTasks.filter(task => task && typeof task === 'object').sort((a, b) => (a.columnId || 0) - (b.columnId || 0)).reduce((acc, task, index, array) => {
                     const prevTask = array[index - 1];
                     const showStatus = !prevTask || prevTask.status !== task.status;
                     
@@ -331,7 +381,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
 
         {/* 行動裝置版卡片 */}
         <div className="lg:hidden space-y-3 max-h-96 overflow-y-auto">
-          {realData.tasks.length > 0 ? realData.tasks.map((task, index) => (
+          {safeTasks.length > 0 ? safeTasks.filter(task => task && typeof task === 'object').map((task, index) => (
             <div key={task.id || index} className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:bg-gray-50">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-medium text-gray-800 text-sm">{task.title || '無標題'}</h3>

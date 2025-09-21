@@ -12,6 +12,7 @@ import AllStudentsView from "./components/AllStudentsView";
 import GroupsView from "./components/GroupsView";
 import IndividualView from "./components/IndividualView";
 import AnalyticsView from "./components/AnalyticsView";
+import ErrorBoundary from "../student-dashboard/components/ErrorBoundary";
 
 const TeacherManagementDashboard = () => {
   const { projectId } = useParams();
@@ -78,58 +79,86 @@ const TeacherManagementDashboard = () => {
     );
   }
 
-  // 渲染檢視內容
+  // 渲染檢視內容 - 用 ErrorBoundary 包裹每個組件
   const renderViewContent = () => {
     if (userRole === 'teacher') {
       switch (viewMode) {
         case 'overview':
-          return <OverviewView 
-            enhancedStudents={enhancedStudents} 
-            classStats={classStats} 
-            realData={realData} 
-          />;
+          return (
+            <ErrorBoundary>
+              <OverviewView
+                enhancedStudents={enhancedStudents}
+                classStats={classStats}
+                realData={realData}
+              />
+            </ErrorBoundary>
+          );
         case 'all-students':
-          return <AllStudentsView 
-            enhancedStudents={enhancedStudents}
-            setViewMode={setViewMode}
-            setSelectedStudent={setSelectedStudent}
-          />;
+          return (
+            <ErrorBoundary>
+              <AllStudentsView
+                enhancedStudents={enhancedStudents}
+                setViewMode={setViewMode}
+                setSelectedStudent={setSelectedStudent}
+              />
+            </ErrorBoundary>
+          );
         case 'groups':
-          return <GroupsView 
-            groupData={groupData}
-            selectedGroup={selectedGroup}
-            setSelectedGroup={setSelectedGroup}
-            enhancedStudents={enhancedStudents}
-          />;
+          return (
+            <ErrorBoundary>
+              <GroupsView
+                groupData={groupData}
+                selectedGroup={selectedGroup}
+                setSelectedGroup={setSelectedGroup}
+                enhancedStudents={enhancedStudents}
+              />
+            </ErrorBoundary>
+          );
         case 'individual':
-          return <IndividualView 
+          return (
+            <ErrorBoundary>
+              <IndividualView
+                selectedStudent={selectedStudent}
+                setSelectedStudent={setSelectedStudent}
+                enhancedStudents={enhancedStudents}
+                userRole={userRole}
+                realData={realData}
+              />
+            </ErrorBoundary>
+          );
+        case 'analytics':
+          return (
+            <ErrorBoundary>
+              <AnalyticsView
+                enhancedStudents={enhancedStudents}
+                realData={realData}
+              />
+            </ErrorBoundary>
+          );
+        default:
+          return (
+            <ErrorBoundary>
+              <OverviewView
+                enhancedStudents={enhancedStudents}
+                classStats={classStats}
+                realData={realData}
+              />
+            </ErrorBoundary>
+          );
+      }
+    } else {
+      // 學生模式，只顯示個人檢視
+      return (
+        <ErrorBoundary>
+          <IndividualView
             selectedStudent={selectedStudent}
             setSelectedStudent={setSelectedStudent}
             enhancedStudents={enhancedStudents}
             userRole={userRole}
             realData={realData}
-          />;
-        case 'analytics':
-          return <AnalyticsView 
-            enhancedStudents={enhancedStudents}
-            realData={realData}
-          />;
-        default:
-          return <OverviewView 
-            enhancedStudents={enhancedStudents} 
-            classStats={classStats} 
-            realData={realData} 
-          />;
-      }
-    } else {
-      // 學生模式，只顯示個人檢視
-      return <IndividualView 
-        selectedStudent={selectedStudent}
-        setSelectedStudent={setSelectedStudent}
-        enhancedStudents={enhancedStudents}
-        userRole={userRole}
-        realData={realData}
-      />;
+          />
+        </ErrorBoundary>
+      );
     }
   };
 
@@ -151,7 +180,9 @@ const TeacherManagementDashboard = () => {
             </div>
 
             {/* 統計卡片 */}
-            <StatsCards classStats={classStats} />
+            <ErrorBoundary>
+              <StatsCards classStats={classStats} />
+            </ErrorBoundary>
 
             {/* 主要內容區域 */}
             <div className="space-y-6 pb-6">
