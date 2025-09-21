@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaTrophy, FaLightbulb, FaTasks, FaBookOpen, FaRobot, FaComments } from 'react-icons/fa';
 import RankingView from './RankingView';
+import ErrorBoundary from './ErrorBoundary';
 import { generateRankingData } from '../utils';
 
 /**
@@ -101,7 +102,9 @@ const Achievements = ({ achievements, enhancedStudents, realData }) => {
       </div>
       <div className="space-y-3 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
         {mode === 'ranking' ? (
-          <RankingView rankingData={rankingData} />
+          <ErrorBoundary>
+            <RankingView rankingData={rankingData} />
+          </ErrorBoundary>
         ) : (
           <>
             {list.map((a) => {

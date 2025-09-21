@@ -128,7 +128,7 @@ export const getColumnStyle = (columnName) => {
  * @param {Object} realData - 真實數據
  * @returns {Array} 排序後的學生活動統計
  */
-export const generateStudentActivityStats = (students, realData) => {
+export const generateStudentActivityStats = (students) => {
   return students.map(student => ({
     name: student.username || student.name,
     reflections: student.weeklyReflections || 0,
@@ -164,7 +164,7 @@ export const generateRankingData = (enhancedStudents, realData) => {
   }
 
   // 學生活動排行
-  const studentActivity = generateStudentActivityStats(enhancedStudents, realData);
+  const studentActivity = generateStudentActivityStats(enhancedStudents);
 
   // 創作者統計
   const nodeCreators = calculateCreatorStats(realData.nodes || [], 'owner');
@@ -175,4 +175,104 @@ export const generateRankingData = (enhancedStudents, realData) => {
     creators: nodeCreators,
     tasks: taskCreators
   };
+};
+
+// 安全資料處理工具函數 - Defensive Programming Utils
+
+/**
+ * 安全的陣列資料存取器
+ * @param {*} data - 待檢查的資料
+ * @param {Array} fallback - 預設值
+ * @returns {Array} 安全的陣列
+ */
+export const getSafeArrayData = (data, fallback = []) => {
+  return Array.isArray(data) ? data : fallback;
+};
+
+/**
+ * 安全的物件資料存取器
+ * @param {*} data - 待檢查的資料
+ * @param {Object} fallback - 預設值
+ * @returns {Object} 安全的物件
+ */
+export const getSafeObjectData = (data, fallback = {}) => {
+  return data && typeof data === 'object' && !Array.isArray(data) ? data : fallback;
+};
+
+/**
+ * 安全的屬性存取器
+ * @param {Object} item - 物件
+ * @param {string} key - 屬性鍵
+ * @param {*} fallback - 預設值
+ * @returns {*} 安全的屬性值
+ */
+export const getSafeValue = (item, key, fallback = 0) => {
+  if (!item || typeof item !== 'object') return fallback;
+  const value = item[key];
+  return value !== undefined && value !== null ? value : fallback;
+};
+
+/**
+ * 安全的顯示名稱獲取
+ * @param {Object} item - 使用者物件
+ * @returns {string} 安全的顯示名稱
+ */
+export const getSafeDisplayName = (item) => {
+  if (!item || typeof item !== 'object') return '未知用戶';
+  return item.name || item.creator || item.username || '未知用戶';
+};
+
+/**
+ * 安全的排行榜資料處理器
+ * @param {*} rawData - 原始資料
+ * @param {number} limit - 限制數量
+ * @returns {Array} 處理後的排行榜資料
+ */
+export const processSafeRankingData = (rawData, limit = 3) => {
+  const safeData = getSafeObjectData(rawData);
+
+  try {
+    return Object.entries(safeData)
+      .filter(([key, value]) => {
+        return key &&
+               typeof key === 'string' &&
+               key.trim() !== '' &&
+               typeof value === 'number' &&
+               !isNaN(value) &&
+               value >= 0;
+      })
+      .sort(([,a], [,b]) => (b || 0) - (a || 0))
+      .slice(0, Math.max(0, limit))
+      .map(([creator, count]) => ({
+        creator: creator.trim(),
+        count: Math.floor(count)
+      }));
+  } catch (error) {
+    console.warn('處理排行榜資料時發生錯誤:', error);
+    return [];
+  }
+};
+
+/**
+ * 安全的陣列排序處理器
+ * @param {*} data - 待排序資料
+ * @param {string} sortKey - 排序鍵
+ * @param {boolean} descending - 是否降序
+ * @returns {Array} 排序後的安全陣列
+ */
+export const safeSortArray = (data, sortKey, descending = true) => {
+  const safeData = getSafeArrayData(data);
+
+  try {
+    return [...safeData]
+      .filter(item => item && typeof item === 'object')
+      .sort((a, b) => {
+        const aVal = getSafeValue(a, sortKey, 0);
+        const bVal = getSafeValue(b, sortKey, 0);
+        return descending ? bVal - aVal : aVal - bVal;
+      });
+  } catch (error) {
+    console.warn('排序陣列時發生錯誤:', error);
+    return [];
+  }
 };
