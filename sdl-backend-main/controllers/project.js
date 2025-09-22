@@ -823,6 +823,14 @@ exports.getViewableProjects = async (req, res) => {
         //     });
         // }
 
+        // 查詢用戶參與的專案ID，用於排除自己的專案
+        const userProjects = await User_project.findAll({
+            where: { userId: userId },
+            attributes: ['projectId']
+        });
+        const userProjectIds = userProjects.map(up => up.projectId);
+        console.log('User participated projects:', userProjectIds);
+
         // 查詢可觀摩的專案
         const projects = await Project.findAll({
             where: {
@@ -835,10 +843,11 @@ exports.getViewableProjects = async (req, res) => {
             }]
         });
 
-        // 篩選允許指定班級觀摩的專案
-        const viewableProjects = projects.filter(project => 
-            project.allowed_classes && 
-            project.allowed_classes.includes(viewable_by)
+        // 篩選允許指定班級觀摩的專案，並排除用戶自己參與的專案（實現組間觀摩）
+        const viewableProjects = projects.filter(project =>
+            project.allowed_classes &&
+            project.allowed_classes.includes(viewable_by) &&
+            !userProjectIds.includes(project.id)  // 排除用戶自己參與的專案
         );
 
         // 格式化回傳資料
