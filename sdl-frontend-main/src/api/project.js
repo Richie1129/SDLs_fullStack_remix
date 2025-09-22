@@ -163,3 +163,21 @@ export const getViewableProjects = async (className) => {
     });
     return response.data;
 };
+
+/**
+ * 批量設定觀摩權限 - 讓目標班級能觀摩來源班級的所有專案
+ * @param {Object} data - 批量設定資料
+ * @param {string} data.sourceClass - 來源班級
+ * @param {string[]} data.targetClasses - 目標班級列表
+ * @param {string} data.mentorName - 指導老師名稱
+ */
+export const batchUpdateViewingSettings = async (data) => {
+    const token = localStorage.getItem('accessToken');
+    const response = await apiClient.post('/projects/batch-viewing-settings', data, {
+        headers: {
+            'accessToken': token,
+            'Content-Type': 'application/json',
+        },
+    });
+    return response.data;
+};

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { getProjectUser } from '../api/users';
+import { getProject } from '../api/project';
+import { getCurrentUsername } from '../utils/userUtils';
 
 /**
  * 觀摩模式 Hook
@@ -23,22 +25,35 @@ export const useObservationMode = () => {
         || localStorage.getItem(`observationMode_${projectId}`) === 'true'
         || localStorage.getItem('isObservationMode') === 'true';
 
-      // 2) 若使用者是專案成員，強制關閉觀摩模式（即使 URL 夾帶 observation）
-      let isMember = false;
+      // 2) 若使用者是專案成員或指導老師，強制關閉觀摩模式（即使 URL 夾帶 observation）
+      let isMemberOrMentor = false;
       try {
         if (projectId) {
-          const members = await getProjectUser(projectId);
+          // 並行檢查成員身份和指導老師身份
+          const [members, project] = await Promise.all([
+            getProjectUser(projectId),
+            getProject(projectId)
+          ]);
+
           const meId = localStorage.getItem('id');
+          const currentUser = getCurrentUsername();
+
+          // 檢查是否為專案成員
           if (Array.isArray(members)) {
-            isMember = members.some(m => String(m?.id ?? '') === String(meId ?? ''));
+            isMemberOrMentor = members.some(m => String(m?.id ?? '') === String(meId ?? ''));
+          }
+
+          // 檢查是否為指導老師
+          if (!isMemberOrMentor && project && project.mentor === currentUser) {
+            isMemberOrMentor = true;
           }
         }
       } catch (e) {
-        // 取不到成員資料時，不影響後續判斷，只是無法做成員排除
-        console.warn('取得專案成員失敗，暫以非成員處理觀摩模式判斷');
+        // 取不到專案資料時，不影響後續判斷，只是無法做成員排除
+        console.warn('取得專案資料失敗，暫以非成員處理觀摩模式判斷');
       }
 
-      if (isMember) {
+      if (isMemberOrMentor) {
         // 清掉任何觀摩模式標記，避免後續頁面殘留
         setIsObservationMode(false);
         localStorage.removeItem('isObservationMode');

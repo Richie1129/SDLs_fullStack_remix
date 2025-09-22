@@ -924,7 +924,7 @@ exports.getClassUsersAndProjects = async (req, res) => {
     console.log('=== getClassUsersAndProjects 控制器被調用 ===');
     const className = req.params.className;
     console.log('查詢班級:', className);
-    
+
     try {
         // 1. 獲取該班級的所有用戶
         const classUsers = await User.findAll({
@@ -932,9 +932,9 @@ exports.getClassUsersAndProjects = async (req, res) => {
             attributes: ['id', 'username', 'class', 'seatNumber'],
             raw: true
         });
-        
+
         console.log(`${className} 班級的用戶:`, classUsers);
-        
+
         if (classUsers.length === 0) {
             return res.status(200).json({
                 message: '該班級沒有用戶',
@@ -942,11 +942,11 @@ exports.getClassUsersAndProjects = async (req, res) => {
                 projects: []
             });
         }
-        
+
         // 2. 獲取這些用戶參與的所有專案
         const userIds = classUsers.map(user => user.id);
         console.log('用戶ID列表:', userIds);
-        
+
         const projects = await Project.findAll({
             include: [{
                 model: User,
@@ -972,11 +972,11 @@ exports.getClassUsersAndProjects = async (req, res) => {
                 'allowed_classes'
             ]
         });
-        
+
         // 3. 排除重複的專案（因為一個專案可能有多個該班級的用戶）
         const uniqueProjects = [];
         const projectIds = new Set();
-        
+
         projects.forEach(project => {
             if (!projectIds.has(project.id)) {
                 projectIds.add(project.id);
@@ -996,20 +996,126 @@ exports.getClassUsersAndProjects = async (req, res) => {
                 });
             }
         });
-        
+
         console.log(`${className} 班級相關的唯一專案:`, uniqueProjects);
-        
+
         res.status(200).json({
             message: `成功獲取 ${className} 班級的用戶和專案`,
             className: className,
             users: classUsers,
             projects: uniqueProjects
         });
-        
+
     } catch (error) {
         console.error('獲取班級用戶和專案時發生錯誤:', error);
         res.status(500).json({
             message: '獲取班級用戶和專案時發生錯誤',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * 批量設定觀摩權限 - 讓目標班級能觀摩來源班級的所有專案
+ * POST /projects/batch-viewing-settings
+ */
+exports.batchUpdateViewingSettings = async (req, res) => {
+    const t = await sequelize.transaction();
+
+    try {
+        const { sourceClass, targetClasses, mentorName } = req.body;
+
+        // 驗證輸入
+        if (!sourceClass || !Array.isArray(targetClasses) || targetClasses.length === 0) {
+            await t.rollback();
+            return res.status(400).json({
+                message: '請提供來源班級和目標班級列表'
+            });
+        }
+
+        if (!mentorName) {
+            await t.rollback();
+            return res.status(400).json({
+                message: '請提供指導老師名稱'
+            });
+        }
+
+        console.log(`批量設定觀摩: ${sourceClass} → ${targetClasses.join(', ')}`);
+
+        // 1. 取得來源班級的所有用戶
+        const sourceUsers = await User.findAll({
+            where: { class: sourceClass },
+            attributes: ['id'],
+            transaction: t
+        });
+
+        if (sourceUsers.length === 0) {
+            await t.rollback();
+            return res.status(404).json({ message: '來源班級沒有用戶' });
+        }
+
+        const sourceUserIds = sourceUsers.map(user => user.id);
+
+        // 2. 取得這些用戶參與的專案(需要是指定老師指導的)
+        const projects = await Project.findAll({
+            where: { mentor: mentorName },
+            include: [{
+                model: User,
+                where: {
+                    id: {
+                        [require('sequelize').Op.in]: sourceUserIds
+                    }
+                },
+                through: { attributes: [] }
+            }],
+            transaction: t
+        });
+
+        if (projects.length === 0) {
+            await t.rollback();
+            return res.status(404).json({
+                message: `${mentorName} 老師在 ${sourceClass} 班級沒有指導的專案`
+            });
+        }
+
+        console.log(`找到 ${projects.length} 個 ${sourceClass} 班級的專案`);
+
+        // 3. 批量更新觀摩設定
+        const updateResults = [];
+        for (const project of projects) {
+            const currentAllowed = project.allowed_classes || [];
+
+            // 合併現有允許的班級和新的目標班級(去重)
+            const newAllowed = [...new Set([...currentAllowed, ...targetClasses])];
+
+            project.is_open_for_viewing = true;
+            project.allowed_classes = newAllowed;
+
+            await project.save({ transaction: t });
+
+            updateResults.push({
+                projectId: project.id,
+                projectName: project.name,
+                previousAllowed: currentAllowed,
+                newAllowed: newAllowed
+            });
+        }
+
+        await t.commit();
+
+        res.status(200).json({
+            message: `成功設定 ${projects.length} 個專案的觀摩權限`,
+            sourceClass,
+            targetClasses,
+            updatedProjects: updateResults.length,
+            details: updateResults
+        });
+
+    } catch (error) {
+        await t.rollback();
+        console.error('批量設定觀摩權限錯誤:', error);
+        res.status(500).json({
+            message: '批量設定觀摩權限時發生錯誤',
             error: error.message
         });
     }

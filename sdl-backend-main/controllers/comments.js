@@ -17,7 +17,7 @@ exports.listByTask = async (req, res) => {
       where: { taskId },
       order: [['createdAt', 'DESC']],
       include: [
-        { model: User, attributes: ['id', 'username'] },
+        { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: CommentAttachment, as: 'attachments' },
         { model: CommentLike, as: 'likes', attributes: ['userId'] },
       ],
@@ -98,7 +98,7 @@ exports.create = async (req, res) => {
     // Return enriched record
     const created = await Comment.findByPk(comment.id, {
       include: [
-        { model: User, attributes: ['id', 'username'] },
+        { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: CommentAttachment, as: 'attachments' },
       ],
     });
@@ -131,7 +131,7 @@ exports.update = async (req, res) => {
     await comment.update({ content: content.trim() }, { req });
     const updated = await Comment.findByPk(comment.id, {
       include: [
-        { model: User, attributes: ['id', 'username'] },
+        { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: CommentAttachment, as: 'attachments' },
       ],
     });

@@ -5,6 +5,7 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import SubStageComponent from "../components/SubStageBar";
 import ActivityStream from "../components/ActivityStream";
 import ProjectCommentDrawer from "../components/ProjectCommentDrawer";
+import { CommentErrorBoundary } from "../components/ErrorBoundary";
 
 export default function ProjectLayout() {
   const location = useLocation();
@@ -56,11 +57,13 @@ export default function ProjectLayout() {
 
       {/* 專案評論抽屜 - 固定在右側，與活動流類似 */}
       {showProjectCommentDrawer && (
-        <ProjectCommentDrawer
-          projectId={projectId}
-          isOpen={showProjectCommentDrawer}
-          onClose={() => setShowProjectCommentDrawer(false)}
-        />
+        <CommentErrorBoundary context="project_comment_drawer">
+          <ProjectCommentDrawer
+            projectId={projectId}
+            isOpen={showProjectCommentDrawer}
+            onClose={() => setShowProjectCommentDrawer(false)}
+          />
+        </CommentErrorBoundary>
       )}
     </div>
   );

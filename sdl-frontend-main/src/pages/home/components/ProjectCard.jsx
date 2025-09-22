@@ -192,7 +192,7 @@ export default function ProjectCard({
   };
 
   return (
-    <div className={`${getCardStyle()} w-full rounded-lg shadow-lg hover:shadow-lg p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out`}>
+    <div className={`${getCardStyle()} w-full rounded-lg shadow-lg hover:shadow-lg p-4 flex flex-col space-y-3 hover:scale-105 transition-transform duration-200 ease-out`}>
       {/* 標題區域 */}
       <div className='flex items-center justify-between'>
         <div className='flex items-center flex-1'>
@@ -232,6 +232,23 @@ export default function ProjectCard({
       <div className='text-sm text-gray-500'>
         所屬班級：{type === 'viewable' ? getViewableProjectClasses() : getProjectClasses()}
       </div>
+
+      {/* 觀摩權限資訊 - 僅教師可見且非觀摩模式 */}
+      {role === "teacher" && type !== 'viewable' && (
+        <div className='text-sm text-gray-500'>
+          {project.is_open_for_viewing ? (
+            <span className='flex items-center'>
+              <span className='text-green-600 mr-1'>✓</span>
+              可觀摩班級：{project.allowed_classes?.length > 0 ? project.allowed_classes.join('、') : '無'}
+            </span>
+          ) : (
+            <span className='flex items-center'>
+              <span className='text-gray-400 mr-1'>✗</span>
+              未開放觀摩
+            </span>
+          )}
+        </div>
+      )}
 
       {/* 時間資訊 */}
       <div className='flex justify-between text-sm text-gray-500'>

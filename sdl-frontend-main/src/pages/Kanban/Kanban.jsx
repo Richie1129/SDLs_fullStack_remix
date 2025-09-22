@@ -20,6 +20,7 @@ import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { useStageIndex, useSubStageIndex } from '../../hooks/useStageIndex';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import KanbanErrorBoundary from '../../components/ErrorBoundary/KanbanErrorBoundary';
 // AI 導師已整合到科學助手(DraggableImage)內部的可切換分頁中
 
 
@@ -692,8 +693,28 @@ export default function Kanban() {
 
   const kanbanContainerRef = useRef(null);
 
+  const handleKanbanError = (error, errorInfo, errorId) => {
+    console.error('Kanban 錯誤處理:', { error, errorInfo, errorId });
+  };
+
+  const handleNetworkError = () => {
+    console.log('嘗試重新連接 Socket...');
+    socket.disconnect();
+    socket.connect();
+  };
+
+  const handleDataReload = () => {
+    console.log('重新載入 Kanban 數據...');
+    queryClient.invalidateQueries(['kanbanDatas', projectId]);
+  };
+
   return (
-    <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
+    <KanbanErrorBoundary
+      onError={handleKanbanError}
+      onNetworkError={handleNetworkError}
+      onDataReload={handleDataReload}
+    >
+      <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
       {/* AI 導師聊天已內嵌於科學助手中 */}
       {/* 觀摩模式隱藏科學助手 */}
       {!isObservationMode && (
@@ -894,5 +915,6 @@ export default function Kanban() {
         </DragDropContext >
       </div>
     </div >
+    </KanbanErrorBoundary>
   )
 }
