@@ -12,7 +12,7 @@ import AllStudentsView from "./components/AllStudentsView";
 import GroupsView from "./components/GroupsView";
 import IndividualView from "./components/IndividualView";
 import AnalyticsView from "./components/AnalyticsView";
-import ErrorBoundary from "../student-dashboard/components/ErrorBoundary";
+import { DashboardErrorBoundary } from "../../components/ErrorBoundary";
 
 const TeacherManagementDashboard = () => {
   const { projectId } = useParams();
@@ -79,44 +79,44 @@ const TeacherManagementDashboard = () => {
     );
   }
 
-  // 渲染檢視內容 - 用 ErrorBoundary 包裹每個組件
+  // 渲染檢視內容 - 用 DashboardErrorBoundary 包裹每個組件
   const renderViewContent = () => {
     if (userRole === 'teacher') {
       switch (viewMode) {
         case 'overview':
           return (
-            <ErrorBoundary>
+            <DashboardErrorBoundary>
               <OverviewView
                 enhancedStudents={enhancedStudents}
                 classStats={classStats}
                 realData={realData}
               />
-            </ErrorBoundary>
+            </DashboardErrorBoundary>
           );
         case 'all-students':
           return (
-            <ErrorBoundary>
+            <DashboardErrorBoundary>
               <AllStudentsView
                 enhancedStudents={enhancedStudents}
                 setViewMode={setViewMode}
                 setSelectedStudent={setSelectedStudent}
               />
-            </ErrorBoundary>
+            </DashboardErrorBoundary>
           );
         case 'groups':
           return (
-            <ErrorBoundary>
+            <DashboardErrorBoundary>
               <GroupsView
                 groupData={groupData}
                 selectedGroup={selectedGroup}
                 setSelectedGroup={setSelectedGroup}
                 enhancedStudents={enhancedStudents}
               />
-            </ErrorBoundary>
+            </DashboardErrorBoundary>
           );
         case 'individual':
           return (
-            <ErrorBoundary>
+            <DashboardErrorBoundary>
               <IndividualView
                 selectedStudent={selectedStudent}
                 setSelectedStudent={setSelectedStudent}
@@ -124,32 +124,32 @@ const TeacherManagementDashboard = () => {
                 userRole={userRole}
                 realData={realData}
               />
-            </ErrorBoundary>
+            </DashboardErrorBoundary>
           );
         case 'analytics':
           return (
-            <ErrorBoundary>
+            <DashboardErrorBoundary>
               <AnalyticsView
                 enhancedStudents={enhancedStudents}
                 realData={realData}
               />
-            </ErrorBoundary>
+            </DashboardErrorBoundary>
           );
         default:
           return (
-            <ErrorBoundary>
+            <DashboardErrorBoundary>
               <OverviewView
                 enhancedStudents={enhancedStudents}
                 classStats={classStats}
                 realData={realData}
               />
-            </ErrorBoundary>
+            </DashboardErrorBoundary>
           );
       }
     } else {
       // 學生模式，只顯示個人檢視
       return (
-        <ErrorBoundary>
+        <DashboardErrorBoundary>
           <IndividualView
             selectedStudent={selectedStudent}
             setSelectedStudent={setSelectedStudent}
@@ -157,7 +157,7 @@ const TeacherManagementDashboard = () => {
             userRole={userRole}
             realData={realData}
           />
-        </ErrorBoundary>
+        </DashboardErrorBoundary>
       );
     }
   };
@@ -180,9 +180,9 @@ const TeacherManagementDashboard = () => {
             </div>
 
             {/* 統計卡片 */}
-            <ErrorBoundary>
+            <DashboardErrorBoundary>
               <StatsCards classStats={classStats} />
-            </ErrorBoundary>
+            </DashboardErrorBoundary>
 
             {/* 主要內容區域 */}
             <div className="space-y-6 pb-6">
