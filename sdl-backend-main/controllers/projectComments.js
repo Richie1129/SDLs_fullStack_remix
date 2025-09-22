@@ -17,7 +17,7 @@ exports.listByProject = async (req, res) => {
       // Return in chronological order so frontend can render directly
       order: [['createdAt', 'ASC']],
       include: [
-        { model: User, attributes: ['id', 'username'] },
+        { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: ProjectCommentLike, as: 'likes', attributes: ['userId'] },
         { model: ProjectCommentAttachment, as: 'attachments' },
       ],
@@ -101,7 +101,7 @@ exports.create = async (req, res) => {
 
     const enriched = await ProjectComment.findByPk(created.id, {
       include: [
-        { model: User, attributes: ['id', 'username'] },
+        { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: ProjectCommentAttachment, as: 'attachments' },
       ],
     });
@@ -136,7 +136,7 @@ exports.update = async (req, res) => {
     const beforeContent = comment.content;
     await comment.update({ content: content.trim() }, { req });
     const updated = await ProjectComment.findByPk(comment.id, {
-      include: [{ model: User, attributes: ['id', 'username'] }],
+      include: [{ model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] }],
     });
 
     // Audit: project comment updated
@@ -265,7 +265,7 @@ exports.addAttachments = async (req, res) => {
 
     const updated = await ProjectComment.findByPk(comment.id, {
       include: [
-        { model: User, attributes: ['id', 'username'] },
+        { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: ProjectCommentAttachment, as: 'attachments' },
         { model: ProjectCommentLike, as: 'likes', attributes: ['userId'] },
       ],

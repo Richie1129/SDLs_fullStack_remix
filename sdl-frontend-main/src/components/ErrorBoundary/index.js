@@ -7,6 +7,7 @@ export { default as GlobalErrorBoundary } from './GlobalErrorBoundary';
 export { default as KanbanErrorBoundary } from './KanbanErrorBoundary';
 export { default as DashboardErrorBoundary } from './DashboardErrorBoundary';
 export { default as ChartErrorBoundary } from './ChartErrorBoundary';
+export { default as CommentErrorBoundary } from './CommentErrorBoundary';
 export { default as SocketStatusIndicator } from './SocketStatusIndicator';
 
 // 預設導出最常用的全域 ErrorBoundary

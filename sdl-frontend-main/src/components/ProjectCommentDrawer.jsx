@@ -13,6 +13,7 @@ import {
 } from '../api/projectComments';
 import { deleteProjectCommentAttachment } from '../api/projectComments';
 import Modal from './Modal';
+import { formatUserDisplay } from '../utils/userDisplayUtils';
 
 const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -330,7 +331,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
             className="w-9 h-9 rounded-full object-cover mr-3"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-800 truncate">{c.user?.username || `使用者 #${c.userId}`}</p>
+            <p className="text-sm font-medium text-gray-800 truncate">{formatUserDisplay(c.user)}</p>
 
             {editingId === c.id ? (
               <div className="mt-2">
@@ -393,7 +394,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
                 type="button"
                 className="hover:underline"
                 onClick={() => {
-                  setReplyTarget({ id: c.id, username: c.user?.username || `使用者 #${c.userId}` });
+                  setReplyTarget({ id: c.id, username: formatUserDisplay(c.user) });
                   setTimeout(() => inputRef.current?.focus(), 0);
                 }}
               >

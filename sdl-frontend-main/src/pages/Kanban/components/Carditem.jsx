@@ -22,6 +22,8 @@ import { FiClock, FiUser, FiEdit3 } from 'react-icons/fi';
 import useObservationMode from '../../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../../api/usage';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils'; // 引入用戶資訊 hook
+import { CommentErrorBoundary } from '../../../components/ErrorBoundary';
+import { formatUserDisplay } from '../../../utils/userDisplayUtils';
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -1192,6 +1194,7 @@ function Carditem({ data, index, columnIndex }) {
           {/* 右側：評論區 */}
           <div className='w-full lg:w-1/3 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 sm:p-6 lg:min-h-0 lg:overflow-y-auto'>
             <h3 className='text-xl font-semibold mb-3'>討論區</h3>
+            <CommentErrorBoundary context="kanban_task_comments">
             {/* 評論列表 */}
             <div className='space-y-4 mb-4'>
               {comments.length === 0 && (
@@ -1207,7 +1210,7 @@ function Carditem({ data, index, columnIndex }) {
                     <img src={userImg} alt={c.user?.username} className='w-9 h-9 rounded-full object-cover' />
                     <div className='flex-1'>
                       <div className='flex items-center justify-between'>
-                        <span className='text-sm font-medium text-gray-800'>{c.user?.username}</span>
+                        <span className='text-sm font-medium text-gray-800'>{formatUserDisplay(c.user)}</span>
                         <span className='text-xs text-gray-400'>{formatTime(c.createdAt, 'relative')}</span>
                       </div>
                       <p className='text-sm text-gray-700 whitespace-pre-wrap mt-1'>
@@ -1323,6 +1326,7 @@ function Carditem({ data, index, columnIndex }) {
                 </div>
               </div>
             </div>
+            </CommentErrorBoundary>
           </div>
         </div>
       </Modal>
