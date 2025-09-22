@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaTimes, FaCog, FaSearch, FaFilter } from 'react-icons/fa';
 import TopBar from '../../components/TopBar';
 import SideBar from '../../components/SideBar';
-import { getProjectsByMentor, getAllClasses, updateViewingSettings } from '../../api/project';
+import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings } from '../../api/project';
 import { getProjectUser } from '../../api/users';
 import Swal from 'sweetalert2';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
@@ -27,6 +27,11 @@ const ClassObservationPage = () => {
     const [projectClassMap, setProjectClassMap] = useState({}); // projectId -> classes[]
     const [projectMembersMap, setProjectMembersMap] = useState({}); // projectId -> users[]
     const [ownedClassOptions, setOwnedClassOptions] = useState([]); // 從專案所屬班級彙整
+
+    // 批量觀摩設定
+    const [showBatchModal, setShowBatchModal] = useState(false);
+    const [selectedSourceClass, setSelectedSourceClass] = useState('');
+    const [selectedTargetClasses, setSelectedTargetClasses] = useState([]);
     
     // 取得當前用戶資訊和指導老師名稱
     useEffect(() => {
@@ -134,6 +139,59 @@ const ClassObservationPage = () => {
         setAllowedClasses(prev => prev.filter(c => c !== className));
     };
 
+    // 批量觀摩處理函數
+    const handleOpenBatchModal = () => {
+        setSelectedSourceClass('');
+        setSelectedTargetClasses([]);
+        setShowBatchModal(true);
+    };
+
+    const addTargetClass = (className) => {
+        if (!selectedTargetClasses.includes(className)) {
+            setSelectedTargetClasses(prev => [...prev, className]);
+        }
+    };
+
+    const removeTargetClass = (className) => {
+        setSelectedTargetClasses(prev => prev.filter(c => c !== className));
+    };
+
+    const handleBatchSave = async () => {
+        if (!selectedSourceClass || selectedTargetClasses.length === 0) {
+            Swal.fire({
+                icon: 'error',
+                title: '請選擇來源班級和目標班級',
+                text: '請確保至少選擇一個來源班級和一個目標班級'
+            });
+            return;
+        }
+
+        try {
+            const result = await batchUpdateViewingSettings({
+                sourceClass: selectedSourceClass,
+                targetClasses: selectedTargetClasses,
+                mentorName: mentorName
+            });
+
+            setShowBatchModal(false);
+            refetchProjects();
+
+            Swal.fire({
+                icon: 'success',
+                title: '批量設定成功！',
+                text: `已設定 ${result.updatedProjects} 個專案開放給 ${selectedTargetClasses.join(', ')} 觀摩`,
+                showConfirmButton: true
+            });
+        } catch (error) {
+            console.error('批量設定觀摩權限失敗:', error);
+            Swal.fire({
+                icon: 'error',
+                title: '批量設定失敗',
+                text: error.response?.data?.message || '請重試！'
+            });
+        }
+    };
+
     // 依據教師專案動態載入每個專案的成員與班級，建立「所屬班級」清單
     useEffect(() => {
         const loadProjectClasses = async () => {
@@ -201,6 +259,12 @@ const ClassObservationPage = () => {
                                         <h2 className='text-xl font-semibold text-gray-800'>
                                             您指導的專案
                                         </h2>
+                                        <button
+                                            onClick={handleOpenBatchModal}
+                                            className='px-4 py-2 bg-customgreen text-white text-sm rounded hover:bg-green-600 transition-colors'
+                                        >
+                                            一鍵批量觀摩
+                                        </button>
                                     </div>
                                     {/* 搜尋與過濾列 */}
                                     <div className='flex flex-col md:flex-row gap-3'>
@@ -311,7 +375,7 @@ const ClassObservationPage = () => {
                                                         <div className='ml-4 flex-shrink-0 flex gap-2'>
                                                             <button
                                                                 onClick={() => handleOpenViewingSettings(project)}
-                                                                className='px-3 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors'
+                                                                className='px-3 py-2 bg-customgreen text-white text-sm rounded hover:bg-green-600 transition-colors'
                                                             >
                                                                 設定觀摩權限
                                                             </button>
@@ -433,9 +497,110 @@ const ClassObservationPage = () => {
                                             </button>
                                             <button
                                                 onClick={handleSaveViewingSettings}
-                                                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors'
+                                                className='px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-green-600 transition-colors'
                                             >
                                                 儲存設定
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 批量觀摩設定Modal */}
+                            {showBatchModal && (
+                                <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+                                    <div className='bg-white rounded-lg shadow-xl max-w-lg w-full mx-4'>
+                                        <div className='px-6 py-4 border-b border-gray-200'>
+                                            <h3 className='text-lg font-semibold text-gray-800'>
+                                                一鍵批量觀摩設定
+                                            </h3>
+                                            <p className='text-sm text-gray-600 mt-1'>
+                                                讓目標班級觀摩來源班級的所有專案
+                                            </p>
+                                        </div>
+                                        <div className='p-6'>
+                                            {/* 來源班級選擇 */}
+                                            <div className='mb-6'>
+                                                <div className='text-sm font-medium text-gray-700 mb-2'>來源班級</div>
+                                                <select
+                                                    value={selectedSourceClass}
+                                                    onChange={(e) => setSelectedSourceClass(e.target.value)}
+                                                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                                >
+                                                    <option value=''>請選擇來源班級</option>
+                                                    {ownedClassOptions.map((cls) => (
+                                                        <option key={cls} value={cls}>{cls}</option>
+                                                    ))}
+                                                </select>
+                                                <div className='text-xs text-gray-500 mt-1'>
+                                                    這個班級的專案將被開放觀摩
+                                                </div>
+                                            </div>
+
+                                            {/* 目標班級選擇 */}
+                                            <div className='mb-4'>
+                                                <div className='text-sm font-medium text-gray-700 mb-2'>目標班級</div>
+                                                {selectedTargetClasses.length === 0 ? (
+                                                    <div className='text-xs text-gray-500 mb-2'>尚未選擇任何目標班級</div>
+                                                ) : (
+                                                    <div className='flex flex-wrap gap-2 mb-2'>
+                                                        {selectedTargetClasses.map((cls) => (
+                                                            <span key={cls} className='inline-flex items-center bg-green-100 text-green-800 text-xs px-2 py-1 rounded'>
+                                                                {cls}
+                                                                <button
+                                                                    onClick={() => removeTargetClass(cls)}
+                                                                    className='ml-1 text-green-700 hover:text-green-900'
+                                                                    aria-label={`移除 ${cls}`}
+                                                                >
+                                                                    <FaTimes />
+                                                                </button>
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <div className='text-xs text-gray-500 mb-2'>
+                                                    這些班級將能觀摩來源班級的專案
+                                                </div>
+
+                                                {/* 可選班級清單 */}
+                                                <div className='space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded p-2'>
+                                                    {(() => {
+                                                        const all = classesData?.classes || [];
+                                                        const available = all.filter(c =>
+                                                            c !== selectedSourceClass &&
+                                                            !selectedTargetClasses.includes(c)
+                                                        );
+
+                                                        return available.length === 0 ? (
+                                                            <div className='text-xs text-gray-500'>沒有可選的班級</div>
+                                                        ) : (
+                                                            available.map((c) => (
+                                                                <button
+                                                                    key={c}
+                                                                    onClick={() => addTargetClass(c)}
+                                                                    className='w-full flex items-center justify-between px-2 py-1 text-left border border-gray-100 rounded hover:bg-gray-50'
+                                                                >
+                                                                    <span className='text-sm text-gray-700'>{c}</span>
+                                                                    <span className='text-xs text-gray-400'>加入</span>
+                                                                </button>
+                                                            ))
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className='px-6 py-4 border-t border-gray-200 flex justify-end space-x-3'>
+                                            <button
+                                                onClick={() => setShowBatchModal(false)}
+                                                className='px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors'
+                                            >
+                                                取消
+                                            </button>
+                                            <button
+                                                onClick={handleBatchSave}
+                                                className='px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-green-600 transition-colors'
+                                            >
+                                                確認批量設定
                                             </button>
                                         </div>
                                     </div>
