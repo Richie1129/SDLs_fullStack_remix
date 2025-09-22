@@ -249,7 +249,7 @@ const ClassObservationPage = () => {
                                     <h1 className='text-3xl font-bold text-gray-800'>專案分享與權限管理</h1>
                                 </div>
                                 <p className='text-gray-600 text-lg'>
-                                    管理您指導的專案，設定開放給其他班級觀摩的權限。
+                                    管理您指導的專案，設定開放給其他班級觀摩的權限。支援同班組間觀摩功能。
                                 </p>
                             </div>
 
@@ -516,7 +516,7 @@ const ClassObservationPage = () => {
                                                 班級觀摩設定
                                             </h3>
                                             <p className='text-sm text-gray-600 mt-1'>
-                                                讓目標班級觀摩來源班級的所有專案
+                                                讓目標班級觀摩來源班級的所有專案（支援同班組間觀摩）
                                             </p>
                                         </div>
                                         <div className='p-6'>
@@ -534,7 +534,7 @@ const ClassObservationPage = () => {
                                                     ))}
                                                 </select>
                                                 <div className='text-xs text-gray-500 mt-1'>
-                                                    這個班級的專案將被開放觀摩
+                                                    這個班級的專案將被開放觀摩（設定為同班時可實現組間觀摩）
                                                 </div>
                                             </div>
 
@@ -560,7 +560,7 @@ const ClassObservationPage = () => {
                                                     </div>
                                                 )}
                                                 <div className='text-xs text-gray-500 mb-2'>
-                                                    這些班級將能觀摩來源班級的專案
+                                                    這些班級將能觀摩來源班級的專案（選擇同班級時學生只能看到其他組的專案）
                                                 </div>
 
                                                 {/* 可選班級清單 */}
@@ -568,23 +568,32 @@ const ClassObservationPage = () => {
                                                     {(() => {
                                                         const all = classesData?.classes || [];
                                                         const available = all.filter(c =>
-                                                            c !== selectedSourceClass &&
                                                             !selectedTargetClasses.includes(c)
                                                         );
 
                                                         return available.length === 0 ? (
                                                             <div className='text-xs text-gray-500'>沒有可選的班級</div>
                                                         ) : (
-                                                            available.map((c) => (
-                                                                <button
-                                                                    key={c}
-                                                                    onClick={() => addTargetClass(c)}
-                                                                    className='w-full flex items-center justify-between px-2 py-1 text-left border border-gray-100 rounded hover:bg-gray-50'
-                                                                >
-                                                                    <span className='text-sm text-gray-700'>{c}</span>
-                                                                    <span className='text-xs text-gray-400'>加入</span>
-                                                                </button>
-                                                            ))
+                                                            available.map((c) => {
+                                                                const isSameClass = c === selectedSourceClass;
+                                                                return (
+                                                                    <button
+                                                                        key={c}
+                                                                        onClick={() => addTargetClass(c)}
+                                                                        className='w-full flex items-center justify-between px-2 py-1 text-left border border-gray-100 rounded hover:bg-gray-50'
+                                                                    >
+                                                                        <div className='flex flex-col items-start'>
+                                                                            <span className='text-sm text-gray-700'>{c}</span>
+                                                                            {isSameClass && (
+                                                                                <span className='text-xs text-blue-600 font-medium'>
+                                                                                    ✨ 組間觀摩：同學只會看到其他組的專案
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <span className='text-xs text-gray-400'>加入</span>
+                                                                    </button>
+                                                                );
+                                                            })
                                                         );
                                                     })()}
                                                 </div>
