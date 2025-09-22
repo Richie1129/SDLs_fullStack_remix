@@ -88,7 +88,8 @@ const ClassObservationPage = () => {
     );
 
     const handleProjectClick = (projectId) => {
-        navigate(`/project/${projectId}/kanban?mode=observation`);
+        // 指導老師直接進入專案，不使用觀摩模式
+        navigate(`/project/${projectId}/kanban`);
     };
 
     // 處理觀摩設定
@@ -261,9 +262,9 @@ const ClassObservationPage = () => {
                                         </h2>
                                         <button
                                             onClick={handleOpenBatchModal}
-                                            className='px-4 py-2 bg-customgreen text-white text-sm rounded hover:bg-green-600 transition-colors'
+                                            className='px-4 py-2 bg-customgreen text-white text-sm rounded hover:bg-customgreen/80 transition-colors'
                                         >
-                                            一鍵批量觀摩
+                                            班級觀摩
                                         </button>
                                     </div>
                                     {/* 搜尋與過濾列 */}
@@ -375,7 +376,7 @@ const ClassObservationPage = () => {
                                                         <div className='ml-4 flex-shrink-0 flex gap-2'>
                                                             <button
                                                                 onClick={() => handleOpenViewingSettings(project)}
-                                                                className='px-3 py-2 bg-customgreen text-white text-sm rounded hover:bg-green-600 transition-colors'
+                                                                className='px-3 py-2 bg-customgreen text-white text-sm rounded hover:bg-customgreen/80 transition-colors'
                                                             >
                                                                 設定觀摩權限
                                                             </button>
@@ -497,7 +498,7 @@ const ClassObservationPage = () => {
                                             </button>
                                             <button
                                                 onClick={handleSaveViewingSettings}
-                                                className='px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-green-600 transition-colors'
+                                                className='px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/80 transition-colors'
                                             >
                                                 儲存設定
                                             </button>
@@ -512,7 +513,7 @@ const ClassObservationPage = () => {
                                     <div className='bg-white rounded-lg shadow-xl max-w-lg w-full mx-4'>
                                         <div className='px-6 py-4 border-b border-gray-200'>
                                             <h3 className='text-lg font-semibold text-gray-800'>
-                                                一鍵批量觀摩設定
+                                                班級觀摩設定
                                             </h3>
                                             <p className='text-sm text-gray-600 mt-1'>
                                                 讓目標班級觀摩來源班級的所有專案
@@ -598,9 +599,9 @@ const ClassObservationPage = () => {
                                             </button>
                                             <button
                                                 onClick={handleBatchSave}
-                                                className='px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-green-600 transition-colors'
+                                                className='px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/80 transition-colors'
                                             >
-                                                確認批量設定
+                                                確認設定
                                             </button>
                                         </div>
                                     </div>
