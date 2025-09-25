@@ -4,11 +4,9 @@ WORKDIR /sdl-backend-main
 
 COPY package*.json ./
 
-# COPY . /sdl-backend-main
+RUN npm install
 
 COPY . .
-
-RUN npm install
 
 EXPOSE 3000
 

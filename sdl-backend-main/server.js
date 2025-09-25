@@ -107,6 +107,7 @@ app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));
 app.use('/api', require('./routes/projectComments'));
 app.use('/api', require('./routes/comments'));
+app.use('/api/auth', require('./routes/passwordReset'));
 
 // 統一錯誤處理中間件 - Linus 式簡潔設計
 const { errorHandler, NotFoundError } = require('./utils/errorHandler');

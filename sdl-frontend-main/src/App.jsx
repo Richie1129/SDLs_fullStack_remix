@@ -5,6 +5,8 @@ import { AuthProvider } from "./utils/AuthContext";
 import HomePage from "./pages/home/HomePage";
 import Login from "./pages/login/Login";
 import Register from "./pages/login/Register";
+import ForgotPassword from "./pages/login/ForgotPassword";
+import ResetPassword from "./pages/login/ResetPassword";
 import Kanban from "./pages/Kanban/Kanban";
 import RootLayout from "./layouts/RootLayout";
 import ProjectLayout from "./layouts/ProjectLayout";
@@ -32,6 +34,8 @@ export default function App() {
         <Route element={<ProtectedLogin />}>
           <Route index element={<Login />} />
           <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="homepage" element={<HomePage />} />

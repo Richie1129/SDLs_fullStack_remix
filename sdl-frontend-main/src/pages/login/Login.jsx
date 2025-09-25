@@ -109,12 +109,20 @@ export default function Login() {
 
             <button type="submit" onClick={handleSubmit} style= { {backgroundColor:"#5BA491" } } className="w-full block  text-white font-semibold rounded-lg px-4 py-3 mt-6 text-base">登入</button>
           </form>
-          <p className="mt-8 text-gray-400">
-            還沒有帳號? 
-            <span style= { {color:"#5BA491" } } className="text-blue-500 hover:text-blue-700 font-semibold ml-2">
-              <Link to="/register">Sign up</Link> 
-            </span>
-          </p>
+          <div className="mt-8 flex flex-row justify-between items-center">
+            <p className="text-gray-400">
+              還沒有帳號?
+              <span style= { {color:"#5BA491" } } className="text-blue-500 hover:text-blue-700 font-semibold ml-2">
+                <Link to="/register">Sign up</Link>
+              </span>
+            </p>
+            <p className="text-gray-400">
+              忘記密碼?
+              <span style= { {color:"#5BA491" } } className="text-blue-500 hover:text-blue-700 font-semibold ml-2">
+                <Link to="/forgot-password">重設密碼</Link>
+              </span>
+            </p>
+          </div>
         </div>
       </div>
   </section>

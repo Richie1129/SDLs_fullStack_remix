@@ -37,6 +37,13 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
+      # Email 環境變數
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
     volumes:
       - "./sdl-backend-main:/sdl-backend-main"
       - "/sdl-backend-main/node_modules"
