@@ -50,7 +50,7 @@ exports.getCurrentUser = async (req, res) => {
         const userId = req.userId; // 來自 AuthMiddleware
         
         const user = await User.findByPk(userId, {
-            attributes: ['id', 'username', 'account', 'role', 'class', 'seatNumber'] // 排除密碼
+            attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber'] // 排除密碼
         });
         
         if (!user) {
@@ -79,6 +79,7 @@ exports.loginUser = (req, res) => {
                     console.log(response);
                     if(response){
                         const account = result[0].account;
+                        const email = result[0].email;
                         const username = result[0].username;
                         const id = result[0].id;
                         const classField = result[0].class;
@@ -88,7 +89,7 @@ exports.loginUser = (req, res) => {
                                 "importantsecret"
                         );
                         const role =  result[0].role;
-                        res.json({accessToken, account, username, id, role, class: classField, seatNumber});
+                        res.json({accessToken, account, email, username, id, role, class: classField, seatNumber});
                     }else{
                         res.status(404).json({message: 'Wrong account or Password!'});
                         console.log(err);
@@ -106,12 +107,14 @@ exports.loginUser = (req, res) => {
 exports.registerUser = (req, res) => {
     const username = req.body.username;
     const account = req.body.account;
+    const email = req.body.email;
     const password = req.body.password;
     const role = req.body.role;
     const classField = req.body.class;
     const seatNumber = req.body.seatNumber;
     console.log("Received username:", username);
     console.log("Received account:", account);
+    console.log("Received email:", email);
     console.log("Received password:", password);
     console.log("Received role:", role);
     console.log("Received class:", classField);
@@ -137,6 +140,7 @@ exports.registerUser = (req, res) => {
                     User.create({
                         username: username,
                         account: account,
+                        email: email,
                         password: hash,
                         role: role,
                         class: classField,
@@ -170,7 +174,7 @@ exports.registerUser = (req, res) => {
 exports.updateUserProfile = async (req, res) => {
     try {
         const userId = req.userId; // 來自 AuthMiddleware
-        const { username, class: classField, seatNumber } = req.body;
+        const { username, email, class: classField, seatNumber } = req.body;
 
         // 驗證輸入
         if (!username || username.trim() === '') {
@@ -192,6 +196,7 @@ exports.updateUserProfile = async (req, res) => {
         // 更新用戶資料
         const [updatedRowsCount] = await User.update({
             username: newUsername,
+            email: email || '',
             class: classField || '',
             seatNumber: seatNumber || ''
         }, {
@@ -237,7 +242,7 @@ exports.updateUserProfile = async (req, res) => {
 
         // 返回更新後的用戶資料
         const updatedUser = await User.findByPk(userId, {
-            attributes: ['id', 'username', 'account', 'role', 'class', 'seatNumber']
+            attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber']
         });
 
         res.status(200).json({

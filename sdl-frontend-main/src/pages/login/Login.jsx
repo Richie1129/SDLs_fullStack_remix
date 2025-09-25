@@ -26,6 +26,7 @@ export default function Login() {
         console.log(res);
         localStorage.setItem("accessToken", res.data.accessToken);
         localStorage.setItem("account", res.data.account);
+        localStorage.setItem("email", res.data.email);
         localStorage.setItem("id", res.data.id);
         localStorage.setItem("username", res.data.username);
         localStorage.setItem("role", res.data.role);
@@ -37,8 +38,9 @@ export default function Login() {
         }
 
         setUserContext( prev =>{
-          return{ ...prev, 
+          return{ ...prev,
               account : res.data.account,
+              email : res.data.email,
               id : res.data.id,
               accessToken : res.data.accessToken,
               username : res.data.username,

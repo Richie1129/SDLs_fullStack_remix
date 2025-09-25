@@ -10,6 +10,7 @@ export default function Profile() {
   const [user, setUser] = useState({
     username: '',
     account: '',
+    email: '',
     class_name: '',
     seat_number: ''
   });
@@ -28,8 +29,9 @@ export default function Profile() {
 
   const role = localStorage.getItem("role");
   const isTeacher = role === 'teacher';
-  // 禁用所有角色的編輯功能
-  const canEdit = false;
+  // 只允許編輯 email，其他資料保持鎖定
+  const canEditEmail = true;
+  const canEditProfile = false;
 
   useEffect(() => {
     fetchUserData();
@@ -41,6 +43,7 @@ export default function Profile() {
       const userInfo = {
         username: userData.username || '',
         account: userData.account || '',
+        email: userData.email || '',
         class_name: userData.class || '',  // 後端回傳 class
         seat_number: userData.seatNumber || ''  // 後端回傳 seatNumber
       };
@@ -76,34 +79,31 @@ export default function Profile() {
 
   const handleSave = async () => {
     try {
-      // 準備更新資料，注意後端使用的欄位名稱
+      // 只更新 email，其他資料保持原樣
       const updateData = {
-        username: user.username,
-        class: user.class_name,  // 前端用 class_name，後端用 class
-        seatNumber: user.seat_number  // 前端用 seat_number，後端用 seatNumber
+        username: originalUser.username,  // 保持原樣
+        email: user.email,  // 只更新 email
+        class: originalUser.class_name,   // 保持原樣
+        seatNumber: originalUser.seat_number  // 保持原樣
       };
 
       await updateUserProfile(updateData);
 
-      // 等待後端確認成功後，再更新 localStorage
-      localStorage.setItem('username', user.username);
-      if (user.class_name) {
-        localStorage.setItem('class', user.class_name);
+      // 更新 localStorage 的 email
+      if (user.email) {
+        localStorage.setItem('email', user.email);
       }
 
-      // 觸發用戶資料更新事件
-      triggerUserUpdate({
-        username: user.username,
-        class: user.class_name,
-        seatNumber: user.seat_number
+      // 更新 originalUser，只更新 email
+      setOriginalUser({
+        ...originalUser,
+        email: user.email
       });
-
-      setOriginalUser(user);
       setIsEditing(false);
       Swal.fire({
         icon: 'success',
         title: '成功',
-        text: '個人資料已更新',
+        text: '電子郵件已更新',
         showConfirmButton: false,
         timer: 1500
       });
@@ -120,7 +120,11 @@ export default function Profile() {
   };
 
   const handleCancel = () => {
-    setUser(originalUser);
+    // 只回復 email，其他欄位保持不變
+    setUser({
+      ...user,
+      email: originalUser.email
+    });
     setIsEditing(false);
   };
 
@@ -244,9 +248,9 @@ export default function Profile() {
                     name="username"
                     value={user.username}
                     onChange={handleInputChange}
-                    disabled={!canEdit}
+                    disabled={!canEditProfile}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !canEdit ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !canEditProfile ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
@@ -266,6 +270,28 @@ export default function Profile() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
+                    電子郵件
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={user.email}
+                    onChange={handleInputChange}
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
+                      !isEditing ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    }`}
+                    placeholder="請輸入您的電子郵件"
+                  />
+                  {user.email && user.email.endsWith('@example.com') && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      ⚠️ 請更新您的真實電子郵件地址
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     班級
                   </label>
                   <input
@@ -273,9 +299,9 @@ export default function Profile() {
                     name="class_name"
                     value={user.class_name}
                     onChange={handleInputChange}
-                    disabled={!canEdit}
+                    disabled={!canEditProfile}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !canEdit ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !canEditProfile ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
@@ -289,35 +315,28 @@ export default function Profile() {
                     name="seat_number"
                     value={user.seat_number}
                     onChange={handleInputChange}
-                    disabled={!canEdit}
+                    disabled={!canEditProfile}
                     className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !canEdit ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                      !canEditProfile ? 'bg-gray-50 text-gray-500' : 'bg-white'
                     }`}
                   />
                 </div>
 
                 {/* 操作按鈕 */}
                 <div className="pt-4 flex flex-col space-y-3">
-                  {!canEdit && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                        <p className="text-sm text-yellow-800 font-medium">
-                          個人資料無法修改，以確保系統資料的穩定性
-                        </p>
-                      </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                      <p className="text-sm text-blue-800 font-medium">
+                        目前僅開放電子郵件編輯功能
+                      </p>
                     </div>
-                  )}
+                  </div>
                   <div className="flex space-x-3">
                     {!isEditing ? (
                       <button
                         onClick={() => setIsEditing(true)}
-                        disabled={!canEdit}
-                        className={`flex items-center space-x-2 px-6 py-3 rounded-lg transition-colors font-medium ${
-                          !canEdit
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                            : 'bg-[#5BA491] text-white hover:bg-[#4A9480]'
-                        }`}
+                        className="flex items-center space-x-2 px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
                       >
                         <FaEdit />
                         <span>編輯資料</span>
@@ -352,24 +371,18 @@ export default function Profile() {
                 </h3>
 
                 <div className="bg-gray-50 rounded-lg p-4">
-                  {!canEdit && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                        <p className="text-sm text-yellow-800 font-medium">
-                          無法修改密碼，以確保帳戶安全性
-                        </p>
-                      </div>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                      <p className="text-sm text-yellow-800 font-medium">
+                        密碼修改功能暫時關閉
+                      </p>
                     </div>
-                  )}
+                  </div>
                   <button
                     onClick={() => setShowPasswordForm(!showPasswordForm)}
-                    disabled={!canEdit}
-                    className={`w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium ${
-                      !canEdit
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200'
-                        : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                    disabled={true}
+                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200"
                   >
                     <FaLock />
                     <span>{showPasswordForm ? '隱藏密碼表單' : '修改密碼'}</span>
