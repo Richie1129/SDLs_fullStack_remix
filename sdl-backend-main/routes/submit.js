@@ -4,7 +4,6 @@ const { uploadToMinio, uploadSingleToMinio } = require('../middlewares/minioUplo
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const { checkProjectViewingPermission, checkWritePermission } = require('../middlewares/projectViewingMiddleware');
 const { getProjectIdFromSubmit } = require('../middlewares/ideaWallProjectMiddleware');
-// const { upload } = require('../middlewares/uploadMiddleware'); // 原版本 - 暫時註解
 
 // 建立一個可選的權限檢查中間件
 const optionalAuth = async (req, res, next) => {

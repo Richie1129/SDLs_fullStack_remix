@@ -209,11 +209,15 @@ export default function Register() {
                         </div>
                         <div>
                             <label className="block text-gray-700 text-base">帳號</label>
-                            <input type="text" name="account" placeholder="請輸入帳號" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+                            <input type="text" name="account" placeholder="請輸入帳號 (學號)" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+                        </div>
+                        <div>
+                            <label className="block text-gray-700 text-base">電子郵件</label>
+                            <input type="email" name="email" placeholder="請輸入電子郵件" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
                         </div>
                         <div>
                             <label className="block text-gray-700 text-base">密碼</label>
-                            <input type="password" name="password" placeholder="請輸入密碼" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+                            <input type="password" name="password" placeholder="請輸入密碼 ( P + 身分證後4碼+生日後4碼 )" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
                         </div>
                         <div>
                             <label className="block text-gray-700 text-base">確認密碼</label>
