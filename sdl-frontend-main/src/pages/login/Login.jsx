@@ -113,7 +113,7 @@ export default function Login() {
             <p className="text-gray-400">
               還沒有帳號?
               <span style= { {color:"#5BA491" } } className="text-blue-500 hover:text-blue-700 font-semibold ml-2">
-                <Link to="/register">Sign up</Link>
+                <Link to="/register">註冊帳號</Link>
               </span>
             </p>
             <p className="text-gray-400">

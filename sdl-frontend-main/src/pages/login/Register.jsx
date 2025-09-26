@@ -262,7 +262,7 @@ export default function Register() {
                     <p className="mt-8">
                         已經有帳號了?
                         <span style={{ color: "#5BA491" }} className="text-blue-500 hover:text-blue-700 font-semibold ml-2">
-                            <Link to="/">Sign in</Link>
+                            <Link to="/">登入</Link>
                         </span>
                     </p>
                 </div>
