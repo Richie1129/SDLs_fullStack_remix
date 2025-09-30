@@ -82,8 +82,12 @@ export default function Reflection() {
 
   const userRole = localStorage.getItem("role");
 
+  // Query keys for cache invalidation consistency
+  const PERSONAL_QUERY_KEY = ["personalDaily", { projectId, isTeacher: userRole === "teacher" }];
+  const TEAM_QUERY_KEY = ["teamDaily"];
+
   const { isLoading, isError, error } = useQuery(
-    ["personalDaily", { projectId, isTeacher: userRole === "teacher" }],
+    PERSONAL_QUERY_KEY,
     () =>
       getAllPersonalDaily({
         projectId: projectId,
@@ -98,7 +102,7 @@ export default function Reflection() {
 
   // 小組日誌查詢
   const teamDailyQuery = useQuery({
-    queryKey: ["teamDaily"],
+    queryKey: TEAM_QUERY_KEY,
     queryFn: () => getAllTeamDaily({ params: { projectId: projectId } }),
     onSuccess: setTeamDaily,
     enabled: !!projectId,
@@ -123,7 +127,7 @@ export default function Reflection() {
   const { mutate } = useMutation(createPersonalDaily, {
     onSuccess: (res) => {
       console.log(res);
-      queryClient.invalidateQueries("personalDaily");
+      queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
       sucesssNotify(res.message);
     },
     onError: (error) => {
@@ -135,7 +139,7 @@ export default function Reflection() {
   const { mutate: teamDailyMutate } = useMutation(createTeamDaily, {
     onSuccess: (res) => {
       console.log(res);
-      queryClient.invalidateQueries(["teamDaily"]);
+      queryClient.invalidateQueries(TEAM_QUERY_KEY);
       sucesssNotify(res.message);
     },
     onError: (error) => {
@@ -159,7 +163,7 @@ export default function Reflection() {
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries("personalDaily");
+        queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
         sucesssNotify("更新成功");
       },
       onError: (error) => {
@@ -174,7 +178,7 @@ export default function Reflection() {
     {
       onSuccess: (res) => {
         console.log("更新成功:", res);
-        queryClient.invalidateQueries("teamDaily");
+        queryClient.invalidateQueries(TEAM_QUERY_KEY);
         sucesssNotify("小組日誌更新成功");
       },
       onError: (error) => {
@@ -612,7 +616,7 @@ export default function Reflection() {
     if (!confirm) return;
     try {
       await deletePersonalDaily(item.id);
-      queryClient.invalidateQueries("personalDaily");
+      queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
       toast.success("個人日誌已刪除");
     } catch (e) {
       console.error(e);
@@ -627,7 +631,7 @@ export default function Reflection() {
     if (!confirm) return;
     try {
       await deleteTeamDaily(item.id);
-      queryClient.invalidateQueries("teamDaily");
+      queryClient.invalidateQueries(TEAM_QUERY_KEY);
       toast.success("小組日誌已刪除");
     } catch (e) {
       console.error(e);
@@ -649,7 +653,7 @@ export default function Reflection() {
     if (!editingId) return;
     try {
       await removePersonalDailyAttachment(editingId);
-      queryClient.invalidateQueries("personalDaily");
+      queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
       toast.success("附件已刪除");
     } catch (e) {
       console.error(e);
@@ -662,7 +666,7 @@ export default function Reflection() {
     if (!editingId) return;
     try {
       await removeTeamDailyAttachment(editingId);
-      queryClient.invalidateQueries("teamDaily");
+      queryClient.invalidateQueries(TEAM_QUERY_KEY);
       toast.success("附件已刪除");
     } catch (e) {
       console.error(e);
