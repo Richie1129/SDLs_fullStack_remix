@@ -2,6 +2,8 @@ letsencrypt/
 history_file.txt
 sql/
 insert.js
+insert_2.js
+
 # Logs
 logs
 *.log
