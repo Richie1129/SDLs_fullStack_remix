@@ -52,21 +52,20 @@ const getProjectIdFromDaily = async (req, res, next) => {
         const DailyPersonal = require('../models/daily_personal');
         const DailyTeam = require('../models/daily_team');
         const dailyId = req.params.id;
-        
+
         if (!dailyId) {
             return res.status(400).json({ message: '缺少 daily ID 參數' });
         }
 
-        // 嘗試在個人日誌中查找
-        let daily = await DailyPersonal.findByPk(dailyId);
-        
-        // 如果個人日誌中沒有，嘗試在團隊日誌中查找
+        // 根據路由路徑決定查哪個表（不要猜測）
+        const isTeamRoute = req.path.includes('/team');
+        const Model = isTeamRoute ? DailyTeam : DailyPersonal;
+        const daily = await Model.findByPk(dailyId);
+
         if (!daily) {
-            daily = await DailyTeam.findByPk(dailyId);
-        }
-        
-        if (!daily) {
-            return res.status(404).json({ message: '日誌記錄不存在' });
+            return res.status(404).json({
+                message: `${isTeamRoute ? '團隊' : '個人'}日誌記錄不存在`
+            });
         }
 
         req.params.projectId = daily.projectId;
@@ -79,9 +78,9 @@ const getProjectIdFromDaily = async (req, res, next) => {
         next();
     } catch (error) {
         console.error('從 daily ID 獲取 projectId 錯誤:', error);
-        return res.status(500).json({ 
+        return res.status(500).json({
             message: '獲取專案資訊時發生錯誤',
-            error: error.message 
+            error: error.message
         });
     }
 };
