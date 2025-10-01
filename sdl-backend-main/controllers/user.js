@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const {sign} = require('jsonwebtoken');
 const sequelize = require('../util/database'); // 引入 Sequelize 實例以支援事務
+const config = require('../config');
 
 //get all users
 exports.getUsers = (req, res) =>{
@@ -65,42 +66,56 @@ exports.getCurrentUser = async (req, res) => {
 }
 
 // login user
-exports.loginUser = (req, res) => {
-    const account = req.body.account;
-    const password = req.body.password;
-        User.findAll({
-            where:{
-                account: account
-            }
-        })
-        .then(result => {
-            if(result){
-                bcrypt.compare(password, result[0].password, (err, response) =>{
-                    console.log(response);
-                    if(response){
-                        const account = result[0].account;
-                        const email = result[0].email;
-                        const username = result[0].username;
-                        const id = result[0].id;
-                        const classField = result[0].class;
-                        const seatNumber = result[0].seatNumber;
-                        const accessToken = sign(
-                                {account: account, id:id}, 
-                                "importantsecret"
-                        );
-                        const role =  result[0].role;
-                        res.json({accessToken, account, email, username, id, role, class: classField, seatNumber});
-                    }else{
-                        res.status(404).json({message: 'Wrong account or Password!'});
-                        console.log(err);
-                    }
-                });
-            };
-        })
-        .catch(err => {
-            console.log(err);
-            res.status(500).send({message: 'Wrong account or Password!'})
+exports.loginUser = async (req, res) => {
+    try {
+        const { account, password } = req.body;
+
+        // 驗證輸入
+        if (!account || !password) {
+            return res.status(400).json({ message: '帳號和密碼為必填項' });
+        }
+
+        // 使用 findOne 而非 findAll
+        const user = await User.findOne({
+            where: { account },
+            attributes: ['id', 'account', 'email', 'username', 'password', 'role', 'class', 'seatNumber']
         });
+
+        // 用戶不存在
+        if (!user) {
+            return res.status(401).json({ message: '帳號或密碼錯誤' });
+        }
+
+        // 驗證密碼 - 使用 Promise
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: '帳號或密碼錯誤' });
+        }
+
+        // 生成 JWT token
+        const accessToken = sign(
+            { account: user.account, id: user.id },
+            config.jwt.secret,
+            { expiresIn: config.jwt.expiresIn }
+        );
+
+        // 返回用戶資料（不包含密碼）
+        res.status(200).json({
+            accessToken,
+            account: user.account,
+            email: user.email,
+            username: user.username,
+            id: user.id,
+            role: user.role,
+            class: user.class,
+            seatNumber: user.seatNumber
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: '伺服器內部錯誤' });
+    }
 }
 
 // register user
@@ -151,7 +166,8 @@ exports.registerUser = (req, res) => {
                         const id = result.id;
                         const accessToken = sign(
                             { account: account, id: id },
-                            "importantsecret"
+                            config.jwt.secret,
+                            { expiresIn: config.jwt.expiresIn }
                         );
                         console.log(result);
                         res.status(201).json({ accessToken, account, id });
@@ -358,6 +374,77 @@ exports.getProjectUsers = async(req, res) => {
         res.status(200).json(result)
     })
     .catch(err => console.log(err));
+}
+
+// 批次獲取多個專案的用戶（解決 N+1 查詢問題）
+exports.batchGetProjectUsers = async (req, res) => {
+    try {
+        const { projectIds } = req.body;
+
+        console.log('[batchGetProjectUsers] 收到請求，projectIds:', projectIds);
+
+        // 驗證輸入
+        if (!projectIds || !Array.isArray(projectIds) || projectIds.length === 0) {
+            return res.status(400).json({
+                message: 'projectIds 必須是非空陣列'
+            });
+        }
+
+        console.log('[batchGetProjectUsers] 開始查詢資料庫...');
+
+        // 單次查詢獲取所有專案的用戶
+        const users = await User.findAll({
+            attributes: ['id', 'username', 'class', 'seatNumber'],
+            include: [{
+                model: Project,
+                attributes: ['id', 'name'],
+                where: {
+                    id: projectIds
+                },
+                through: { attributes: [] }
+            }]
+        });
+
+        console.log('[batchGetProjectUsers] 查詢完成，找到用戶數:', users.length);
+
+        // 將結果按專案 ID 分組
+        const usersByProject = {};
+        users.forEach(user => {
+            const projects = user.Projects || user.projects || [];
+
+            if (!projects || projects.length === 0) {
+                console.warn('[batchGetProjectUsers] 用戶無關聯專案:', user.id);
+                return;
+            }
+
+            projects.forEach(project => {
+                if (!usersByProject[project.id]) {
+                    usersByProject[project.id] = [];
+                }
+                usersByProject[project.id].push({
+                    id: user.id,
+                    username: user.username,
+                    class: user.class,
+                    seatNumber: user.seatNumber,
+                    projectId: project.id
+                });
+            });
+        });
+
+        console.log('[batchGetProjectUsers] 資料處理完成，專案數:', Object.keys(usersByProject).length);
+
+        res.status(200).json(usersByProject);
+    } catch (error) {
+        console.error('[batchGetProjectUsers] 錯誤詳情:');
+        console.error('  訊息:', error.message);
+        console.error('  堆疊:', error.stack);
+        console.error('  完整錯誤:', error);
+
+        res.status(500).json({
+            message: '伺服器內部錯誤',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 }
 
 // delete user

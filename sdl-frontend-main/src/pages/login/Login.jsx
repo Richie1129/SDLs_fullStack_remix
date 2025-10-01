@@ -6,11 +6,11 @@ import { useMutation } from 'react-query';
 import { userLogin } from '../../api/users';
 import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
+import Swal from 'sweetalert2';
 
 export default function Login() {
   const [userContext, setUserContext] = useContext(AuthContext);
   const [userData, setUserData] = useState({});
-  const [ error, setError ] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e) =>{
@@ -22,6 +22,31 @@ export default function Login() {
   }
   
   const userLoginMutation = useMutation(userLogin, {
+      onError: (err) => {
+        let errorMessage = '帳號或密碼錯誤';
+
+        if (err.response) {
+          switch (err.response.status) {
+            case 400:
+              errorMessage = err.response.data.message || '請輸入帳號和密碼';
+              break;
+            case 401:
+              errorMessage = err.response.data.message || '帳號或密碼錯誤';
+              break;
+            case 500:
+              errorMessage = '伺服器錯誤，請稍後再試';
+              break;
+          }
+        }
+
+        Swal.fire({
+          icon: 'error',
+          title: '登入失敗',
+          text: errorMessage,
+          confirmButtonText: '確定',
+          confirmButtonColor: '#5BA491'
+        });
+      },
       onSuccess: (res) => {
         console.log(res);
         localStorage.setItem("accessToken", res.data.accessToken);
@@ -49,12 +74,16 @@ export default function Login() {
               seatNumber : res.data.seatNumber,
           }
         })
-        navigate("/homepage")
-        // navigate(`/project/1/kanban`)
-      },
-      onError: (err) => {
-        console.log(err);
-        setError("帳號或密碼錯誤")
+
+        Swal.fire({
+          icon: 'success',
+          title: '登入成功',
+          text: `歡迎回來，${res.data.username}！`,
+          timer: 1500,
+          showConfirmButton: false
+        }).then(() => {
+          navigate("/homepage")
+        });
       }
   })
 
@@ -102,7 +131,6 @@ export default function Login() {
             <div className="mt-4">
               <label className="block text-gray-700 text-base">密碼</label>
               <input type="password" name="password" placeholder="請輸入密碼" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
-              {error && <span className=' text-xs text-red-600'>{error}</span>}
             </div>
             {/* <p className='text-gray-400 bg-white flex items-center justify-center'><hr className="my-6 border-gray-300 w-1/2" />or<hr className="my-6 border-gray-300 w-1/2" /></p>
             <button className=''><button className=''><button className=''>Google</button>FB</button>Apple</button> */}
