@@ -20,7 +20,7 @@ const validateToken = async(req, res, next) =>{
     }
     catch (err){
         console.log('JWT verification error:', err);
-        return res.json({error: err});
+        return res.status(401).json({error: "Invalid or expired token"});
     }
 };
 

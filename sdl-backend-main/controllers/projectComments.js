@@ -202,7 +202,7 @@ exports.remove = async (req, res) => {
     });
 
     await comment.destroy({ req });
-    res.json({ message: '已刪除' });
+    res.status(200).json({ message: '已刪除' });
   } catch (err) {
     console.error('remove project comment error:', err);
     res.status(500).json({ message: '刪除評論失敗', error: err.message });
@@ -226,7 +226,7 @@ exports.toggleLike = async (req, res) => {
     }
 
     const likeCount = await ProjectCommentLike.count({ where: { commentId } });
-    res.json({ liked: !existing, likeCount });
+    res.status(200).json({ liked: !existing, likeCount });
   } catch (err) {
     console.error('toggle project comment like error:', err);
     res.status(500).json({ message: '按讚操作失敗', error: err.message });
@@ -313,7 +313,7 @@ exports.removeAttachment = async (req, res) => {
     });
 
     await attachment.destroy({ req });
-    res.json({ message: '附件已刪除' });
+    res.status(200).json({ message: '附件已刪除' });
   } catch (err) {
     console.error('remove project comment attachment error:', err);
     res.status(500).json({ message: '刪除附件失敗', error: err.message });

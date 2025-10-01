@@ -241,7 +241,7 @@ router.post('/batch-delete', async (req, res) => {
         console.log('刪除結果:', results);
         console.log('========================');
         
-        res.json({
+        res.status(200).json({
             message: `批量刪除完成`,
             summary: {
                 total: results.length,

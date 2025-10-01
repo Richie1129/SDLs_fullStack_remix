@@ -265,7 +265,7 @@ exports.recordObservationEvent = async (req, res) => {
     });
 
     // Respond quickly; do not block UI
-    return res.json({ ok: true });
+    return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('recordObservationEvent error:', err);
     res.status(500).json({ message: 'server error' });

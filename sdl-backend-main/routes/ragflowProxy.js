@@ -21,7 +21,7 @@ router.post('/:chatId/sessions', async (req, res) => {
     try {
         const { chatId } = req.params;
         console.log("RAGFlow 創建會話 - chatId:", chatId, "body:", req.body);
-        
+
         const response = await axios.post(
             `${config.ragflow.baseUrl}/api/v1/chats/${chatId}/sessions`,
             req.body,
@@ -35,7 +35,7 @@ router.post('/:chatId/sessions', async (req, res) => {
         );
 
         console.log("RAGFlow 會話創建成功:", response.data);
-        
+
         // 記錄審計日誌
         try {
             await logAudit(req, {
@@ -53,7 +53,7 @@ router.post('/:chatId/sessions', async (req, res) => {
             console.warn('審計日誌記錄失敗:', auditError.message);
         }
 
-        res.json(response.data);
+        res.status(200).json(response.data);
     } catch (error) {
         console.error("RAGFlow 代理請求失敗 (sessions):", error.message);
         res.status(error.response?.status || 500).json({ 
@@ -69,7 +69,7 @@ router.post('/:chatId/completions', async (req, res) => {
     try {
         const { chatId } = req.params;
         console.log("RAGFlow 完成請求 - chatId:", chatId);
-        
+
         const response = await axios.post(
             `${config.ragflow.baseUrl}/api/v1/chats/${chatId}/completions`,
             req.body,
@@ -99,7 +99,7 @@ router.post('/:chatId/completions', async (req, res) => {
             console.warn('審計日誌記錄失敗:', auditError.message);
         }
 
-        res.json(response.data);
+        res.status(200).json(response.data);
     } catch (error) {
         console.error("RAGFlow 代理請求失敗 (completions):", error.message);
         res.status(error.response?.status || 500).json({ 
@@ -142,7 +142,7 @@ router.delete('/:chatId/sessions/:sessionId', async (req, res) => {
             console.warn('審計日誌記錄失敗:', auditError.message);
         }
 
-        res.json(response.data);
+        res.status(200).json(response.data);
     } catch (error) {
         console.error("RAGFlow 代理請求失敗 (delete sessions):", error.message);
         res.status(error.response?.status || 500).json({ 
@@ -155,7 +155,7 @@ router.delete('/:chatId/sessions/:sessionId', async (req, res) => {
 
 // 健康檢查端點
 router.get('/health', (req, res) => {
-    res.json({
+    res.status(200).json({
         status: 'ok',
         ragflowUrl: config.ragflow.baseUrl,
         hasApiKey: !!config.apiKeys.ragflow,
