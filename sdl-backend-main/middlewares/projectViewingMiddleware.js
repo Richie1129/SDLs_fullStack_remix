@@ -180,73 +180,102 @@ const checkProjectOwnerOrTeacher = async (req, res, next) => {
  */
 const checkWritePermission = async (req, res, next) => {
     try {
-        // 如果前面的 checkProjectViewingPermission 設置了 readOnly 標誌
-        if (req.readOnly === true) {
-            const userId = parseInt(req.userId);
+        const userId = parseInt(req.userId);
+        console.log('=== checkWritePermission Debug ===');
+        console.log('userId:', userId);
+        console.log('readOnly:', req.readOnly);
+        console.log('hasViewingPermission:', req.hasViewingPermission);
+        console.log('dailyRecord存在:', !!req.dailyRecord);
+        console.log('submitRecord存在:', !!req.submitRecord);
 
-            // 處理 daily 相關操作（個人/小組日誌）
-            if (req.dailyRecord && userId) {
-                const projectId = req.dailyRecord.projectId;
-
-                // 檢查用戶是否為該日誌所屬專案的成員
-                const project = await Project.findByPk(projectId, {
-                    include: [{
-                        model: User,
-                        through: { attributes: [] }
-                    }]
-                });
-
-                if (project) {
-                    const isProjectMember = project.users.some(u => u.id === userId);
-
-                    if (isProjectMember) {
-                        console.log('權限通過：專案成員編輯日誌');
-                        return next();
-                    }
-
-                    // 個人日誌：創建者可以編輯（即使不是當前專案成員）
-                    if (req.dailyRecord.userId === userId) {
-                        console.log('權限通過：日誌創建者編輯自己的日誌');
-                        return next();
-                    }
-                }
-            }
-
-            // 處理 submit 相關操作
-            if (req.submitRecord && userId) {
-                const projectId = req.submitRecord.projectId;
-
-                // 檢查用戶是否為該提交所屬專案的成員
-                const project = await Project.findByPk(projectId, {
-                    include: [{
-                        model: User,
-                        through: { attributes: [] }
-                    }]
-                });
-
-                if (project) {
-                    const isProjectMember = project.users.some(u => u.id === userId);
-
-                    if (isProjectMember) {
-                        console.log('權限通過：專案成員編輯提交');
-                        return next();
-                    }
-
-                    // 個人提交：創建者可以編輯
-                    if (req.submitRecord.userId === userId) {
-                        console.log('權限通過：提交創建者編輯自己的提交');
-                        return next();
-                    }
-                }
-            }
-
-            return res.status(403).json({
-                message: '觀摩模式下無法進行編輯操作',
-                code: 'READ_ONLY_MODE'
-            });
+        // 如果用戶已經在 checkProjectViewingPermission 中被確認為專案成員或教師（readOnly = false），直接放行
+        if (req.readOnly === false && req.hasViewingPermission === true) {
+            console.log('權限通過：已確認為專案成員或教師');
+            return next();
         }
 
-        next();
+        // 處理 daily 相關操作（個人/小組日誌）
+        if (req.dailyRecord && userId) {
+            const projectId = req.dailyRecord.projectId;
+            console.log('檢查日誌編輯權限 - projectId:', projectId, 'dailyRecord.userId:', req.dailyRecord.userId);
+
+            // 重新查詢專案成員資訊（確保資料正確）
+            const project = await Project.findByPk(projectId, {
+                include: [{
+                    model: User,
+                    through: { attributes: [] }
+                }]
+            });
+
+            if (project) {
+                const projectMemberIds = project.users ? project.users.map(u => u.id) : [];
+                const isProjectMember = projectMemberIds.includes(userId);
+                console.log('isProjectMember:', isProjectMember, '成員列表:', projectMemberIds);
+
+                // 小組日誌：專案成員可以編輯
+                if (isProjectMember) {
+                    console.log('權限通過：專案成員編輯日誌');
+                    return next();
+                }
+
+                // 個人日誌：創建者可以編輯自己的日誌
+                if (req.dailyRecord.userId === userId) {
+                    console.log('權限通過：日誌創建者編輯自己的日誌');
+                    return next();
+                }
+
+                // 檢查是否為指導教師
+                const user = await User.findByPk(userId);
+                if (user && project.mentor === user.username) {
+                    console.log('權限通過：指導教師編輯日誌');
+                    return next();
+                }
+            }
+        }
+
+        // 處理 submit 相關操作
+        if (req.submitRecord && userId) {
+            const projectId = req.submitRecord.projectId;
+
+            // 重新查詢專案成員資訊
+            const project = await Project.findByPk(projectId, {
+                include: [{
+                    model: User,
+                    through: { attributes: [] }
+                }]
+            });
+
+            if (project) {
+                const projectMemberIds = project.users ? project.users.map(u => u.id) : [];
+                const isProjectMember = projectMemberIds.includes(userId);
+
+                // 專案提交：專案成員可以編輯
+                if (isProjectMember) {
+                    console.log('權限通過：專案成員編輯提交');
+                    return next();
+                }
+
+                // 個人提交：創建者可以編輯
+                if (req.submitRecord.userId === userId) {
+                    console.log('權限通過：提交創建者編輯自己的提交');
+                    return next();
+                }
+
+                // 檢查是否為指導教師
+                const user = await User.findByPk(userId);
+                if (user && project.mentor === user.username) {
+                    console.log('權限通過：指導教師編輯提交');
+                    return next();
+                }
+            }
+        }
+
+        // 沒有權限
+        console.log('權限被拒絕：無編輯權限');
+        return res.status(403).json({
+            message: '沒有權限進行此操作',
+            code: 'WRITE_PERMISSION_DENIED'
+        });
     } catch (error) {
         console.error('寫入權限檢查錯誤:', error);
         return res.status(500).json({
