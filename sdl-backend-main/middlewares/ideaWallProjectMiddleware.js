@@ -100,7 +100,10 @@ const getProjectIdFromSubmit = async (req, res, next) => {
         req.params.projectId = submit.projectId;
         req.body.projectId = submit.projectId;
         req.query.projectId = submit.projectId;
-        
+
+        // 儲存 submit 記錄供後續中間件使用（用於權限檢查）
+        req.submitRecord = submit;
+
         next();
     } catch (error) {
         console.error('從 submitId 獲取 projectId 錯誤:', error);

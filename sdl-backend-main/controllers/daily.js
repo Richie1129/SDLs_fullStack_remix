@@ -440,24 +440,35 @@ exports.updateTeamDaily = async (req, res) => {
         console.log('日誌ID:', id);
         console.log('新標題:', title);
         console.log('新內容:', content);
-        console.log('上傳的檔案:', req.uploadedFile);
-        
+        console.log('上傳的單檔:', req.uploadedFile);
+        console.log('上傳的多檔:', req.uploadedFiles);
+
+        // 將單檔與多檔統一處理
+        const incomingFiles = Array.isArray(req.uploadedFiles) && req.uploadedFiles.length > 0
+          ? req.uploadedFiles
+          : (req.uploadedFile ? [req.uploadedFile] : []);
+
         let updateData = { title, content };
-        
+
         // 如果有新檔案上傳，更新檔案資訊
-        if (req.uploadedFile) {
-            console.log('📁 檢測到新檔案上傳:', {
-                fileName: req.uploadedFile.fileName,
-                originalName: req.uploadedFile.originalName,
-                url: req.uploadedFile.url,
-                size: req.uploadedFile.size
+        if (incomingFiles.length > 0) {
+            console.log(`📁 檢測到 ${incomingFiles.length} 個檔案上傳`);
+
+            // 只將第一個檔案更新到原有記錄
+            const firstFile = incomingFiles[0];
+
+            console.log('📁 使用第一個檔案更新日誌:', {
+                fileName: firstFile.fileName,
+                originalName: firstFile.originalName,
+                url: firstFile.url,
+                size: firstFile.size
             });
-            
-            updateData.fileName = req.uploadedFile.fileName;
-            updateData.originalName = req.uploadedFile.originalName;
-            updateData.fileUrl = req.uploadedFile.url;
-            updateData.mimeType = req.uploadedFile.mimeType;
-            updateData.fileSize = req.uploadedFile.size;
+
+            updateData.fileName = firstFile.fileName;
+            updateData.originalName = firstFile.originalName;
+            updateData.fileUrl = firstFile.url;
+            updateData.mimeType = firstFile.mimeType;
+            updateData.fileSize = firstFile.size;
         }
 
         const before = { title: daily.title, content: daily.content, fileName: daily.fileName, mimeType: daily.mimeType, fileSize: daily.fileSize };
@@ -472,7 +483,12 @@ exports.updateTeamDaily = async (req, res) => {
                 diff: {
                     title: { before: summarizeText(before.title || ''), after: summarizeText(title || '') },
                     content: { before: summarizeText(before.content || ''), after: summarizeText(content || '') },
-                    ...(req.uploadedFile ? { file: { before: { name: before.fileName || null, size: before.fileSize || null, mimeType: before.mimeType || null }, after: { name: req.uploadedFile.fileName, size: req.uploadedFile.size, mimeType: req.uploadedFile.mimeType } } } : {})
+                    ...(incomingFiles.length > 0 ? {
+                        file: {
+                            before: { name: before.fileName || null, size: before.fileSize || null, mimeType: before.mimeType || null },
+                            after: { name: incomingFiles[0].fileName, size: incomingFiles[0].size, mimeType: incomingFiles[0].mimeType }
+                        }
+                    } : {})
                 }
             })
         });

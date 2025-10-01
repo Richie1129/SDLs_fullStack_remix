@@ -72,7 +72,10 @@ const getProjectIdFromDaily = async (req, res, next) => {
         req.params.projectId = daily.projectId;
         req.body.projectId = daily.projectId;
         req.query.projectId = daily.projectId;
-        
+
+        // 儲存 daily 記錄供後續中間件使用
+        req.dailyRecord = daily;
+
         next();
     } catch (error) {
         console.error('從 daily ID 獲取 projectId 錯誤:', error);
