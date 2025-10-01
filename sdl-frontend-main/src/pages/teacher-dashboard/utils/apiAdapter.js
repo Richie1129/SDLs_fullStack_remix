@@ -1,7 +1,7 @@
 import { getKanbanColumns, getProjectActivity } from "../../../api/kanban";
 import { getNodes, getNodeRelation } from "../../../api/nodes";
 import { getIdeaWall } from "../../../api/ideaWall";
-import { getProjectUser } from "../../../api/users";
+import { getProjectUser, batchGetProjectUsers } from "../../../api/users";
 import { getAllPersonalDaily } from "../../../api/reflection";
 import { getAllChatrooms } from "../../../api/question";
 import { getChatroomHistory } from "../../../api/chatroom";
@@ -229,23 +229,27 @@ export class ApiAdapter {
   }
 
   /**
-   * 所有專案成員資料獲取
+   * 所有專案成員資料獲取 - 使用批次 API 優化
    */
   async getAllProjectMembers(projects) {
     if (!Array.isArray(projects) || projects.length === 0) {
       return { success: true, data: {} };
     }
 
-    const membersMap = {};
+    try {
+      const projectIds = projects.map(p => p.id);
+      console.log('[apiAdapter] 開始批次載入成員，專案數:', projectIds.length);
 
-    const promises = projects.map(async (project) => {
-      const result = await this.callWithRetry(getProjectUser, project.id);
-      membersMap[project.id] = result.success ? (result.data || []) : [];
-    });
+      // 使用批次 API 一次獲取所有專案的用戶
+      const usersByProject = await batchGetProjectUsers(projectIds);
 
-    await Promise.all(promises);
+      console.log('[apiAdapter] 成員載入完成，專案數:', Object.keys(usersByProject).length);
 
-    return { success: true, data: membersMap };
+      return { success: true, data: usersByProject };
+    } catch (error) {
+      console.error('[apiAdapter] 載入成員失敗:', error);
+      return { success: false, data: {} };
+    }
   }
 
   /**

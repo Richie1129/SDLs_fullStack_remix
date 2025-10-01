@@ -4,16 +4,17 @@ const { uploadToMinio, uploadSingleToMinio } = require('../middlewares/minioUplo
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const { checkProjectViewingPermission, checkWritePermission } = require('../middlewares/projectViewingMiddleware');
 const { getProjectIdFromSubmit } = require('../middlewares/ideaWallProjectMiddleware');
+const config = require('../config');
 
 // 建立一個可選的權限檢查中間件
 const optionalAuth = async (req, res, next) => {
     try {
         const accessToken = req.header("accessToken");
-        
+
         if (accessToken) {
             // 有 token 的情況下，進行身份驗證
             const { verify } = require("jsonwebtoken");
-            const validToken = verify(accessToken, "importantsecret");
+            const validToken = verify(accessToken, config.jwt.secret);
             req.user = validToken;
             req.userId = validToken.id;
         }

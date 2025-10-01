@@ -63,3 +63,16 @@ export const updateUserPassword = async (passwordData) => {
         throw error;
     }
 }
+
+// 批次獲取多個專案的用戶
+export const batchGetProjectUsers = async (projectIds) => {
+    try {
+        const response = await apiClient.post('/users/batch-project-users', {
+            projectIds
+        });
+        return response.data; // { projectId1: [users...], projectId2: [users...] }
+    } catch (error) {
+        console.error('Failed to batch fetch project users:', error);
+        throw error;
+    }
+}

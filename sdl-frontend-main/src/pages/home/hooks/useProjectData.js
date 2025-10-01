@@ -6,7 +6,7 @@ import {
   updateProject,
   deleteProject
 } from '../../../api/project';
-import { getAllTeachers, getProjectUser } from '../../../api/users';
+import { getAllTeachers, getProjectUser, batchGetProjectUsers } from '../../../api/users';
 import { getCurrentUsername } from '../../../utils/userUtils';
 
 export const useProjectData = () => {
@@ -120,7 +120,7 @@ export const useProjectData = () => {
     });
   }, []);
 
-  // 載入專案成員 - 根據角色不同處理
+  // 載入專案成員 - 使用批次 API 優化
   useEffect(() => {
     if (!role || !projectData?.length) return;
 
@@ -140,20 +140,25 @@ export const useProjectData = () => {
 
         if (projectIds.length === 0) return;
 
-        const projectUsersPromises = projectIds.map(async (projectId) => {
-          try {
-            const users = await getProjectUser(projectId);
-            return users.map(user => ({ ...user, projectId }));
-          } catch (err) {
-            console.error(`獲取專案 ID ${projectId} 的用戶失敗`, err);
-            return [];
-          }
+        console.log('[useProjectData] 開始批次載入成員，專案數:', projectIds.length);
+
+        // 使用批次 API 一次獲取所有專案的用戶
+        const usersByProject = await batchGetProjectUsers(projectIds);
+
+        // 將結果扁平化
+        const allMembers = [];
+        Object.entries(usersByProject).forEach(([projectId, users]) => {
+          users.forEach(user => {
+            allMembers.push(user);
+          });
         });
 
-        const projectUsers = await Promise.all(projectUsersPromises);
-        setMembers(projectUsers.flat());
+        setMembers(allMembers);
+        console.log('[useProjectData] 成員載入完成，總數:', allMembers.length);
+
       } catch (error) {
-        console.error("獲取專案成員失敗:", error);
+        console.error('[useProjectData] 載入成員失敗:', error);
+        setMembers([]);
       }
     };
 
@@ -171,7 +176,15 @@ export const useProjectData = () => {
           headers: { 'accessToken': localStorage.getItem('accessToken') }
         });
 
-        let projects = response.projects || response || [];
+        // 安全地取得專案陣列
+        let projects = [];
+        if (response?.error) {
+          console.warn("getAllProject 回傳錯誤:", response.error);
+        } else if (Array.isArray(response?.projects)) {
+          projects = response.projects;
+        } else if (Array.isArray(response)) {
+          projects = response;
+        }
 
         // 過濾掉使用者自己參與的專案
         const myId = String(localStorage.getItem('id') || '');

@@ -28,7 +28,10 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
-    if (status === 401 || status === 403) {
+    const currentPath = window.location.pathname;
+
+    // 只在非登入頁面才重定向
+    if ((status === 401 || status === 403) && !currentPath.includes('/login')) {
       try { localStorage.removeItem('accessToken'); } catch {}
       // Redirect to login
       if (typeof window !== 'undefined') {
