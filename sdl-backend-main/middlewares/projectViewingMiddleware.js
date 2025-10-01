@@ -173,23 +173,85 @@ const checkProjectOwnerOrTeacher = async (req, res, next) => {
 /**
  * 檢查只讀模式權限的中介層
  * 如果用戶處於只讀模式（跨班觀摩），則阻止所有寫入操作
+ *
+ * 例外：
+ * - 個人日誌/個人提交：創建者可以編輯自己的資源
+ * - 小組日誌/專案提交：專案的所有成員都可以編輯
  */
 const checkWritePermission = async (req, res, next) => {
     try {
         // 如果前面的 checkProjectViewingPermission 設置了 readOnly 標誌
         if (req.readOnly === true) {
-            return res.status(403).json({ 
+            const userId = parseInt(req.userId);
+
+            // 處理 daily 相關操作（個人/小組日誌）
+            if (req.dailyRecord && userId) {
+                const projectId = req.dailyRecord.projectId;
+
+                // 檢查用戶是否為該日誌所屬專案的成員
+                const project = await Project.findByPk(projectId, {
+                    include: [{
+                        model: User,
+                        through: { attributes: [] }
+                    }]
+                });
+
+                if (project) {
+                    const isProjectMember = project.users.some(u => u.id === userId);
+
+                    if (isProjectMember) {
+                        console.log('權限通過：專案成員編輯日誌');
+                        return next();
+                    }
+
+                    // 個人日誌：創建者可以編輯（即使不是當前專案成員）
+                    if (req.dailyRecord.userId === userId) {
+                        console.log('權限通過：日誌創建者編輯自己的日誌');
+                        return next();
+                    }
+                }
+            }
+
+            // 處理 submit 相關操作
+            if (req.submitRecord && userId) {
+                const projectId = req.submitRecord.projectId;
+
+                // 檢查用戶是否為該提交所屬專案的成員
+                const project = await Project.findByPk(projectId, {
+                    include: [{
+                        model: User,
+                        through: { attributes: [] }
+                    }]
+                });
+
+                if (project) {
+                    const isProjectMember = project.users.some(u => u.id === userId);
+
+                    if (isProjectMember) {
+                        console.log('權限通過：專案成員編輯提交');
+                        return next();
+                    }
+
+                    // 個人提交：創建者可以編輯
+                    if (req.submitRecord.userId === userId) {
+                        console.log('權限通過：提交創建者編輯自己的提交');
+                        return next();
+                    }
+                }
+            }
+
+            return res.status(403).json({
                 message: '觀摩模式下無法進行編輯操作',
                 code: 'READ_ONLY_MODE'
             });
         }
-        
+
         next();
     } catch (error) {
         console.error('寫入權限檢查錯誤:', error);
-        return res.status(500).json({ 
+        return res.status(500).json({
             message: '權限檢查時發生錯誤',
-            error: error.message 
+            error: error.message
         });
     }
 };

@@ -150,16 +150,15 @@ export default function Reflection() {
 
   const { mutate: updateDaily } = useMutation(
     (data) => {
-      // 檢查 data 是否為 FormData 且包含 id
+      // FormData: 從中提取 id
       if (data instanceof FormData) {
         const id = data.get("id");
-        data.delete("id"); // 從 FormData 中移除 id，因為它應該在 URL 中
+        data.delete("id");
         return updatePersonalDaily(id, data);
-      } else {
-        // 傳統的物件格式
-        const { id, ...restData } = data;
-        return updatePersonalDaily(id, restData);
       }
+      // 物件格式（向後相容）
+      const { id, ...restData } = data;
+      return updatePersonalDaily(id, restData);
     },
     {
       onSuccess: () => {
@@ -174,7 +173,17 @@ export default function Reflection() {
   );
 
   const { mutate: updateTeamDailyMutate } = useMutation(
-    ({ id, ...data }) => updateTeamDaily(id, data),
+    (data) => {
+      // FormData: 從中提取 id
+      if (data instanceof FormData) {
+        const id = data.get("id");
+        data.delete("id");
+        return updateTeamDaily(id, data);
+      }
+      // 物件格式（向後相容）
+      const { id, ...restData } = data;
+      return updateTeamDaily(id, restData);
+    },
     {
       onSuccess: (res) => {
         console.log("更新成功:", res);
@@ -221,17 +230,25 @@ export default function Reflection() {
       return;
     }
 
-    const updatedData = {
-      id: Number(editingId), // 確保 id 是數字
-      title: title,
-      content: content,
-    };
+    // 使用 FormData 支援檔案上傳
+    const formData = new FormData();
+    formData.append("id", Number(editingId));
+    formData.append("title", title);
+    formData.append("content", content);
 
-    console.log("更新日誌:", updatedData);
-    updateDaily(updatedData, {
+    // 如果有附加檔案
+    if (attachFile && attachFile.length > 0) {
+      for (let i = 0; i < attachFile.length; i++) {
+        formData.append("attachFile", attachFile[i]);
+      }
+    }
+
+    console.log("更新日誌:", formData);
+    updateDaily(formData, {
       onSuccess: () => {
         setEditingId(null); // 更新後清除 editingId
         setPersonalDailyModalOpen(false);
+        setAttachFile(null); // 清除檔案
         sucesssNotify("日誌更新成功");
       },
       onError: (error) => {
@@ -247,17 +264,25 @@ export default function Reflection() {
       return;
     }
 
-    const updatedData = {
-      id: Number(editingId), // 確保 id 是數字
-      title: title,
-      content: content,
-    };
+    // 使用 FormData 支援檔案上傳
+    const formData = new FormData();
+    formData.append("id", Number(editingId));
+    formData.append("title", title);
+    formData.append("content", content);
 
-    console.log("更新日誌:", updatedData);
-    updateTeamDailyMutate(updatedData, {
+    // 如果有附加檔案
+    if (attachFile && attachFile.length > 0) {
+      for (let i = 0; i < attachFile.length; i++) {
+        formData.append("attachFile", attachFile[i]);
+      }
+    }
+
+    console.log("更新小組日誌:", formData);
+    updateTeamDailyMutate(formData, {
       onSuccess: () => {
         setEditingId(null);
         setTeamDailyModalOpen(false);
+        setAttachFile(null); // 清除檔案
         sucesssNotify("小組日誌更新成功");
       },
       onError: (error) => {

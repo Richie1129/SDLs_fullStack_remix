@@ -58,8 +58,15 @@ export const createTeamDaily = async (data) => {
 
 // 修改團隊日報
 export const updateTeamDaily = async (id, data) => {
+    console.log(`發送請求: PUT /daily/team/${id}`, data);
+    
+    // 檢查 data 是否為 FormData（有檔案上傳）
+    const isFormData = data instanceof FormData;
+
     const response = await apiClient.put(`/daily/team/${id}`, data, {
-        headers: { "Content-Type": "application/json" },
+        headers: isFormData 
+            ? { "Content-Type": "multipart/form-data" } 
+            : { "Content-Type": "application/json" }
     });
     return response.data;
 };
