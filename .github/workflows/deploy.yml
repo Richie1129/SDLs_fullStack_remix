@@ -15,7 +15,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -50,61 +50,81 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: 🚀 Deploy to server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
-          command_timeout: 300s
+          command_timeout: 900s
+          timeout: 1200s
           script: |
-            # 定義部署目標
+            set -euo pipefail
+
+            DOCKER_USER="${{ env.DOCKER_USERNAME }}"
+            DOCKER_PASS="${{ env.DOCKER_TOKEN }}"
+
+            echo "🔐 Docker Hub login on server..."
+            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
             DEPLOY_TARGETS=(
               "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
               "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
             )
 
-            # 全域拉取映像檔一次即可
-            echo "📦 拉取最新映像檔..."
-            docker pull stone881129/sdl-api:sdls-v3
-            docker pull stone881129/sdl-front:sdls-v3
+            retry() {
+              local n=0
+              local max=3
+              local delay=5
+              while true; do
+                "$@" && break || {
+                  n=$((n+1))
+                  if [ $n -ge $max ]; then
+                    echo "❌ Command failed after $n attempts: $*"
+                    return 1
+                  else
+                    echo "⏳ Retry $n/$max after ${delay}s: $*"
+                    sleep $delay
+                    delay=$((delay*2))
+                  fi
+                }
+              done
+            }
 
-            # 遍歷部署目標
             for target in "${DEPLOY_TARGETS[@]}"; do
               IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
-              
               echo "🎯 部署 $service_name 到 $deploy_dir"
-              cd "$deploy_dir" || { echo "❌ 目錄 $deploy_dir 不存在"; exit 1; }
+              cd "$deploy_dir" || { echo "❌ 目錄不存在: $deploy_dir"; exit 1; }
 
               # 備份 .env
               if [ -f .env ]; then
                 cp .env .env.backup
-                echo "✅ 已備份 $service_name .env 檔案"
+                echo "✅ 已備份 .env"
               fi
 
-              # 停止舊服務
+              echo "📦 拉取服務所需映像檔 (docker-compose pull)..."
+              retry docker-compose -f "$compose_file" pull
+
               echo "🛑 停止 $service_name 舊服務..."
               docker-compose -f "$compose_file" down || true
 
-              # 啟動新服務
               echo "🚀 啟動 $service_name 新服務..."
-              docker-compose -f "$compose_file" up -d
+              retry docker-compose -f "$compose_file" up -d
 
-              # 等待啟動
-              echo "⏳ 等待 $service_name 服務啟動..."
-              sleep 30
+              echo "⏳ 等待服務穩定..."
+              sleep 20
 
-              # 執行 migration
-              echo "🧬 執行 $service_name Sequelize migration..."
-              docker-compose -f "$compose_file" exec -T api npx sequelize-cli db:migrate || { 
-                echo "❌ $service_name Migration 失敗"; 
-                exit 1; 
-              }
+              # 若存在 api 服務才執行 migration
+              if docker-compose -f "$compose_file" ps | awk 'NR>1 {print $1}' | grep -q "_api_"; then
+                echo "🧬 執行 Sequelize migration..."
+                retry docker-compose -f "$compose_file" exec -T api npx sequelize-cli db:migrate
+              else
+                echo "ℹ️ 找不到 api 服務，略過 migration"
+              fi
 
-              echo "✅ $service_name 部署完成！"
+              echo "✅ $service_name 部署完成"
             done
 
-            # 統一清理映像檔
-            echo "🧹 清理舊映像檔..."
+            echo "🧹 清理 dangling images..."
             docker image prune -f
 
       - name: 🎯 Verify deployment
@@ -113,31 +133,31 @@ jobs:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
-          command_timeout: 180s
+          command_timeout: 600s
+          timeout: 900s
           script: |
-            # 驗證部署目標 (復用相同數據結構)
+            set -euo pipefail
+
             VERIFY_TARGETS=(
               "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
               "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
             )
 
-            # 遍歷驗證每個服務
             for target in "${VERIFY_TARGETS[@]}"; do
               IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
-              
-              echo "🔍 驗證 $service_name 部署狀態..."
+
+              echo "🔍 驗證 $service_name ..."
               cd "$deploy_dir" || { echo "❌ 無法進入 $deploy_dir"; exit 1; }
 
               docker-compose -f "$compose_file" ps
 
               INVALID=$(docker-compose -f "$compose_file" ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
-
               if [ -n "$INVALID" ]; then
-                echo "❌ $service_name 以下容器未正常運行："
+                echo "❌ 未正常運行容器："
                 echo "$INVALID"
-                docker-compose -f "$compose_file" logs --tail=100
+                docker-compose -f "$compose_file" logs --tail=120
                 exit 1
-              else
-                echo "✅ $service_name 所有容器皆正常運行"
               fi
+
+              echo "✅ $service_name OK"
             done
