@@ -1,6 +1,7 @@
 //controllers/daily.js
 const Daily_personal = require('../models/daily_personal');
 const Daily_team = require('../models/daily_team');
+const User = require('../models/user');
 const { logAudit, summarizeText, clampMetadataSize } = require('../services/auditService');
 const { deleteFileFromMinio } = require('../config/minio');
 
@@ -11,14 +12,21 @@ exports.getPersonalDaily = async (req, res) => {
         let personalDaily;
 
         if (isTeacher === "true") {
-            // 教師端：獲取該 projectId 內所有學生的個人日誌
+            // 教師端：獲取該 projectId 內所有學生的個人日誌，並帶上創建者資訊
             personalDaily = await Daily_personal.findAll({
-                where: { projectId }
+                where: { projectId },
+                include: [{
+                    model: User,
+                    attributes: ['id', 'username', 'account', 'class', 'seatNumber', 'role'],
+                    where: { role: 'student' }  // 只顯示學生的日誌
+                }],
+                order: [['createdAt', 'DESC']]
             });
         } else {
             // 學生端：僅獲取自己(userId)的日誌
             personalDaily = await Daily_personal.findAll({
-                where: { projectId, userId }
+                where: { projectId, userId },
+                order: [['createdAt', 'DESC']]
             });
         }
 

@@ -178,7 +178,7 @@ const LogCard = ({
           </p>
           {showCreator && (
             <p className="text-xs sm:text-sm text-gray-500">
-              建立者: {item.creator}
+              建立者: {item.user?.username || item.creator || '未知'}
             </p>
           )}
           {item.updatedAt && item.updatedAt !== item.createdAt && (

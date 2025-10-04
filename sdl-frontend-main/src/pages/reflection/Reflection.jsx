@@ -46,7 +46,8 @@ export default function Reflection() {
   const [teamDaily, setTeamDaily] = useState([]);
   const [dailyData, setDailyData] = useState({});
   const [attachFile, setAttachFile] = useState(null);
-  const [showEmptyMessage, setShowEmptyMessage] = useState(false);
+  const [showPersonalEmptyMessage, setShowPersonalEmptyMessage] = useState(false);
+  const [showTeamEmptyMessage, setShowTeamEmptyMessage] = useState(false);
 
   // Modal 狀態
   const [personalDailyModalOpen, setPersonalDailyModalOpen] = useState(false);
@@ -108,21 +109,29 @@ export default function Reflection() {
     enabled: !!projectId,
   });
 
-  // 空狀態消息控制
+  // 空狀態消息控制 - 個人日誌
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (
-        personalDaily.length === 0 &&
-        teamDaily.length === 0 &&
-        !isLoading &&
-        !isError
-      ) {
-        setShowEmptyMessage(true);
+      if (personalDaily.length === 0 && !isLoading && !isError) {
+        setShowPersonalEmptyMessage(true);
+      } else {
+        setShowPersonalEmptyMessage(false);
       }
-    }, 20); // 延迟500毫秒显示空状态消息
-
+    }, 20);
     return () => clearTimeout(timer);
-  }, [personalDaily.length, teamDaily.length, isLoading, isError]);
+  }, [personalDaily.length, isLoading, isError]);
+
+  // 空狀態消息控制 - 小組日誌
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (teamDaily.length === 0 && !teamDailyQuery.isLoading && !teamDailyQuery.isError) {
+        setShowTeamEmptyMessage(true);
+      } else {
+        setShowTeamEmptyMessage(false);
+      }
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [teamDaily.length, teamDailyQuery.isLoading, teamDailyQuery.isError]);
 
   const { mutate } = useMutation(createPersonalDaily, {
     onSuccess: (res) => {
@@ -779,7 +788,7 @@ export default function Reflection() {
               isLoading={isLoading}
               isError={isError}
               error={error}
-              showEmptyMessage={showEmptyMessage}
+              showEmptyMessage={showPersonalEmptyMessage}
               emptyStateConfig={{
                 animationData: personalDailyIcon,
                 message:
@@ -791,7 +800,7 @@ export default function Reflection() {
               onView5Rs={handleView5Rs}
               onRequestAIAnalysis={handleRequestAIAnalysis}
               showAIAnalysis={true}
-              showCreator={false}
+              showCreator={userRole === "teacher"}
               className="h-full flex flex-col"
             />
           </div>
@@ -851,7 +860,7 @@ export default function Reflection() {
               isLoading={teamDailyQuery.isLoading}
               isError={teamDailyQuery.isError}
               error={error}
-              showEmptyMessage={showEmptyMessage}
+              showEmptyMessage={showTeamEmptyMessage}
               emptyStateConfig={{
                 animationData: teamDailyIcon,
                 message:
