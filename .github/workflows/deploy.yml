@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Deploy to Production (lazyinwork only)
 
 on:
   push:
@@ -49,115 +49,72 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: 🚀 Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
+      - name: 🚀 Deploy lazyinwork
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
-          command_timeout: 900s
-          timeout: 1200s
+          command_timeout: 400s
           script: |
-            set -euo pipefail
+            set -e
 
-            DOCKER_USER="${{ env.DOCKER_USERNAME }}"
-            DOCKER_PASS="${{ env.DOCKER_TOKEN }}"
+            DEPLOY_DIR="/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork"
+            COMPOSE_FILE="docker-compose.yml"
 
-            echo "🔐 Docker Hub login on server..."
-            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+            echo "📦 拉取最新映像檔..."
+            docker pull stone881129/sdl-api:sdls-v3
+            docker pull stone881129/sdl-front:sdls-v3
 
-            DEPLOY_TARGETS=(
-              "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
-              "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
-            )
+            echo "🎯 部署 lazyinwork 到 $DEPLOY_DIR"
+            cd "$DEPLOY_DIR" || { echo "❌ 目錄 $DEPLOY_DIR 不存在"; exit 1; }
 
-            retry() {
-              local n=0
-              local max=3
-              local delay=5
-              while true; do
-                "$@" && break || {
-                  n=$((n+1))
-                  if [ $n -ge $max ]; then
-                    echo "❌ Command failed after $n attempts: $*"
-                    return 1
-                  else
-                    echo "⏳ Retry $n/$max after ${delay}s: $*"
-                    sleep $delay
-                    delay=$((delay*2))
-                  fi
-                }
-              done
+            # 備份 .env（如存在）
+            if [ -f .env ]; then
+              cp .env .env.backup
+              echo "✅ 已備份 .env 檔案"
+            fi
+
+            echo "🛑 停止舊服務..."
+            docker-compose -f "$COMPOSE_FILE" down || true
+
+            echo "🚀 啟動新服務..."
+            docker-compose -f "$COMPOSE_FILE" up -d
+
+            echo "⏳ 等待服務啟動..."
+            sleep 30
+
+            echo "🧬 執行 Sequelize migration（lazyinwork）..."
+            docker-compose -f "$COMPOSE_FILE" exec -T api npx sequelize-cli db:migrate || {
+              echo "❌ Migration 失敗"; exit 1;
             }
 
-            for target in "${DEPLOY_TARGETS[@]}"; do
-              IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
-              echo "🎯 部署 $service_name 到 $deploy_dir"
-              cd "$deploy_dir" || { echo "❌ 目錄不存在: $deploy_dir"; exit 1; }
-
-              # 備份 .env
-              if [ -f .env ]; then
-                cp .env .env.backup
-                echo "✅ 已備份 .env"
-              fi
-
-              echo "📦 拉取服務所需映像檔 (docker-compose pull)..."
-              retry docker-compose -f "$compose_file" pull
-
-              echo "🛑 停止 $service_name 舊服務..."
-              docker-compose -f "$compose_file" down || true
-
-              echo "🚀 啟動 $service_name 新服務..."
-              retry docker-compose -f "$compose_file" up -d
-
-              echo "⏳ 等待服務穩定..."
-              sleep 20
-
-              # 若存在 api 服務才執行 migration
-              if docker-compose -f "$compose_file" ps | awk 'NR>1 {print $1}' | grep -q "_api_"; then
-                echo "🧬 執行 Sequelize migration..."
-                retry docker-compose -f "$compose_file" exec -T api npx sequelize-cli db:migrate
-              else
-                echo "ℹ️ 找不到 api 服務，略過 migration"
-              fi
-
-              echo "✅ $service_name 部署完成"
-            done
-
-            echo "🧹 清理 dangling images..."
+            echo "🧹 清理舊映像檔..."
             docker image prune -f
 
-      - name: 🎯 Verify deployment
+      - name: 🎯 Verify lazyinwork
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
-          command_timeout: 600s
-          timeout: 900s
+          command_timeout: 180s
           script: |
-            set -euo pipefail
+            set -e
+            DEPLOY_DIR="/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork"
+            COMPOSE_FILE="docker-compose.yml"
 
-            VERIFY_TARGETS=(
-              "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
-              "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
-            )
+            echo "🔍 驗證 lazyinwork 部署狀態..."
+            cd "$DEPLOY_DIR" || { echo "❌ 無法進入 $DEPLOY_DIR"; exit 1; }
 
-            for target in "${VERIFY_TARGETS[@]}"; do
-              IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
+            docker-compose -f "$COMPOSE_FILE" ps
 
-              echo "🔍 驗證 $service_name ..."
-              cd "$deploy_dir" || { echo "❌ 無法進入 $deploy_dir"; exit 1; }
-
-              docker-compose -f "$compose_file" ps
-
-              INVALID=$(docker-compose -f "$compose_file" ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
-              if [ -n "$INVALID" ]; then
-                echo "❌ 未正常運行容器："
-                echo "$INVALID"
-                docker-compose -f "$compose_file" logs --tail=120
-                exit 1
-              fi
-
-              echo "✅ $service_name OK"
-            done
+            INVALID=$(docker-compose -f "$COMPOSE_FILE" ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
+            if [ -n "$INVALID" ]; then
+              echo "❌ 以下容器未正常運行："
+              echo "$INVALID"
+              docker-compose -f "$COMPOSE_FILE" logs --tail=100
+              exit 1
+            else
+              echo "✅ 所有容器皆正常運行"
+            fi
