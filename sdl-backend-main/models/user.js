@@ -49,7 +49,9 @@ User.hasMany(Threads_Message);
 User.hasMany(Threads);
 // User.hasMany(Chatroom_message);
 User.hasMany(daily_personal);
+daily_personal.belongsTo(User);
 User.hasMany(daily_team);
+daily_team.belongsTo(User);
 User.hasMany(Question);
 
 module.exports = User;

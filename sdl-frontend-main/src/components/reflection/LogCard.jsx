@@ -8,9 +8,9 @@ import FileDownload from 'js-file-download';
 import { getAuditEvents } from '@/api/audit.js';
 import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
 
-const LogCard = ({ 
-  item, 
-  index, 
+const LogCard = ({
+  item,
+  index,
   isActive = false,
   onEdit,
   onDelete,
@@ -25,6 +25,19 @@ const LogCard = ({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
+
+  // 權限檢查：判斷當前用戶是否可以編輯此日誌
+  const currentUserId = parseInt(localStorage.getItem("id"));
+  const currentUserRole = localStorage.getItem("role");
+  const isTeacher = currentUserRole === "teacher";
+  const isCreator = item.userId === currentUserId || item.user?.id === currentUserId;
+  const isTeamLog = inferredTargetType === 'daily_team';
+
+  // 權限邏輯：
+  // - 教師：永遠不能編輯
+  // - 小組日誌：所有學生都可以編輯（不檢查創建者）
+  // - 個人日誌：只有創建者可以編輯
+  const canEdit = !isTeacher && (isTeamLog || isCreator);
   
   const handleDownload = () => {
     if (item.fileName && item.fileUrl) {
@@ -131,7 +144,7 @@ const LogCard = ({
                 5Rs 反思
               </span>
             )}
-            {typeof onDelete === 'function' && (
+            {typeof onDelete === 'function' && canEdit && (
               <button
                 type="button"
                 onClick={() => onDelete(item)}
@@ -178,7 +191,7 @@ const LogCard = ({
           </p>
           {showCreator && (
             <p className="text-xs sm:text-sm text-gray-500">
-              建立者: {item.creator}
+              建立者: {item.user?.username || item.creator || '未知'}
             </p>
           )}
           {item.updatedAt && item.updatedAt !== item.createdAt && (
@@ -215,13 +228,22 @@ const LogCard = ({
             return null;
           })()}
 
-          {/* Edit Button */}
-          <button
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-300 text-sm sm:text-base"
-            onClick={() => onEdit(item)}
-          >
-            編輯 {is5Rs ? "5Rs 反思" : "傳統日誌"}
-          </button>
+          {/* Edit/View Button */}
+          {canEdit ? (
+            <button
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-300 text-sm sm:text-base"
+              onClick={() => onEdit(item)}
+            >
+              編輯 {is5Rs ? "5Rs 反思" : "傳統日誌"}
+            </button>
+          ) : (
+            <button
+              className="w-full bg-[#5BA491] text-white py-2 px-4 rounded hover:bg-[#5BA491]/80 transition-colors duration-300 text-sm sm:text-base"
+              onClick={() => onEdit(item)}
+            >
+              查看 {is5Rs ? "5Rs 反思" : "日誌"}
+            </button>
+          )}
         </div>
       </div>
     </motion.div>
