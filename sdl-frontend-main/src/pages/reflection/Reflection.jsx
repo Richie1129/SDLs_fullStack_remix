@@ -502,6 +502,15 @@ export default function Reflection() {
     setPersonalDailyModalOpen(true);
   };
 
+  const handleViewClick = (item) => {
+    console.log("查看日誌:", item);
+    setTitle(item.title);
+    setContent(item.content);
+    setAttachFile(null);
+    setEditingId(item.id);
+    setPersonalDailyModalOpen(true);
+  };
+
   const handleEdit5Rs = (item) => {
     console.log("編輯 5Rs 反思:", item);
     const parsedContent = parse5RsContent(item.content);
@@ -618,10 +627,24 @@ export default function Reflection() {
   };
 
   const handlePersonalLogEdit = (item) => {
-    if (is5RsFormat(item.content)) {
-      handleEdit5Rs(item);
+    // 檢查是否為教師
+    const currentUserRole = localStorage.getItem("role");
+    const isTeacher = currentUserRole === "teacher";
+
+    if (isTeacher) {
+      // 教師只能查看
+      if (is5RsFormat(item.content)) {
+        handleView5Rs(item);
+      } else {
+        handleViewClick(item);
+      }
     } else {
-      handleEditClick(item);
+      // 學生可以編輯
+      if (is5RsFormat(item.content)) {
+        handleEdit5Rs(item);
+      } else {
+        handleEditClick(item);
+      }
     }
   };
 
@@ -640,7 +663,21 @@ export default function Reflection() {
   };
 
   const handleTeamLogEdit = (item) => {
-    handleEditTeamClick(item);
+    // 檢查是否為教師
+    const currentUserRole = localStorage.getItem("role");
+    const isTeacher = currentUserRole === "teacher";
+
+    if (isTeacher) {
+      // 教師只能查看，打開 modal 但不允許編輯
+      setTitle(item.title || "");
+      setContent(item.content || "");
+      setAttachFile(null);
+      setEditingId(item.id);
+      setTeamDailyModalOpen(true);
+    } else {
+      // 學生可以編輯
+      handleEditTeamClick(item);
+    }
   };
 
   // 刪除：個人日誌
@@ -721,59 +758,61 @@ export default function Reflection() {
                 個人日誌
               </h2>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <button
-                  onClick={() => {
-                    setTitle("");
-                    setContent("");
-                    setAttachFile(null);
-                    setEditingId(null);
-                    setPersonalDailyModalOpen(true);
-                  }}
-                  className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              {/* Action Buttons - 只有學生可以新增 */}
+              {userRole !== "teacher" && (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <button
+                    onClick={() => {
+                      setTitle("");
+                      setContent("");
+                      setAttachFile(null);
+                      setEditingId(null);
+                      setPersonalDailyModalOpen(true);
+                    }}
+                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  傳統日誌
-                </button>
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    傳統日誌
+                  </button>
 
-                <button
-                  onClick={() => {
-                    setTitle("");
-                    setEditingReflectionData({});
-                    setEditingId(null);
-                    setIs5RsModalOpen(true);
-                  }}
-                  className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491] text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                  <button
+                    onClick={() => {
+                      setTitle("");
+                      setEditingReflectionData({});
+                      setEditingId(null);
+                      setIs5RsModalOpen(true);
+                    }}
+                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491] text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  +5Rs 反思
-                </button>
-              </div>
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    +5Rs 反思
+                  </button>
+                </div>
+              )}
             </div>
             <p className="text-sm text-gray-600 mt-2">
               記錄個人的學習心得和反思，可以選擇傳統日誌或 5Rs 反思格式
@@ -815,37 +854,39 @@ export default function Reflection() {
                 小組日誌
               </h2>
 
-              {/* Action Button */}
-              <div className="flex">
-                <button
-                  onClick={() => {
-                    setTitle("");
-                    setContent("");
-                    setAttachFile(null);
-                    setTeamDailyModalOpen(true);
-                    setDailyData((prev) => ({
-                      ...prev,
-                      type: "discuss",
-                    }));
-                  }}
-                  className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base w-full sm:w-auto"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              {/* Action Button - 只有學生可以新增 */}
+              {userRole !== "teacher" && (
+                <div className="flex">
+                  <button
+                    onClick={() => {
+                      setTitle("");
+                      setContent("");
+                      setAttachFile(null);
+                      setTeamDailyModalOpen(true);
+                      setDailyData((prev) => ({
+                        ...prev,
+                        type: "discuss",
+                      }));
+                    }}
+                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base w-full sm:w-auto"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  新增
-                </button>
-              </div>
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    新增
+                  </button>
+                </div>
+              )}
             </div>
             <p className="text-sm text-gray-600 mt-2">
               記錄小組討論和協作的成果，與團隊成員分享經驗
@@ -893,7 +934,7 @@ export default function Reflection() {
         </button>
         <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
           <h3 className="font-bold text-base sm:text-lg mb-3 text-center">
-            個人反思日誌
+            {userRole === "teacher" ? "查看個人反思日誌" : "個人反思日誌"}
           </h3>
           <div className="flex items-center mb-3">
             <p className="font-bold text-sm sm:text-base">日誌內容</p>
@@ -928,7 +969,7 @@ export default function Reflection() {
               onClick={() => setPersonalTab('edit')}
               className={`px-4 py-2 font-medium text-sm ${personalTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              編輯日誌
+              {userRole === "teacher" ? "查看日誌" : "編輯日誌"}
             </button>
             <button
               onClick={() => setPersonalTab('history')}
@@ -955,6 +996,7 @@ export default function Reflection() {
             value={title}
             onChange={handleChange}
             required
+            disabled={userRole === "teacher"}
           />
           <textarea
             className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto"
@@ -963,6 +1005,7 @@ export default function Reflection() {
             name="content"
             value={content}
             onChange={handleChange}
+            disabled={userRole === "teacher"}
           />
           <input
             className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
@@ -970,6 +1013,7 @@ export default function Reflection() {
             name="filename"
             onChange={handleAddFileChange}
             multiple
+            disabled={userRole === "teacher"}
           />
           {/* 現有附件（編輯時） */}
           {editingId && currentEditingPersonal && (currentEditingPersonal.fileName || currentEditingPersonal.fileData) && (
@@ -994,12 +1038,14 @@ export default function Reflection() {
                 >
                   下載附件
                 </a>
-                <button
-                  onClick={handleRemovePersonalAttachment}
-                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                >
-                  刪除附件
-                </button>
+                {userRole !== "teacher" && (
+                  <button
+                    onClick={handleRemovePersonalAttachment}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  >
+                    刪除附件
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1008,19 +1054,21 @@ export default function Reflection() {
               onClick={() => setPersonalDailyModalOpen(false)}
               className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2"
             >
-              取消
+              {userRole === "teacher" ? "關閉" : "取消"}
             </button>
-            <button
-              onClick={(e) => {
-                editingId
-                  ? handleSaveEdit()
-                  : handleCreateOrUpdatePersonalDaily(e);
-              }}
-              type="submit"
-              className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-xs sm:text-sm text-white"
-            >
-              {editingId ? "更新" : "儲存"}
-            </button>
+            {userRole !== "teacher" && (
+              <button
+                onClick={(e) => {
+                  editingId
+                    ? handleSaveEdit()
+                    : handleCreateOrUpdatePersonalDaily(e);
+                }}
+                type="submit"
+                className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-xs sm:text-sm text-white"
+              >
+                {editingId ? "更新" : "儲存"}
+              </button>
+            )}
           </div>
             </>
           )}
@@ -1064,7 +1112,7 @@ export default function Reflection() {
         </button>
         <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
           <h3 className="font-bold text-base sm:text-lg mb-3 text-center">
-            小組反思日誌
+            {userRole === "teacher" ? "查看小組反思日誌" : "小組反思日誌"}
           </h3>
           <div className="flex items-center mb-3">
             <p className="font-bold text-sm sm:text-base">日誌內容</p>
@@ -1099,7 +1147,7 @@ export default function Reflection() {
               onClick={() => setTeamTab('edit')}
               className={`px-4 py-2 font-medium text-sm ${teamTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
             >
-              編輯日誌
+              {userRole === "teacher" ? "查看日誌" : "編輯日誌"}
             </button>
             <button
               onClick={() => setTeamTab('history')}
@@ -1118,6 +1166,7 @@ export default function Reflection() {
             value={title}
             onChange={handleChange}
             required
+            disabled={userRole === "teacher"}
           />
           <textarea
             className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto"
@@ -1126,6 +1175,7 @@ export default function Reflection() {
             name="content"
             value={content}
             onChange={handleChange}
+            disabled={userRole === "teacher"}
           />
           <input
             className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
@@ -1133,6 +1183,7 @@ export default function Reflection() {
             name="filename"
             onChange={handleAddFileChange}
             multiple
+            disabled={userRole === "teacher"}
           />
           {/* 現有附件（編輯時） */}
           {editingId && currentEditingTeam && (currentEditingTeam.fileName || currentEditingTeam.fileData) && (
@@ -1157,12 +1208,14 @@ export default function Reflection() {
                 >
                   下載附件
                 </a>
-                <button
-                  onClick={handleRemoveTeamAttachment}
-                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                >
-                  刪除附件
-                </button>
+                {userRole !== "teacher" && (
+                  <button
+                    onClick={handleRemoveTeamAttachment}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  >
+                    刪除附件
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1171,19 +1224,21 @@ export default function Reflection() {
               onClick={() => setTeamDailyModalOpen(false)}
               className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2"
             >
-              取消
+              {userRole === "teacher" ? "關閉" : "取消"}
             </button>
-            <button
-              onClick={(e) => {
-                editingId
-                  ? handleSaveTeamEdit()
-                  : handleCreateOrUpdateTeamDaily(e);
-              }}
-              type="submit"
-              className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-xs sm:text-sm text-white"
-            >
-              {editingId ? "更新" : "儲存"}
-            </button>
+            {userRole !== "teacher" && (
+              <button
+                onClick={(e) => {
+                  editingId
+                    ? handleSaveTeamEdit()
+                    : handleCreateOrUpdateTeamDaily(e);
+                }}
+                type="submit"
+                className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-xs sm:text-sm text-white"
+              >
+                {editingId ? "更新" : "儲存"}
+              </button>
+            )}
           </div>
             </>
           )}

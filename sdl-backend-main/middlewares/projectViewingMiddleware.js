@@ -62,10 +62,10 @@ const checkProjectViewingPermission = async (req, res, next) => {
         console.log('isProjectMentor:', isProjectMentor);
 
         if (isProjectMentor) {
-            // 指導教師擁有完整權限
-            req.readOnly = false;
+            // 指導教師只有查看權限，無編輯權限
+            req.readOnly = true;
             req.hasViewingPermission = true;
-            console.log('權限通過：指導教師');
+            console.log('權限通過：指導教師（只讀）');
             return next();
         }
 
@@ -188,9 +188,10 @@ const checkWritePermission = async (req, res, next) => {
         console.log('dailyRecord存在:', !!req.dailyRecord);
         console.log('submitRecord存在:', !!req.submitRecord);
 
-        // 如果用戶已經在 checkProjectViewingPermission 中被確認為專案成員或教師（readOnly = false），直接放行
+        // 如果用戶已經在 checkProjectViewingPermission 中被確認為專案成員（readOnly = false），直接放行
+        // 注意：指導教師是 readOnly = true，不會在此通過
         if (req.readOnly === false && req.hasViewingPermission === true) {
-            console.log('權限通過：已確認為專案成員或教師');
+            console.log('權限通過：已確認為專案成員');
             return next();
         }
 
@@ -223,13 +224,6 @@ const checkWritePermission = async (req, res, next) => {
                     console.log('權限通過：日誌創建者編輯自己的日誌');
                     return next();
                 }
-
-                // 檢查是否為指導教師
-                const user = await User.findByPk(userId);
-                if (user && project.mentor === user.username) {
-                    console.log('權限通過：指導教師編輯日誌');
-                    return next();
-                }
             }
         }
 
@@ -258,13 +252,6 @@ const checkWritePermission = async (req, res, next) => {
                 // 個人提交：創建者可以編輯
                 if (req.submitRecord.userId === userId) {
                     console.log('權限通過：提交創建者編輯自己的提交');
-                    return next();
-                }
-
-                // 檢查是否為指導教師
-                const user = await User.findByPk(userId);
-                if (user && project.mentor === user.username) {
-                    console.log('權限通過：指導教師編輯提交');
                     return next();
                 }
             }
