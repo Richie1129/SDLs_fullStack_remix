@@ -1014,7 +1014,11 @@ export default function Reflection() {
             onChange={handleAddFileChange}
             multiple
             disabled={userRole === "teacher"}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
           />
+          <p className="text-xs text-gray-500 mb-3">
+            💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+          </p>
           {/* 現有附件（編輯時） */}
           {editingId && currentEditingPersonal && (currentEditingPersonal.fileName || currentEditingPersonal.fileData) && (
             <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -1184,7 +1188,11 @@ export default function Reflection() {
             onChange={handleAddFileChange}
             multiple
             disabled={userRole === "teacher"}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
           />
+          <p className="text-xs text-gray-500 mb-3">
+            💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+          </p>
           {/* 現有附件（編輯時） */}
           {editingId && currentEditingTeam && (currentEditingTeam.fileName || currentEditingTeam.fileData) && (
             <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

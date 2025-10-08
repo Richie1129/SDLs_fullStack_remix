@@ -12,19 +12,32 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         // 支援的檔案類型
         const allowedTypes = [
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-            'application/pdf', 'application/msword', 
+            // 圖片
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml',
+            // 文件
+            'application/pdf', 'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            // 試算表
             'application/vnd.ms-excel',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            // 簡報
             'application/vnd.ms-powerpoint',
             'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            // 開放文件格式
             'application/vnd.oasis.opendocument.text',           // ODT
             'application/vnd.oasis.opendocument.spreadsheet',    // ODS
             'application/vnd.oasis.opendocument.presentation',   // ODP
-            'text/plain', 'text/csv'
+            // 純文字
+            'text/plain', 'text/csv',
+            // 影片
+            'video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+            // 音訊
+            'audio/mpeg', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/x-m4a',
+            // 壓縮檔
+            'application/zip', 'application/x-zip-compressed',
+            'application/x-rar-compressed', 'application/vnd.rar'
         ];
-        
+
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {

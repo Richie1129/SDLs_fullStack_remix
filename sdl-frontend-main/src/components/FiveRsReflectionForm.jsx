@@ -314,8 +314,11 @@ const FiveRsReflectionForm = ({
           multiple
           onChange={onFileChange}
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
-          accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
         />
+        <p className="mt-2 text-xs text-gray-500">
+          💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+        </p>
         {/* 現有附件（編輯時） */}
         {isEditing && existingRecord && (existingRecord.fileName || existingRecord.fileData) && (
           <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

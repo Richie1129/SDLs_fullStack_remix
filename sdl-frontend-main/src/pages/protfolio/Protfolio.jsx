@@ -463,19 +463,20 @@ export default function Protfolio() {
 
                                             {/* File Section */}
                                             <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
-                                                <div className="flex items-start justify-between mb-4">
-                                                    <div>
-                                                        <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                                                            附加檔案
-                                                        </h3>
-                                                        {modalData.fileName ? (
-                                                            <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded border inline-block">
-                                                                {modalData.fileName}
-                                                            </p>
-                                                        ) : (
-                                                            <p className="text-sm text-gray-500">無附加檔案</p>
-                                                        )}
-                                                    </div>
+                                                <div className="mb-4">
+                                                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                                                        附加檔案
+                                                    </h3>
+                                                    <p className="text-xs text-gray-500 mb-3">
+                                                        💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB
+                                                    </p>
+                                                    {modalData.fileName ? (
+                                                        <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded border inline-block">
+                                                            {modalData.fileName}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-sm text-gray-500">無附加檔案</p>
+                                                    )}
                                                 </div>
                                                 
                                                 <div className="flex flex-wrap gap-3">
@@ -498,15 +499,18 @@ export default function Protfolio() {
                                                     )}
                                                     {/* 上傳檔案按鈕 - 觀摩模式隱藏 */}
                                                     {!isObservationMode && (
-                                                        <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 cursor-pointer transition-colors shadow-sm">
-                                                            <AiOutlineUpload className="mr-2 w-4 h-4" />
-                                                            {modalData.fileData ? "重新上傳" : "上傳檔案"}
-                                                            <input
-                                                                type="file"
-                                                                className="hidden"
-                                                                onChange={handleFileChange}
-                                                            />
-                                                        </label>
+                                                        <div className="flex flex-col gap-1">
+                                                            <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 cursor-pointer transition-colors shadow-sm">
+                                                                <AiOutlineUpload className="mr-2 w-4 h-4" />
+                                                                {modalData.fileData ? "重新上傳" : "上傳檔案"}
+                                                                <input
+                                                                    type="file"
+                                                                    className="hidden"
+                                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
+                                                                    onChange={handleFileChange}
+                                                                />
+                                                            </label>
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>
