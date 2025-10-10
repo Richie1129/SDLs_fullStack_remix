@@ -478,33 +478,39 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               送出
             </button>
           </div>
-          <div className="mt-2 flex items-center gap-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              multiple
-              onChange={onFilesChosenForNew}
-            />
-            <button
-              type="button"
-              className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-              title="選擇圖片或檔案"
-              onClick={onPickFilesForNew}
-            >
-              <FiImage size={18} />
-            </button>
-            <button
-              type="button"
-              className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-              title="選擇檔案"
-              onClick={onPickFilesForNew}
-            >
-              <FiPaperclip size={18} />
-            </button>
-            {pendingFiles.length > 0 && (
-              <span className="text-xs text-gray-500">已選 {pendingFiles.length} 個檔案</span>
-            )}
+          <div className="mt-2 flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                multiple
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
+                onChange={onFilesChosenForNew}
+              />
+              <button
+                type="button"
+                className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                title="選擇圖片或檔案"
+                onClick={onPickFilesForNew}
+              >
+                <FiImage size={18} />
+              </button>
+              <button
+                type="button"
+                className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                title="選擇檔案"
+                onClick={onPickFilesForNew}
+              >
+                <FiPaperclip size={18} />
+              </button>
+              {pendingFiles.length > 0 && (
+                <span className="text-xs text-gray-500">已選 {pendingFiles.length} 個檔案</span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500">
+              💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+            </p>
           </div>
         </div>
       </div>
@@ -537,12 +543,22 @@ function CommentAttachmentPicker({ onPick, label = '附件' }) {
     e.target.value = '';
   };
   return (
-    <>
-      <input ref={ref} type="file" multiple className="hidden" onChange={onChange} />
+    <div className="flex flex-col gap-1">
+      <input
+        ref={ref}
+        type="file"
+        multiple
+        className="hidden"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
+        onChange={onChange}
+      />
       <button type="button" className="text-xs text-gray-600 hover:underline" title="上傳附件" onClick={() => ref.current?.click()}>
         {label}
       </button>
-    </>
+      <p className="text-xs text-gray-400">
+        💡 單檔最大 100MB | 最多 10 個檔案
+      </p>
+    </div>
   );
 }
 

@@ -57,7 +57,7 @@ const FileManagementModal = ({
 
   return (
     <div className='flex flex-col w-full mt-6'>
-      <div className='flex items-center justify-between mb-4'>
+      <div className='flex items-center justify-between mb-2'>
         <div className='flex items-center space-x-2'>
           <h3 className='text-lg font-semibold text-gray-800'>檔案管理</h3>
           <span className='text-sm text-gray-500'>
@@ -71,6 +71,7 @@ const FileManagementModal = ({
             <input
               type="file"
               multiple
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
               onChange={handleFileUpload}
               ref={fileInputRef}
               className='hidden'
@@ -78,6 +79,11 @@ const FileManagementModal = ({
           </label>
         )}
       </div>
+
+      {/* 檔案上傳提示 */}
+      <p className='text-xs text-gray-500 mb-4'>
+        💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+      </p>
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {/* Images Section */}
