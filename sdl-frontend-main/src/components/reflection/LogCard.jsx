@@ -7,6 +7,7 @@ import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.j
 import FileDownload from 'js-file-download';
 import { getAuditEvents } from '@/api/audit.js';
 import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
+import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 
 const LogCard = ({
   item,
@@ -40,12 +41,11 @@ const LogCard = ({
   const canEdit = !isTeacher && (isTeamLog || isCreator);
   
   const handleDownload = () => {
-    if (item.fileName && item.fileUrl) {
-      window.open(
-        `http://localhost/api/file/direct/${item.fileName}`,
-        "_blank"
-      );
+    if (item.fileName) {
+      // 使用後端 API 代理下載（支援 MinIO）
+      window.open(buildFileDownloadUrl(item.fileName), "_blank");
     } else if (item.fileData && item.fileData.data) {
+      // 向後相容：處理舊的 BLOB 資料
       const buffer = new Uint8Array(item.fileData.data);
       const blob = new Blob([buffer], {
         type: "application/octet-stream",
