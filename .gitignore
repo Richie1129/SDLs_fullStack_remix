@@ -137,7 +137,11 @@ dist
 daily_file/
 
 # files
-*.md
+# *.md
 *.txt
 *.sh
 *.example
+
+# folders
+/docs
+/Todo

@@ -31,6 +31,7 @@ import LogSection from "../../components/reflection/LogSection";
 import AuditHistoryPanel from "@/components/reflection/AuditHistoryPanel.jsx";
 import AIAnalysisHistoryPanel from "@/components/reflection/AIAnalysisHistoryPanel.jsx";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { extractErrorMessage, DAILY_ERROR_CODES } from '@/constants/dailyErrorCodes.js';
 
 // Animation configuration
 const fadeInOut = {
@@ -140,8 +141,9 @@ export default function Reflection() {
       sucesssNotify(res.message);
     },
     onError: (error) => {
-      console.log(error);
-      errorNotify(error.response.data.message);
+      console.log('❌ 創建個人日誌失敗:', error);
+      const errorMessage = extractErrorMessage(error);
+      errorNotify(errorMessage);
     },
   });
 
@@ -152,8 +154,9 @@ export default function Reflection() {
       sucesssNotify(res.message);
     },
     onError: (error) => {
-      console.log(error);
-      errorNotify(error.response.data.message);
+      console.log('❌ 創建小組日誌失敗:', error);
+      const errorMessage = extractErrorMessage(error);
+      errorNotify(errorMessage);
     },
   });
 
@@ -175,8 +178,9 @@ export default function Reflection() {
         sucesssNotify("更新成功");
       },
       onError: (error) => {
-        console.log(error);
-        errorNotify("更新失敗");
+        console.log('❌ 更新個人日誌失敗:', error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
       },
     }
   );
@@ -200,8 +204,9 @@ export default function Reflection() {
         sucesssNotify("小組日誌更新成功");
       },
       onError: (error) => {
-        console.log("更新失敗:", error);
-        errorNotify("小組日誌更新失敗");
+        console.log("❌ 更新小組日誌失敗:", error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
       },
     }
   );
@@ -229,13 +234,13 @@ export default function Reflection() {
       teamDailyMutate(formData);
       setTeamDailyModalOpen(false);
     } else {
-      toast.error("標題及內容請填寫完整!");
+      toast.error(DAILY_ERROR_CODES.EMPTY_TITLE_AND_CONTENT.zh);
     }
   };
 
   const handleSaveEdit = () => {
     if (!editingId) {
-      toast.error("未選擇日誌");
+      toast.error(DAILY_ERROR_CODES.NO_DAILY_SELECTED.zh);
       return;
     }
 
@@ -261,15 +266,16 @@ export default function Reflection() {
         sucesssNotify("日誌更新成功");
       },
       onError: (error) => {
-        console.log(error);
-        errorNotify("更新失敗");
+        console.log('❌ 儲存編輯失敗:', error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
       },
     });
   };
 
   const handleSaveTeamEdit = () => {
     if (!editingId) {
-      toast.error("未選擇日誌");
+      toast.error(DAILY_ERROR_CODES.NO_DAILY_SELECTED.zh);
       return;
     }
 
@@ -295,8 +301,9 @@ export default function Reflection() {
         sucesssNotify("小組日誌更新成功");
       },
       onError: (error) => {
-        console.log(error);
-        errorNotify("小組日誌更新失敗");
+        console.log('❌ 小組日誌更新失敗:', error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
       },
     });
   };
@@ -337,7 +344,7 @@ export default function Reflection() {
       mutate(formData);
       setPersonalDailyModalOpen(false);
     } else {
-      toast.error("標題及內容請填寫完整!");
+      toast.error(DAILY_ERROR_CODES.EMPTY_TITLE_AND_CONTENT.zh);
     }
   };
 
@@ -385,8 +392,9 @@ export default function Reflection() {
           sucesssNotify("5Rs 反思更新成功");
         },
         onError: (error) => {
-          console.log(error);
-          errorNotify("5Rs 反思更新失敗");
+          console.log('❌ 5Rs 反思更新失敗:', error);
+          const errorMessage = extractErrorMessage(error);
+          errorNotify(errorMessage);
         },
       });
     } else {
@@ -411,8 +419,9 @@ export default function Reflection() {
           setAttachFile(null);
         },
         onError: (error) => {
-          console.log(error);
-          errorNotify("5Rs 反思創建失敗");
+          console.log('❌ 5Rs 反思創建失敗:', error);
+          const errorMessage = extractErrorMessage(error);
+          errorNotify(errorMessage);
         },
       });
     }
@@ -538,7 +547,7 @@ export default function Reflection() {
 
     if (!parsedContent || !parsedContent.data) {
       console.error("解析 5Rs 內容失敗");
-      toast.error("無法解析 5Rs 反思內容");
+      toast.error(DAILY_ERROR_CODES.INVALID_5RS_CONTENT.zh);
       return;
     }
 
@@ -610,17 +619,17 @@ export default function Reflection() {
             });
           },
           onError: (error) => {
-            console.error("儲存 AI 分析結果失敗:", error);
-            toast.error("儲存 AI 分析結果失敗", { id: "ai-analysis" });
+            console.error("❌ 儲存 AI 分析結果失敗:", error);
+            toast.error(DAILY_ERROR_CODES.AI_SAVE_FAILED.zh, { id: "ai-analysis" });
           },
         });
       } else {
         console.error("AI 分析失敗:", result);
-        toast.error("AI 分析失敗", { id: "ai-analysis" });
+        toast.error(DAILY_ERROR_CODES.AI_ANALYSIS_FAILED.zh, { id: "ai-analysis" });
       }
     } catch (error) {
       console.error("AI 分析過程發生錯誤:", error);
-      toast.error("AI 分析過程中發生錯誤", { id: "ai-analysis" });
+      toast.error(DAILY_ERROR_CODES.AI_SERVICE_ERROR.zh, { id: "ai-analysis" });
     }
 
     console.log("=== 前端 AI 分析請求結束 ===");
@@ -690,8 +699,9 @@ export default function Reflection() {
       queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
       toast.success("個人日誌已刪除");
     } catch (e) {
-      console.error(e);
-      toast.error("刪除個人日誌失敗");
+      console.error('❌ 刪除個人日誌失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
     }
   };
 
@@ -705,8 +715,9 @@ export default function Reflection() {
       queryClient.invalidateQueries(TEAM_QUERY_KEY);
       toast.success("小組日誌已刪除");
     } catch (e) {
-      console.error(e);
-      toast.error("刪除小組日誌失敗");
+      console.error('❌ 刪除小組日誌失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
     }
   };
 
@@ -727,8 +738,9 @@ export default function Reflection() {
       queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
       toast.success("附件已刪除");
     } catch (e) {
-      console.error(e);
-      toast.error("刪除附件失敗");
+      console.error('❌ 刪除個人附件失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
     }
   };
 
@@ -740,8 +752,9 @@ export default function Reflection() {
       queryClient.invalidateQueries(TEAM_QUERY_KEY);
       toast.success("附件已刪除");
     } catch (e) {
-      console.error(e);
-      toast.error("刪除附件失敗");
+      console.error('❌ 刪除小組附件失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
     }
   };
 
