@@ -1,8 +1,10 @@
 const User = require('../models/user');
 const Project = require('../models/project');
+const RefreshToken = require('../models/refresh_token');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const {sign} = require('jsonwebtoken');
+const crypto = require('crypto');
 const sequelize = require('../util/database'); // 引入 Sequelize 實例以支援事務
 const config = require('../config');
 
@@ -93,16 +95,29 @@ exports.loginUser = async (req, res) => {
             return res.status(401).json({ message: '帳號或密碼錯誤' });
         }
 
-        // 生成 JWT token
+        // 生成 Access Token
         const accessToken = sign(
-            { account: user.account, id: user.id },
+            { account: user.account, id: user.id, role: user.role },
             config.jwt.secret,
             { expiresIn: config.jwt.expiresIn }
         );
 
+        // 生成 Refresh Token
+        const refreshToken = crypto.randomUUID();
+        const expiresAt = new Date();
+        expiresAt.setTime(expiresAt.getTime() + config.jwt.refreshExpiresIn * 1000); // 轉換秒為毫秒
+
+        // 儲存 Refresh Token 到資料庫
+        await RefreshToken.create({
+            userId: user.id,
+            token: refreshToken,
+            expiresAt
+        });
+
         // 返回用戶資料（不包含密碼）
         res.status(200).json({
             accessToken,
+            refreshToken,  // 新增 refreshToken
             account: user.account,
             email: user.email,
             username: user.username,

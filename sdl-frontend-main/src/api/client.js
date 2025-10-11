@@ -23,30 +23,57 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Unified error handling
+// Response Interceptor - 自動 Refresh Token
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error?.response?.status;
-    const errorCode = error?.response?.data?.code;
     const currentPath = window.location.pathname;
 
-    // 只有真正的認證失敗才重定向（NO_TOKEN 或 TOKEN_EXPIRED）
-    // 其他錯誤（如權限錯誤）不應該強制登出
-    if (status === 401 && !currentPath.includes('/login')) {
-      // 如果是 NO_TOKEN 或 TOKEN_EXPIRED，清除 token 並重定向
-      if (errorCode === 'NO_TOKEN' || errorCode === 'TOKEN_EXPIRED') {
-        try { localStorage.removeItem('accessToken'); } catch {}
+    // 🟢 消除特殊情況: 401 就是 401，不需要檢查 code
+    if (status === 401 && !currentPath.includes('/login') && !error.config.__isRetry) {
+      error.config.__isRetry = true;  // 防止無限重試
+
+      const refreshToken = localStorage.getItem('refreshToken');
+
+      if (!refreshToken) {
+        // 無 refresh token，清除並跳轉登入
+        try {
+          localStorage.clear();
+        } catch {}
         if (typeof window !== 'undefined') {
           window.location.assign('/login');
         }
+        return Promise.reject(error);
       }
-      // INVALID_TOKEN 或 AUTH_FAILED：可能是配置問題，讓錯誤自然傳播給呼叫者處理
-      // 不自動重定向，讓用戶看到具體錯誤
+
+      try {
+        // 刷新 Access Token
+        const response = await axios.post(`${baseURL}/auth/refresh`, {
+          refreshToken
+        });
+
+        const newAccessToken = response.data.accessToken;
+        localStorage.setItem('accessToken', newAccessToken);
+        error.config.headers['accessToken'] = newAccessToken;
+        error.config.headers['Authorization'] = `Bearer ${newAccessToken}`;
+
+        // 重試原始請求
+        return apiClient(error.config);
+
+      } catch (refreshError) {
+        // Refresh 失敗，清除並跳轉登入
+        try {
+          localStorage.clear();
+        } catch {}
+        if (typeof window !== 'undefined') {
+          window.location.assign('/login');
+        }
+        return Promise.reject(refreshError);
+      }
     }
 
     // 403 不重定向，僅傳播錯誤（可能是權限問題，不是認證問題）
-
     return Promise.reject(error);
   }
 );
