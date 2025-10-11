@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const User = require('../models/user');
 const PasswordResetToken = require('../models/password_reset_token');
 const { sendPasswordResetEmail } = require('../services/emailService');
+const { revokeAllTokens } = require('./auth');
 
 // 設定模型關聯
 PasswordResetToken.belongsTo(User, {
@@ -191,6 +192,9 @@ const resetPassword = async (req, res) => {
             { password: hashedPassword },
             { where: { id: resetToken.User.id } }
         );
+
+        // 撤銷所有 Refresh Tokens (密碼重設後強制重新登入)
+        await revokeAllTokens(resetToken.User.id);
 
         await PasswordResetToken.destroy({
             where: { userId: resetToken.User.id }

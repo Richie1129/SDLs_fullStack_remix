@@ -7,6 +7,7 @@ import { RiDashboardLine } from "react-icons/ri"; // 添加儀表板圖示
 import { FaEye, FaEyeSlash } from "react-icons/fa"; // 添加觀摩圖示
 import { getProjectUser } from '../api/users';
 import { getProject, getProjectsByMentor } from '../api/project';
+import { logout } from '../api/auth';  // 引入 logout API
 import { useQuery } from 'react-query';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { GrFormClose } from "react-icons/gr";
@@ -257,11 +258,10 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
       cancelButtonColor: "#d33",
       confirmButtonText: "確定",
       cancelButtonText: "取消",
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        localStorage.clear();
         socket.disconnect();
-        navigate("/");
+        await logout();  // 使用新的 logout API
       }
     });
   };
@@ -423,9 +423,9 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         <Announcement projectId={projectId} role={role} projectList={projectList} />
         <button
           className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-1 sm:p-2 font-semibold text-xs sm:text-sm"
-          onClick={() => {
-            localStorage.clear();
-            navigate("/");
+          onClick={async () => {
+            socket.disconnect();
+            await logout();  // 使用新的 logout API
           }}
         >
           <span className="hidden sm:inline">登出</span>

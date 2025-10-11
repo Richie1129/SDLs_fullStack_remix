@@ -148,6 +148,28 @@ services:
     networks:
       - agent_network
 
+  # Refresh Token 清理任務 - 每 6 小時執行一次
+  token-cleanup:
+    image: postgres:latest
+    restart: unless-stopped
+    environment:
+      - PGPASSWORD=postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent_network
+    entrypoint: >
+      /bin/sh -c "
+      echo '🧹 Token 清理服務已啟動，每 6 小時執行一次';
+      while true; do
+        sleep 21600;
+        echo '⏰ [$(date)] 開始清理過期 tokens...';
+        DELETED=$$(psql -h postgres -U postgres -d postgres -t -c \"DELETE FROM refresh_tokens WHERE \\\"expiresAt\\\" < NOW(); SELECT ROW_COUNT();\");
+        echo '✅ [$(date)] 已刪除 '$${DELETED}' 個過期 tokens';
+      done
+      "
+
 networks:
   agent_network:
 
