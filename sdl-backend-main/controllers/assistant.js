@@ -107,7 +107,6 @@ async function getProjectBasicsAndUserRole(projectId, userId) {
   });
 
   if (!user) return null;
-  console.log("User", user);
 
   return {
     project,
@@ -365,32 +364,32 @@ ${JSON.stringify(activitySummary, null, 2)}
 
   let result = null;
   try {
-    console.log('🤖 開始 LLM 專案狀態分析...');
     result = await callGeminiAPI(analysisPrompt);
-    
+
     // 處理可能包含 Markdown 代碼塊的回應
     let jsonContent = result.content.trim();
-    
+
     // 移除 Markdown 代碼塊標記
     if (jsonContent.startsWith('```json')) {
       jsonContent = jsonContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
     } else if (jsonContent.startsWith('```')) {
       jsonContent = jsonContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
     }
-    
-    console.log('📄 LLM 原始回應:', result.content.substring(0, 200) + '...');
-    console.log('🔍 處理後的 JSON:', jsonContent.substring(0, 200) + '...');
-    
+
     const analysis = JSON.parse(jsonContent);
-    console.log('✅ LLM 分析完成');
     return analysis;
   } catch (error) {
-    console.error('❌ LLM 分析失敗，使用基本統計:', error);
+    console.error('LLM analysis failed, using fallback | LLM 分析失敗，使用基本統計:', error);
     if (result?.content) {
-      console.error('原始回應內容:', result.content.substring(0, 500));
+      console.error('LLM raw response | 原始回應:', result.content.substring(0, 500));
     }
-    // 降級到基本統計
-    return generateBasicSummaries({ kanban, ideaWall, submissions, stageMeta });
+    // 降級到基本統計，並標記為降級模式
+    const basicSummary = generateBasicSummaries({ kanban, ideaWall, submissions, stageMeta });
+    return {
+      ...basicSummary,
+      degradedMode: true,
+      degradedReason: 'LLM 服務暫時不可用'
+    };
   }
 }
 
@@ -448,11 +447,10 @@ ${userMessage || '請提供目前狀況的建議'}
 要求：使用友善、專業的語調，內容要具體且可行動。`;
 
   try {
-    console.log('報告生成成功:', reportPrompt);
     const result = await callGeminiAPI(reportPrompt);
     return result.content;
   } catch (error) {
-    console.error('報告生成失敗:', error);
+    console.error('Report generation failed | 報告生成失敗:', error);
     // 降級到基本報告
     return `# 專案分析報告：${projectBasics.name}
 
@@ -490,89 +488,43 @@ exports.getGuidance = async (req, res) => {
     const { projectId, userMessage } = req.body;
 
     if (!projectId) {
-      return res.status(400).json({ error: "Project ID is required" });
+      return res.status(400).json({ error: "Project ID is required | 需要專案ID" });
     }
-
-    console.log("=== getGuidance 開始收集專案資料 ===");
-    console.log("projectId:", projectId);
-    console.log("userMessage:", userMessage);
 
     // 需要用戶驗證來獲取詳細資料
     const userId = req.user?.id;
     if (!userId) {
-      console.log("❌ 沒有使用者驗證");
-      return res.status(401).json({ error: "User authentication required" });
+      return res.status(401).json({ error: "User authentication required | 需要使用者驗證" });
     }
 
-    console.log("userId:", userId);
-
     // 1. 獲取專案基本資訊和使用者權限
-    console.log("\n📋 1. 獲取專案基本資訊和使用者權限...");
     const projectData = await getProjectBasicsAndUserRole(projectId, userId);
-    console.log("projectData:", JSON.stringify(projectData, null, 2));
 
     if (!projectData) {
-      console.log("❌ 專案不存在或無權限");
       return res
         .status(404)
-        .json({ error: "Project not found or access denied" });
+        .json({ error: "Project not found or access denied | 專案不存在或無權限" });
     }
 
     // 2. 獲取階段和子階段資訊
-    console.log("\n🎯 2. 獲取階段和子階段資訊...");
     const stageMeta = await getStageMeta(projectData.project);
-    console.log("stageMeta:", JSON.stringify(stageMeta, null, 2));
 
     // 3. 獲取看板快照
-    console.log("\n📊 3. 獲取看板快照...");
     const kanbanSnapshot = await getKanbanSnapshot(projectId);
-    console.log(
-      "kanbanSnapshot (前3欄):",
-      JSON.stringify(kanbanSnapshot.slice(0, 3), null, 2)
-    );
-    console.log("看板總欄數:", kanbanSnapshot.length);
 
     // 4. 獲取想法牆快照
-    console.log("\n💡 4. 獲取想法牆快照...");
     const ideaWallSnapshot = await getIdeaWallSnapshot(projectId);
-    console.log(
-      "ideaWallSnapshot:",
-      JSON.stringify(
-        {
-          total: ideaWallSnapshot.total,
-          nodesCount: ideaWallSnapshot.nodes?.length || 0,
-          sampleNodes: ideaWallSnapshot.nodes?.slice(0, 2) || [],
-        },
-        null,
-        2
-      )
-    );
 
     // 5. 獲取提交歷程
-    console.log("\n📝 5. 獲取提交歷程...");
     const submissions = await getSubmissions(projectId);
-    console.log(
-      "submissions (前2筆):",
-      JSON.stringify(submissions, null, 2)
-    );
-    console.log("提交總數:", submissions.length);
 
     // 6. 獲取對話歷史
-    console.log("\n💬 6. 獲取對話歷史...");
     const chatHistory = await getChatHistory(projectId);
-    console.log(
-      "chatHistory (前3條):",
-      JSON.stringify(chatHistory.slice(0, 3), null, 2)
-    );
-    console.log("對話總數:", chatHistory.length);
 
     // 7. 獲取活動摘要
-    console.log("\n📈 7. 獲取活動摘要...");
     const activitySummary = await getActivitySummary(projectId);
-    console.log("activitySummary:", JSON.stringify(activitySummary, null, 2));
 
     // 8. LLM 智能分析專案狀態
-    console.log("\n🔍 8. LLM 智能分析專案狀態...");
     const projectAnalysis = await analyzeProjectStateWithLLM({
       kanban: kanbanSnapshot,
       ideaWall: ideaWallSnapshot,
@@ -586,9 +538,6 @@ exports.getGuidance = async (req, res) => {
       },
       activitySummary,
     });
-    console.log("projectAnalysis:", JSON.stringify(projectAnalysis, null, 2));
-
-    console.log("\n=== 資料收集完成，開始生成報告 ===");
 
     // 第二階段：生成易讀報告
     const projectBasics = {
@@ -629,13 +578,21 @@ exports.getGuidance = async (req, res) => {
           "需要我分析想法牆的內容嗎？",
         ],
       },
+      // 如果是降級模式，通知前端
+      ...(projectAnalysis.degradedMode && {
+        warning: {
+          type: 'DEGRADED_SERVICE',
+          message: 'AI 服務暫時不可用，目前顯示基本統計資料',
+          details: projectAnalysis.degradedReason
+        }
+      })
     };
 
     res.status(200).json(response);
   } catch (error) {
-    console.error("Error in getGuidance:", error);
+    console.error("Guidance generation failed | 指導建議生成失敗:", error);
     res.status(500).json({
-      error: "Failed to generate guidance",
+      error: "Failed to generate guidance | 指導建議生成失敗",
       message: "抱歉，暫時無法回應，請稍後再試。",
     });
   }

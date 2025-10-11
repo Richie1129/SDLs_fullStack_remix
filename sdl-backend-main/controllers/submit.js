@@ -5,39 +5,25 @@ const Process = require('../models/process');
 const Stage = require('../models/stage');
 const { logSubmitChange, logSubmitFieldChanges } = require('../utils/submitChangeLogger');
 const sequelize = require('../util/database');
+const { createErrorResponse, getHttpStatusByErrorCode } = require('../constants/dailyErrorCodes');
 
 exports.createSubmit = async(req, res) => {
     const { currentStage, currentSubStage, content, projectId } = req.body;
     const currentStageInt = parseInt(currentStage);
     const currentSubStageInt = parseInt(currentSubStage);
 
-    console.log('=== 創建提交 ===');
-    console.log("接收到的資料:", req.body);
-    console.log("接收到的檔案:", req.uploadedFiles);
-    console.log('階段:', `${currentStageInt}-${currentSubStageInt}`);
-    console.log('專案ID:', projectId);
-    console.log('內容:', content);
-
     if (!content) {
-        console.log('❌ 內容為空');
-        return res.status(400).send({ message: '請填寫表單!' });
+        const errorResponse = createErrorResponse('EMPTY_CONTENT');
+        const statusCode = getHttpStatusByErrorCode('EMPTY_CONTENT');
+        return res.status(statusCode).json(errorResponse);
     }
 
     const t = await sequelize.transaction();
     try {
         // 如果有檔案上傳（來自 MinIO 中介軟體）
         if (req.uploadedFiles && req.uploadedFiles.length > 0) {
-            console.log(`📁 檢測到 ${req.uploadedFiles.length} 個檔案`);
-            
             // 為每個檔案創建一筆 Submit 記錄
-            const submitPromises = req.uploadedFiles.map(async (file, index) => {
-                console.log(`處理檔案 ${index + 1}/${req.uploadedFiles.length}:`, {
-                    fileName: file.fileName,
-                    originalName: file.originalName,
-                    url: file.url,
-                    size: file.size
-                });
-                
+            const submitPromises = req.uploadedFiles.map(async (file) => {
                 return Submit.create({
                     stage: `${currentStageInt}-${currentSubStageInt}`,
                     content: content,
@@ -53,10 +39,7 @@ exports.createSubmit = async(req, res) => {
             });
 
             await Promise.all(submitPromises);
-            console.log(`✅ 創建 Submit 成功 (${req.uploadedFiles.length} 個檔案)`);
-            
         } else {
-            console.log('📝 無檔案上傳，創建純文字提交');
             // 沒有檔案上傳
             await Submit.create({
                 stage: `${currentStageInt}-${currentSubStageInt}`,
@@ -64,7 +47,6 @@ exports.createSubmit = async(req, res) => {
                 projectId: projectId,
                 userId: req.userId,
             }, { req, transaction: t });
-            console.log('✅ 創建 Submit 成功 (無檔案)');
         }
 
         // 檢查並更新到下一階段
@@ -124,7 +106,6 @@ exports.createSubmit = async(req, res) => {
             }, { transaction: t });
             } else {
                 // 所有階段已完成，標記專案為完成狀態
-                console.log('🎉 所有階段已完成，更新專案狀態為完成');
                 await Project.update({
                     ProjectEnd: true
                 }, {
@@ -142,42 +123,56 @@ exports.createSubmit = async(req, res) => {
                     type: "project"
                 }, { transaction: t });
 
-                console.log('==================');
                 await t.commit();
-                console.log('✅ 專案完成處理成功');
-                return res.status(200).send({ message: 'done' });
+                return res.status(200).json({
+                    success: true,
+                    message: 'Project completed | 專案已完成'
+                });
             }
         }
 
-        console.log('==================');
         await t.commit();
-        res.status(200).send({ message: 'create success!' });
+        res.status(200).json({
+            success: true,
+            message: 'Submit created successfully | 提交建立成功'
+        });
 
     } catch (err) {
-        console.error("❌ 創建 Submit 失敗:", err);
-        try { await t.rollback(); } catch (_) {}
-        return res.status(500).send({ message: 'create failed!', error: err.message });
+        console.error("❌ Submit creation failed | 提交建立失敗:", err);
+
+        // 嘗試 rollback，如果失敗記錄關鍵錯誤
+        try {
+            await t.rollback();
+        } catch (rollbackError) {
+            console.error('❌❌❌ CRITICAL: Transaction rollback failed:', {
+                originalError: err.message,
+                rollbackError: rollbackError.message,
+                projectId,
+                timestamp: new Date().toISOString()
+            });
+            // TODO: 觸發監控警報 (Sentry, CloudWatch 等)
+        }
+
+        const errorResponse = createErrorResponse('CREATE_FAILED', err.message);
+        const statusCode = getHttpStatusByErrorCode('CREATE_FAILED');
+        return res.status(statusCode).json(errorResponse);
     }
 };
 
 exports.getAllSubmit = async(req, res) => {
     const { projectId } = req.query;
-    console.log('=== 取得所有提交 ===');
-    console.log("專案ID:", projectId);
-    
+
     try {
         const allSubmit = await Submit.findAll({
             where: { projectId: projectId },
             order: [['createdAt', 'ASC']]
         });
 
-        console.log(`找到 ${allSubmit.length} 筆提交記錄`);
-
         // 在 JavaScript 中按階段排序
         allSubmit.sort((a, b) => {
             const [aStage, aSubStage] = a.stage.split('-').map(Number);
             const [bStage, bSubStage] = b.stage.split('-').map(Number);
-            
+
             // 先按主階段排序
             if (aStage !== bStage) {
                 return aStage - bStage;
@@ -191,57 +186,35 @@ exports.getAllSubmit = async(req, res) => {
         });
 
         // 由於不再使用 BLOB，直接返回資料
-        const submitsWithFileInfo = allSubmit.map(submit => {
-            const submitJson = submit.toJSON();
-            
-            // 如果有檔案資訊，記錄日誌
-            if (submitJson.fileName) {
-                console.log("檔案資訊:", {
-                    fileName: submitJson.fileName,
-                    originalName: submitJson.originalName,
-                    fileUrl: submitJson.fileUrl
-                });
-            }
-            
-            return submitJson;
-        });
-
-        console.log('✅ 成功取得所有提交');
-        console.log('==================');
+        const submitsWithFileInfo = allSubmit.map(submit => submit.toJSON());
         res.status(200).json(submitsWithFileInfo);
-        
+
     } catch (error) {
-        console.error("❌ Error in getAllSubmit:", error);
-        res.status(500).send({ message: '獲取項目失敗！' });
+        console.error("❌ Failed to get all submits | 取得所有提交失敗:", error);
+        const errorResponse = createErrorResponse('QUERY_FAILED', error.message);
+        const statusCode = getHttpStatusByErrorCode('QUERY_FAILED');
+        res.status(statusCode).json(errorResponse);
     }
 };
 
 exports.getSubmit = async(req, res) => {
     const submitId = req.params.submitId;
-    console.log('=== 取得提交檔案 ===');
-    console.log("提交ID:", submitId);
-    
+
     try {
         const submit = await Submit.findByPk(submitId);
-        
+
         if (!submit) {
-            console.log('❌ Submit not found');
-            return res.status(404).send({ message: 'Submit not found!' });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND', 'Submit not found');
+            return res.status(404).json(errorResponse);
         }
 
         if (!submit.fileName) {
-            console.log("❌ 無檔案附件");
-            return res.status(404).send({ message: 'No file attached!' });
+            return res.status(404).json({
+                success: false,
+                message: 'No file attached | 無檔案附件'
+            });
         }
 
-        console.log("✅ 取得檔案資訊:", {
-            fileName: submit.fileName,
-            originalName: submit.originalName,
-            fileUrl: submit.fileUrl
-        });
-
-        console.log('==================');
-        
         // 返回檔案資訊，讓前端通過 MinIO URL 或預簽名 URL 下載
         res.status(200).json({
             fileName: submit.fileName,
@@ -250,10 +223,12 @@ exports.getSubmit = async(req, res) => {
             mimeType: submit.mimeType,
             fileSize: submit.fileSize
         });
-        
+
     } catch (error) {
-        console.error("❌ getSubmit 錯誤:", error);
-        res.status(500).send({ message: 'get portfolio failed!', error: error.message });
+        console.error("❌ Failed to get submit | 取得提交失敗:", error);
+        const errorResponse = createErrorResponse('QUERY_FAILED', error.message);
+        const statusCode = getHttpStatusByErrorCode('QUERY_FAILED');
+        res.status(statusCode).json(errorResponse);
     }
 };
 
@@ -265,141 +240,137 @@ exports.updateSubmit = async (req, res) => {
     try {
         const submit = await Submit.findByPk(submitId);
         if (!submit) {
-            return res.status(404).json({ message: "找不到該提交記錄" });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND', 'Submit not found');
+            return res.status(404).json(errorResponse);
         }
 
-        console.log('=== 更新提交 ===');
-        console.log('提交ID:', submitId);
-        console.log('新內容:', content);
-        console.log('變更者:', changedBy);
-        console.log('完整 req.body:', req.body);
-        console.log('上傳的檔案:', req.uploadedFile);
-  
         // 保存原始資料用於變更記錄
         const originalData = {
             content: submit.content,
             fileName: submit.fileName
         };
-      
+
         // 1. 更新檔案（如果有）
         if (req.uploadedFile) {
             const file = req.uploadedFile;
-            
-            console.log('📁 檢測到新檔案上傳:', {
-                fileName: file.fileName,
-                originalName: file.originalName,
-                url: file.url,
-                size: file.size
-            });
-            
-        await submit.update({
+
+            await submit.update({
                 fileName: file.fileName,
                 originalName: file.originalName,
                 fileUrl: file.url,
                 mimeType: file.mimeType,
                 fileSize: file.size
-        }, { req, transaction: t });
-        
-        // 記錄檔案變更
-        try {
-          await logSubmitChange({
-            submitId: submit.id,
-            changeType: 'update',
-            fieldName: 'file',
+            }, { req, transaction: t });
+
+            // 記錄檔案變更
+            try {
+                await logSubmitChange({
+                    submitId: submit.id,
+                    changeType: 'update',
+                    fieldName: 'file',
                     oldValue: originalData.fileName || '無檔案',
                     newValue: file.fileName,
                     changedBy: changedBy || '未知用戶',
-            projectId: submit.projectId,
+                    projectId: submit.projectId,
                     description: `檔案從「${originalData.fileName || '無檔案'}」更新為「${file.originalName}」`
-          });
-        } catch (logError) {
-          console.warn('記錄檔案變更失敗，但不影響主要功能:', logError);
+                });
+            } catch (logError) {
+                console.warn('記錄檔案變更失敗，但不影響主要功能:', logError);
+            }
         }
-      }
-  
-      // 2. 更新文字內容（如果有）
-      if (content !== undefined) {
-        await submit.update({ content }, { req, transaction: t });
-        
-        // 記錄內容變更
-        try {
-          await logSubmitFieldChanges(
-            originalData,
-            { content },
-            submit.id,
+
+        // 2. 更新文字內容（如果有）
+        if (content !== undefined) {
+            await submit.update({ content }, { req, transaction: t });
+
+            // 記錄內容變更
+            try {
+                await logSubmitFieldChanges(
+                    originalData,
+                    { content },
+                    submit.id,
                     changedBy || '未知用戶',
-            submit.projectId
-          );
-        } catch (logError) {
-          console.warn('記錄內容變更失敗，但不影響主要功能:', logError);
+                    submit.projectId
+                );
+            } catch (logError) {
+                console.warn('記錄內容變更失敗，但不影響主要功能:', logError);
+            }
         }
-      }
-  
-        console.log(`✅ 更新 Submit 成功: ${submitId}`);
-        console.log('==================');
-      await t.commit();
-      return res.status(200).json({ message: "更新成功" });
-        
+
+        await t.commit();
+        return res.status(200).json({
+            success: true,
+            message: "Submit updated successfully | 更新成功"
+        });
+
     } catch (err) {
-        console.error("❌ updateSubmit 錯誤:", err);
-        try { await t.rollback(); } catch (_) {}
-        return res.status(500).json({ message: "更新失敗", error: err.message });
+        console.error("❌ Submit update failed | 更新提交失敗:", err);
+
+        try {
+            await t.rollback();
+        } catch (rollbackError) {
+            console.error('❌❌❌ CRITICAL: Transaction rollback failed:', {
+                originalError: err.message,
+                rollbackError: rollbackError.message,
+                submitId,
+                timestamp: new Date().toISOString()
+            });
+            // TODO: 觸發監控警報
+        }
+
+        const errorResponse = createErrorResponse('UPDATE_FAILED', err.message);
+        const statusCode = getHttpStatusByErrorCode('UPDATE_FAILED');
+        return res.status(statusCode).json(errorResponse);
     }
-  };
+};
 
 // 取得提交變更記錄
 exports.getSubmitChangeLogs = async (req, res) => {
     const { submitId } = req.params;
-    
+
     try {
         const SubmitChangeLog = require('../models/submit_change_log');
         const changeLogs = await SubmitChangeLog.findAll({
             where: { submitId },
             order: [['createdAt', 'DESC']]
         });
-        
+
         res.status(200).json(changeLogs);
     } catch (error) {
-        console.error('取得提交變更記錄失敗:', error);
-        
+        console.error('❌ 取得提交變更記錄失敗:', error);
+
         // 如果是表不存在的錯誤，返回空陣列
         if (error.name === 'SequelizeDatabaseError' && error.message.includes('doesn\'t exist')) {
-            console.log('submit_change_logs表不存在，返回空記錄');
+            console.log('submit_change_logs 表不存在，返回空記錄');
             return res.status(200).json([]);
         }
-        
-        res.status(500).json({ message: '取得變更記錄失敗', error: error.message });
+
+        const errorResponse = createErrorResponse('QUERY_FAILED', error.message);
+        const statusCode = getHttpStatusByErrorCode('QUERY_FAILED');
+        res.status(statusCode).json(errorResponse);
     }
 };
 
 exports.deleteSubmit = async (req, res) => {
     const { submitId } = req.params;
-    
+
     try {
         const submit = await Submit.findByPk(submitId);
         if (!submit) {
-            return res.status(404).json({ message: "提交記錄未找到" });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND', 'Submit not found');
+            return res.status(404).json(errorResponse);
         }
 
-        console.log('=== 刪除提交記錄 ===');
-        console.log('提交ID:', submitId);
-        console.log('階段:', submit.stage);
-        console.log('專案ID:', submit.projectId);
-        
         // 先清理 MinIO 檔案
         try {
             const { extractSubmitFileNames, batchDeleteMinioFiles } = require('../utils/minioFileHelper');
             const fileNames = extractSubmitFileNames(submit);
-            
+
             if (fileNames.length > 0) {
-                console.log(`📁 提交記錄 ${submitId} 發現 ${fileNames.length} 個檔案需要刪除:`, fileNames);
-                const deleteResult = await batchDeleteMinioFiles(fileNames);
-                console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
-            } else {
-                console.log(`📁 提交記錄 ${submitId} 沒有發現需要清理的檔案`);
+                await batchDeleteMinioFiles(fileNames);
             }
         } catch (fileCleanupError) {
-            console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除提交記錄:', fileCleanupError.message);
+            console.warn('MinIO file cleanup failed but continuing | MinIO 檔案清理失敗但繼續:', fileCleanupError.message);
         }
 
         // 記錄刪除操作
@@ -417,13 +388,16 @@ exports.deleteSubmit = async (req, res) => {
 
         // 刪除提交記錄（用 instance.destroy 讓 hooks 正常觸發）
         await submit.destroy({ req });
-        console.log(`✅ 提交記錄 ${submitId} 刪除完成`);
-        console.log('==================');
-        
-        return res.status(200).json({ message: "提交記錄刪除成功" });
-        
+
+        return res.status(200).json({
+            success: true,
+            message: "Submit deleted successfully | 提交記錄刪除成功"
+        });
+
     } catch (error) {
-        console.error("❌ 刪除提交記錄錯誤:", error);
-        return res.status(500).json({ message: "刪除失敗", error: error.message });
+        console.error("❌ Submit deletion failed | 刪除提交記錄失敗:", error);
+        const errorResponse = createErrorResponse('DELETE_FAILED', error.message);
+        const statusCode = getHttpStatusByErrorCode('DELETE_FAILED');
+        return res.status(statusCode).json(errorResponse);
     }
 };

@@ -9,7 +9,7 @@ export const getProject = async (projectId) => {
 export const getAllProject = async (config) => {
     // 如果 config 包含 headers，合併認證 token
     const token = localStorage.getItem('accessToken');
-    
+
     // 構建完整的配置對象
     const fullConfig = {
         ...config,
@@ -19,14 +19,8 @@ export const getAllProject = async (config) => {
             ...(token && { 'accessToken': token })
         }
     };
-    
-    console.log('getAllProject API 調用:');
-    console.log('- token:', token);
-    console.log('- config:', config);
-    console.log('- fullConfig:', fullConfig);
-    
+
     const response = await apiClient.get(`/projects`, fullConfig);
-    console.log('getAllProject API 回應:', response.data);
     return response.data;
 }
 
@@ -93,29 +87,14 @@ export const checkViewingPermission = async (projectId) => {
  * 取得所有可用的班級列表
  */
 export const getAllClasses = async () => {
-    console.log('=== getAllClasses API 被調用 ===');
-    const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
-    console.log('從 localStorage 取得的 token:', token);
-    console.log('準備發送請求到 /projects/classes/list');
-    
-    try {
-        const response = await apiClient.get('/projects/classes/list', {
-            headers: {
-                'accessToken': token,
-            },
-        });
-        console.log('getAllClasses API 成功響應:', response.data);
-        return response.data;
-    } catch (error) {
-        console.error('getAllClasses API 錯誤:', error);
-        console.error('錯誤詳情:', {
-            message: error.message,
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data
-        });
-        throw error;
-    }
+    const token = localStorage.getItem('accessToken');
+
+    const response = await apiClient.get('/projects/classes/list', {
+        headers: {
+            'accessToken': token,
+        },
+    });
+    return response.data;
 };
 
 /**
@@ -124,29 +103,15 @@ export const getAllClasses = async () => {
  */
 // 獲取班級的用戶和專案資料
 export const getClassUsersAndProjects = async (className) => {
-    console.log('API: 開始查詢班級資料:', className);
-    try {
-        const token = localStorage.getItem('accessToken');
-        console.log('API: 發送 token:', token);
-        
-        const response = await apiClient.get(`/projects/classes/${className}/users-projects`, {
-            headers: {
-                'accessToken': token
-            }
-        });
-        
-        console.log('API: 班級資料查詢成功:', response.data);
-        return response.data;
-    } catch (error) {
-        console.error('API: 班級資料查詢失敗:', error);
-        console.error('API: 錯誤詳情:', {
-            message: error.message,
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data
-        });
-        throw error;
-    }
+    const token = localStorage.getItem('accessToken');
+
+    const response = await apiClient.get(`/projects/classes/${className}/users-projects`, {
+        headers: {
+            'accessToken': token
+        }
+    });
+
+    return response.data;
 };
 
 /**

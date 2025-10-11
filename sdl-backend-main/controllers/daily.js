@@ -4,6 +4,7 @@ const Daily_team = require('../models/daily_team');
 const User = require('../models/user');
 const { logAudit, summarizeText, clampMetadataSize } = require('../services/auditService');
 const { deleteFileFromMinio } = require('../config/minio');
+const { DAILY_ERROR_CODES, createErrorResponse, getHttpStatusByErrorCode } = require('../constants/dailyErrorCodes');
 
 exports.getPersonalDaily = async (req, res) => {
     const { userId, projectId, isTeacher } = req.query;
@@ -32,20 +33,23 @@ exports.getPersonalDaily = async (req, res) => {
 
         res.status(200).json(personalDaily);
     } catch (err) {
-        console.error("取得個人日誌失敗:", err);
-        res.status(500).json({ message: "獲取日誌失敗", error: err });
+        console.error("❌ 取得個人日誌失敗:", err);
+        const errorResponse = createErrorResponse('QUERY_FAILED', err.message);
+        res.status(500).json(errorResponse);
     }
 };
 
 exports.createPersonalDaily = async (req, res) => {
     const { userId, projectId, title, content } = req.body;
-    
+
     if (!title) {
-        return res.status(400).send({ message: 'please enter title!' });
+        const errorResponse = createErrorResponse('EMPTY_TITLE');
+        return res.status(400).json(errorResponse);
     }
 
     if (!content) {
-        return res.status(400).send({ message: 'please fill in the form!' });
+        const errorResponse = createErrorResponse('EMPTY_CONTENT');
+        return res.status(400).json(errorResponse);
     }
 
     console.log('=== 創建個人日誌 ===');
@@ -141,37 +145,40 @@ exports.createPersonalDaily = async (req, res) => {
 
         console.log('==================');
                 return res.status(200).send({ message: 'create success!' });
-        
+
     } catch (err) {
         console.error('❌ 創建個人日誌失敗:', err);
-        return res.status(500).send({ message: 'create failed!', error: err.message });
+        const errorResponse = createErrorResponse('CREATE_FAILED', err.message);
+        return res.status(500).json(errorResponse);
     }
 };
 
 exports.getTeamDaily = async (req, res) => {
     const { projectId } = req.query;
-    
+
     try {
-    const teamDaily = await Daily_team.findAll({
-        where: {
-            projectId: projectId,
-        }
+        const teamDaily = await Daily_team.findAll({
+            where: {
+                projectId: projectId,
+            }
         });
-        
+
         console.log('取得團隊日誌成功');
         res.status(200).json(teamDaily);
-        
+
     } catch (err) {
-        console.error('取得團隊日誌失敗:', err);
-        res.status(500).json({ message: '取得團隊日誌失敗', error: err.message });
-}
+        console.error('❌ 取得團隊日誌失敗:', err);
+        const errorResponse = createErrorResponse('QUERY_FAILED', err.message);
+        res.status(500).json(errorResponse);
+    }
 };
 
 exports.createTeamDaily = async (req, res) => {
     const { userId, projectId, title, content, creator } = req.body;
-    
+
     if (!title) {
-        return res.status(400).send({ message: 'please enter title!' });
+        const errorResponse = createErrorResponse('EMPTY_TITLE');
+        return res.status(400).json(errorResponse);
     }
 
     console.log('=== 創建團隊日誌 ===');
@@ -255,10 +262,11 @@ exports.createTeamDaily = async (req, res) => {
 
         console.log('==================');
                 return res.status(200).send({ message: 'create success!' });
-        
+
     } catch (err) {
         console.error('❌ 創建團隊日誌失敗:', err);
-        return res.status(500).send({ message: 'create failed!', error: err.message });
+        const errorResponse = createErrorResponse('CREATE_FAILED', err.message);
+        return res.status(500).json(errorResponse);
     }
 };
 
@@ -269,7 +277,8 @@ exports.updatePersonalDaily = async (req, res) => {
     try {
         const daily = await Daily_personal.findOne({ where: { id } });
         if (!daily) {
-            return res.status(404).json({ message: "日誌未找到" });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND');
+            return res.status(404).json(errorResponse);
         }
         const before = { title: daily.title, content: daily.content, fileName: daily.fileName, mimeType: daily.mimeType, fileSize: daily.fileSize };
 
@@ -424,24 +433,26 @@ exports.updatePersonalDaily = async (req, res) => {
         console.log('==================');
         
         return res.status(200).json({ message: "更新成功", data: daily });
-        
+
     } catch (error) {
         console.error("❌ 更新個人日誌錯誤:", error);
-        return res.status(500).json({ message: "更新失敗", error: error.message });
+        const errorResponse = createErrorResponse('UPDATE_FAILED', error.message);
+        return res.status(500).json(errorResponse);
     }
 };
 
 exports.updateTeamDaily = async (req, res) => {
     console.log("收到的 params:", req.params);
     console.log("收到的請求:", req.body);
-    
+
     const { id } = req.params;
     const { title, content } = req.body;
-    
+
     try {
         const daily = await Daily_team.findOne({ where: { id } });
         if (!daily) {
-            return res.status(404).json({ message: "小組日誌未找到" });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND');
+            return res.status(404).json(errorResponse);
         }
 
         console.log('=== 更新團隊日誌 ===');
@@ -504,10 +515,11 @@ exports.updateTeamDaily = async (req, res) => {
         console.log('==================');
         
         return res.status(200).json({ message: "更新成功", data: daily });
-        
+
     } catch (error) {
         console.error("❌ 更新團隊日誌錯誤:", error);
-        return res.status(500).json({ message: "更新失敗", error: error.message });
+        const errorResponse = createErrorResponse('UPDATE_FAILED', error.message);
+        return res.status(500).json(errorResponse);
     }
 };
 
@@ -517,7 +529,8 @@ exports.removePersonalAttachment = async (req, res) => {
     try {
         const daily = await Daily_personal.findOne({ where: { id } });
         if (!daily) {
-            return res.status(404).json({ message: '個人日誌未找到' });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND');
+            return res.status(404).json(errorResponse);
         }
 
         const before = {
@@ -567,7 +580,8 @@ exports.removePersonalAttachment = async (req, res) => {
         return res.status(200).json({ message: '附件已移除', data: daily });
     } catch (error) {
         console.error('❌ 移除個人日誌附件失敗:', error);
-        return res.status(500).json({ message: '移除附件失敗', error: error.message });
+        const errorResponse = createErrorResponse('DELETE_ATTACHMENT_FAILED', error.message);
+        return res.status(500).json(errorResponse);
     }
 };
 
@@ -577,7 +591,8 @@ exports.removeTeamAttachment = async (req, res) => {
     try {
         const daily = await Daily_team.findOne({ where: { id } });
         if (!daily) {
-            return res.status(404).json({ message: '小組日誌未找到' });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND');
+            return res.status(404).json(errorResponse);
         }
 
         const before = {
@@ -625,17 +640,19 @@ exports.removeTeamAttachment = async (req, res) => {
         return res.status(200).json({ message: '附件已移除', data: daily });
     } catch (error) {
         console.error('❌ 移除小組日誌附件失敗:', error);
-        return res.status(500).json({ message: '移除附件失敗', error: error.message });
+        const errorResponse = createErrorResponse('DELETE_ATTACHMENT_FAILED', error.message);
+        return res.status(500).json(errorResponse);
     }
 };
 
 exports.deletePersonalDaily = async (req, res) => {
     const { id } = req.params;
-    
+
     try {
         const daily = await Daily_personal.findOne({ where: { id } });
         if (!daily) {
-            return res.status(404).json({ message: "個人日誌未找到" });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND');
+            return res.status(404).json(errorResponse);
         }
 
         console.log('=== 刪除個人日誌 ===');
@@ -674,20 +691,22 @@ exports.deletePersonalDaily = async (req, res) => {
         console.log('==================');
         
         return res.status(200).json({ message: "個人日誌刪除成功" });
-        
+
     } catch (error) {
         console.error("❌ 刪除個人日誌錯誤:", error);
-        return res.status(500).json({ message: "刪除失敗", error: error.message });
+        const errorResponse = createErrorResponse('DELETE_FAILED', error.message);
+        return res.status(500).json(errorResponse);
     }
 };
 
 exports.deleteTeamDaily = async (req, res) => {
     const { id } = req.params;
-    
+
     try {
         const daily = await Daily_team.findOne({ where: { id } });
         if (!daily) {
-            return res.status(404).json({ message: "團隊日誌未找到" });
+            const errorResponse = createErrorResponse('DAILY_NOT_FOUND');
+            return res.status(404).json(errorResponse);
         }
 
         console.log('=== 刪除團隊日誌 ===');
@@ -727,9 +746,10 @@ exports.deleteTeamDaily = async (req, res) => {
         console.log('==================');
         
         return res.status(200).json({ message: "團隊日誌刪除成功" });
-        
+
     } catch (error) {
         console.error("❌ 刪除團隊日誌錯誤:", error);
-        return res.status(500).json({ message: "刪除失敗", error: error.message });
+        const errorResponse = createErrorResponse('DELETE_FAILED', error.message);
+        return res.status(500).json(errorResponse);
     }
 };

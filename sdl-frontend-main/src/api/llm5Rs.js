@@ -4,31 +4,15 @@ const API_BASE_URL = '/llm';
 // 分析 5Rs 反思內容
 export const analyze5RsReflection = async (studentContent, preferredProvider = 'auto') => {
   try {
-    console.log('=== API 呼叫開始 ===');
-    console.log('API URL:', `${API_BASE_URL}/analyze-5rs`);
-    console.log('學生內容:', studentContent);
-    console.log('偏好提供者:', preferredProvider);
-    
     const requestPayload = {
       studentContent,
       preferredProvider
     };
-    
-    console.log('請求負載:', requestPayload);
-    
+
     const response = await apiClient.post(`${API_BASE_URL}/analyze-5rs`, requestPayload);
-    
-    console.log('API 回應狀態:', response.status);
-    console.log('API 回應資料:', response.data);
-    console.log('=== API 呼叫結束 ===');
-    
     return response.data;
   } catch (error) {
-    console.error('=== API 呼叫失敗 ===');
-    console.error('錯誤詳情:', error);
-    console.error('錯誤回應:', error.response?.data);
-    console.error('錯誤狀態:', error.response?.status);
-    console.error('==================');
+    console.error('5Rs analysis failed | 5Rs 分析失敗:', error);
     throw new Error(error.response?.data?.message || '分析過程中發生錯誤');
   }
 };
