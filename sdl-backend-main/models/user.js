@@ -6,7 +6,8 @@ const Threads_Message = require('./threads_message');
 const daily_personal = require('./daily_personal');
 const daily_team = require('./daily_team');
 const Question = require('./question');
-const UserProject = require('./user_project'); 
+const UserProject = require('./user_project');
+const RefreshToken = require('./refresh_token'); 
 
 const User = sequelize.define('user', {
     username: {
@@ -53,5 +54,16 @@ daily_personal.belongsTo(User);
 User.hasMany(daily_team);
 daily_team.belongsTo(User);
 User.hasMany(Question);
+
+// RefreshToken relations
+User.hasMany(RefreshToken, {
+    foreignKey: 'userId',
+    as: 'refreshTokens',
+    onDelete: 'CASCADE'
+});
+RefreshToken.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user'
+});
 
 module.exports = User;

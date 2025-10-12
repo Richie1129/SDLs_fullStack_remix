@@ -14,6 +14,7 @@ import {
 import { deleteProjectCommentAttachment } from '../api/projectComments';
 import Modal from './Modal';
 import { formatUserDisplay } from '../utils/userDisplayUtils';
+import { buildFileDownloadUrl, buildFileImageUrl } from '@/utils/fileUrlBuilder.js';
 
 const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -167,7 +168,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const [commentImageList, setCommentImageList] = useState([]);
   const [selectedCommentImageIndex, setSelectedCommentImageIndex] = useState(null);
   const openCommentImageModal = (imageAttachments, index) => {
-    const urls = (imageAttachments || []).map(att => `https://science.lazyinwork.com/api/file/image/${att.fileName}`);
+    const urls = (imageAttachments || []).map(att => buildFileImageUrl(att.fileName));
     setCommentImageList(urls);
     setSelectedCommentImageIndex(index || 0);
   };
@@ -192,9 +193,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const handleAttachmentDownload = async (attachment) => {
     try {
       const fileName = attachment.fileName;
-      const resp = await fetch(`https://science.lazyinwork.com/api/file/download/${fileName}`);
-      const data = await resp.json().catch(() => ({}));
-      const url = data?.downloadUrl || `https://science.lazyinwork.com/api/file/direct/${fileName}`;
+      const url = buildFileDownloadUrl(fileName);
       window.open(url, '_blank');
     } catch (err) {
       console.error('下載附件失敗:', err);
@@ -255,7 +254,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
             {imgs.map(a => (
               <div key={a.id} className="relative group">
                 <img
-                  src={`https://science.lazyinwork.com/api/file/image/${a.fileName}`}
+                  src={buildFileImageUrl(a.fileName)}
                   alt={a.originalName}
                   className="w-full h-24 object-cover rounded border cursor-pointer"
                   onClick={() => openCommentImageModal(imgs, imgs.indexOf(a))}
@@ -283,7 +282,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
                   {pickFileIcon(a.mimeType)}
                 </span>
                 <a
-                  href={`https://science.lazyinwork.com/api/file/direct/${a.fileName}`}
+                  href={buildFileDownloadUrl(a.fileName)}
                   target="_blank"
                   rel="noreferrer"
                   className="truncate text-blue-600 hover:underline"

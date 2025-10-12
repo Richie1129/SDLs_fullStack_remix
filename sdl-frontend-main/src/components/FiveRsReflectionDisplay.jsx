@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FiChevronDown, FiChevronUp, FiMessageCircle, FiClock, FiUser } from 'react-icons/fi';
 import { AiOutlineRobot } from 'react-icons/ai';
 import { format5RsForDisplay } from '@/utils/5RsUtils.js';
+import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 
 const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = false, record = null }) => {
   const [expandedSections, setExpandedSections] = useState({});
@@ -22,8 +23,9 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
   // 針對附件的下載處理（支援 MinIO 與舊有 BLOB）
   const handleDownload = () => {
     if (!record) return;
+
     if (record.fileName) {
-      window.open(`https://science.lazyinwork.com/api/file/direct/${record.fileName}`, "_blank");
+      window.open(buildFileDownloadUrl(record.fileName), "_blank");
     } else if (record.fileData && record.fileData.data) {
       const buffer = new Uint8Array(record.fileData.data);
       const blob = new Blob([buffer], { type: "application/octet-stream" });

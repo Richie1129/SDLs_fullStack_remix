@@ -24,6 +24,7 @@ import { recordObservationEvent } from '../../../api/usage';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils'; // 引入用戶資訊 hook
 import { CommentErrorBoundary } from '../../../components/ErrorBoundary';
 import { formatUserDisplay } from '../../../utils/userDisplayUtils';
+import { buildApiUrl, buildFileImageUrl, buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 
 // 子元件：卡片圖片顯示
 const CardImage = ({ image, onClick, additionalCount }) => (
@@ -388,7 +389,7 @@ function Carditem({ data, index, columnIndex }) {
   const [commentImageList, setCommentImageList] = useState([]);
   const [selectedCommentImageIndex, setSelectedCommentImageIndex] = useState(null);
   const openCommentImageModal = (imageAttachments, index) => {
-    const urls = (imageAttachments || []).map(att => `https://science.lazyinwork.com/api/file/image/${att.fileName}`);
+    const urls = (imageAttachments || []).map(att => buildFileImageUrl(att.fileName));
     setCommentImageList(urls);
     setSelectedCommentImageIndex(index || 0);
   };
@@ -443,8 +444,7 @@ function Carditem({ data, index, columnIndex }) {
   const handleCommentAttachmentDownload = async (attachment) => {
     try {
       const fileName = attachment.fileName;
-      const resp = await axios.get(`https://science.lazyinwork.com/api/file/download/${fileName}`);
-      const url = resp.data?.downloadUrl || `https://science.lazyinwork.com/api/file/direct/${fileName}`;
+      const url = buildFileDownloadUrl(fileName);
       // 直接打開下載 URL
       window.open(url, '_blank');
     } catch (err) {
@@ -491,7 +491,7 @@ function Carditem({ data, index, columnIndex }) {
     const processedImages = (data.images || []).map(imageUrl => {
       if (imageUrl.includes('sdls-files/')) {
         const fileName = imageUrl.split('/').pop();
-        return `https://science.lazyinwork.com/api/file/image/${fileName}`;
+        return buildFileImageUrl(fileName);
       }
       return imageUrl;
     });
@@ -568,7 +568,7 @@ function Carditem({ data, index, columnIndex }) {
     });
 
     try {
-      const response = await axios.post('https://science.lazyinwork.com/api/upload', formData, {
+      const response = await axios.post(buildApiUrl('/upload'), formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -578,23 +578,20 @@ function Carditem({ data, index, columnIndex }) {
       const uploadedFiles = response.data.files
         .filter((file) => !file.mimeType.startsWith("image/"))
         .map((file) => ({
-          // 如果是完整 URL (MinIO)，直接使用；否則拼接本地路徑
-          url: file.url.startsWith('http') ? file.url : `https://science.lazyinwork.com/api${file.url}`,
+          url: file.fileName ? buildFileDownloadUrl(file.fileName) : file.url,
           originalName: file.originalName,
           mimeType: file.mimeType,
           fileName: file.fileName // 保存 MinIO 檔名
         }));
-      
+
       const uploadedImages = response.data.files
         .filter((file) => file.mimeType.startsWith("image/"))
         .map((file) => {
-          // 如果是 MinIO URL，提取檔名並使用代理 API
-          if (file.url.includes('sdls-files/')) {
-            const fileName = file.fileName || file.url.split('/').pop();
-            return `https://science.lazyinwork.com/api/file/image/${fileName}`;
+          // 使用 MinIO 檔名建構圖片 URL
+          if (file.fileName) {
+            return buildFileImageUrl(file.fileName);
           }
-          // 本地檔案使用原來的邏輯
-          return file.url.startsWith('http') ? file.url : `https://science.lazyinwork.com/api${file.url}`;
+          return file.url;
         });
 
       setCardData((prev) => ({
@@ -616,18 +613,18 @@ function Carditem({ data, index, columnIndex }) {
 
   const handleFileDownload = async (file) => {
     try {
-      // 檢查是否為 MinIO URL (完整 URL)
-      const downloadUrl = file.url.startsWith('http') 
-        ? file.url  // MinIO 完整 URL
-        : `https://science.lazyinwork.com/api${file.url}`; // 本地相對路徑
-      
+      // 統一使用後端 API 代理下載（支援 MinIO 和 BLOB）
+      const downloadUrl = file.fileName
+        ? buildFileDownloadUrl(file.fileName) // MinIO 檔案
+        : buildApiUrl(file.url); // 向後相容舊的路徑
+
       console.log('下載檔案 URL:', downloadUrl);
-      
+
       const response = await axios.get(downloadUrl, {
         responseType: 'blob'
       });
-      FileDownload(response.data, file.originalName);
-      toast.success(`下載成功: ${file.originalName}`);
+      FileDownload(response.data, file.originalName || file.fileName || 'download');
+      toast.success(`下載成功: ${file.originalName || file.fileName}`);
     } catch (err) {
       console.error('檔案下載失敗:', err);
       toast.error('檔案下載失敗');
@@ -649,7 +646,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(`https://science.lazyinwork.com/api/file/${fileName}`);
+        await axios.delete(buildApiUrl(`/file/${fileName}`));
         console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
       }
 
@@ -694,7 +691,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(`https://science.lazyinwork.com/api/file/${fileName}`);
+        await axios.delete(buildApiUrl(`/file/${fileName}`));
         console.log(`✅ MinIO 圖片刪除成功: ${fileName}`);
       }
 
@@ -1228,7 +1225,7 @@ function Carditem({ data, index, columnIndex }) {
                           {c.attachments.map((a, i) => {
                             const isImage = (a.mimeType || '').startsWith('image/');
                             if (isImage) {
-                              const imgUrl = `https://science.lazyinwork.com/api/file/image/${a.fileName}`;
+                              const imgUrl = buildFileImageUrl(a.fileName);
                               return (
                                 <div key={i}>
                                   <img
@@ -1240,7 +1237,7 @@ function Carditem({ data, index, columnIndex }) {
                                 </div>
                               );
                             }
-                            const dlUrl = `https://science.lazyinwork.com/api/file/direct/${a.fileName}`;
+                            const dlUrl = buildFileDownloadUrl(a.fileName);
                             return (
                               <div key={i} className='text-xs flex items-center gap-2'>
                                 <a href={dlUrl} target='_blank' rel='noreferrer' className='text-blue-600 hover:underline'>

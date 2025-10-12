@@ -4,6 +4,7 @@ import { FiChevronDown, FiChevronUp, FiHelpCircle, FiCheck, FiX, FiRefreshCw } f
 import { AiOutlineRobot } from 'react-icons/ai';
 import { FIVE_R_FRAMEWORK, build5RsContent, validate5RsData } from '@/utils/5RsUtils.js';
 import { analyze5RsReflection } from '@/api/llm5Rs.js';
+import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 import toast from 'react-hot-toast';
 import Swal from 'sweetalert2';
 
@@ -327,7 +328,7 @@ const FiveRsReflectionForm = ({
             </div>
             <div className="flex gap-2">
               <a
-                href={existingRecord.fileName ? `https://science.lazyinwork.com/api/file/direct/${existingRecord.fileName}` : undefined}
+                href={existingRecord.fileName ? buildFileDownloadUrl(existingRecord.fileName) : undefined}
                 onClick={(e) => {
                   if (!existingRecord.fileName && existingRecord.fileData) {
                     e.preventDefault();

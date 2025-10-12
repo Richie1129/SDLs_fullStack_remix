@@ -50,6 +50,7 @@ export default function Login() {
       onSuccess: (res) => {
         console.log(res);
         localStorage.setItem("accessToken", res.data.accessToken);
+        localStorage.setItem("refreshToken", res.data.refreshToken);  // 新增 refreshToken
         localStorage.setItem("account", res.data.account);
         localStorage.setItem("email", res.data.email);
         localStorage.setItem("id", res.data.id);

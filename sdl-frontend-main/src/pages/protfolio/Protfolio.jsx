@@ -16,6 +16,7 @@ import { formatTime } from '../../utils/timeUtils';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 
 export default function Protfolio() {
     const [currentStageIndex] = useStageIndex();
@@ -151,14 +152,14 @@ export default function Protfolio() {
 
     const downloadFile = () => {
         // 檢查是否有 MinIO 檔案資訊
-        if (modalData.fileName && modalData.fileUrl) {
-            // 使用 MinIO 直接下載 API
-            window.open(`https://science.lazyinwork.com/api/file/direct/${modalData.fileName}`, '_blank');
+        if (modalData.fileName) {
+            // 使用後端 API 代理下載
+            window.open(buildFileDownloadUrl(modalData.fileName), '_blank');
         } else if (modalData.fileData && modalData.fileData.data) {
             // 向後相容：處理舊的 BLOB 資料
             const buffer = new Uint8Array(modalData.fileData.data);
             const blob = new Blob([buffer], { type: "application/octet-stream" });
-            FileDownload(blob, modalData.fileName || "downloaded-file");
+            FileDownload(blob, modalData.fileName || modalData.originalName || "downloaded-file");
         } else {
             Swal.fire({
                 icon: 'warning',
@@ -483,8 +484,8 @@ export default function Protfolio() {
                                                     {(modalData.fileName || modalData.fileData) && (
                                                         <button
                                                             onClick={() => {
-                                                                if (modalData.fileName && modalData.fileUrl) {
-                                                                    window.open(`https://science.lazyinwork.com/api/file/direct/${modalData.fileName}`, '_blank');
+                                                                if (modalData.fileName) {
+                                                                    window.open(buildFileDownloadUrl(modalData.fileName), '_blank');
                                                                 } else if (modalData.fileData && modalData.fileData.data) {
                                                                     const buffer = new Uint8Array(modalData.fileData.data);
                                                                     const blob = new Blob([buffer], { type: "application/octet-stream" });
