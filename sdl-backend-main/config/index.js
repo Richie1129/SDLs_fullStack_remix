@@ -51,7 +51,7 @@ class Config {
     // RAGFlow 配置
     get ragflow() {
         return {
-            baseUrl: process.env.RAGFLOW_BASE_URL || 'https://140.115.126.193',
+            baseUrl: process.env.RAGFLOW_BASE_URL || 'https://ragflow.lazyinwork.com/',
             apiKey: process.env.RAGFLOW_API_KEY
         };
     }
@@ -59,7 +59,7 @@ class Config {
     // SSL 配置
     get ssl() {
         return {
-            verify: false  
+            verify: true 
         };
     }
 
