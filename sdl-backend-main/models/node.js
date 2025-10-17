@@ -20,7 +20,11 @@ const Node = sequelize.define('node', {
         allowNull:true
     }
 }, {
-    tableName: 'nodes'
+    tableName: 'nodes',
+    indexes: [
+        { fields: ['ideaWallId'] },  // IdeaWall 查詢
+        { fields: ['owner'] }         // 擁有者篩選
+    ]
 });
 
 // Self-referential many-to-many via node_relations

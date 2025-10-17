@@ -53,7 +53,13 @@ const Project = sequelize.define('project', {
     }
 },{
     timestamps: true,
-    tableName: 'projects'  
+    tableName: 'projects',
+    indexes: [
+        { fields: ['mentor'] },                     // 導師查詢
+        { fields: ['is_open_for_viewing'] },        // 觀摩篩選
+        { fields: ['referral_code'], unique: true }, // 推薦碼查詢
+        { fields: ['createdAt'] }                   // 時間排序
+    ]
 });
 
 // Project.hasMany(Chatroom_message);

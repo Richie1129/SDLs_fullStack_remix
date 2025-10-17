@@ -148,14 +148,18 @@ try {
 
 // 啟動服務器
 const PORT = config.server.port;
+
+// Socket 統計 timer ID - 用於清理
+let statsIntervalId = null;
+
 server.listen(PORT, () => {
     console.log(`✅ 伺服器已啟動，監聽端口 ${PORT}`);
     console.log(`🔗 Socket.IO 已初始化並準備連接`);
     console.log(`📂 所有路由已加載完成`);
     console.log(`🔧 配置模式: ${config.isDevelopment ? '開發' : '生產'}`);
-    
+
     // 顯示 Socket 連接統計
-    setInterval(() => {
+    statsIntervalId = setInterval(() => {
         const stats = socketManager.getStats();
         if (stats.totalConnections > 0) {
             console.log(`📊 Socket 連接統計: ${stats.totalConnections} 總連接, ${stats.authenticatedUsers} 已認證用戶`);
@@ -168,12 +172,26 @@ console.log('Models loaded:', Object.keys(sequelize.models));
 // 優雅關閉處理
 const gracefulShutdown = (signal) => {
     console.log(`${signal} received, shutting down gracefully`);
-    
+
+    // 清理 Socket 統計 timer
+    if (statsIntervalId) {
+        clearInterval(statsIntervalId);
+        statsIntervalId = null;
+        console.log('Socket 統計 timer 已清理');
+    }
+
     // 停止使用會話清理服務
     if (stopUsageCleanup) {
         stopUsageCleanup();
     }
-    
+
+    // 清理所有 Socket 連線
+    if (io) {
+        io.close(() => {
+            console.log('Socket.IO server closed');
+        });
+    }
+
     server.close(() => {
         console.log('HTTP server closed');
         process.exit(0);

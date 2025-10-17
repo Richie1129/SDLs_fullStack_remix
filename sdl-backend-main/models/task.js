@@ -38,7 +38,12 @@ const Task = sequelize.define('task', {
         allowNull: true,
     }
 }, {
-    timestamps: true 
+    timestamps: true,
+    indexes: [
+        { fields: ['columnId'] },  // Column 查詢
+        { fields: ['owner'] },     // 擁有者篩選
+        { fields: ['createdAt'] }  // 時間排序
+    ]
 });
 
 Task.belongsToMany(Tag, { through: 'card_tags' });
