@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { FiPlus } from "react-icons/fi";
 import { v4 as uuidv4 } from 'uuid';
-import Carditem from './components/Carditem';
+import Carditem from './components/carditem';
 import TaskHint from './components/TaskHint';
 import Loader from '../../components/Loader';
 import { FaPlus } from "react-icons/fa";

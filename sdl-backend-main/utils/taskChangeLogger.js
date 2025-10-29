@@ -51,20 +51,38 @@ async function logTaskChange({
  * @param {number} projectId - 專案ID
  */
 async function logFieldChanges(oldData, newData, taskId, changedBy, projectId) {
-    const fieldsToTrack = ['title', 'content', 'assignees', 'labels'];
+    const fieldsToTrack = ['title', 'content', 'assignees', 'labels', 'files', 'images'];
     const changes = [];
-    
+
+    // 提取檔案/圖片名稱的輔助函數
+    const extractFileName = (path) => {
+        if (!path) return '';
+        const fileName = path.split('/').pop();
+        return fileName.replace(/^\d+-[a-z0-9]+-/, '');
+    };
+
     for (const field of fieldsToTrack) {
         const oldValue = oldData[field];
         const newValue = newData[field];
-        
+
         // 處理陣列類型的比較
         if (Array.isArray(oldValue) && Array.isArray(newValue)) {
             if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
+                let oldValueToStore = JSON.stringify(oldValue);
+                let newValueToStore = JSON.stringify(newValue);
+
+                // 對於 files 和 images，只保存檔案名稱
+                if (field === 'files' || field === 'images') {
+                    const oldFileNames = oldValue.map(extractFileName);
+                    const newFileNames = newValue.map(extractFileName);
+                    oldValueToStore = JSON.stringify(oldFileNames);
+                    newValueToStore = JSON.stringify(newFileNames);
+                }
+
                 changes.push({
                     fieldName: field,
-                    oldValue: JSON.stringify(oldValue),
-                    newValue: JSON.stringify(newValue),
+                    oldValue: oldValueToStore,
+                    newValue: newValueToStore,
                     description: getFieldChangeDescription(field, oldValue, newValue)
                 });
             }
@@ -141,10 +159,10 @@ function getFieldChangeDescription(fieldName, oldValue, newValue) {
             try {
                 const oldLabels = Array.isArray(oldValue) ? oldValue : (oldValue ? JSON.parse(oldValue) : []);
                 const newLabels = Array.isArray(newValue) ? newValue : (newValue ? JSON.parse(newValue) : []);
-                
+
                 const oldLabelNames = oldLabels.map(l => l.content || l).join(', ');
                 const newLabelNames = newLabels.map(l => l.content || l).join(', ');
-                
+
                 if (!oldLabelNames && newLabelNames) {
                     return `添加標籤: ${newLabelNames}`;
                 } else if (oldLabelNames && !newLabelNames) {
@@ -154,6 +172,74 @@ function getFieldChangeDescription(fieldName, oldValue, newValue) {
                 }
             } catch (error) {
                 return '更新了標籤';
+            }
+        case 'files':
+            try {
+                const oldFiles = Array.isArray(oldValue) ? oldValue : (oldValue ? JSON.parse(oldValue) : []);
+                const newFiles = Array.isArray(newValue) ? newValue : (newValue ? JSON.parse(newValue) : []);
+
+                // 提取檔案名稱的輔助函數
+                const extractFileName = (path) => {
+                    if (!path) return '';
+                    // 從路徑中提取檔案名稱
+                    const fileName = path.split('/').pop();
+                    // 移除時間戳前綴 (例如：1761660718240-8peenx635pe-檔案.pdf -> 檔案.pdf)
+                    return fileName.replace(/^\d+-[a-z0-9]+-/, '');
+                };
+
+                // 找出新增和刪除的檔案
+                const addedFiles = newFiles.filter(f => !oldFiles.includes(f));
+                const removedFiles = oldFiles.filter(f => !newFiles.includes(f));
+
+                if (addedFiles.length > 0 && removedFiles.length === 0) {
+                    const fileNames = addedFiles.map(extractFileName).join('、');
+                    return `上傳了檔案：${fileNames}`;
+                } else if (removedFiles.length > 0 && addedFiles.length === 0) {
+                    const fileNames = removedFiles.map(extractFileName).join('、');
+                    return `刪除了檔案：${fileNames}`;
+                } else if (addedFiles.length > 0 && removedFiles.length > 0) {
+                    const added = addedFiles.map(extractFileName).join('、');
+                    const removed = removedFiles.map(extractFileName).join('、');
+                    return `更新了檔案（新增：${added}；刪除：${removed}）`;
+                } else {
+                    return '更新了檔案';
+                }
+            } catch (error) {
+                return '更新了檔案';
+            }
+        case 'images':
+            try {
+                const oldImages = Array.isArray(oldValue) ? oldValue : (oldValue ? JSON.parse(oldValue) : []);
+                const newImages = Array.isArray(newValue) ? newValue : (newValue ? JSON.parse(newValue) : []);
+
+                // 提取圖片名稱的輔助函數
+                const extractImageName = (path) => {
+                    if (!path) return '';
+                    // 從路徑中提取圖片名稱
+                    const imageName = path.split('/').pop();
+                    // 移除時間戳前綴 (例如：1761660718240-8peenx635pe-圖片.jpg -> 圖片.jpg)
+                    return imageName.replace(/^\d+-[a-z0-9]+-/, '');
+                };
+
+                // 找出新增和刪除的圖片
+                const addedImages = newImages.filter(img => !oldImages.includes(img));
+                const removedImages = oldImages.filter(img => !newImages.includes(img));
+
+                if (addedImages.length > 0 && removedImages.length === 0) {
+                    const imageNames = addedImages.map(extractImageName).join('、');
+                    return `上傳了圖片：${imageNames}`;
+                } else if (removedImages.length > 0 && addedImages.length === 0) {
+                    const imageNames = removedImages.map(extractImageName).join('、');
+                    return `刪除了圖片：${imageNames}`;
+                } else if (addedImages.length > 0 && removedImages.length > 0) {
+                    const added = addedImages.map(extractImageName).join('、');
+                    const removed = removedImages.map(extractImageName).join('、');
+                    return `更新了圖片（新增：${added}；刪除：${removed}）`;
+                } else {
+                    return '更新了圖片';
+                }
+            } catch (error) {
+                return '更新了圖片';
             }
         default:
             return `${fieldName} 已更新`;
