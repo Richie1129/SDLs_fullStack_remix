@@ -1,0 +1,1408 @@
+//Reflection
+import React, { useState, useEffect } from "react";
+import Modal from "../../components/Modal";
+import { GrFormClose } from "react-icons/gr";
+import { useParams } from "react-router-dom";
+import {
+  getAllPersonalDaily,
+  createPersonalDaily,
+  getAllTeamDaily,
+  createTeamDaily,
+  updatePersonalDaily,
+  updateTeamDaily,
+  removePersonalDailyAttachment,
+  removeTeamDailyAttachment,
+  deletePersonalDaily,
+  deleteTeamDaily,
+} from "../../api/reflection";
+import { useQuery, useMutation, useQueryClient } from "react-query";
+import toast, { Toaster } from "react-hot-toast";
+import { GrCircleQuestion } from "react-icons/gr";
+import { motion } from "framer-motion";
+import { socket } from "../../utils/socket";
+import personalDailyIcon from "../../assets/AnimationPersonalDaily.json";
+import teamDailyIcon from "../../assets/AnimationTeamDaily.json";
+import FiveRsReflectionForm from "@/components/FiveRsReflectionForm.jsx";
+import FiveRsReflectionDisplay from "@/components/FiveRsReflectionDisplay.jsx";
+import { is5RsFormat, parse5RsContent } from "@/utils/5RsUtils.js";
+import { analyze5RsReflection } from "@/api/llm5Rs.js";
+import { postClientAuditEvent } from "@/api/audit.js";
+import LogSection from "../../components/reflection/LogSection";
+import AuditHistoryPanel from "@/components/reflection/AuditHistoryPanel.jsx";
+import AIAnalysisHistoryPanel from "@/components/reflection/AIAnalysisHistoryPanel.jsx";
+import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { extractErrorMessage, DAILY_ERROR_CODES } from '@/constants/dailyErrorCodes.js';
+import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+
+// Animation configuration
+const fadeInOut = {
+  hidden: { opacity: 0, scale: 0.95, y: 20 },
+  visible: { opacity: 1, scale: 1, y: 0 },
+};
+export default function Reflection() {
+  const { projectId } = useParams();
+  const queryClient = useQueryClient();
+
+  // 資料狀態
+  const [personalDaily, setPersonalDaily] = useState([]);
+  const [teamDaily, setTeamDaily] = useState([]);
+  const [dailyData, setDailyData] = useState({});
+  const [attachFile, setAttachFile] = useState(null);
+  const [showPersonalEmptyMessage, setShowPersonalEmptyMessage] = useState(false);
+  const [showTeamEmptyMessage, setShowTeamEmptyMessage] = useState(false);
+
+  // Modal 狀態
+  const [personalDailyModalOpen, setPersonalDailyModalOpen] = useState(false);
+  const [teamDailyModalOpen, setTeamDailyModalOpen] = useState(false);
+  const [is5RsModalOpen, setIs5RsModalOpen] = useState(false);
+  const [viewReflectionModalOpen, setViewReflectionModalOpen] = useState(false);
+  // Modal tab states
+  const [personalTab, setPersonalTab] = useState('edit');
+  const [teamTab, setTeamTab] = useState('edit');
+  const [fiveRsTab, setFiveRsTab] = useState('edit');
+
+  // Reset tabs when opening modals
+  useEffect(() => { if (personalDailyModalOpen) setPersonalTab('edit'); }, [personalDailyModalOpen]);
+  useEffect(() => { if (teamDailyModalOpen) setTeamTab('edit'); }, [teamDailyModalOpen]);
+  useEffect(() => { if (is5RsModalOpen) setFiveRsTab('edit'); }, [is5RsModalOpen]);
+
+  // 表單狀態
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
+  // 5Rs 相關狀態
+  const [editingReflectionData, setEditingReflectionData] = useState({});
+  const [selectedReflectionForView, setSelectedReflectionForView] =
+    useState(null);
+
+  // 輔助函數
+  const toggleTooltip = () => setIsTooltipVisible(!isTooltipVisible);
+  const closeTooltip = () => setIsTooltipVisible(false);
+  const errorNotify = (toastContent) => toast.error(toastContent);
+  const sucesssNotify = (toastContent) => toast.success(toastContent);
+
+  const userRole = localStorage.getItem("role");
+
+  // Query keys for cache invalidation consistency
+  const PERSONAL_QUERY_KEY = ["personalDaily", { projectId, isTeacher: userRole === "teacher" }];
+  const TEAM_QUERY_KEY = ["teamDaily"];
+
+  const { isLoading, isError, error } = useQuery(
+    PERSONAL_QUERY_KEY,
+    () =>
+      getAllPersonalDaily({
+        projectId: projectId,
+        userId: localStorage.getItem("id"),
+        isTeacher: userRole === "teacher",
+      }),
+    {
+      onSuccess: setPersonalDaily,
+      enabled: !!projectId,
+    }
+  );
+
+  // 小組日誌查詢
+  const teamDailyQuery = useQuery({
+    queryKey: TEAM_QUERY_KEY,
+    queryFn: () => getAllTeamDaily({ params: { projectId: projectId } }),
+    onSuccess: setTeamDaily,
+    enabled: !!projectId,
+  });
+
+  // 空狀態消息控制 - 個人日誌
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (personalDaily.length === 0 && !isLoading && !isError) {
+        setShowPersonalEmptyMessage(true);
+      } else {
+        setShowPersonalEmptyMessage(false);
+      }
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [personalDaily.length, isLoading, isError]);
+
+  // 空狀態消息控制 - 小組日誌
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (teamDaily.length === 0 && !teamDailyQuery.isLoading && !teamDailyQuery.isError) {
+        setShowTeamEmptyMessage(true);
+      } else {
+        setShowTeamEmptyMessage(false);
+      }
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [teamDaily.length, teamDailyQuery.isLoading, teamDailyQuery.isError]);
+
+  const { mutate } = useMutation(createPersonalDaily, {
+    onSuccess: (res) => {
+      console.log(res);
+      queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
+      sucesssNotify(res.message);
+    },
+    onError: (error) => {
+      console.log('❌ 創建個人日誌失敗:', error);
+      const errorMessage = extractErrorMessage(error);
+      errorNotify(errorMessage);
+    },
+  });
+
+  const { mutate: teamDailyMutate } = useMutation(createTeamDaily, {
+    onSuccess: (res) => {
+      console.log(res);
+      queryClient.invalidateQueries(TEAM_QUERY_KEY);
+      sucesssNotify(res.message);
+    },
+    onError: (error) => {
+      console.log('❌ 創建小組日誌失敗:', error);
+      const errorMessage = extractErrorMessage(error);
+      errorNotify(errorMessage);
+    },
+  });
+
+  const { mutate: updateDaily } = useMutation(
+    (data) => {
+      // FormData: 從中提取 id
+      if (data instanceof FormData) {
+        const id = data.get("id");
+        data.delete("id");
+        return updatePersonalDaily(id, data);
+      }
+      // 物件格式（向後相容）
+      const { id, ...restData } = data;
+      return updatePersonalDaily(id, restData);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
+        sucesssNotify("更新成功");
+      },
+      onError: (error) => {
+        console.log('❌ 更新個人日誌失敗:', error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
+      },
+    }
+  );
+
+  const { mutate: updateTeamDailyMutate } = useMutation(
+    (data) => {
+      // FormData: 從中提取 id
+      if (data instanceof FormData) {
+        const id = data.get("id");
+        data.delete("id");
+        return updateTeamDaily(id, data);
+      }
+      // 物件格式（向後相容）
+      const { id, ...restData } = data;
+      return updateTeamDaily(id, restData);
+    },
+    {
+      onSuccess: (res) => {
+        console.log("更新成功:", res);
+        queryClient.invalidateQueries(TEAM_QUERY_KEY);
+        sucesssNotify("小組日誌更新成功");
+      },
+      onError: (error) => {
+        console.log("❌ 更新小組日誌失敗:", error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
+      },
+    }
+  );
+
+  const handleCreateOrUpdateTeamDaily = (e) => {
+    e.preventDefault();
+
+    if (editingId) {
+      handleSaveTeamEdit();
+      return;
+    }
+
+    if (title.trim() !== "" && content.trim() !== "") {
+      const formData = new FormData();
+      formData.append("projectId", projectId);
+      formData.append("creator", getCurrentUsername());
+      if (attachFile) {
+        for (let i = 0; i < attachFile.length; i++) {
+          formData.append("attachFile", attachFile[i]);
+        }
+      }
+      for (let key in dailyData) {
+        formData.append(key, dailyData[key]);
+      }
+      teamDailyMutate(formData);
+      setTeamDailyModalOpen(false);
+    } else {
+      toast.error(DAILY_ERROR_CODES.EMPTY_TITLE_AND_CONTENT.zh);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingId) {
+      toast.error(DAILY_ERROR_CODES.NO_DAILY_SELECTED.zh);
+      return;
+    }
+
+    // 使用 FormData 支援檔案上傳
+    const formData = new FormData();
+    formData.append("id", Number(editingId));
+    formData.append("title", title);
+    formData.append("content", content);
+
+    // 如果有附加檔案
+    if (attachFile && attachFile.length > 0) {
+      for (let i = 0; i < attachFile.length; i++) {
+        formData.append("attachFile", attachFile[i]);
+      }
+    }
+
+    console.log("更新日誌:", formData);
+    updateDaily(formData, {
+      onSuccess: () => {
+        setEditingId(null); // 更新後清除 editingId
+        setPersonalDailyModalOpen(false);
+        setAttachFile(null); // 清除檔案
+        sucesssNotify("日誌更新成功");
+      },
+      onError: (error) => {
+        console.log('❌ 儲存編輯失敗:', error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
+      },
+    });
+  };
+
+  const handleSaveTeamEdit = () => {
+    if (!editingId) {
+      toast.error(DAILY_ERROR_CODES.NO_DAILY_SELECTED.zh);
+      return;
+    }
+
+    // 使用 FormData 支援檔案上傳
+    const formData = new FormData();
+    formData.append("id", Number(editingId));
+    formData.append("title", title);
+    formData.append("content", content);
+
+    // 如果有附加檔案
+    if (attachFile && attachFile.length > 0) {
+      for (let i = 0; i < attachFile.length; i++) {
+        formData.append("attachFile", attachFile[i]);
+      }
+    }
+
+    console.log("更新小組日誌:", formData);
+    updateTeamDailyMutate(formData, {
+      onSuccess: () => {
+        setEditingId(null);
+        setTeamDailyModalOpen(false);
+        setAttachFile(null); // 清除檔案
+        sucesssNotify("小組日誌更新成功");
+      },
+      onError: (error) => {
+        console.log('❌ 小組日誌更新失敗:', error);
+        const errorMessage = extractErrorMessage(error);
+        errorNotify(errorMessage);
+      },
+    });
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setDailyData((prev) => ({
+      ...prev,
+      [name]: value,
+      userId: localStorage.getItem("id"),
+    }));
+    if (name === "title") setTitle(value);
+    if (name === "content") setContent(value);
+  };
+  const handleAddFileChange = (e) => {
+    setAttachFile(e.target.files);
+  };
+  const handleCreateOrUpdatePersonalDaily = (e) => {
+    e.preventDefault();
+
+    if (editingId) {
+      handleSaveEdit();
+      return;
+    }
+
+    if (title.trim() !== "" && content.trim() !== "") {
+      const formData = new FormData();
+      formData.append("projectId", projectId);
+      if (attachFile) {
+        for (let i = 0; i < attachFile.length; i++) {
+          formData.append("attachFile", attachFile[i]);
+        }
+      }
+      for (let key in dailyData) {
+        formData.append(key, dailyData[key]);
+      }
+      console.log("創建日誌:", ...formData);
+      mutate(formData);
+      setPersonalDailyModalOpen(false);
+    } else {
+      toast.error(DAILY_ERROR_CODES.EMPTY_TITLE_AND_CONTENT.zh);
+    }
+  };
+
+  // const handleChangeSelectDaily = e => {
+  //     const { name, value } = e.target;
+  //     setSelectedDaily(prev => ({
+  //         ...prev,
+  //         [name]: value,
+  //     }));
+  // }
+
+  // const handleTeamDailyChange = e => {
+  //     const { name, value } = e.target;
+  //     setDailyData(prev => ({
+  //         ...prev,
+  //         [name]: value,
+  //         userId: localStorage.getItem("id")
+  //     }));
+  // }
+
+  // 5Rs 反思相關處理函式
+  const handle5RsSave = (data) => {
+    console.log("儲存 5Rs 反思:", data);
+
+    if (editingId) {
+      // 更新現有的 5Rs 反思
+      const formData = new FormData();
+      formData.append("id", Number(editingId));
+      formData.append("title", data.title);
+      formData.append("content", data.content);
+
+      // 如果有附加檔案，添加到 FormData
+      if (data.attachFile && data.attachFile.length > 0) {
+        for (let i = 0; i < data.attachFile.length; i++) {
+          formData.append("attachFile", data.attachFile[i]);
+        }
+      }
+
+      updateDaily(formData, {
+        onSuccess: () => {
+          setEditingId(null);
+          setIs5RsModalOpen(false);
+          setEditingReflectionData({});
+          setAttachFile(null);
+          sucesssNotify("5Rs 反思更新成功");
+        },
+        onError: (error) => {
+          console.log('❌ 5Rs 反思更新失敗:', error);
+          const errorMessage = extractErrorMessage(error);
+          errorNotify(errorMessage);
+        },
+      });
+    } else {
+      // 創建新的 5Rs 反思
+      const formData = new FormData();
+      formData.append("projectId", projectId);
+      formData.append("title", data.title);
+      formData.append("content", data.content);
+      formData.append("userId", localStorage.getItem("id"));
+
+      // 如果有附加檔案，添加到 FormData
+      if (data.attachFile && data.attachFile.length > 0) {
+        for (let i = 0; i < data.attachFile.length; i++) {
+          formData.append("attachFile", data.attachFile[i]);
+        }
+      }
+
+      mutate(formData, {
+        onSuccess: () => {
+          setIs5RsModalOpen(false);
+          setEditingReflectionData({});
+          setAttachFile(null);
+        },
+        onError: (error) => {
+          console.log('❌ 5Rs 反思創建失敗:', error);
+          const errorMessage = extractErrorMessage(error);
+          errorNotify(errorMessage);
+        },
+      });
+    }
+  };
+
+  const handle5RsCancel = () => {
+    setIs5RsModalOpen(false);
+    setEditingId(null);
+    setEditingReflectionData({});
+    setTitle("");
+    setAttachFile(null);
+  };
+
+  const Tooltip = ({ children, content }) => {
+    return (
+      <div className="relative group">
+        {children}
+        <div className="absolute  hidden group-hover:block">
+          <div className="bg-gray-700 text-white text-xs rounded-lg py-1 px-2 whitespace-nowrap">
+            {content}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+  // socket
+  useEffect(() => {
+    socket.connect();
+    // socket.on("receive_message", receive_message);
+
+    // return () => {
+    //     socket.disconnect();
+    // }
+  }, [socket]);
+
+  // Button configurations for cleaner component usage
+  const personalLogButtons = [
+    {
+      text: "傳統日誌",
+      variant: "primary",
+      onClick: () => {
+        setTitle("");
+        setContent("");
+        setAttachFile(null);
+        setEditingId(null);
+        setPersonalDailyModalOpen(true);
+      },
+    },
+    {
+      text: "5Rs 反思",
+      variant: "teal",
+      onClick: () => {
+        setTitle("");
+        setEditingReflectionData({});
+        setEditingId(null);
+        setIs5RsModalOpen(true);
+      },
+    },
+  ];
+
+  const teamLogButtons = [
+    {
+      text: "新增",
+      variant: "primary",
+      onClick: () => {
+        setTitle("");
+        setContent("");
+        setAttachFile(null);
+        setTeamDailyModalOpen(true);
+        setDailyData((prev) => ({
+          ...prev,
+          type: "discuss",
+        }));
+      },
+    },
+  ];
+
+  // Handler functions for LogSection
+  const handleEditClick = (item) => {
+    console.log("編輯的日誌:", item);
+    setTitle(item.title);
+    setContent(item.content);
+    setAttachFile(null);
+    setEditingId(item.id);
+    setPersonalDailyModalOpen(true);
+  };
+
+  const handleViewClick = (item) => {
+    console.log("查看日誌:", item);
+    setTitle(item.title);
+    setContent(item.content);
+    setAttachFile(null);
+    setEditingId(item.id);
+    setPersonalDailyModalOpen(true);
+  };
+
+  const handleEdit5Rs = (item) => {
+    console.log("編輯 5Rs 反思:", item);
+    const parsedContent = parse5RsContent(item.content);
+    if (parsedContent) {
+      setEditingReflectionData(parsedContent.data);
+    } else {
+      setEditingReflectionData({});
+    }
+    setTitle(item.title);
+    setEditingId(item.id);
+    setIs5RsModalOpen(true);
+  };
+
+  const handleView5Rs = (item) => {
+    setSelectedReflectionForView(item);
+    setViewReflectionModalOpen(true);
+  };
+
+  const handleRequestAIAnalysis = async (item) => {
+    console.log("=== 前端 AI 分析請求開始 ===");
+    console.log("選中的日誌項目:", item);
+
+    const parsedContent = parse5RsContent(item.content);
+    console.log("解析後的內容:", parsedContent);
+
+    if (!parsedContent || !parsedContent.data) {
+      console.error("解析 5Rs 內容失敗");
+      toast.error(DAILY_ERROR_CODES.INVALID_5RS_CONTENT.zh);
+      return;
+    }
+
+    // 若已有 AI 反饋，仍允許再次分析（將作為歷史紀錄保存）
+    if (
+      parsedContent.feedback &&
+      (parsedContent.feedback.overall ||
+        parsedContent.feedback.suggestions?.length > 0)
+    ) {
+      console.log("已有 AI 反饋，仍將進行再次分析並保存為歷史");
+    }
+
+    console.log("準備發送的反思資料:", parsedContent.data);
+
+    try {
+      toast.loading("正在請求 AI 分析...", { id: "ai-analysis" });
+
+      console.log("呼叫 AI 分析 API...");
+      const result = await analyze5RsReflection(parsedContent.data, "auto");
+      console.log("AI 分析 API 回應:", result);
+
+      if (result.success) {
+        console.log("AI 分析成功，提供者:", result.provider);
+        console.log("AI 回饋內容:", result.feedback);
+
+        // 紀錄 AI 分析歷史（審計事件）
+        try {
+          await postClientAuditEvent({
+            action: 'DAILY_PERSONAL_5RS_AI_ANALYSIS',
+            targetType: 'daily_personal',
+            targetId: item.id,
+            projectId: projectId,
+            metadata: {
+              provider: result.provider,
+              analysisDate: result.analysisDate || new Date().toISOString(),
+              title: item.title,
+              inputData: parsedContent.data,
+              feedback: result.feedback,
+            },
+          });
+        } catch (e) {
+          console.warn('送出 AI 分析審計事件失敗（略過，不影響主流程）', e);
+        }
+
+        // 將 AI 反饋整合到現有內容中
+        const updatedContent = JSON.parse(item.content);
+        updatedContent.feedback = {
+          ...result.feedback,
+          provider: result.provider,
+          analysisDate: result.analysisDate || new Date().toISOString(),
+        };
+
+        console.log("更新後的內容:", updatedContent);
+
+        // 更新日記內容
+        const updatedData = {
+          id: Number(item.id),
+          title: item.title,
+          content: JSON.stringify(updatedContent, null, 2),
+        };
+
+        console.log("準備更新的資料:", updatedData);
+
+        updateDaily(updatedData, {
+          onSuccess: () => {
+            console.log("AI 分析結果保存成功");
+            toast.success(`AI 分析完成！使用 ${result.provider}`, {
+              id: "ai-analysis",
+            });
+          },
+          onError: (error) => {
+            console.error("❌ 儲存 AI 分析結果失敗:", error);
+            toast.error(DAILY_ERROR_CODES.AI_SAVE_FAILED.zh, { id: "ai-analysis" });
+          },
+        });
+      } else {
+        console.error("AI 分析失敗:", result);
+        toast.error(DAILY_ERROR_CODES.AI_ANALYSIS_FAILED.zh, { id: "ai-analysis" });
+      }
+    } catch (error) {
+      console.error("AI 分析過程發生錯誤:", error);
+      toast.error(DAILY_ERROR_CODES.AI_SERVICE_ERROR.zh, { id: "ai-analysis" });
+    }
+
+    console.log("=== 前端 AI 分析請求結束 ===");
+  };
+
+  const handlePersonalLogEdit = (item) => {
+    // 檢查是否為教師
+    const currentUserRole = localStorage.getItem("role");
+    const isTeacher = currentUserRole === "teacher";
+
+    if (isTeacher) {
+      // 教師只能查看
+      if (is5RsFormat(item.content)) {
+        handleView5Rs(item);
+      } else {
+        handleViewClick(item);
+      }
+    } else {
+      // 學生可以編輯
+      if (is5RsFormat(item.content)) {
+        handleEdit5Rs(item);
+      } else {
+        handleEditClick(item);
+      }
+    }
+  };
+
+  const handleEditTeamClick = (item) => {
+    if (!item) {
+      console.error("選擇的日誌為 undefined，請確認 teamDaily 是否有資料");
+      return;
+    }
+
+    console.log("編輯的小組日誌:", item);
+    setTitle(item.title || "");
+    setContent(item.content || "");
+    setAttachFile(null);
+    setEditingId(item.id);
+    setTeamDailyModalOpen(true);
+  };
+
+  const handleTeamLogEdit = (item) => {
+    // 檢查是否為教師
+    const currentUserRole = localStorage.getItem("role");
+    const isTeacher = currentUserRole === "teacher";
+
+    if (isTeacher) {
+      // 教師只能查看，打開 modal 但不允許編輯
+      setTitle(item.title || "");
+      setContent(item.content || "");
+      setAttachFile(null);
+      setEditingId(item.id);
+      setTeamDailyModalOpen(true);
+    } else {
+      // 學生可以編輯
+      handleEditTeamClick(item);
+    }
+  };
+
+  // 刪除：個人日誌
+  const handleDeletePersonal = async (item) => {
+    if (!item?.id) return;
+    const confirm = window.confirm(`確定要刪除「${item.title || '未命名'}」嗎？此動作無法復原。`);
+    if (!confirm) return;
+    try {
+      await deletePersonalDaily(item.id);
+      queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
+      toast.success("個人日誌已刪除");
+    } catch (e) {
+      console.error('❌ 刪除個人日誌失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
+    }
+  };
+
+  // 刪除：小組日誌
+  const handleDeleteTeam = async (item) => {
+    if (!item?.id) return;
+    const confirm = window.confirm(`確定要刪除小組日誌「${item.title || '未命名'}」嗎？此動作無法復原。`);
+    if (!confirm) return;
+    try {
+      await deleteTeamDaily(item.id);
+      queryClient.invalidateQueries(TEAM_QUERY_KEY);
+      toast.success("小組日誌已刪除");
+    } catch (e) {
+      console.error('❌ 刪除小組日誌失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
+    }
+  };
+
+  // 目前正在編輯的記錄（個人/小組）
+  const currentEditingPersonal = editingId
+    ? personalDaily.find((d) => d.id === editingId)
+    : null;
+  const currentEditingTeam = editingId
+    ? teamDaily.find((d) => d.id === editingId)
+    : null;
+  const isCurrent5Rs = currentEditingPersonal ? is5RsFormat(currentEditingPersonal.content) : false;
+
+  // 刪除附件：個人
+  const handleRemovePersonalAttachment = async () => {
+    if (!editingId) return;
+    try {
+      await removePersonalDailyAttachment(editingId);
+      queryClient.invalidateQueries(PERSONAL_QUERY_KEY);
+      toast.success("附件已刪除");
+    } catch (e) {
+      console.error('❌ 刪除個人附件失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
+    }
+  };
+
+  // 刪除附件：小組
+  const handleRemoveTeamAttachment = async () => {
+    if (!editingId) return;
+    try {
+      await removeTeamDailyAttachment(editingId);
+      queryClient.invalidateQueries(TEAM_QUERY_KEY);
+      toast.success("附件已刪除");
+    } catch (e) {
+      console.error('❌ 刪除小組附件失敗:', e);
+      const errorMessage = extractErrorMessage(e);
+      toast.error(errorMessage);
+    }
+  };
+
+  return (
+    <div className="h-full w-full bg-gray-50">
+      {/* 雙欄佈局容器 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 h-full">
+        {/* 左側欄位 - 個人日誌 */}
+        <div className="flex flex-col lg:border-r border-gray-200 bg-white">
+          {/* 標題區塊 */}
+          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 ">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+                個人日誌
+              </h2>
+
+              {/* Action Buttons - 只有學生可以新增 */}
+              {userRole !== "teacher" && (
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                  <button
+                    onClick={() => {
+                      setTitle("");
+                      setContent("");
+                      setAttachFile(null);
+                      setEditingId(null);
+                      setPersonalDailyModalOpen(true);
+                    }}
+                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    傳統日誌
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setTitle("");
+                      setEditingReflectionData({});
+                      setEditingId(null);
+                      setIs5RsModalOpen(true);
+                    }}
+                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491] text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    +5Rs 反思
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              記錄個人的學習心得和反思，可以選擇傳統日誌或 5Rs 反思格式
+            </p>
+          </div>
+
+          {/* 內容區塊 */}
+          <div className="flex-1 overflow-y-auto">
+            <LogSection
+              title=""
+              items={personalDaily}
+              isLoading={isLoading}
+              isError={isError}
+              error={error}
+              showEmptyMessage={showPersonalEmptyMessage}
+              emptyStateConfig={{
+                animationData: personalDailyIcon,
+                message:
+                  "還沒新增過個人日誌 ! 趕快新增你的第一個【個人日誌】吧 ~",
+              }}
+              buttons={[]}
+              onEdit={handlePersonalLogEdit}
+              onDelete={handleDeletePersonal}
+              onView5Rs={handleView5Rs}
+              onRequestAIAnalysis={handleRequestAIAnalysis}
+              showAIAnalysis={true}
+              showCreator={userRole === "teacher"}
+              className="h-full flex flex-col"
+            />
+          </div>
+        </div>
+
+        {/* 右側欄位 - 小組日誌 */}
+        <div className="flex flex-col bg-white border-t lg:border-t-0 border-gray-200">
+          {/* 標題區塊 */}
+          <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 ">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 flex items-center">
+                小組日誌
+              </h2>
+
+              {/* Action Button - 只有學生可以新增 */}
+              {userRole !== "teacher" && (
+                <div className="flex">
+                  <button
+                    onClick={() => {
+                      setTitle("");
+                      setContent("");
+                      setAttachFile(null);
+                      setTeamDailyModalOpen(true);
+                      setDailyData((prev) => ({
+                        ...prev,
+                        type: "discuss",
+                      }));
+                    }}
+                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm text-sm sm:text-base w-full sm:w-auto"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    新增
+                  </button>
+                </div>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">
+              記錄小組討論和協作的成果，與團隊成員分享經驗
+            </p>
+          </div>
+
+          {/* 內容區塊 */}
+          <div className="flex-1 overflow-y-auto">
+            <LogSection
+              title=""
+              items={teamDaily}
+              isLoading={teamDailyQuery.isLoading}
+              isError={teamDailyQuery.isError}
+              error={error}
+              showEmptyMessage={showTeamEmptyMessage}
+              emptyStateConfig={{
+                animationData: teamDailyIcon,
+                message:
+                  "還沒新增過小組日誌 ! 趕快新增你的第一個【小組日誌】吧 ~",
+              }}
+              buttons={[]}
+              onEdit={handleTeamLogEdit}
+              onDelete={handleDeleteTeam}
+              showAIAnalysis={false}
+              showCreator={true}
+              className="h-full flex flex-col"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 個人反思日誌 */}
+      <Modal
+        open={personalDailyModalOpen}
+        onClose={() => setPersonalDailyModalOpen(false)}
+        opacity={true}
+        position={"justify-center items-center"}
+        custom="w-[80vw] max-w-5xl"
+      >
+        <button
+          onClick={() => setPersonalDailyModalOpen(false)}
+          className="absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200"
+        >
+          <GrFormClose className="w-6 h-6" />
+        </button>
+        <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
+          <h3 className="font-bold text-base sm:text-lg mb-3 text-center">
+            {userRole === "teacher" ? "查看個人反思日誌" : "個人反思日誌"}
+          </h3>
+          <div className="flex items-center mb-3">
+            <p className="font-bold text-sm sm:text-base">日誌內容</p>
+            <button onClick={toggleTooltip} className="ml-2 p-1">
+              <GrCircleQuestion className="w-4 h-4 text-[#5BA491] hover:text-[#5BA491]/60" />
+            </button>
+          </div>
+          {isTooltipVisible && (
+            <motion.div
+              className="absolute z-10 bg-white p-6 rounded shadow-lg text-sm"
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={fadeInOut}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              <button onClick={closeTooltip} className="absolute top-1 right-1">
+                <GrFormClose className="w-4 h-4" />
+              </button>
+              <p className=" font-bold text-base ">日誌內容可以撰寫以下項目:</p>
+              <ul>
+                <li className="  text-sm pt-2">1.最近完成的進度內容。</li>
+                <li className="  text-sm ">2.完成的心得反思。</li>
+                <li className="  text-sm ">3.下次的預計完成的進度內容。</li>
+                <li className="  text-sm ">4.是否遇到新的問題。</li>
+              </ul>
+            </motion.div>
+          )}
+          {/* Tabs for personal modal */}
+          <div className="flex border-b border-gray-200 mb-3">
+            <button
+              onClick={() => setPersonalTab('edit')}
+              className={`px-4 py-2 font-medium text-sm ${personalTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {userRole === "teacher" ? "查看日誌" : "編輯日誌"}
+            </button>
+            <button
+              onClick={() => setPersonalTab('history')}
+              className={`px-4 py-2 font-medium text-sm ${personalTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              變更歷史
+            </button>
+            {isCurrent5Rs && (
+              <button
+                onClick={() => setPersonalTab('aiHistory')}
+                className={`px-4 py-2 font-medium text-sm ${personalTab === 'aiHistory' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                AI 分析歷史
+              </button>
+            )}
+          </div>
+          {personalTab === 'edit' && (
+            <>
+          <input
+            className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
+            type="text"
+            placeholder="日誌名稱..."
+            name="title"
+            value={title}
+            onChange={handleChange}
+            required
+            disabled={userRole === "teacher"}
+          />
+          <textarea
+            className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto"
+            rows={10}
+            placeholder="撰寫您的日誌..."
+            name="content"
+            value={content}
+            onChange={handleChange}
+            disabled={userRole === "teacher"}
+          />
+          <input
+            className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
+            type="file"
+            name="filename"
+            onChange={handleAddFileChange}
+            multiple
+            disabled={userRole === "teacher"}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
+          />
+          <p className="text-xs text-gray-500 mb-3">
+            💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+          </p>
+          {/* 現有附件（編輯時） */}
+          {editingId && currentEditingPersonal && (currentEditingPersonal.fileName || currentEditingPersonal.fileData) && (
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-sm text-gray-700 break-all">
+                附件：{currentEditingPersonal.originalName || currentEditingPersonal.filename || currentEditingPersonal.fileName}
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={currentEditingPersonal.fileName ? buildFileDownloadUrl(currentEditingPersonal.fileName) : undefined}
+                  onClick={(e) => {
+                    if (!currentEditingPersonal.fileName && currentEditingPersonal.fileData) {
+                      e.preventDefault();
+                      const buffer = new Uint8Array(currentEditingPersonal.fileData.data);
+                      const blob = new Blob([buffer], { type: "application/octet-stream" });
+                      import('js-file-download').then(({ default: FileDownload }) => {
+                        FileDownload(blob, currentEditingPersonal.filename || currentEditingPersonal.originalName || 'downloaded-file');
+                      });
+                    }
+                  }}
+                  className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm text-center"
+                >
+                  下載附件
+                </a>
+                {userRole !== "teacher" && (
+                  <button
+                    onClick={handleRemovePersonalAttachment}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  >
+                    刪除附件
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end m-2">
+            <button
+              onClick={() => setPersonalDailyModalOpen(false)}
+              className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2"
+            >
+              {userRole === "teacher" ? "關閉" : "取消"}
+            </button>
+            {userRole !== "teacher" && (
+              <button
+                onClick={(e) => {
+                  editingId
+                    ? handleSaveEdit()
+                    : handleCreateOrUpdatePersonalDaily(e);
+                }}
+                type="submit"
+                className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-xs sm:text-sm text-white"
+              >
+                {editingId ? "更新" : "儲存"}
+              </button>
+            )}
+          </div>
+            </>
+          )}
+          {personalTab === 'history' && editingId && (
+            isCurrent5Rs ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">變更歷史</h4>
+                  <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">AI 分析歷史</h4>
+                  <AIAnalysisHistoryPanel targetId={editingId} title={title || currentEditingPersonal?.title} />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">變更歷史</h4>
+                <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} />
+              </div>
+            )
+          )}
+          {personalTab === 'aiHistory' && editingId && isCurrent5Rs && (
+            <AIAnalysisHistoryPanel targetId={editingId} title={title || currentEditingPersonal?.title} />
+          )}
+        </div>
+      </Modal>
+      {/* 小組反思日誌 */}
+      <Modal
+        open={teamDailyModalOpen}
+        onClose={() => setTeamDailyModalOpen(false)}
+        opacity={true}
+        position={"justify-center items-center"}
+        custom="w-[80vw] max-w-5xl"
+      >
+        <button
+          onClick={() => setTeamDailyModalOpen(false)}
+          className="absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200"
+        >
+          <GrFormClose className="w-6 h-6" />
+        </button>
+        <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
+          <h3 className="font-bold text-base sm:text-lg mb-3 text-center">
+            {userRole === "teacher" ? "查看小組反思日誌" : "小組反思日誌"}
+          </h3>
+          <div className="flex items-center mb-3">
+            <p className="font-bold text-sm sm:text-base">日誌內容</p>
+            <button onClick={toggleTooltip} className="ml-2 p-1 ">
+              <GrCircleQuestion className="w-4 h-4 text-[#5BA491] hover:text-[#5BA491]/60" />
+            </button>
+          </div>
+          {isTooltipVisible && (
+            <motion.div
+              className="absolute z-10 bg-white p-6 rounded shadow-lg text-sm"
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={fadeInOut}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              <button onClick={closeTooltip} className="absolute top-1 right-1">
+                <GrFormClose className="w-4 h-4" />
+              </button>
+              <p className=" font-bold text-base ">日誌內容可以撰寫以下項目:</p>
+              <ul>
+                <li className="  text-sm pt-2">1.最近完成的進度內容。</li>
+                <li className="  text-sm ">2.完成的心得反思。</li>
+                <li className="  text-sm ">3.下次的預計完成的進度內容。</li>
+                <li className="  text-sm ">4.是否遇到新的問題。</li>
+              </ul>
+            </motion.div>
+          )}
+          {/* Tabs for team modal */}
+          <div className="flex border-b border-gray-200 mb-3">
+            <button
+              onClick={() => setTeamTab('edit')}
+              className={`px-4 py-2 font-medium text-sm ${teamTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {userRole === "teacher" ? "查看日誌" : "編輯日誌"}
+            </button>
+            <button
+              onClick={() => setTeamTab('history')}
+              className={`px-4 py-2 font-medium text-sm ${teamTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              變更歷史
+            </button>
+          </div>
+          {teamTab === 'edit' && (
+            <>
+          <input
+            className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
+            type="text"
+            placeholder="日誌名稱..."
+            name="title"
+            value={title}
+            onChange={handleChange}
+            required
+            disabled={userRole === "teacher"}
+          />
+          <textarea
+            className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto"
+            rows={10}
+            placeholder="撰寫您的日誌..."
+            name="content"
+            value={content}
+            onChange={handleChange}
+            disabled={userRole === "teacher"}
+          />
+          <input
+            className="rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
+            type="file"
+            name="filename"
+            onChange={handleAddFileChange}
+            multiple
+            disabled={userRole === "teacher"}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
+          />
+          <p className="text-xs text-gray-500 mb-3">
+            💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+          </p>
+          {/* 現有附件（編輯時） */}
+          {editingId && currentEditingTeam && (currentEditingTeam.fileName || currentEditingTeam.fileData) && (
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-sm text-gray-700 break-all">
+                附件：{currentEditingTeam.originalName || currentEditingTeam.filename || currentEditingTeam.fileName}
+              </div>
+              <div className="flex gap-2">
+                <a
+                  href={currentEditingTeam.fileName ? buildFileDownloadUrl(currentEditingTeam.fileName) : undefined}
+                  onClick={(e) => {
+                    if (!currentEditingTeam.fileName && currentEditingTeam.fileData) {
+                      e.preventDefault();
+                      const buffer = new Uint8Array(currentEditingTeam.fileData.data);
+                      const blob = new Blob([buffer], { type: "application/octet-stream" });
+                      import('js-file-download').then(({ default: FileDownload }) => {
+                        FileDownload(blob, currentEditingTeam.filename || currentEditingTeam.originalName || 'downloaded-file');
+                      });
+                    }
+                  }}
+                  className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm text-center"
+                >
+                  下載附件
+                </a>
+                {userRole !== "teacher" && (
+                  <button
+                    onClick={handleRemoveTeamAttachment}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  >
+                    刪除附件
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end m-2">
+            <button
+              onClick={() => setTeamDailyModalOpen(false)}
+              className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2"
+            >
+              {userRole === "teacher" ? "關閉" : "取消"}
+            </button>
+            {userRole !== "teacher" && (
+              <button
+                onClick={(e) => {
+                  editingId
+                    ? handleSaveTeamEdit()
+                    : handleCreateOrUpdateTeamDaily(e);
+                }}
+                type="submit"
+                className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-xs sm:text-sm text-white"
+              >
+                {editingId ? "更新" : "儲存"}
+              </button>
+            )}
+          </div>
+            </>
+          )}
+          {teamTab === 'history' && editingId && (
+            <AuditHistoryPanel targetType="daily_team" targetId={editingId} defaultOpen={true} />
+          )}
+        </div>
+      </Modal>
+      {/* 檢視 */}
+      {/* {
+                selectedDaily &&
+                <Modal open={inspectDailyModalOpen} onClose={() => setInspectDailyModalOpen(false)} opacity={true} position={"justify-center items-center"}>
+                    <div className='flex flex-col p-3'>
+                        <h3 className='  font-bold text-lg mb-3 text-center'>檢視日誌</h3>
+                        <p className=' font-bold text-base mb-3'>標題</p>
+                        <input className=" rounded outline-none ring-2 p-1 ring-[#5BA491] w-full mb-3"
+                            type="text"
+                            placeholder="標題"
+                            name='title'
+                            value={selectedDaily.title}
+                            onChange={handleChangeSelectDaily}
+                            disabled
+                        />
+                        <p className=' font-bold text-base mb-3'>內容</p>
+                        <textarea className=" rounded outline-none ring-2 ring-[#5BA491] w-full p-1 resize-none overflow-auto"
+                            rows={10}
+                            placeholder="內容"
+                            name='content'
+                            value={selectedDaily.content}
+                            onChange={handleChangeSelectDaily}
+                            disabled
+                        />
+                        {selectedDaily.fileData && (
+                            <div className='flex justify-between items-center p-3 bg-gray-100 rounded-lg mt-5'>
+                                <span className="font-semibold text-gray-700">附加檔案: {selectedDaily.filename}</span>
+                                <button
+                                    className="flex items-center justify-center px-3 py-1 bg-[#5BA491] text-white rounded-md hover:bg-[#487e6c] transition-colors duration-300 ease-in-out"
+                                    onClick={() => {
+                                        const buffer = new Uint8Array(selectedDaily.fileData.data);
+                                        const blob = new Blob([buffer], { type: "application/octet-stream" });
+                                        FileDownload(blob, selectedDaily.filename);
+                                    }}
+                                >
+                                    <AiOutlineCloudDownload size={24} className="mr-2" />
+                                    下載附件
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <div className='flex justify-end m-2'>
+
+                        <button onClick={() => setInspectDailyModalOpen(false)} className="inline-flex items-center justify-center px-4 py-2 bg-[#5BA491] text-white rounded-md hover:bg-[#487e6c] transition-colors duration-300 ease-in-out" >
+                            關閉
+                        </button>
+                    </div>
+                </Modal>
+            } */}
+
+      <Modal
+        open={is5RsModalOpen}
+        onClose={() => handle5RsCancel()}
+        opacity={true}
+        position={"justify-center items-center"}
+        custom="w-[60vw] max-w-none"
+      >
+        <button
+          onClick={() => handle5RsCancel()}
+          className="absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200"
+        >
+          <GrFormClose className="w-6 h-6" />
+        </button>
+        <div className="w-full h-[80vh] flex flex-col">
+          {/* Tabs for 5Rs modal */}
+          <div className="flex border-b border-gray-200 mb-3 flex-shrink-0">
+            <button
+              onClick={() => setFiveRsTab('edit')}
+              className={`px-4 py-2 font-medium text-sm ${fiveRsTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              編輯 5Rs 反思
+            </button>
+            <button
+              onClick={() => setFiveRsTab('history')}
+              className={`px-4 py-2 font-medium text-sm ${fiveRsTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              變更歷史
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {fiveRsTab === 'edit' && (
+              <FiveRsReflectionForm
+                initialData={editingReflectionData}
+                onSave={handle5RsSave}
+                onCancel={handle5RsCancel}
+                isEditing={!!editingId}
+                title={title}
+                onTitleChange={setTitle}
+                attachFile={attachFile}
+                onFileChange={handleAddFileChange}
+                existingRecord={currentEditingPersonal}
+                onRemoveAttachment={handleRemovePersonalAttachment}
+              />
+            )}
+            {fiveRsTab === 'history' && editingId && (
+              <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} />
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* 5Rs 反思檢視 Modal */}
+      <Modal
+        open={viewReflectionModalOpen}
+        onClose={() => setViewReflectionModalOpen(false)}
+        opacity={true}
+        position={"justify-center items-center"}
+        custom="w-[60vw] max-w-none"
+      >
+        <div className="max-w-6xl max-h-[90vh]">
+          <div className="flex justify-between items-center mb-4 p-4 border-b">
+            <h2 className="text-2xl font-bold text-gray-800">
+              {selectedReflectionForView?.title || "5Rs 反思檢視"}
+            </h2>
+            <button
+              onClick={() => setViewReflectionModalOpen(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <GrFormClose size={24} />
+            </button>
+          </div>
+          {selectedReflectionForView && (
+            <FiveRsReflectionDisplay
+              content={selectedReflectionForView.content}
+              showFeedback={true}
+              isTeacher={userRole === "teacher"}
+              record={selectedReflectionForView}
+            />
+          )}
+        </div>
+      </Modal>
+
+      <Toaster />
+    </div>
+  );
+			
+}

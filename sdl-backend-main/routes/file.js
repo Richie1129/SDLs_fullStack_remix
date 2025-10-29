@@ -106,27 +106,43 @@ router.get('/download/:fileName', async (req, res) => {
  */
 router.get('/direct/:fileName', async (req, res) => {
     console.log('=== 📥 MinIO 直接下載請求 ===');
-    const { fileName } = req.params;
+    let { fileName } = req.params;
+
+    // URL 解碼：處理編碼後的檔案名（%20, %E2%80%99 等）
+    try {
+        fileName = decodeURIComponent(fileName);
+    } catch (e) {
+        console.warn('⚠️ 檔案名解碼失敗，使用原始名稱:', fileName);
+    }
+
     console.log('直接下載檔案:', fileName);
-    
+
     try {
         const { downloadFileFromMinio } = require('../config/minio');
-        
+
         // 檢查檔案是否存在
         const exists = await fileExistsInMinio(fileName);
         if (!exists) {
             console.log('❌ 檔案不存在:', fileName);
-            return res.status(404).json({ 
+            return res.status(404).json({
                 message: '檔案不存在',
-                fileName 
+                fileName
             });
         }
 
         // 下載檔案
         const fileBuffer = await downloadFileFromMinio(fileName);
-        
-        // 設置響應頭
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+        // 提取原始檔案名稱（移除時間戳前綴）
+        const originalFileName = fileName.replace(/^\d+-[a-z0-9]+-/, '');
+
+        // RFC 5987 編碼：支援中文和特殊字符
+        const encodedFileName = encodeURIComponent(originalFileName)
+            .replace(/['()]/g, escape) // 額外處理單引號和括號
+            .replace(/\*/g, '%2A');
+
+        // 設置響應頭（使用純 ASCII 的 filename*）
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFileName}`);
         res.setHeader('Content-Type', 'application/octet-stream');
         
         console.log('✅ 檔案下載成功:', fileName);
