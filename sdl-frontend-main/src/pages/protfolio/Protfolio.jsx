@@ -3,7 +3,7 @@ import { AiTwotoneFolderAdd, AiOutlineCloudDownload, AiOutlineUpload } from "rea
 import { GrFormClose } from "react-icons/gr";
 import { useQuery, useQueryClient } from 'react-query';
 import { getAllSubmit, updateSubmitTask, updateSubmitAttachment, getSubmitChangeLogs } from '../../api/submit';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../../components/Loader';
 import ProtfoliioIcon from "../../assets/AnimationProtfoliio.json";
 import Lottie from "lottie-react";
@@ -25,6 +25,7 @@ export default function Protfolio() {
     const [folderModalOpen, setFolderModalOpen] = useState(false);
     const [modalData, setModalData] = useState({});
     const { projectId } = useParams();
+    const navigate = useNavigate();
     const [activeItemId, setActiveItemId] = useState(null);
     const [showEmptyMessage, setShowEmptyMessage] = useState(false);
     const [editableContent, setEditableContent] = useState("");
@@ -34,6 +35,11 @@ export default function Protfolio() {
 
     // 使用觀摩模式 hook
     const { isObservationMode } = useObservationMode();
+
+    // 匯出學習歷程
+    const handleExportPortfolio = () => {
+        navigate(`/project/${projectId}/export-preview`);
+    };
     
     const {
         isLoading,
@@ -217,8 +223,19 @@ export default function Protfolio() {
                 {/* Left Column - Stage Navigation (Sticky) */}
                 <div className="lg:col-span-1 flex flex-col bg-white lg:border-r border-gray-200">
                     {/* Header Section */}
-                    
-                    
+                    <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-[#5BA491]/5">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-xl font-bold text-gray-800">學習歷程</h2>
+                        </div>
+                        <button
+                            onClick={handleExportPortfolio}
+                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#5BA491] to-[#4a8f7c] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 font-medium"
+                        >
+                            <AiOutlineCloudDownload className="text-xl" />
+                            <span>匯出學習歷程 PDF</span>
+                        </button>
+                    </div>
+
                     {/* Navigation Content */}
                     <div className="flex-1 overflow-y-auto">
                         {isLoading ? (

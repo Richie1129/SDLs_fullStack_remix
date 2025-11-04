@@ -18,6 +18,7 @@ import Reflection from "./pages/reflection/Reflection";
 import Protfolio from './pages/protfolio/Protfolio';
 import ManageIdeaWall from "./pages/manageIdeaWall/ManageIdeaWall";
 import IdeaWall from "./pages/ideaWall/IdeaWall";
+import ExportPreview from "./pages/ExportPreview";
 import NotFound from "./pages/notFound/NotFound";
 import TeacherManagementDashboard from './pages/teacher-dashboard';
 import ManagementOverview from './pages/overview/ManagementOverview';
@@ -53,6 +54,7 @@ export default function App() {
             <Route path="askQuestion" element={<AskQuestion />} />
             <Route path="reflection" element={<Reflection />} />
             <Route path="protfolio" element={<Protfolio />} />
+            <Route path="export-preview" element={<ExportPreview />} />
             <Route path="manageIdeaWall" element={<ManageIdeaWall />} />
             <Route path="ideaWall" element={<IdeaWall />} />
             <Route path="teacherDashboard" element={<TeacherManagementDashboard />} />

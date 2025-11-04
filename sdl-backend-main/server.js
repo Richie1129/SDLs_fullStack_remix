@@ -174,6 +174,9 @@ app.use('/api/auth', require('./routes/passwordReset'));
 // Production: 需要 X-Metrics-Token header
 app.use('/api', require('./routes/metrics'));
 
+// 學習歷程匯出 API
+app.use('/api', require('./routes/export'));
+
 // 統一錯誤處理中間件 - Linus 式簡潔設計
 const { errorHandler, NotFoundError } = require('./utils/errorHandler');
 

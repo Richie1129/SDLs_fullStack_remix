@@ -16,6 +16,7 @@
     "date-fns": "^3.3.1",
     "dateformat": "^5.0.3",
     "framer-motion": "^11.0.28",
+    "html2pdf.js": "^0.12.1",
     "js-file-download": "^0.4.12",
     "lottie-react": "^2.4.0",
     "lucide-react": "^0.511.0",
