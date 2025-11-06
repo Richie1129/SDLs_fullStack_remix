@@ -19,6 +19,7 @@ import Lottie from "lottie-react";
 import Adding_icon from "../../assets/AnimationAddingNode.json";
 import Timer from './components/Timer';
 import Idea_development from './components/Idea_development';
+import KnowledgeForumScaffolds from './components/KnowledgeForumScaffolds';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
 import { getCurrentUsername, isCurrentUser } from '../../utils/userUtils'; // 引入用戶資訊工具
@@ -129,7 +130,7 @@ export default function IdeaWall() {
         nodes.map((item) => {
             const nodeColor = colors[item.colorindex - 1 % colors.length]; // Use modulo to cycle through colors if index exceeds array length
 
-            item.image = svgConvertUrl(item.title, item.owner, item.createdAt, nodeColor);
+            item.image = svgConvertUrl(item.title, item.owner, item.createdAt, nodeColor, item.content);
 
 
             item.shape = "image";
@@ -548,6 +549,13 @@ export default function IdeaWall() {
                         value={title}
                         onChange={handleChange}
                     />
+
+                    {/* Knowledge Forum 思考鷹架 */}
+                    <KnowledgeForumScaffolds
+                        currentContent={content}
+                        onInsert={setContent}
+                    />
+
                     <p className=' font-bold text-base mb-3'>內容</p>
                     <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
                         rows={5}
@@ -614,6 +622,18 @@ export default function IdeaWall() {
                                     onChange={handleUpdataChange}
                                     disabled={isObservationMode || currentUsername !== selectNodeInfo.owner}
                                 />
+
+                                {/* Knowledge Forum 思考鷹架 - 只在可編輯時顯示 */}
+                                {!isObservationMode && currentUsername === selectNodeInfo.owner && (
+                                    <KnowledgeForumScaffolds
+                                        currentContent={selectNodeInfo.content}
+                                        onInsert={(newContent) => setSelectNodeInfo({
+                                            ...selectNodeInfo,
+                                            content: newContent
+                                        })}
+                                    />
+                                )}
+
                                 <p className=' font-bold text-base mb-3'>內容</p>
                                 <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
                                     rows={5}
