@@ -2,10 +2,13 @@ import React from "react";
 
 /**
  * ProjectAssistantSidebar - Sidebar for managing chat sessions in Project Assistant
- * Matches ChatSidebar styling from Science Assistant
+ * Fully responsive, matches ChatSidebar from Science Assistant
  */
 const ProjectAssistantSidebar = ({
   showSidebar,
+  isMinimized,
+  isFullscreen,
+  screenWidth,
   chatSessions,
   currentSessionId,
   isLoadingSessions,
@@ -17,8 +20,11 @@ const ProjectAssistantSidebar = ({
 
   return (
     <div
-      className="w-[220px] h-full bg-[#f8f9fa] border-r border-[#e9ecef] p-4 flex flex-col"
-      style={{ minWidth: '220px' }}
+      className={`sidebar ${isMinimized ? 'hidden' : ''} ${
+        isFullscreen
+          ? (screenWidth >= 768 ? 'w-[280px] h-full' : 'w-full h-auto min-h-[180px] border-b border-[#e9ecef]')
+          : 'w-[200px] h-full border-r border-[#e9ecef]'
+      } ${isFullscreen ? 'rounded-none' : 'rounded-l-2xl'} bg-[#f8f9fa] p-4 flex flex-col`}
     >
       {/* 新對話按鈕 */}
       <button
@@ -45,7 +51,7 @@ const ProjectAssistantSidebar = ({
           chatSessions.map((session) => (
             <div
               key={session.id}
-              className={`group p-[12px_14px] rounded mb-1.5 cursor-default text-[13px] transition-all break-words flex items-center justify-between ${
+              className={`session-item group p-[12px_14px] rounded mb-1.5 cursor-default text-[13px] transition-all break-words flex items-center justify-between ${
                 currentSessionId === session.id
                   ? 'bg-[#5BA491] text-white font-medium'
                   : 'text-[#495057] border border-transparent hover:bg-[#e9ecef] hover:border-[#dee2e6]'
@@ -60,7 +66,7 @@ const ProjectAssistantSidebar = ({
 
               {/* 刪除按鈕 */}
               <button
-                className={`flex items-center justify-center w-5 h-5 rounded border-0 bg-transparent text-[#dc3545] cursor-pointer text-[12px] transition-all ml-1 ${
+                className={`delete-btn flex items-center justify-center w-5 h-5 rounded border-0 bg-transparent text-[#dc3545] cursor-pointer text-[12px] transition-all ml-1 ${
                   currentSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                 }`}
                 onClick={(e) => {
