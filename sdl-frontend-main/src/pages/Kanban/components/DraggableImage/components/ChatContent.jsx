@@ -2,6 +2,7 @@ import React from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import AssistantChat from '../../../../../components/AssistantChat';
+import AssistantChatStreaming from '../../../../../components/AssistantChatStreaming';
 
 const ChatContent = ({
   activeTab,
@@ -17,6 +18,15 @@ const ChatContent = ({
   currentStage,
   currentSubStage
 }) => {
+  // ✅ 移除 RAGFlow 引用標記（##0$$, ##1$$ 等）並清理多餘空格
+  const cleanRagflowCitations = (text) => {
+    if (!text) return text;
+    return text
+      .replace(/##\d+\$\$/g, '')   // 移除引用標記
+      .replace(/ {2,}/g, ' ')       // 只合併連續的空格（保留換行符）
+      .trim();                      // 移除首尾空格
+  };
+
   if (isMinimized) return null;
 
   return (
@@ -27,7 +37,16 @@ const ChatContent = ({
           : (screenWidth < 768 ? 'p-3' : 'p-5')
       } bg-[#fdfdfd]`}
     >
-      {activeTab === 'mentor' ? (
+      {activeTab === 'project-assistant' ? (
+        // 專案助理（新版，支援 streaming）
+        <div className="h-full">
+          <AssistantChatStreaming
+            projectId={projectId}
+            provider="gemini"
+            embedded={true}
+          />
+        </div>
+      ) : activeTab === 'mentor' ? (
         mentorStarted ? (
           <div className="h-full">
             <AssistantChat
@@ -113,8 +132,33 @@ const ChatContent = ({
                         strong: ({ children }) => <strong className="font-semibold text-[#343a40]">{children}</strong>,
                       }}
                     >
-                      {item.answer}
+                      {cleanRagflowCitations(item.answer)}
                     </ReactMarkdown>
+
+                    {/* ✅ 顯示 RAGFlow 參考文獻 */}
+                    {item.reference?.doc_aggs && item.reference.doc_aggs.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-[#e9ecef]">
+                        <div className="flex items-center gap-1 mb-2">
+                          <svg className="w-3.5 h-3.5 text-[#5BA491]" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                          </svg>
+                          <span className="text-[11px] font-semibold text-[#5BA491]">參考文獻</span>
+                        </div>
+                        <div className="space-y-1">
+                          {item.reference.doc_aggs.map((doc, idx) => (
+                            <div key={idx} className="text-[11px] text-[#6c757d] flex items-start gap-1.5">
+                              <span className="text-[#5BA491] font-medium shrink-0">[{idx + 1}]</span>
+                              <span className="flex-1">
+                                {doc.doc_name}
+                                {doc.count > 1 && (
+                                  <span className="ml-1 text-[10px] text-[#adb5bd]">({doc.count} 處引用)</span>
+                                )}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

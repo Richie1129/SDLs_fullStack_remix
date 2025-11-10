@@ -38,12 +38,13 @@ const ChatWindow = ({
   currentStage,
   currentSubStage
 }) => {
-  // 當 showChat 變為 true 時獲取歷史對話列表
+  // 當 showChat 變為 true 時獲取歷史對話列表（只執行一次）
   useEffect(() => {
-    if (showChat && chatSessions.length === 0 && !isLoadingSessions) {
+    if (showChat && !isLoadingSessions) {
       fetchChatSessions();
     }
-  }, [showChat, chatSessions.length, isLoadingSessions, fetchChatSessions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showChat]); // 只依賴 showChat，避免無限循環
 
   if (!showChat) return null;
 
@@ -114,6 +115,14 @@ const ChatWindow = ({
               onClick={() => setActiveTab('science')}
             >
               🧑‍🔬 科學助手
+            </button>
+            <button
+              className={`px-3 py-1 rounded-full text-sm ${
+                activeTab === 'project-assistant' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'
+              }`}
+              onClick={() => setActiveTab('project-assistant')}
+            >
+              🤖 專案助理
             </button>
             {/* <button
               className={`px-3 py-1 rounded-full text-sm ${

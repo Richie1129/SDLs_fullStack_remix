@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { socket } from "../../../../../utils/socket";
 import {
   getUserSessions,
@@ -49,7 +49,7 @@ export const useChatSession = () => {
   }, [currentChatId]);
 
   // 獲取歷史對話列表
-  const fetchChatSessions = async () => {
+  const fetchChatSessions = useCallback(async () => {
     if (isLoadingSessions) return;
 
     try {
@@ -74,9 +74,7 @@ export const useChatSession = () => {
       if (sessions.length === 0) {
         console.log("沒有歷史對話，顯示空狀態");
         setChatSessions([]);
-        if (history.length === 0) {
-          setHistory([{ question: null, answer: OPENING_MESSAGE }]);
-        }
+        setHistory(prev => prev.length === 0 ? [{ question: null, answer: OPENING_MESSAGE }] : prev);
       } else {
         console.log(`找到 ${sessions.length} 個歷史對話`);
 
@@ -106,13 +104,11 @@ export const useChatSession = () => {
       console.error("獲取對話列表失敗:", error);
       console.error("錯誤詳情:", error.response?.data || error.message);
       setChatSessions([]);
-      if (history.length === 0) {
-        setHistory([{ question: null, answer: OPENING_MESSAGE }]);
-      }
+      setHistory(prev => prev.length === 0 ? [{ question: null, answer: OPENING_MESSAGE }] : prev);
     } finally {
       setIsLoadingSessions(false);
     }
-  };
+  }, [isLoadingSessions, currentChatId]); // 只依賴真正需要的狀態
 
   // 載入單一對話歷史訊息
   const loadChatHistory = async (sessionId) => {
@@ -273,12 +269,17 @@ export const useChatSession = () => {
 
       const data = await response.json();
       const answer = data?.data?.answer || "無法取得回答";
+      const reference = data?.data?.reference || null; // ✅ 提取 RAGFlow 參考文獻
 
       setHistory((prevHistory) => {
         const newHistory = [...prevHistory];
         const lastIndex = newHistory.length - 1;
         if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
-          newHistory[lastIndex] = { question: userQuestion, answer };
+          newHistory[lastIndex] = {
+            question: userQuestion,
+            answer,
+            reference // ✅ 儲存參考文獻
+          };
         }
         return newHistory;
       });

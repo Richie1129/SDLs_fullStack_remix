@@ -20,6 +20,27 @@ const ChatTurn = require("../models/chat_turn");
 
 const { callGPTAPI } = require("../services/gpt");
 const { callGeminiAPI } = require("../services/gemini");
+const { streamOpenAIResponse, streamGeminiResponse } = require("../services/streamingService");
+const ASSISTANT_CONFIG = require("../config/assistant");
+const { generateGeminiPrompt, generateOpenAISystemContent } = require("../config/assistantPrompts");
+
+/**
+ * 估算 Token 數量
+ * 簡化演算法：中文約 1.5-2 字元 = 1 token，英文約 4 字元 = 1 token
+ * @param {string} text - 要估算的文字
+ * @returns {number} 估算的 token 數
+ */
+function estimateTokenCount(text) {
+  if (!text) return 0;
+
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - chineseChars;
+
+  // 中文：1.5 字元 ≈ 1 token，英文：4 字元 ≈ 1 token
+  const estimatedTokens = Math.ceil(chineseChars / 1.5 + otherChars / 4);
+
+  return estimatedTokens;
+}
 
 /**
  * 整合專案內容供 LLM 分析使用
@@ -168,7 +189,7 @@ async function getKanbanSnapshot(projectId) {
               "assignees",
               "createdAt",
             ],
-            limit: 30, 
+            limit: ASSISTANT_CONFIG.DB_KANBAN_TASKS_LIMIT,
             order: [["createdAt", "DESC"]],
           },
         ],
@@ -183,8 +204,8 @@ async function getKanbanSnapshot(projectId) {
     name: column.name,
     tasks: column.tasks.map((task) => ({
       id: task.id,
-      title: task.title ? truncateText(task.title, 200) : "",
-      content: task.content ? truncateText(task.content, 1500) : "",
+      title: task.title ? truncateText(task.title, ASSISTANT_CONFIG.TRUNCATE_TASK_TITLE) : "",
+      content: task.content ? truncateText(task.content, ASSISTANT_CONFIG.TRUNCATE_TASK_CONTENT) : "",
       labels: task.labels || [],
       assignees: task.assignees || [],
       createdAt: task.createdAt,
@@ -202,7 +223,7 @@ async function getIdeaWallSnapshot(projectId) {
           [Op.and]: [{ title: { [Op.ne]: null } }, { title: { [Op.ne]: "" } }],
         },
         attributes: ["id", "title", "content", "createdAt", "owner"],
-        limit: 100,
+        limit: ASSISTANT_CONFIG.DB_IDEA_WALL_NODES_LIMIT,
         order: [["createdAt", "DESC"]],
       },
     ],
@@ -216,8 +237,8 @@ async function getIdeaWallSnapshot(projectId) {
     total: ideaWall.nodes.length,
     nodes: ideaWall.nodes.map((node) => ({
       id: node.id,
-      title: node.title ? truncateText(node.title, 200) : "",
-      content: node.content ? truncateText(node.content, 1500) : "",
+      title: node.title ? truncateText(node.title, ASSISTANT_CONFIG.TRUNCATE_NODE_TITLE) : "",
+      content: node.content ? truncateText(node.content, ASSISTANT_CONFIG.TRUNCATE_NODE_CONTENT) : "",
       createdAt: node.createdAt,
       owner: node.owner,
     })),
@@ -228,7 +249,7 @@ async function getSubmissions(projectId) {
   const submissions = await Submit.findAll({
     where: { projectId },
     attributes: ["id", "stage", "content", "createdAt", "userId"],
-    limit: 30,
+    limit: ASSISTANT_CONFIG.DB_SUBMISSIONS_LIMIT,
     order: [["createdAt", "DESC"]],
   });
 
@@ -236,7 +257,7 @@ async function getSubmissions(projectId) {
     id: submit.id,
     stage: submit.stage,
     content: submit.content
-      ? truncateText(JSON.stringify(submit.content), 2000)
+      ? truncateText(JSON.stringify(submit.content), ASSISTANT_CONFIG.TRUNCATE_SUBMIT_CONTENT)
       : "",
     createdAt: submit.createdAt,
     userId: submit.userId,
@@ -254,7 +275,7 @@ async function getChatHistory(projectId) {
       "assistantUsername",
       "createdAt",
     ],
-    limit: 10,
+    limit: ASSISTANT_CONFIG.DB_CHAT_HISTORY_LIMIT,
     order: [["createdAt", "DESC"]],
   });
 
@@ -264,7 +285,7 @@ async function getChatHistory(projectId) {
     if (turn.userContent) {
       history.push({
         role: "user",
-        content: truncateText(turn.userContent, 2000),
+        content: truncateText(turn.userContent, ASSISTANT_CONFIG.TRUNCATE_CHAT_CONTENT),
         username: turn.username,
         createdAt: turn.createdAt,
       });
@@ -273,27 +294,27 @@ async function getChatHistory(projectId) {
     if (turn.assistantContent) {
       history.push({
         role: "assistant",
-        content: truncateText(turn.assistantContent, 2000),
+        content: truncateText(turn.assistantContent, ASSISTANT_CONFIG.TRUNCATE_CHAT_CONTENT),
         username: turn.assistantUsername,
         createdAt: turn.createdAt,
       });
     }
   });
 
-  return history.slice(-20); 
+  return history.slice(-ASSISTANT_CONFIG.CHAT_HISTORY_FINAL_LIMIT);
 }
 
-/* 獲取 30 天內 動作 */
+/* 獲取最近活動摘要 */
 async function getActivitySummary(projectId) {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - ASSISTANT_CONFIG.ACTIVITY_SUMMARY_DAYS);
 
   const taskChanges = await TaskChangeLog.findAll({
     where: {
       projectId,
-      createdAt: { [Op.gte]: thirtyDaysAgo },
+      createdAt: { [Op.gte]: daysAgo },
     },
-    limit: 200,
+    limit: ASSISTANT_CONFIG.DB_TASK_CHANGES_LIMIT,
     order: [["createdAt", "DESC"]],
   });
 
@@ -416,7 +437,7 @@ function generateBasicSummaries({ kanban, ideaWall, submissions, stageMeta }) {
     stageCompliance: stageMeta ? "階段資訊完整" : "缺少階段資訊",
     riskFactors: dataQualityHints,
     actionableInsights: ["建議使用 LLM 獲得更深度分析"],
-    existingTaskTitles: allTaskTitles.slice(0, 200),
+    existingTaskTitles: allTaskTitles.slice(0, ASSISTANT_CONFIG.BASIC_SUMMARY_TASK_TITLES_LIMIT),
     dataQualityHints,
   };
 }
@@ -595,5 +616,198 @@ exports.getGuidance = async (req, res) => {
       error: "Failed to generate guidance | 指導建議生成失敗",
       message: "抱歉，暫時無法回應，請稍後再試。",
     });
+  }
+};
+
+/**
+ * 聊天功能（支援 streaming）
+ * POST /api/assistant/chat
+ *
+ * 功能說明：
+ * 1. 接收使用者的問題
+ * 2. 撈取專案的所有資料（看板、想法牆、提交記錄、對話歷史）
+ * 3. 將資料和問題一起傳給 AI
+ * 4. AI 以 streaming 方式回答（逐字傳回）
+ */
+exports.chatWithStreaming = async (req, res) => {
+  try {
+    const { projectId, message, provider = 'gemini' } = req.body;
+    const userId = req.user?.id;
+
+    console.log('🤖 [Assistant Chat] 收到請求:', { projectId, message, provider, userId });
+
+    // === 第 1 步：驗證輸入 ===
+    if (!userId) {
+      console.log('❌ [Assistant Chat] 驗證失敗: 未登入');
+      return res.status(401).json({ error: '請先登入' });
+    }
+
+    if (!projectId || !message) {
+      console.log('❌ [Assistant Chat] 驗證失敗: 缺少參數');
+      return res.status(400).json({ error: '需要 projectId 和 message' });
+    }
+
+    // === 第 2 步：取得專案資料和使用者權限 ===
+    console.log('📂 [Assistant Chat] 開始取得專案資料...');
+    const projectData = await getProjectBasicsAndUserRole(projectId, userId);
+
+    if (!projectData) {
+      console.log('❌ [Assistant Chat] 專案不存在或無權限');
+      return res.status(404).json({ error: '找不到專案或沒有權限' });
+    }
+
+    console.log('✅ [Assistant Chat] 專案資料取得成功:', projectData.project.name);
+
+    // === 第 3 步：平行撈取所有需要的資料（效能優化）===
+    console.log('📊 [Assistant Chat] 開始撈取專案詳細資料...');
+    const [stageMeta, kanban, ideaWall, submissions, chatHistory] = await Promise.all([
+      getStageMeta(projectData.project),
+      getKanbanSnapshot(projectId),
+      getIdeaWallSnapshot(projectId),
+      getSubmissions(projectId),
+      getChatHistory(projectId),
+    ]);
+
+    console.log('✅ [Assistant Chat] 所有資料撈取完成');
+
+    // 取得使用者名字
+    const userName = projectData.user.username || '同學';
+    console.log('👤 [Assistant Chat] 使用者名字:', userName);
+
+    // === 第 4 步：整理專案內容成結構化資料 ===
+    // 統一數據格式：所有欄位都使用對象結構，避免 object vs string 混雜
+    const projectContext = {
+      專案名稱: projectData.project.name,
+      專案描述: projectData.project.describe || '無描述',
+      當前階段: `${projectData.project.currentStage || '未設定'}/${projectData.project.currentSubStage || '未設定'}`,
+
+      階段要求: {
+        hasData: !!stageMeta,
+        階段名稱: stageMeta?.stageName || null,
+        子階段名稱: stageMeta?.meta.name || null,
+        子階段說明: stageMeta?.meta.description || null,
+        需填寫欄位: stageMeta?.meta.requiredFields || []
+      },
+
+      看板狀況: {
+        hasData: kanban.length > 0,
+        總欄位數: kanban.length,
+        總任務數: kanban.reduce((sum, col) => sum + col.tasks.length, 0),
+        欄位詳情: kanban.map(col => ({
+          欄位名稱: col.name,
+          任務數量: col.tasks.length,
+          任務列表: col.tasks.slice(0, ASSISTANT_CONFIG.PROMPT_KANBAN_TASKS_LIMIT).map(t => ({
+            標題: t.title,
+            內容: t.content ? t.content.substring(0, ASSISTANT_CONFIG.PROMPT_TASK_CONTENT_LIMIT) : '',
+            負責人: t.assignees?.map(a => a.username).join(', ') || '未指派',
+            標籤: t.labels?.join(', ') || '無',
+          }))
+        }))
+      },
+
+      想法牆: {
+        hasData: ideaWall.total > 0,
+        總節點數: ideaWall.total,
+        想法列表: ideaWall.nodes.slice(0, ASSISTANT_CONFIG.PROMPT_IDEA_NODES_LIMIT).map(n => ({
+          標題: n.title,
+          內容: n.content ? n.content.substring(0, ASSISTANT_CONFIG.PROMPT_IDEA_CONTENT_LIMIT) : '',
+          作者: n.owner,
+          建立時間: n.createdAt,
+        }))
+      },
+
+      最近提交記錄: {
+        hasData: submissions.length > 0,
+        總數: submissions.length,
+        記錄列表: submissions.slice(0, ASSISTANT_CONFIG.PROMPT_SUBMISSIONS_LIMIT).map(s => ({
+          階段: s.stage,
+          內容摘要: typeof s.content === 'string'
+            ? s.content.substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT)
+            : JSON.stringify(s.content).substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT),
+          提交時間: s.createdAt,
+        }))
+      },
+    };
+
+    // === 第 5 步：根據 provider 選擇使用 Gemini 或 OpenAI ===
+    if (provider === 'gemini') {
+      // 使用 Gemini（預設）
+      console.log('🚀 [Assistant Chat] 使用 Gemini 開始串流...');
+
+      // 使用獨立配置生成 Prompt（包含邊界約束）
+      const prompt = generateGeminiPrompt({
+        userName,
+        projectContext,
+        chatHistory,
+        message,
+        chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
+      });
+
+      // Token 計數監控
+      const promptTokens = estimateTokenCount(prompt);
+      const contextSize = JSON.stringify(projectContext).length;
+      console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
+      console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
+      console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+
+      await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
+
+    } else if (provider === 'openai') {
+      // 使用 OpenAI（備選）
+      console.log('🚀 [Assistant Chat] 使用 OpenAI 開始串流...');
+
+      // 使用獨立配置生成 System Content（包含邊界約束）
+      const systemContent = generateOpenAISystemContent({
+        userName,
+        projectContext,
+        chatHistory,
+        chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
+      });
+
+      const messages = [
+        {
+          role: 'system',
+          content: systemContent
+        },
+        {
+          role: 'user',
+          content: message
+        }
+      ];
+
+      // Token 計數監控
+      const totalPromptText = systemContent + message;
+      const promptTokens = estimateTokenCount(totalPromptText);
+      const contextSize = JSON.stringify(projectContext).length;
+      console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
+      console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
+      console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+
+      await streamOpenAIResponse(messages, res, {
+        model: 'gpt-4o-mini',
+        temperature: 0.7
+      });
+
+    } else {
+      return res.status(400).json({ error: 'provider 必須是 "gemini" 或 "openai"' });
+    }
+
+  } catch (error) {
+    console.error('Chat streaming error:', error);
+
+    // 如果還沒開始傳送 SSE，用 JSON 回傳錯誤
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: '發生錯誤',
+        message: '抱歉，AI 服務暫時無法回應，請稍後再試'
+      });
+    } else {
+      // 如果已經開始 streaming，用 SSE 格式傳送錯誤
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        error: '發生錯誤，請稍後再試'
+      })}\n\n`);
+      res.end();
+    }
   }
 };
