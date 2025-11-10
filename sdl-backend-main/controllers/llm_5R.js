@@ -1,6 +1,6 @@
 // 引入必要的套件
 const axios = require('axios'); // 用於 GPT API 呼叫
-const { GoogleGenerativeAI } = require('@google/generative-ai'); // 用於 Gemini API 呼叫
+const { GoogleGenAI } = require('@google/genai'); // 用於 Gemini API 呼叫
 require('dotenv').config(); // 載入環境變數
 
 // 5Rs 反思框架的詳細定義
@@ -213,21 +213,16 @@ async function callGPTNanoAPI(prompt) {
   }
 }
 
-// Gemini API 呼叫函數 (已更新為直接使用 Node.js SDK)
+// Gemini API 呼叫函數 (使用新版 SDK)
 async function callGeminiAPI(prompt) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY; // 從環境變數獲取 API Key
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY not found in environment variables");
     }
 
-    // 初始化 GoogleGenerativeAI 客戶端
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const genAI = new GoogleGenAI({ apiKey });
 
-    // 獲取 Gemini 模型實例
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-    // 設定生成配置
     const generationConfig = {
       temperature: 0.7,
       topP: 1,
@@ -235,7 +230,6 @@ async function callGeminiAPI(prompt) {
       maxOutputTokens: 2048,
     };
 
-    // 設定安全設定
     const safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
       { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
@@ -243,20 +237,21 @@ async function callGeminiAPI(prompt) {
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
     ];
 
-    // 呼叫 Gemini API
-    const result = await model.generateContent({
-      contents: [{ parts: [{ text: prompt }] }], // 將 prompt 作為內容傳遞
-      generationConfig,
-      safetySettings,
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+      config: {
+        generationConfig,
+        safetySettings,
+      }
     });
 
-    const response = await result.response; // 獲取 API 回應
-    const text = response.text(); // 提取回應中的文字內容
+    const text = response.text;
 
     return {
       success: true,
       provider: "gemini-2.0-flash",
-      content: text, // 返回 AI 生成的內容
+      content: text,
     };
 
   } catch (error) {

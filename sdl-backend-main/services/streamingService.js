@@ -1,12 +1,12 @@
 const OpenAI = require('openai');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config();
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 /**
  * 使用 OpenAI 串流式回傳 AI 回答
@@ -107,20 +107,22 @@ async function streamGeminiResponse(prompt, res, options = {}) {
 
     console.log('✅ [Gemini] SSE headers 已設定');
 
-    const geminiModel = genAI.getGenerativeModel({ model });
-    console.log('✅ [Gemini] Gemini model 已初始化');
+    console.log('✅ [Gemini] 準備呼叫串流 API');
 
-    // Gemini streaming
+    // Gemini streaming - 使用新版 SDK API
     console.log('🚀 [Gemini] 開始呼叫 generateContentStream...');
-    const result = await geminiModel.generateContentStream(prompt);
+    const stream = await genAI.models.generateContentStream({
+      model,
+      contents: prompt
+    });
     console.log('✅ [Gemini] generateContentStream 回應成功');
 
     // 逐塊處理回應
     let chunkCount = 0;
     let totalChars = 0;
 
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
+    for await (const chunk of stream) {
+      const text = chunk.text || '';
       chunkCount++;
 
       if (text) {
