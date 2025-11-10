@@ -26,7 +26,23 @@ export const useChatSession = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✅ 外部連結開關狀態（從 localStorage 讀取，預設關閉）
+  const [enableExternalLinks, setEnableExternalLinks] = useState(() => {
+    const saved = localStorage.getItem('science-assistant-external-links');
+    return saved === 'true';
+  });
+
   const chatEndRef = useRef(null);
+
+  // ✅ 當開關狀態改變時，儲存到 localStorage
+  useEffect(() => {
+    localStorage.setItem('science-assistant-external-links', enableExternalLinks);
+  }, [enableExternalLinks]);
+
+  // ✅ 切換開關函數
+  const toggleExternalLinks = () => {
+    setEnableExternalLinks(prev => !prev);
+  };
 
   // 初始化歷史記錄為開場白
   useEffect(() => {
@@ -134,7 +150,10 @@ export const useChatSession = () => {
           if (message.input_message && message.response_message) {
             conversationHistory.push({
               question: message.input_message,
-              answer: message.response_message
+              answer: message.response_message,
+              // ✅ 從資料庫載入 reference 和 externalLinks
+              reference: message.reference_data || null,
+              externalLinks: message.external_links || []
             });
           } else if (message.input_message && !message.response_message) {
             conversationHistory.push({
@@ -261,28 +280,106 @@ export const useChatSession = () => {
 
       console.log("發送問題到 RAGFlow，使用 session ID:", currentSessionId, "問題:", userQuestion);
 
-      const response = await fetch(`${API_URL}/completions`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
+      // ✅ 聲明變數（解決作用域問題）
+      let answer;
+      let reference;
+      let externalLinks = [];
 
-      const data = await response.json();
-      const answer = data?.data?.answer || "無法取得回答";
-      const reference = data?.data?.reference || null; // ✅ 提取 RAGFlow 參考文獻
+      // ✅ 根據開關決定是否平行呼叫 Gemini Grounding
+      if (enableExternalLinks) {
+        console.log("🔗 外部連結開關已開啟，將平行呼叫 RAGFlow 和 Gemini Grounding");
 
-      setHistory((prevHistory) => {
-        const newHistory = [...prevHistory];
-        const lastIndex = newHistory.length - 1;
-        if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
-          newHistory[lastIndex] = {
-            question: userQuestion,
-            answer,
-            reference // ✅ 儲存參考文獻
-          };
+        // ✅ 取得認證令牌（優先使用 accessToken）
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+
+        const [ragflowResponse, geminiResponse] = await Promise.allSettled([
+          // RAGFlow API 呼叫
+          fetch(`${API_URL}/completions`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(payload),
+          }).then(res => res.json()),
+
+          // Gemini Grounding API 呼叫（✅ 加入 accessToken header）
+          fetch('/api/assistant/grounding', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'accessToken': token // ✅ 後端期望 accessToken header
+            },
+            body: JSON.stringify({ question: userQuestion }),
+          }).then(res => res.json())
+        ]);
+
+        // 處理 RAGFlow 回應（必須成功）
+        if (ragflowResponse.status === 'rejected') {
+          throw new Error('RAGFlow API 呼叫失敗');
         }
-        return newHistory;
-      });
+        const data = ragflowResponse.value;
+        answer = data?.data?.answer || "無法取得回答";
+        reference = data?.data?.reference || null;
+
+        // 🔍 Debug: 檢查 reference 內容
+        console.log('🔍 [Debug] RAGFlow reference:', JSON.stringify(reference, null, 2));
+        console.log('🔍 [Debug] reference.doc_aggs 存在:', !!reference?.doc_aggs);
+        console.log('🔍 [Debug] reference.doc_aggs 長度:', reference?.doc_aggs?.length || 0);
+
+        // 處理 Gemini 回應（失敗不影響主功能）
+        console.log('🔍 [Debug] Gemini Response 完整資料:', geminiResponse);
+        console.log('🔍 [Debug] Gemini Response status:', geminiResponse.status);
+        console.log('🔍 [Debug] Gemini Response value:', JSON.stringify(geminiResponse.value, null, 2));
+
+        if (geminiResponse.status === 'fulfilled' && geminiResponse.value?.success) {
+          externalLinks = geminiResponse.value.externalLinks || [];
+          console.log(`✅ 成功取得 ${externalLinks.length} 個外部連結`);
+          console.log('🔍 [Debug] externalLinks 詳細資料:', JSON.stringify(externalLinks, null, 2));
+        } else {
+          console.warn('⚠️ Gemini Grounding 呼叫失敗，但不影響主要功能');
+          console.warn('🔍 [Debug] 失敗原因 (reason):', geminiResponse.reason);
+          console.warn('🔍 [Debug] 失敗回應 (value):', geminiResponse.value);
+          console.warn('🔍 [Debug] 錯誤訊息:', geminiResponse.value?.error);
+        }
+
+        // 更新歷史記錄
+        setHistory((prevHistory) => {
+          const newHistory = [...prevHistory];
+          const lastIndex = newHistory.length - 1;
+          if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
+            newHistory[lastIndex] = {
+              question: userQuestion,
+              answer,
+              reference,
+              externalLinks // ✅ 儲存外部連結
+            };
+          }
+          return newHistory;
+        });
+
+      } else {
+        // ✅ 開關關閉，只呼叫 RAGFlow（原有邏輯，0 破壞性）
+        const response = await fetch(`${API_URL}/completions`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        answer = data?.data?.answer || "無法取得回答";
+        reference = data?.data?.reference || null; // ✅ 提取 RAGFlow 參考文獻
+
+        setHistory((prevHistory) => {
+          const newHistory = [...prevHistory];
+          const lastIndex = newHistory.length - 1;
+          if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
+            newHistory[lastIndex] = {
+              question: userQuestion,
+              answer,
+              reference // ✅ 儲存參考文獻
+            };
+          }
+          return newHistory;
+        });
+      }
 
       // Socket 事件處理
       const userIdRaw = localStorage.getItem('id') ?? localStorage.getItem('userId');
@@ -318,6 +415,9 @@ export const useChatSession = () => {
 
       socket.once("input_stored", (storedData) => {
         const payloadResponse = {
+          // ✅ 新增欄位：儲存 reference 和 externalLinks
+          reference,
+          externalLinks,
           messageType: "response",
           message: answer,
           author: "科學助手",
@@ -499,5 +599,8 @@ export const useChatSession = () => {
     handleDeleteSession,
     createNewSession,
     refreshChatSessions,
+    // ✅ 外部連結開關
+    enableExternalLinks,
+    toggleExternalLinks,
   };
 };

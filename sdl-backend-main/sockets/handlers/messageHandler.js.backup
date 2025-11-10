@@ -112,16 +112,13 @@ class MessageHandler {
                 
             } else if (data.messageType === 'response') {
                 // 當接收到 response_message 時，根據前端返回的 messageId 進行更新
-                // ✅ 儲存 reference 和 externalLinks
                 await Rag_message.update(
                     {
                         response_message: data.message,
                         author: data.author || 'system',
                         userName: userName,
                         sessionId: sessionId,
-                        ragflow_session_id: ragflowSessionId,
-                        reference_data: data.reference || null,
-                        external_links: data.externalLinks || null
+                        ragflow_session_id: ragflowSessionId
                     },
                     {
                         where: {
@@ -130,8 +127,6 @@ class MessageHandler {
                         }
                     }
                 );
-                
-                console.log(`✅ 已儲存 reference_data 和 external_links 到資料庫 (messageId: ${data.messageId})`);
             }
         } catch (error) {
             console.error("保存 RAG 訊息時出錯：", error);

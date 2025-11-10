@@ -159,6 +159,39 @@ const ChatContent = ({
                         </div>
                       </div>
                     )}
+
+                    {/* ✅ 顯示外部連結（Gemini Grounding） */}
+                    {item.externalLinks && item.externalLinks.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-[#e9ecef]">
+                        <div className="flex items-center gap-1 mb-2">
+                          <svg className="w-3.5 h-3.5 text-[#28a745]" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-[11px] font-semibold text-[#28a745]">網路延伸閱讀</span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {item.externalLinks.map((link, idx) => (
+                            <a
+                              key={idx}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] flex items-start gap-1.5 group hover:bg-[#f8f9fa] p-1.5 -ml-1.5 rounded transition-colors"
+                            >
+                              <span className="text-[#28a745] font-medium shrink-0 group-hover:text-[#218838]">[{idx + 1}]</span>
+                              <span className="flex-1">
+                                <span className="text-[#0056b3] underline group-hover:text-[#004494] break-words">
+                                  {link.title}
+                                </span>
+                              </span>
+                              <svg className="w-3 h-3 text-[#6c757d] shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

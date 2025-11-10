@@ -19,7 +19,7 @@ const Sub_stage = require("../models/sub_stage");
 const ChatTurn = require("../models/chat_turn");
 
 const { callGPTAPI } = require("../services/gpt");
-const { callGeminiAPI } = require("../services/gemini");
+const { callGeminiAPI, callGeminiGrounding } = require("../services/gemini");
 const { streamOpenAIResponse, streamGeminiResponse } = require("../services/streamingService");
 const ASSISTANT_CONFIG = require("../config/assistant");
 const { generateGeminiPrompt, generateOpenAISystemContent } = require("../config/assistantPrompts");
@@ -809,5 +809,55 @@ exports.chatWithStreaming = async (req, res) => {
       })}\n\n`);
       res.end();
     }
+  }
+};
+
+/**
+ * ✅ 取得外部延伸閱讀連結（使用 Gemini Grounding）
+ * POST /api/assistant/grounding
+ */
+exports.getExternalLinks = async (req, res) => {
+  try {
+    const { question } = req.body;
+
+    if (!question || typeof question !== 'string' || !question.trim()) {
+      return res.status(400).json({
+        error: 'question 參數必須是非空字串'
+      });
+    }
+
+    console.log(`🔗 [External Links] 收到請求，問題: "${question}"`);
+
+    // ✅ 呼叫 Gemini Grounding
+    console.log(`[External Links Debug] 開始呼叫 callGeminiGrounding...`);
+    const result = await callGeminiGrounding(question);
+
+    console.log(`[External Links Debug] callGeminiGrounding 返回結果:`, JSON.stringify(result, null, 2));
+    console.log(`✅ [External Links] 成功取得 ${result.externalLinks.length} 個連結`);
+
+    const response = {
+      success: true,
+      externalLinks: result.externalLinks,
+      webSearchQueries: result.webSearchQueries
+    };
+
+    console.log(`[External Links Debug] 準備返回給前端:`, JSON.stringify(response, null, 2));
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('❌ [External Links] 錯誤:', error);
+    console.error('❌ [External Links] 錯誤堆疊:', error.stack);
+
+    // ✅ 失敗不影響主要功能，返回空陣列
+    const errorResponse = {
+      success: false,
+      externalLinks: [],
+      error: error.message
+    };
+
+    console.log(`[External Links Debug] 錯誤回應:`, JSON.stringify(errorResponse, null, 2));
+
+    res.status(200).json(errorResponse);
   }
 };

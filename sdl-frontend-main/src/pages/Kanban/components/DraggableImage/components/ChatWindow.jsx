@@ -33,6 +33,9 @@ const ChatWindow = ({
   createNewSession,
   refreshChatSessions,
   showSwalWithCorrectZIndex,
+  // ✅ 外部連結開關
+  enableExternalLinks,
+  toggleExternalLinks,
   // Other props
   projectId,
   currentStage,
@@ -180,6 +183,9 @@ const ChatWindow = ({
           isSubmitting={isSubmitting}
           onSubmit={handleSubmit}
           projectId={projectId}
+          // ✅ 外部連結開關
+          enableExternalLinks={enableExternalLinks}
+          toggleExternalLinks={toggleExternalLinks}
         />
       </div>
     </div>

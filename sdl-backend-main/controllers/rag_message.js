@@ -29,13 +29,15 @@ exports.getRagMessageBySession = async (req, res) => {
 
     try {
         // 先嘗試取得基本欄位
-        let attributes = ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt'];
+        let attributes = ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt','reference_data', 'external_links'];
         
         // 檢查是否存在 ragflow_session_id 欄位
         try {
             const tableDescription = await Rag_message.describe();
             if (tableDescription.ragflow_session_id) {
                 attributes.push('ragflow_session_id');
+                attributes.push('reference_data');
+                attributes.push('external_links');
                 console.log("已包含 ragflow_session_id 欄位");
             } else {
                 console.log("ragflow_session_id 欄位尚未存在，使用基本欄位");

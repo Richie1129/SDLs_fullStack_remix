@@ -33,6 +33,9 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
     handleDeleteSession,
     createNewSession,
     refreshChatSessions,
+    // ✅ 外部連結開關
+    enableExternalLinks,
+    toggleExternalLinks,
   } = useChatSession();
 
   const {
@@ -144,6 +147,9 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
         createNewSession={createNewSession}
         refreshChatSessions={refreshChatSessions}
         showSwalWithCorrectZIndex={showSwalWithCorrectZIndex}
+        // ✅ 外部連結開關
+        enableExternalLinks={enableExternalLinks}
+        toggleExternalLinks={toggleExternalLinks}
         // Other props
         projectId={projectId}
         currentStage={currentStage}

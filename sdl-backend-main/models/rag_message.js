@@ -34,8 +34,7 @@ const Rag_message = sequelize.define('Rag_message', {
     ragflow_session_id: {
         type: DataTypes.STRING,
         allowNull: true,
-    }
-    ,
+    },
     project_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
@@ -43,6 +42,18 @@ const Rag_message = sequelize.define('Rag_message', {
             model: 'projects',
             key: 'id'
         }
+    },
+    // ✅ 新增欄位：儲存 RAGFlow 參考文獻
+    reference_data: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null
+    },
+    // ✅ 新增欄位：儲存 Gemini Grounding 外部連結
+    external_links: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     tableName: 'rag_messages'
