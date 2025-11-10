@@ -1,11 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { getChatHistory, getChatSessions, deleteChatSession, createChatTurn } from '../api/assistant';
 
 /**
- * 專案助理聊天 Hook（支援 streaming）
+ * 專案助理聊天 Hook（支援 streaming + session management）
  *
  * 使用範例：
  * ```jsx
- * const { messages, isLoading, sendMessage, clearMessages } = useAssistantChat();
+ * const { messages, isLoading, sendMessage, clearMessages, chatSessions, currentSessionId, createNewSession } = useAssistantChat();
  *
  * const handleSend = async () => {
  *   await sendMessage(projectId, '我的專案進度如何？');
@@ -14,8 +15,14 @@ import { useState, useCallback } from 'react';
  */
 export function useAssistantChat() {
   const [messages, setMessages] = useState([]);
+  const [historyMessages, setHistoryMessages] = useState([]); // 歷史對話記錄（已廢棄，保留以維持零破壞性）
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Session management state
+  const [chatSessions, setChatSessions] = useState([]);
+  const [currentSessionId, setCurrentSessionId] = useState('default');
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
 
   /**
    * 發送訊息給 AI 助理
@@ -42,6 +49,7 @@ export function useAssistantChat() {
 
     // 2. 準備接收 AI 回應
     let aiResponse = '';
+    let aiThinking = '';  // Store thinking process
     // AI 訊息的索引位置（加入 user message 後，AI message 會是下一個）
     const aiMessageIndex = messages.length + 1;
 
@@ -49,6 +57,7 @@ export function useAssistantChat() {
     setMessages(prev => [...prev, {
       role: 'assistant',
       content: '',
+      thinking: '',  // Initialize thinking field
       timestamp: new Date().toISOString(),
     }]);
 
@@ -64,7 +73,7 @@ export function useAssistantChat() {
       // 使用 /api 路徑（跟其他 API 一致）
       const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
       console.log('🚀 [前端] 發送請求到:', `${baseURL}/assistant/chat`);
-      console.log('📦 [前端] 請求參數:', { projectId, message: userMessage, provider });
+      console.log('📦 [前端] 請求參數:', { projectId, message: userMessage, provider, sessionId: currentSessionId });
 
       const response = await fetch(`${baseURL}/assistant/chat`, {
         method: 'POST',
@@ -77,6 +86,7 @@ export function useAssistantChat() {
           projectId,
           message: userMessage,
           provider,
+          sessionId: currentSessionId,  // Include currentSessionId for session management
         }),
       });
 
@@ -111,7 +121,26 @@ export function useAssistantChat() {
             try {
               const data = JSON.parse(dataStr);
 
-              if (data.type === 'content' && data.content) {
+              if (data.type === 'thinking' && data.content) {
+                // Received thinking process (sent as complete chunk)
+                aiThinking = data.content;
+                console.log(`💭 [前端] 收到思考過程 - ${aiThinking.length} 個字元`);
+
+                // Update UI with thinking content
+                setMessages(prev => {
+                  const newMessages = [...prev];
+                  const lastIndex = newMessages.length - 1;
+                  if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
+                    newMessages[lastIndex] = {
+                      ...newMessages[lastIndex],
+                      thinking: aiThinking,
+                      timestamp: new Date().toISOString(),
+                    };
+                  }
+                  return newMessages;
+                });
+
+              } else if (data.type === 'content' && data.content) {
                 // 收到內容，逐字累加
                 aiResponse += data.content;
                 chunkCount++;
@@ -125,6 +154,7 @@ export function useAssistantChat() {
                     newMessages[lastIndex] = {
                       ...newMessages[lastIndex],
                       content: aiResponse,
+                      thinking: aiThinking,  // Keep thinking content
                       timestamp: new Date().toISOString(),
                     };
                   }
@@ -133,7 +163,8 @@ export function useAssistantChat() {
 
               } else if (data.type === 'done') {
                 // 串流完成
-                console.log(`✅ [前端] 串流完成 - 收到 ${chunkCount} 個 chunks，總共 ${aiResponse.length} 個字元`);
+                console.log(`✅ [前端] 串流完成 - 收到 ${chunkCount} 個 chunks`);
+                console.log(`📊 [前端] 思考: ${aiThinking.length} 字元, 答案: ${aiResponse.length} 字元`);
 
               } else if (data.type === 'error') {
                 // 收到錯誤
@@ -170,7 +201,47 @@ export function useAssistantChat() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages.length]);
+  }, [messages.length, currentSessionId]);
+
+  /**
+   * 載入對話歷史記錄
+   * @param {number} projectId - 專案 ID
+   */
+  const loadHistory = useCallback(async (projectId) => {
+    if (!projectId) return;
+
+    try {
+      const history = await getChatHistory({ projectId });
+
+      // 扁平化：ChatTurn[] → Message[]
+      const flattened = [];
+      for (const turn of (history || [])) {
+        if (turn.userContent) {
+          flattened.push({
+            role: 'user',
+            content: turn.userContent,
+            username: turn.username,
+            timestamp: turn.createdAt,
+          });
+        }
+        if (turn.assistantContent) {
+          flattened.push({
+            role: 'assistant',
+            content: turn.assistantContent,
+            thinking: turn.thinkingContent || '', // 包含思考過程
+            username: turn.assistantUsername || 'AI 導師',
+            timestamp: turn.updatedAt || turn.createdAt,
+          });
+        }
+      }
+
+      setHistoryMessages(flattened);
+      console.log(`📚 [前端] 載入了 ${flattened.length} 條歷史訊息`);
+    } catch (err) {
+      console.error('載入歷史記錄失敗:', err);
+      // 不影響正常使用，靜默失敗
+    }
+  }, []);
 
   /**
    * 清除所有訊息
@@ -196,12 +267,189 @@ export function useAssistantChat() {
     }
   }, [messages, sendMessage]);
 
+  /**
+   * 載入專案的所有對話 sessions
+   * @param {number} projectId - 專案 ID
+   */
+  const fetchSessions = useCallback(async (projectId) => {
+    if (!projectId) return;
+
+    try {
+      setIsLoadingSessions(true);
+      const sessions = await getChatSessions({ projectId });
+      setChatSessions(sessions);
+      console.log(`📚 [前端] 載入了 ${sessions.length} 個對話 sessions`);
+    } catch (err) {
+      console.error('載入 sessions 失敗:', err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  }, []); // Remove dependencies to prevent infinite loop
+
+  /**
+   * 建立新對話 session
+   * @param {number} projectId - 專案 ID
+   */
+  const createNewSession = useCallback(async (projectId) => {
+    if (!projectId) return;
+
+    try {
+      // Generate a unique session ID
+      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+      setCurrentSessionId(newSessionId);
+      setMessages([]);
+      setError(null);
+
+      // Refresh sessions list manually without calling fetchSessions
+      try {
+        setIsLoadingSessions(true);
+        const sessions = await getChatSessions({ projectId });
+        setChatSessions(sessions);
+      } catch (err) {
+        console.error('載入 sessions 失敗:', err);
+      } finally {
+        setIsLoadingSessions(false);
+      }
+
+      console.log(`✨ [前端] 建立新對話: ${newSessionId}`);
+      return newSessionId;
+    } catch (err) {
+      console.error('建立新對話失敗:', err);
+      setError('建立新對話失敗');
+    }
+  }, []); // Remove fetchSessions dependency
+
+  /**
+   * 切換到不同的 session
+   * @param {number} projectId - 專案 ID
+   * @param {string} sessionId - Session ID
+   */
+  const switchSession = useCallback(async (projectId, sessionId) => {
+    if (!projectId || !sessionId) return;
+
+    try {
+      setCurrentSessionId(sessionId);
+      setMessages([]);
+      setError(null);
+
+      // Load history for this session
+      const history = await getChatHistory({ projectId, sessionId });
+
+      // Convert to messages format
+      const flattened = [];
+      for (const turn of (history || [])) {
+        if (turn.userContent) {
+          flattened.push({
+            role: 'user',
+            content: turn.userContent,
+            username: turn.username,
+            timestamp: turn.createdAt,
+          });
+        }
+        if (turn.assistantContent) {
+          flattened.push({
+            role: 'assistant',
+            content: turn.assistantContent,
+            thinking: turn.thinkingContent || '',
+            username: turn.assistantUsername || 'AI 導師',
+            timestamp: turn.updatedAt || turn.createdAt,
+          });
+        }
+      }
+
+      setMessages(flattened);
+      console.log(`🔄 [前端] 切換到對話: ${sessionId}, 載入了 ${flattened.length} 條訊息`);
+    } catch (err) {
+      console.error('切換對話失敗:', err);
+      setError('切換對話失敗');
+    }
+  }, []); // Remove currentSessionId dependency
+
+  /**
+   * 刪除對話 session
+   * @param {number} projectId - 專案 ID
+   * @param {string} sessionId - Session ID
+   */
+  const deleteSession = useCallback(async (projectId, sessionId) => {
+    if (!projectId || !sessionId) return;
+
+    try {
+      await deleteChatSession({ projectId, sessionId });
+
+      // Remove from local state and get updated sessions
+      setChatSessions(prev => {
+        const updated = prev.filter(s => s.id !== sessionId);
+
+        // If we deleted the current session, switch to first available
+        setCurrentSessionId(current => {
+          if (sessionId === current) {
+            if (updated.length > 0) {
+              // Switch to first available session
+              const newSessionId = updated[0].id;
+              // Load history for the new session asynchronously
+              getChatHistory({ projectId, sessionId: newSessionId }).then(history => {
+                const flattened = [];
+                for (const turn of (history || [])) {
+                  if (turn.userContent) {
+                    flattened.push({
+                      role: 'user',
+                      content: turn.userContent,
+                      username: turn.username,
+                      timestamp: turn.createdAt,
+                    });
+                  }
+                  if (turn.assistantContent) {
+                    flattened.push({
+                      role: 'assistant',
+                      content: turn.assistantContent,
+                      thinking: turn.thinkingContent || '',
+                      username: turn.assistantUsername || 'AI 導師',
+                      timestamp: turn.updatedAt || turn.createdAt,
+                    });
+                  }
+                }
+                setMessages(flattened);
+              }).catch(err => {
+                console.error('載入對話歷史失敗:', err);
+                setMessages([]);
+              });
+              return newSessionId;
+            } else {
+              // No sessions left, reset to default
+              setMessages([]);
+              return 'default';
+            }
+          }
+          return current;
+        });
+
+        return updated;
+      });
+
+      console.log(`🗑️ [前端] 刪除對話: ${sessionId}`);
+    } catch (err) {
+      console.error('刪除對話失敗:', err);
+      setError('刪除對話失敗');
+    }
+  }, []); // Remove all dependencies
+
   return {
     messages,
+    historyMessages,
     isLoading,
     error,
     sendMessage,
+    loadHistory,
     clearMessages,
     retryLastMessage,
+    // Session management
+    chatSessions,
+    currentSessionId,
+    isLoadingSessions,
+    fetchSessions,
+    createNewSession,
+    switchSession,
+    deleteSession,
   };
 }

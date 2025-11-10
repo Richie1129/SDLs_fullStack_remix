@@ -21,8 +21,9 @@ const ChatTurn = require("../models/chat_turn");
 const { callGPTAPI } = require("../services/gpt");
 const { callGeminiAPI, callGeminiGrounding } = require("../services/gemini");
 const { streamOpenAIResponse, streamGeminiResponse } = require("../services/streamingService");
+const { streamGeminiResponseStructured } = require("../services/structuredStreamingService");
 const ASSISTANT_CONFIG = require("../config/assistant");
-const { generateGeminiPrompt, generateOpenAISystemContent } = require("../config/assistantPrompts");
+const { generateGeminiPrompt, generateOpenAISystemContent, generateStructuredPrompt } = require("../config/assistantPrompts");
 
 /**
  * 估算 Token 數量
@@ -631,10 +632,10 @@ exports.getGuidance = async (req, res) => {
  */
 exports.chatWithStreaming = async (req, res) => {
   try {
-    const { projectId, message, provider = 'gemini' } = req.body;
+    const { projectId, message, provider = 'gemini', sessionId = 'default' } = req.body;
     const userId = req.user?.id;
 
-    console.log('🤖 [Assistant Chat] 收到請求:', { projectId, message, provider, userId });
+    console.log('🤖 [Assistant Chat] 收到請求:', { projectId, message, provider, userId, sessionId });
 
     // === 第 1 步：驗證輸入 ===
     if (!userId) {
@@ -734,23 +735,92 @@ exports.chatWithStreaming = async (req, res) => {
       // 使用 Gemini（預設）
       console.log('🚀 [Assistant Chat] 使用 Gemini 開始串流...');
 
-      // 使用獨立配置生成 Prompt（包含邊界約束）
-      const prompt = generateGeminiPrompt({
-        userName,
-        projectContext,
-        chatHistory,
-        message,
-        chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
-      });
+      // 檢查是否啟用 Structured Output（實驗性功能）
+      const useStructuredOutput = process.env.USE_STRUCTURED_OUTPUT === 'true';
+      let result;
 
-      // Token 計數監控
-      const promptTokens = estimateTokenCount(prompt);
-      const contextSize = JSON.stringify(projectContext).length;
-      console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
-      console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
-      console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+      if (useStructuredOutput) {
+        // 🧪 Experimental: 使用 Structured Output（消除 XML 解析，保證結構）
+        console.log('🧪 [Assistant Chat] 啟用 Structured Output 模式');
 
-      await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
+        try {
+          // 使用簡化 Prompt（不需要 XML 標籤指示）
+          const structuredPrompt = generateStructuredPrompt({
+            userName,
+            projectContext,
+            chatHistory,
+            message,
+            chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
+          });
+
+          // Token 計數監控
+          const promptTokens = estimateTokenCount(structuredPrompt);
+          const contextSize = JSON.stringify(projectContext).length;
+          console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元 (Structured)`);
+          console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
+          console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+
+          // 嘗試使用 Structured Output
+          result = await streamGeminiResponseStructured(structuredPrompt, res, { model: 'gemini-2.5-flash' });
+          console.log('✅ [Assistant Chat] Structured Output 成功');
+
+        } catch (structuredError) {
+          // Fallback: Structured Output 失敗，使用傳統方法
+          console.warn('⚠️ [Assistant Chat] Structured Output 失敗，fallback 到傳統方法');
+          console.error('  錯誤詳情:', structuredError.message);
+
+          // 使用傳統 Prompt（包含 XML 標籤指示）
+          const prompt = generateGeminiPrompt({
+            userName,
+            projectContext,
+            chatHistory,
+            message,
+            chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
+          });
+
+          result = await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
+        }
+
+      } else {
+        // 預設：使用傳統方法（零破壞性）
+        console.log('📝 [Assistant Chat] 使用傳統 XML 解析模式（預設）');
+
+        // 使用傳統 Prompt（包含 XML 標籤指示）
+        const prompt = generateGeminiPrompt({
+          userName,
+          projectContext,
+          chatHistory,
+          message,
+          chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
+        });
+
+        // Token 計數監控
+        const promptTokens = estimateTokenCount(prompt);
+        const contextSize = JSON.stringify(projectContext).length;
+        console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
+        console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
+        console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+
+        // Stream response and get thinking + content
+        result = await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
+      }
+
+      // Save to database (async, don't block response)
+      if (result && (result.thinkingContent || result.assistantContent)) {
+        ChatTurn.create({
+          projectId: parseInt(projectId, 10),
+          projectName: projectData.project.name,
+          userId: parseInt(userId, 10),
+          username: userName,
+          userContent: message,
+          assistantContent: result.assistantContent || '',
+          thinkingContent: result.thinkingContent || null,
+          assistantUsername: 'AI 導師',
+          sessionId: sessionId || 'default'  // Include sessionId for session management
+        }).catch(err => {
+          console.error('❌ [Assistant Chat] 儲存對話失敗:', err);
+        });
+      }
 
     } else if (provider === 'openai') {
       // 使用 OpenAI（備選）
@@ -783,10 +853,28 @@ exports.chatWithStreaming = async (req, res) => {
       console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
       console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
 
-      await streamOpenAIResponse(messages, res, {
+      // Stream response and get thinking + content
+      const result = await streamOpenAIResponse(messages, res, {
         model: 'gpt-4o-mini',
         temperature: 0.7
       });
+
+      // Save to database (async, don't block response)
+      if (result && (result.thinkingContent || result.assistantContent)) {
+        ChatTurn.create({
+          projectId: parseInt(projectId, 10),
+          projectName: projectData.project.name,
+          userId: parseInt(userId, 10),
+          username: userName,
+          userContent: message,
+          assistantContent: result.assistantContent || '',
+          thinkingContent: result.thinkingContent || null,
+          assistantUsername: 'AI 導師',
+          sessionId: sessionId || 'default'  // Include sessionId for session management
+        }).catch(err => {
+          console.error('❌ [Assistant Chat] 儲存對話失敗:', err);
+        });
+      }
 
     } else {
       return res.status(400).json({ error: 'provider 必須是 "gemini" 或 "openai"' });

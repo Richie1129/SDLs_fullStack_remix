@@ -1,9 +1,10 @@
 import React, { useRef, useEffect } from 'react';
 import { useAssistantChat } from '../hooks/useAssistantChat';
+import ProjectAssistantSidebar from './ProjectAssistantSidebar';
 import ReactMarkdown from 'react-markdown';
 
 /**
- * 專案助理聊天介面（支援 Streaming）
+ * 專案助理聊天介面（支援 Streaming + Session Management）
  *
  * 使用範例：
  * ```jsx
@@ -16,9 +17,32 @@ export default function AssistantChatStreaming({
   embedded = false,
   className = ''
 }) {
-  const { messages, isLoading, error, sendMessage, clearMessages } = useAssistantChat();
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    clearMessages,
+    chatSessions,
+    currentSessionId,
+    isLoadingSessions,
+    fetchSessions,
+    createNewSession,
+    switchSession,
+    deleteSession
+  } = useAssistantChat();
+
+  const [showSidebar, setShowSidebar] = React.useState(true);
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
+
+  // 載入對話 sessions
+  useEffect(() => {
+    if (projectId) {
+      fetchSessions(projectId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]); // fetchSessions has empty deps array, so it's stable - no need to include it
 
   // 自動滾動到底部
   const scrollToBottom = (smooth = true) => {
@@ -93,6 +117,59 @@ export default function AssistantChatStreaming({
     );
   };
 
+  // 思考過程區塊組件
+  const ThinkingBlock = ({ content }) => {
+    const [isExpanded, setIsExpanded] = React.useState(false);
+
+    // 如果沒有思考內容，不渲染
+    if (!content || content.trim() === '') {
+      return null;
+    }
+
+    return (
+      <div
+        className="mb-4 border-2 rounded-lg overflow-hidden shadow-sm"
+        style={{
+          borderColor: '#d4a373',
+          borderStyle: 'dashed',
+          backgroundColor: '#fffbf0'
+        }}
+      >
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full px-4 py-3 flex items-center justify-between hover:bg-opacity-80 transition-colors"
+          style={{
+            background: 'linear-gradient(to right, #fffbf0, #fff9e6)',
+            color: '#8b7355'
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-base">💭</span>
+            <span className="font-medium text-sm">AI 思考過程</span>
+          </div>
+          <span className="text-xs transition-transform" style={{
+            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+          }}>
+            ▼
+          </span>
+        </button>
+
+        {isExpanded && (
+          <div
+            className="px-4 py-3 text-sm leading-relaxed prose prose-sm max-w-none"
+            style={{
+              borderTop: '2px dashed #e8d4b8',
+              color: '#5a5a5a',
+              backgroundColor: '#fffef8'
+            }}
+          >
+            <ReactMarkdown>{content}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 訊息氣泡
   const MessageBubble = ({ message }) => {
     const isUser = message.role === 'user';
@@ -100,30 +177,38 @@ export default function AssistantChatStreaming({
 
     return (
       <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
-        <div
-          className={`
-            max-w-[80%] px-4 py-2 rounded-lg
-            ${isUser
-              ? 'text-white'
-              : isError
-                ? 'bg-red-50 text-red-900 border border-red-200'
-                : 'bg-gray-100 text-gray-900'
-            }
-          `}
-          style={isUser ? { backgroundColor: '#5BA491' } : {}}
-        >
-          {isUser ? (
-            <div className="text-sm whitespace-pre-wrap">{message.content}</div>
-          ) : (
-            <div className="prose prose-sm max-w-none">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
-            </div>
+        <div className="max-w-[80%]">
+          {/* 思考過程區塊（只在 AI 訊息中顯示）*/}
+          {!isUser && message.thinking && (
+            <ThinkingBlock content={message.thinking} />
           )}
-          <div className="text-xs opacity-60 mt-1">
-            {new Date(message.timestamp).toLocaleTimeString('zh-TW', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
+
+          {/* 訊息氣泡 */}
+          <div
+            className={`
+              px-4 py-2 rounded-lg
+              ${isUser
+                ? 'text-white'
+                : isError
+                  ? 'bg-red-50 text-red-900 border border-red-200'
+                  : 'bg-gray-100 text-gray-900'
+              }
+            `}
+            style={isUser ? { backgroundColor: '#5BA491' } : {}}
+          >
+            {isUser ? (
+              <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+            ) : (
+              <div className="prose prose-sm max-w-none">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
+            )}
+            <div className="text-xs opacity-60 mt-1">
+              {new Date(message.timestamp).toLocaleTimeString('zh-TW', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -133,12 +218,12 @@ export default function AssistantChatStreaming({
   // 容器樣式
   const Container = ({ children }) => (
     embedded ? (
-      <div className={`flex flex-col h-full min-h-0 bg-transparent ${className}`}>{children}</div>
+      <div className={`flex flex-row h-full min-h-0 bg-transparent ${className}`}>{children}</div>
     ) : (
       <div className={`
-        w-full max-w-4xl mx-auto h-[600px]
+        w-full max-w-6xl mx-auto h-[600px]
         bg-white shadow-lg rounded-lg border border-gray-200
-        flex flex-col overflow-hidden
+        flex flex-row overflow-hidden
         ${className}
       `}>
         {children}
@@ -146,32 +231,74 @@ export default function AssistantChatStreaming({
     )
   );
 
+  // 處理側邊欄回調
+  const handleNewConversation = async () => {
+    if (!projectId) return;
+    await createNewSession(projectId);
+  };
+
+  const handleSessionClick = async (sessionId) => {
+    if (!projectId) return;
+    await switchSession(projectId, sessionId);
+  };
+
+  const handleDeleteSession = async (sessionId, sessionName) => {
+    if (!projectId) return;
+
+    // 使用簡單的 confirm 對話框（如需要可替換為更好的 UI）
+    if (window.confirm(`確定要刪除「${sessionName}」這個對話嗎？刪除後將無法恢復！`)) {
+      await deleteSession(projectId, sessionId);
+    }
+  };
+
   return (
     <Container>
-      {/* 標題列 */}
-      {!embedded && (
-        <div className="px-4 py-3 text-white flex items-center justify-between" style={{ background: 'linear-gradient(to right, #5BA491, #4a9076)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              🤖
-            </div>
-            <div>
-              <div className="font-semibold">專案助理</div>
-              <div className="text-xs opacity-90">
-                使用 {provider === 'gemini' ? 'Gemini' : 'GPT-4'} 提供協助
+      {/* 側邊欄 */}
+      <ProjectAssistantSidebar
+        showSidebar={showSidebar}
+        chatSessions={chatSessions}
+        currentSessionId={currentSessionId}
+        isLoadingSessions={isLoadingSessions}
+        onNewConversation={handleNewConversation}
+        onSessionClick={handleSessionClick}
+        onDeleteSession={handleDeleteSession}
+      />
+
+      {/* 主要聊天區域 */}
+      <div className="flex flex-col flex-1 min-w-0">
+        {/* 標題列 */}
+        {!embedded && (
+          <div className="px-4 py-3 text-white flex items-center justify-between" style={{ background: 'linear-gradient(to right, #5BA491, #4a9076)' }}>
+            <div className="flex items-center gap-3">
+              {/* 側邊欄切換按鈕 */}
+              <button
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded flex items-center justify-center transition-colors"
+                title={showSidebar ? "隱藏側邊欄" : "顯示側邊欄"}
+              >
+                {showSidebar ? "◂" : "▸"}
+              </button>
+
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                🤖
+              </div>
+              <div>
+                <div className="font-semibold">專案助理</div>
+                <div className="text-xs opacity-90">
+                  使用 {provider === 'gemini' ? 'Gemini' : 'GPT-4'} 提供協助
+                </div>
               </div>
             </div>
+            {messages.length > 0 && (
+              <button
+                onClick={clearMessages}
+                className="text-xs px-3 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors"
+              >
+                清空當前對話
+              </button>
+            )}
           </div>
-          {messages.length > 0 && (
-            <button
-              onClick={clearMessages}
-              className="text-xs px-3 py-1 bg-white/20 hover:bg-white/30 rounded transition-colors"
-            >
-              清空對話
-            </button>
-          )}
-        </div>
-      )}
+        )}
 
       {/* 聊天區域 */}
       <div
@@ -244,55 +371,56 @@ export default function AssistantChatStreaming({
         )}
       </div>
 
-      {/* 輸入區域 */}
-      <form
-        onSubmit={handleSend}
-        className={`p-4 border-t ${embedded ? 'bg-transparent' : 'bg-white'}`}
-      >
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            className="
-              flex-1 px-4 py-2
-              border border-gray-300 rounded-lg
-              focus:outline-none focus:ring-2 focus:border-transparent
-              disabled:bg-gray-100 disabled:cursor-not-allowed
-            "
-            onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px rgba(91, 164, 145, 0.5)'}
-            onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
-            placeholder={
-              !projectId
-                ? '請先選擇專案'
-                : isLoading
-                  ? '等待回應中...'
-                  : '詢問專案相關問題...'
-            }
-            disabled={isLoading || !projectId}
-            autoFocus
-          />
-          <button
-            type="submit"
-            className="
-              px-6 py-2
-              text-white font-medium rounded-lg
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transition-colors
-            "
-            style={{ backgroundColor: '#5BA491' }}
-            onMouseEnter={(e) => !isLoading && !(!projectId) && (e.currentTarget.style.backgroundColor = '#4a9076')}
-            onMouseLeave={(e) => !isLoading && !(!projectId) && (e.currentTarget.style.backgroundColor = '#5BA491')}
-            disabled={isLoading || !projectId}
-          >
-            {isLoading ? '送出中...' : '送出'}
-          </button>
-        </div>
+        {/* 輸入區域 */}
+        <form
+          onSubmit={handleSend}
+          className={`p-4 border-t ${embedded ? 'bg-transparent' : 'bg-white'}`}
+        >
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              className="
+                flex-1 px-4 py-2
+                border border-gray-300 rounded-lg
+                focus:outline-none focus:ring-2 focus:border-transparent
+                disabled:bg-gray-100 disabled:cursor-not-allowed
+              "
+              onFocus={(e) => e.currentTarget.style.boxShadow = '0 0 0 2px rgba(91, 164, 145, 0.5)'}
+              onBlur={(e) => e.currentTarget.style.boxShadow = 'none'}
+              placeholder={
+                !projectId
+                  ? '請先選擇專案'
+                  : isLoading
+                    ? '等待回應中...'
+                    : '詢問專案相關問題...'
+              }
+              disabled={isLoading || !projectId}
+              autoFocus
+            />
+            <button
+              type="submit"
+              className="
+                px-6 py-2
+                text-white font-medium rounded-lg
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors
+              "
+              style={{ backgroundColor: '#5BA491' }}
+              onMouseEnter={(e) => !isLoading && !(!projectId) && (e.currentTarget.style.backgroundColor = '#4a9076')}
+              onMouseLeave={(e) => !isLoading && !(!projectId) && (e.currentTarget.style.backgroundColor = '#5BA491')}
+              disabled={isLoading || !projectId}
+            >
+              {isLoading ? '送出中...' : '送出'}
+            </button>
+          </div>
 
-        {/* 提示文字 */}
-        <div className="mt-2 text-xs text-gray-500">
-          💡 提示：我可以分析專案的看板、想法牆、提交記錄等資料來回答你的問題
-        </div>
-      </form>
+          {/* 提示文字 */}
+          <div className="mt-2 text-xs text-gray-500">
+            💡 提示：我可以分析專案的看板、想法牆、提交記錄等資料來回答你的問題
+          </div>
+        </form>
+      </div>
     </Container>
   );
 }

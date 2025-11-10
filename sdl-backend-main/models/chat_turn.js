@@ -34,6 +34,17 @@ const ChatTurn = sequelize.define('chat_turn', {
     allowNull: true,
     defaultValue: 'AI 導師',
   },
+  thinkingContent: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    field: 'thinking_content', // Map to snake_case column name
+  },
+  sessionId: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    defaultValue: 'default',
+    field: 'session_id', // Map to snake_case column name
+  },
 }, {
   tableName: 'chat_turns',
   timestamps: true,

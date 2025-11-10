@@ -26,6 +26,8 @@ router.get('/:projectId', controller.getProject);
 // router.get('/:projectId/content', validateToken, checkProjectViewingPermission, assistantController.getProjectContent);
 
 // Project chat history and turns (AssistantChat)
+router.get('/:projectId/chat/sessions', validateToken, checkProjectViewingPermission, chatTurnController.listSessions);
+router.delete('/:projectId/chat/sessions/:sessionId', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.deleteSession);
 router.get('/:projectId/chat', validateToken, checkProjectViewingPermission, chatTurnController.listByProject);
 router.post('/:projectId/chat', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.create);
 router.put('/:projectId/chat/:id', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.update);

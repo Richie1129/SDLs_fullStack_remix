@@ -9,13 +9,46 @@
 const ASSISTANT_ROLE = '你是一個專案助理 AI，專門協助使用者了解和管理他們的學習專案。';
 
 /**
+ * 思考過程指示
+ * 要求 AI 在回答前先展示推理過程
+ *
+ * 版本: v2.0 (精簡版，減少 80% token 消耗)
+ * 變更記錄: 2025-01-XX - 移除冗長範例，保留核心格式要求
+ */
+const THINKING_INSTRUCTION = `
+## 回答格式要求：
+
+每次回答必須包含兩部分：
+
+1. **思考過程**（使用 XML 標籤）：
+<thinking>
+- 問題分析：[核心問題]
+- 資料來源：[使用哪些專案資料]
+- 推理：[如何得出結論]
+- 結論：[答案方向]
+</thinking>
+
+2. **正式答案**：在 </thinking> 後直接回答，第一句稱呼使用者。
+
+範例：
+<thinking>
+- 問題分析：使用者想了解看板任務進度
+- 資料來源：專案看板的欄位和任務列表
+- 推理：統計各欄位任務數量
+- 結論：提供分布摘要和評估
+</thinking>
+
+張三，您的專案看板中有 5 個任務...
+`.trim();
+
+/**
  * 回答準則（包含邊界約束）
  * @param {string} userName - 使用者名字
  * @returns {string} 格式化的回答準則
  */
 function getAnswerGuidelines(userName) {
   return `## 回答準則：
-1. **務必在回答開頭稱呼使用者的名字**（例如：「${userName}，...」），讓對話更有溫度
+1. **在正式答案的第一句話稱呼使用者一次**（例如：「${userName}，目前在您的專案中...」），只稱呼一次即可，不要重複
 2. 根據實際專案資料回答，不要編造不存在的資訊
 3. 回答要具體、實用，並引用專案中的實際內容
 4. 使用繁體中文
@@ -38,6 +71,8 @@ function generateGeminiPrompt({ userName, projectContext, chatHistory, message, 
   const hasHistory = chatHistory && chatHistory.length > 0;
 
   return `${ASSISTANT_ROLE}
+
+${THINKING_INSTRUCTION}
 
 ## 使用者資訊：
 - 使用者名字：${userName}
@@ -68,6 +103,8 @@ function generateOpenAISystemContent({ userName, projectContext, chatHistory, ch
   const hasHistory = chatHistory && chatHistory.length > 0;
 
   return `${ASSISTANT_ROLE}
+
+${THINKING_INSTRUCTION}
 
 使用者資訊：
 - 使用者名字：${userName}
@@ -110,10 +147,51 @@ const BOUNDARY_TEST_CASES = {
 你想討論專案的哪個部分呢？`
 };
 
+/**
+ * 生成 Structured Output 使用的簡化 Prompt
+ * （不需要 XML 標籤指示，因為結構由 responseSchema 保證）
+ *
+ * @param {Object} params
+ * @param {string} params.userName - 使用者名字
+ * @param {Object} params.projectContext - 專案完整資料
+ * @param {Array} params.chatHistory - 對話歷史
+ * @param {string} params.message - 使用者問題
+ * @param {number} params.chatHistoryLimit - 對話歷史顯示數量限制
+ * @returns {string} 簡化的 Prompt（專用於 Structured Output）
+ */
+function generateStructuredPrompt({ userName, projectContext, chatHistory, message, chatHistoryLimit }) {
+  const hasHistory = chatHistory && chatHistory.length > 0;
+
+  return `${ASSISTANT_ROLE}
+
+## 回答要求：
+
+你的回答會以 JSON 格式輸出，包含兩個欄位：
+1. **thinking**（推理過程）：簡要分析問題、資料來源、推理過程和結論方向（3-5 句話）
+2. **answer**（正式答案）：回答使用者問題，第一句稱呼使用者名字
+
+## 使用者資訊：
+- 使用者名字：${userName}
+
+## 專案完整資料：
+${JSON.stringify(projectContext, null, 2)}
+
+${hasHistory ? `## 最近的對話紀錄：
+${chatHistory.slice(-chatHistoryLimit).map(h => `${h.username || h.role}: ${h.content}`).join('\n')}
+` : ''}
+
+${getAnswerGuidelines(userName)}
+
+## 使用者問題：
+${message}`;
+}
+
 module.exports = {
   ASSISTANT_ROLE,
+  THINKING_INSTRUCTION,
   getAnswerGuidelines,
   generateGeminiPrompt,
   generateOpenAISystemContent,
+  generateStructuredPrompt, // 新增：Structured Output 專用 Prompt
   BOUNDARY_TEST_CASES
 };
