@@ -6,6 +6,7 @@ const Project = require('../../models/project');
 const { logTaskChange, logFieldChanges } = require('../../utils/taskChangeLogger');
 const { Op } = require('sequelize');
 const sequelize = require('../../util/database');
+const { invalidateProjectCache } = require('../../controllers/assistant');
 
 /**
  * 任務相關 Socket 事件處理器
@@ -124,11 +125,14 @@ class TaskHandler {
                 }
             });
 
+            // 🗑️ 清除快取：看板資料已變更
+            invalidateProjectCache(projectId);
+
             console.log(`✅ 任務創建成功: ${createdTask.id} - ${createdTask.title}`);
 
         } catch (error) {
             console.error("創建任務錯誤:", error);
-            this.emitError('taskItemCreated', { 
+            this.emitError('taskItemCreated', {
                 message: '創建任務時發生錯誤',
                 code: 'TASK_CREATE_ERROR'
             });
@@ -207,6 +211,9 @@ class TaskHandler {
                     timestamp: new Date(),
                     columnName: taskColumn?.name || '未知列表'
                 });
+
+                // 🗑️ 清除快取：看板資料已變更
+                invalidateProjectCache(projectId);
 
                 console.log(`✅ 任務更新成功: ${cardData.id} - ${cardData.title}`);
 
@@ -323,11 +330,14 @@ class TaskHandler {
                 }
             });
 
+            // 🗑️ 清除快取：看板資料已變更
+            invalidateProjectCache(projectId);
+
             console.log(`✅ 任務 ${cardData.id} 刪除完成，影響 ${deletedRowCount} 行`);
 
         } catch (error) {
             console.error('任務刪除錯誤:', error);
-            this.emitError('taskDelete', { 
+            this.emitError('taskDelete', {
                 message: '刪除任務時發生錯誤',
                 code: 'TASK_DELETE_ERROR'
             });
@@ -434,11 +444,14 @@ class TaskHandler {
                 });
             }
 
+            // 🗑️ 清除快取：看板資料已變更
+            invalidateProjectCache(projectId);
+
             console.log(`✅ 拖拽操作完成: 任務 ${taskId}`);
 
         } catch (error) {
             console.error('任務拖拽錯誤:', error);
-            this.emitError('taskDrag', { 
+            this.emitError('taskDrag', {
                 message: '拖拽任務時發生錯誤',
                 code: 'TASK_DRAG_ERROR'
             });

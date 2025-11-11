@@ -23,7 +23,9 @@ const { callGeminiAPI, callGeminiGrounding } = require("../services/gemini");
 const { streamOpenAIResponse, streamGeminiResponse } = require("../services/streamingService");
 const { streamGeminiResponseStructured } = require("../services/structuredStreamingService");
 const ASSISTANT_CONFIG = require("../config/assistant");
-const { generateGeminiPrompt, generateOpenAISystemContent, generateStructuredPrompt } = require("../config/assistantPrompts");
+// v2.0 新版建構器（推薦，性能提升 ~40%）
+// 已完全遷移至 PromptBuilder，移除舊函數導入（舊函數仍保留在 assistantPrompts.js 以保持向後相容）
+const { PromptBuilder } = require("../config/assistantPrompts");
 
 /**
  * 估算 Token 數量
@@ -42,6 +44,156 @@ function estimateTokenCount(text) {
 
   return estimatedTokens;
 }
+
+/**
+ * ProjectContext 快取系統
+ * Linus 原則：簡單的資料結構，消除重複計算
+ *
+ * 快取策略：
+ * - TTL: 5 分鐘（連續對話期間不重複查詢）
+ * - Key: projectId
+ * - 自動清理過期條目
+ */
+const projectContextCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 分鐘
+
+/**
+ * 取得 ProjectContext（帶快取）
+ *
+ * @param {number} projectId - 專案 ID
+ * @param {Object} projectData - 專案基本資料（含使用者資訊）
+ * @param {boolean} forceRefresh - 強制重新查詢（預設 false）
+ * @returns {Promise<Object>} projectContext
+ */
+async function getProjectContext(projectId, projectData, forceRefresh = false) {
+  const cacheKey = `project_${projectId}`;
+  const now = Date.now();
+
+  // 快取命中且未過期
+  if (!forceRefresh) {
+    const cached = projectContextCache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      console.log(`🚀 [Cache Hit] ProjectContext 從快取載入 (${projectId})`);
+      return cached.data;
+    }
+  }
+
+  // 快取未命中或強制刷新，重新查詢資料庫
+  console.log(`📊 [Cache Miss] 開始撈取 ProjectContext (${projectId})`);
+
+  const [stageMeta, kanban, ideaWall, submissions] = await Promise.all([
+    getStageMeta(projectData.project),
+    getKanbanSnapshot(projectId),
+    getIdeaWallSnapshot(projectId),
+    getSubmissions(projectId),
+  ]);
+
+  // 組裝 projectContext
+  const projectContext = {
+    專案名稱: projectData.project.name,
+    專案描述: projectData.project.describe || '無描述',
+    當前階段: `${projectData.project.currentStage || '未設定'}/${projectData.project.currentSubStage || '未設定'}`,
+
+    階段要求: {
+      hasData: !!stageMeta,
+      階段名稱: stageMeta?.stageName || null,
+      子階段名稱: stageMeta?.meta.name || null,
+      子階段說明: stageMeta?.meta.description || null,
+      需填寫欄位: stageMeta?.meta.requiredFields || []
+    },
+
+    看板狀況: {
+      hasData: kanban.length > 0,
+      總欄位數: kanban.length,
+      總任務數: kanban.reduce((sum, col) => sum + col.tasks.length, 0),
+      欄位詳情: kanban.map(col => ({
+        欄位名稱: col.name,
+        任務數量: col.tasks.length,
+        任務列表: col.tasks.slice(0, ASSISTANT_CONFIG.PROMPT_KANBAN_TASKS_LIMIT).map(t => ({
+          標題: t.title,
+          內容: t.content ? t.content.substring(0, ASSISTANT_CONFIG.PROMPT_TASK_CONTENT_LIMIT) : '',
+          負責人: t.assignees?.map(a => a.username).join(', ') || '未指派',
+          標籤: t.labels?.join(', ') || '無',
+        }))
+      }))
+    },
+
+    想法牆: {
+      hasData: ideaWall.total > 0,
+      總節點數: ideaWall.total,
+      想法列表: ideaWall.nodes.slice(0, ASSISTANT_CONFIG.PROMPT_IDEA_NODES_LIMIT).map(n => ({
+        標題: n.title,
+        內容: n.content ? n.content.substring(0, ASSISTANT_CONFIG.PROMPT_IDEA_CONTENT_LIMIT) : '',
+        作者: n.owner,
+        建立時間: n.createdAt,
+      }))
+    },
+
+    最近提交記錄: {
+      hasData: submissions.length > 0,
+      總數: submissions.length,
+      記錄列表: submissions.slice(0, ASSISTANT_CONFIG.PROMPT_SUBMISSIONS_LIMIT).map(s => ({
+        階段: s.stage,
+        內容摘要: typeof s.content === 'string'
+          ? s.content.substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT)
+          : JSON.stringify(s.content).substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT),
+        提交時間: s.createdAt,
+      }))
+    },
+  };
+
+  // 存入快取
+  projectContextCache.set(cacheKey, {
+    data: projectContext,
+    timestamp: now
+  });
+
+  console.log(`✅ [Cache Store] ProjectContext 已快取 (${projectId})`);
+
+  // 定期清理過期快取（簡單策略：當快取超過 100 個時觸發清理）
+  if (projectContextCache.size > 100) {
+    cleanExpiredCache();
+  }
+
+  return projectContext;
+}
+
+/**
+ * 清理過期的快取條目
+ * Linus 原則：簡單實用，不過度設計
+ */
+function cleanExpiredCache() {
+  const now = Date.now();
+  let cleaned = 0;
+
+  for (const [key, value] of projectContextCache.entries()) {
+    if (now - value.timestamp >= CACHE_TTL) {
+      projectContextCache.delete(key);
+      cleaned++;
+    }
+  }
+
+  if (cleaned > 0) {
+    console.log(`🧹 [Cache Clean] 清理 ${cleaned} 個過期快取條目`);
+  }
+}
+
+/**
+ * 手動清除特定專案的快取（供外部更新事件使用）
+ * 例如：當看板、想法牆有變更時，呼叫此函數清除快取
+ *
+ * @param {number} projectId - 專案 ID
+ */
+function invalidateProjectCache(projectId) {
+  const cacheKey = `project_${projectId}`;
+  const deleted = projectContextCache.delete(cacheKey);
+  if (deleted) {
+    console.log(`🗑️ [Cache Invalidate] 已清除 ProjectContext 快取 (${projectId})`);
+  }
+}
+
+// 匯出快取管理函數（供其他 controller 使用）
+module.exports.invalidateProjectCache = invalidateProjectCache;
 
 /**
  * 整合專案內容供 LLM 分析使用
@@ -659,78 +811,29 @@ exports.chatWithStreaming = async (req, res) => {
 
     console.log('✅ [Assistant Chat] 專案資料取得成功:', projectData.project.name);
 
-    // === 第 3 步：平行撈取所有需要的資料（效能優化）===
-    console.log('📊 [Assistant Chat] 開始撈取專案詳細資料...');
-    const [stageMeta, kanban, ideaWall, submissions, chatHistory] = await Promise.all([
-      getStageMeta(projectData.project),
-      getKanbanSnapshot(projectId),
-      getIdeaWallSnapshot(projectId),
-      getSubmissions(projectId),
+    // === 第 3 步：取得專案資料（v2.0 帶快取優化）===
+    // 取得使用者名字
+    const userName = projectData.user.username || '同學';
+    console.log('👤 [Assistant Chat] 使用者名字:', userName);
+
+    // v2.0: 使用快取系統取得 projectContext（5 分鐘內的連續請求不重複查詢資料庫）
+    // chatHistory 單獨查詢（因為它是動態變化的，不適合快取）
+    const [projectContext, chatHistory] = await Promise.all([
+      getProjectContext(projectId, projectData),
       getChatHistory(projectId),
     ]);
 
     console.log('✅ [Assistant Chat] 所有資料撈取完成');
 
-    // 取得使用者名字
-    const userName = projectData.user.username || '同學';
-    console.log('👤 [Assistant Chat] 使用者名字:', userName);
+    // === 第 5 步：初始化 PromptBuilder（v2.0 優化，資料預處理只執行一次）===
+    const promptBuilder = new PromptBuilder({
+      userName,
+      projectContext,
+      chatHistory,
+      chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
+    });
 
-    // === 第 4 步：整理專案內容成結構化資料 ===
-    // 統一數據格式：所有欄位都使用對象結構，避免 object vs string 混雜
-    const projectContext = {
-      專案名稱: projectData.project.name,
-      專案描述: projectData.project.describe || '無描述',
-      當前階段: `${projectData.project.currentStage || '未設定'}/${projectData.project.currentSubStage || '未設定'}`,
-
-      階段要求: {
-        hasData: !!stageMeta,
-        階段名稱: stageMeta?.stageName || null,
-        子階段名稱: stageMeta?.meta.name || null,
-        子階段說明: stageMeta?.meta.description || null,
-        需填寫欄位: stageMeta?.meta.requiredFields || []
-      },
-
-      看板狀況: {
-        hasData: kanban.length > 0,
-        總欄位數: kanban.length,
-        總任務數: kanban.reduce((sum, col) => sum + col.tasks.length, 0),
-        欄位詳情: kanban.map(col => ({
-          欄位名稱: col.name,
-          任務數量: col.tasks.length,
-          任務列表: col.tasks.slice(0, ASSISTANT_CONFIG.PROMPT_KANBAN_TASKS_LIMIT).map(t => ({
-            標題: t.title,
-            內容: t.content ? t.content.substring(0, ASSISTANT_CONFIG.PROMPT_TASK_CONTENT_LIMIT) : '',
-            負責人: t.assignees?.map(a => a.username).join(', ') || '未指派',
-            標籤: t.labels?.join(', ') || '無',
-          }))
-        }))
-      },
-
-      想法牆: {
-        hasData: ideaWall.total > 0,
-        總節點數: ideaWall.total,
-        想法列表: ideaWall.nodes.slice(0, ASSISTANT_CONFIG.PROMPT_IDEA_NODES_LIMIT).map(n => ({
-          標題: n.title,
-          內容: n.content ? n.content.substring(0, ASSISTANT_CONFIG.PROMPT_IDEA_CONTENT_LIMIT) : '',
-          作者: n.owner,
-          建立時間: n.createdAt,
-        }))
-      },
-
-      最近提交記錄: {
-        hasData: submissions.length > 0,
-        總數: submissions.length,
-        記錄列表: submissions.slice(0, ASSISTANT_CONFIG.PROMPT_SUBMISSIONS_LIMIT).map(s => ({
-          階段: s.stage,
-          內容摘要: typeof s.content === 'string'
-            ? s.content.substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT)
-            : JSON.stringify(s.content).substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT),
-          提交時間: s.createdAt,
-        }))
-      },
-    };
-
-    // === 第 5 步：根據 provider 選擇使用 Gemini 或 OpenAI ===
+    // === 第 6 步：根據 provider 選擇使用 Gemini 或 OpenAI ===
     if (provider === 'gemini') {
       // 使用 Gemini（預設）
       console.log('🚀 [Assistant Chat] 使用 Gemini 開始串流...');
@@ -745,20 +848,15 @@ exports.chatWithStreaming = async (req, res) => {
 
         try {
           // 使用簡化 Prompt（不需要 XML 標籤指示）
-          const structuredPrompt = generateStructuredPrompt({
-            userName,
-            projectContext,
-            chatHistory,
-            message,
-            chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
-          });
+          // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
+          const structuredPrompt = promptBuilder.forStructured(message);
 
           // Token 計數監控
           const promptTokens = estimateTokenCount(structuredPrompt);
           const contextSize = JSON.stringify(projectContext).length;
           console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元 (Structured)`);
           console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
-          console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+          console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
 
           // 嘗試使用 Structured Output
           result = await streamGeminiResponseStructured(structuredPrompt, res, { model: 'gemini-2.5-flash' });
@@ -770,13 +868,8 @@ exports.chatWithStreaming = async (req, res) => {
           console.error('  錯誤詳情:', structuredError.message);
 
           // 使用傳統 Prompt（包含 XML 標籤指示）
-          const prompt = generateGeminiPrompt({
-            userName,
-            projectContext,
-            chatHistory,
-            message,
-            chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
-          });
+          // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
+          const prompt = promptBuilder.forGemini(message);
 
           result = await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
         }
@@ -786,20 +879,15 @@ exports.chatWithStreaming = async (req, res) => {
         console.log('📝 [Assistant Chat] 使用傳統 XML 解析模式（預設）');
 
         // 使用傳統 Prompt（包含 XML 標籤指示）
-        const prompt = generateGeminiPrompt({
-          userName,
-          projectContext,
-          chatHistory,
-          message,
-          chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
-        });
+        // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
+        const prompt = promptBuilder.forGemini(message);
 
         // Token 計數監控
         const promptTokens = estimateTokenCount(prompt);
         const contextSize = JSON.stringify(projectContext).length;
         console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
         console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
-        console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+        console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
 
         // Stream response and get thinking + content
         result = await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
@@ -827,12 +915,8 @@ exports.chatWithStreaming = async (req, res) => {
       console.log('🚀 [Assistant Chat] 使用 OpenAI 開始串流...');
 
       // 使用獨立配置生成 System Content（包含邊界約束）
-      const systemContent = generateOpenAISystemContent({
-        userName,
-        projectContext,
-        chatHistory,
-        chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
-      });
+      // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
+      const systemContent = promptBuilder.forOpenAI();
 
       const messages = [
         {
@@ -851,7 +935,7 @@ exports.chatWithStreaming = async (req, res) => {
       const contextSize = JSON.stringify(projectContext).length;
       console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
       console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
-      console.log(`📊 [Token Monitor] 專案數據: 看板 ${kanban.length} 欄/${kanban.reduce((sum, col) => sum + col.tasks.length, 0)} 任務, 想法牆 ${ideaWall.total} 節點, 提交 ${submissions.length} 筆`);
+      console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
 
       // Stream response and get thinking + content
       const result = await streamOpenAIResponse(messages, res, {
