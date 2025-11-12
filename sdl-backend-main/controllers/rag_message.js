@@ -23,14 +23,17 @@ exports.getRagMessageHistory = async (req, res) => {
 };
 
 // 根據 userId 和 sessionId 取得特定會話的訊息歷史
+// ✅ v2.0: 支援 projectId 過濾（可選，0破壞性）
 exports.getRagMessageBySession = async (req, res) => {
     const { userId, sessionId } = req.params;
-    console.log("取得特定會話的 RAG 訊息，userId:", userId, "sessionId:", sessionId);
+    const { projectId } = req.query; // ✅ 從 query parameter 讀取 projectId（可選）
+
+    console.log("取得特定會話的 RAG 訊息，userId:", userId, "sessionId:", sessionId, "projectId:", projectId || '未指定');
 
     try {
         // 先嘗試取得基本欄位
         let attributes = ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt','reference_data', 'external_links'];
-        
+
         // 檢查是否存在 ragflow_session_id 欄位
         try {
             const tableDescription = await Rag_message.describe();
@@ -46,12 +49,21 @@ exports.getRagMessageBySession = async (req, res) => {
             console.log("無法檢查表結構，使用基本欄位:", describeError.message);
         }
 
+        // ✅ 建構 where 條件（向後相容）
+        const whereCondition = {
+            userId: userId,
+            sessionId: sessionId
+        };
+
+        // ✅ 如果有 projectId，加入專案隔離（0破壞性：沒有 projectId 時不影響查詢）
+        if (projectId) {
+            whereCondition.project_id = parseInt(projectId, 10);
+            console.log("✅ 啟用專案隔離，project_id:", whereCondition.project_id);
+        }
+
         const messages = await Rag_message.findAll({
             attributes: attributes,
-            where: { 
-                userId: userId,
-                sessionId: sessionId 
-            },
+            where: whereCondition,
             order: [['createdAt', 'ASC']]
         });
 
@@ -64,18 +76,30 @@ exports.getRagMessageBySession = async (req, res) => {
 };
 
 // 根據 userId 取得所有不同的 sessionId（用於顯示會話列表）
+// ✅ v2.0: 支援 projectId 過濾（可選，0破壞性）
 exports.getUserSessions = async (req, res) => {
     const userId = req.params.userId;
-    console.log("取得用戶的所有會話列表，userId:", userId);
+    const { projectId } = req.query; // ✅ 從 query parameter 讀取 projectId（可選）
+
+    console.log("取得用戶的所有會話列表，userId:", userId, "projectId:", projectId || '未指定');
 
     try {
+        // ✅ 建構 where 條件（向後相容）
+        const whereCondition = {
+            userId: userId,
+            sessionId: { [require('sequelize').Op.not]: null }
+        };
+
+        // ✅ 如果有 projectId，加入專案隔離（0破壞性）
+        if (projectId) {
+            whereCondition.project_id = parseInt(projectId, 10);
+            console.log("✅ 啟用專案隔離，project_id:", whereCondition.project_id);
+        }
+
         // 先獲取所有該用戶的訊息，然後在 JavaScript 中處理去重
         const messages = await Rag_message.findAll({
             attributes: ['sessionId', 'userName', 'project_id', 'createdAt'],
-            where: { 
-                userId: userId,
-                sessionId: { [require('sequelize').Op.not]: null }
-            },
+            where: whereCondition,
             order: [['createdAt', 'DESC']]
         });
 
@@ -165,45 +189,57 @@ exports.getRagflowSessionId = async (req, res) => {
 };
 
 // 新增：根據 userId 和 sessionId 刪除特定會話的所有訊息
+// ✅ v2.0: 支援 projectId 過濾（可選，0破壞性）
 exports.deleteSessionMessages = async (req, res) => {
     const { userId, sessionId } = req.params;
-    console.log("刪除會話訊息，userId:", userId, "sessionId:", sessionId);
+    const { projectId } = req.query; // ✅ 從 query parameter 讀取 projectId（可選）
+
+    console.log("刪除會話訊息，userId:", userId, "sessionId:", sessionId, "projectId:", projectId || '未指定');
 
     try {
+        // ✅ 建構 where 條件（向後相容）
+        const whereCondition = {
+            userId: userId,
+            sessionId: sessionId
+        };
+
+        // ✅ 如果有 projectId，加入專案隔離（0破壞性：確保只刪除該專案的訊息）
+        if (projectId) {
+            whereCondition.project_id = parseInt(projectId, 10);
+            console.log("✅ 啟用專案隔離刪除，project_id:", whereCondition.project_id);
+        }
+
         // 刪除該會話的所有訊息
         const deletedCount = await Rag_message.destroy({
-            where: { 
-                userId: userId,
-                sessionId: sessionId 
-            }
+            where: whereCondition
         });
 
         console.log("已刪除的訊息數量:", deletedCount);
-        
+
         if (deletedCount > 0) {
             // Audit: delete assistant session messages
             await logAudit(req, {
                 action: 'ASSISTANT_SESSION_MESSAGES_DELETE',
                 targetType: 'assistant_session',
                 targetId: sessionId,
-                projectId: null,
+                projectId: projectId ? parseInt(projectId, 10) : null,
                 actorId: parseInt(userId, 10) || undefined,
-                metadata: clampMetadataSize({ userId, sessionId, deletedCount })
+                metadata: clampMetadataSize({ userId, sessionId, projectId, deletedCount })
             });
-            res.status(200).json({ 
-                message: "會話訊息已成功刪除", 
-                deletedCount: deletedCount 
+            res.status(200).json({
+                message: "會話訊息已成功刪除",
+                deletedCount: deletedCount
             });
         } else {
-            res.status(404).json({ 
-                message: "未找到要刪除的會話訊息" 
+            res.status(404).json({
+                message: "未找到要刪除的會話訊息"
             });
         }
     } catch (err) {
         console.error("刪除會話訊息錯誤:", err);
-        res.status(500).json({ 
-            error: '無法刪除會話訊息', 
-            details: err.message 
+        res.status(500).json({
+            error: '無法刪除會話訊息',
+            details: err.message
         });
     }
 };

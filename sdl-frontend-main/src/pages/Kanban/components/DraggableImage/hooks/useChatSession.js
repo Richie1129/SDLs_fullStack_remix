@@ -17,6 +17,21 @@ const headers = {
   "Content-Type": "application/json",
 };
 
+/**
+ * ✅ 輔助函數：取得當前專案 ID（0破壞性）
+ * 優先從 localStorage 取得，如果沒有則從 URL 解析
+ */
+const getCurrentProjectId = () => {
+  let projectIdRaw = localStorage.getItem('projectId');
+
+  if (!projectIdRaw) {
+    const m = window.location.pathname.match(/\/project\/(\d+)/);
+    if (m && m[1]) projectIdRaw = m[1];
+  }
+
+  return projectIdRaw ? Number(projectIdRaw) : null;
+};
+
 export const useChatSession = () => {
   const [history, setHistory] = useState([]);
   const [chatSessions, setChatSessions] = useState([]);
@@ -65,6 +80,7 @@ export const useChatSession = () => {
   }, [currentChatId]);
 
   // 獲取歷史對話列表
+  // ✅ v2.0: 加入專案隔離（0破壞性）
   const fetchChatSessions = useCallback(async () => {
     if (isLoadingSessions) return;
 
@@ -73,7 +89,8 @@ export const useChatSession = () => {
       console.log("正在獲取對話列表...");
 
       const userId = localStorage.getItem('id') || '1';
-      console.log("獲取用戶 ID:", userId);
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log("獲取用戶 ID:", userId, "專案 ID:", projectId || '未指定');
 
       // 先測試 API 連接
       try {
@@ -84,7 +101,8 @@ export const useChatSession = () => {
         throw new Error("無法連接到後端 API");
       }
 
-      const sessions = await getUserSessions(userId);
+      // ✅ 傳遞 projectId 參數（如果存在）
+      const sessions = await getUserSessions(userId, projectId);
       console.log("獲取到的對話數據:", sessions);
 
       if (sessions.length === 0) {
@@ -127,6 +145,7 @@ export const useChatSession = () => {
   }, [isLoadingSessions, currentChatId]); // 只依賴真正需要的狀態
 
   // 載入單一對話歷史訊息
+  // ✅ v2.0: 加入專案隔離（0破壞性）
   const loadChatHistory = async (sessionId) => {
     if (isLoadingHistory) return;
 
@@ -135,9 +154,11 @@ export const useChatSession = () => {
       console.log(`正在載入對話歷史，Session ID: ${sessionId}`);
 
       const userId = localStorage.getItem('id') || '1';
-      console.log("使用用戶 ID:", userId);
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log("使用用戶 ID:", userId, "專案 ID:", projectId || '未指定');
 
-      const messages = await getRagMessageBySession(userId, sessionId);
+      // ✅ 傳遞 projectId 參數（如果存在）
+      const messages = await getRagMessageBySession(userId, sessionId, projectId);
       console.log("獲取到的對話歷史:", messages);
 
       const conversationHistory = [];
@@ -468,6 +489,7 @@ export const useChatSession = () => {
   };
 
   // 刪除對話功能
+  // ✅ v2.0: 加入專案隔離（0破壞性）
   const handleDeleteSession = async (sessionId, sessionName, showSwalWithCorrectZIndex) => {
     const result = await showSwalWithCorrectZIndex({
       title: `確定要刪除「${sessionName}」這個對話嗎？`,
@@ -483,7 +505,8 @@ export const useChatSession = () => {
 
     try {
       const userId = localStorage.getItem('id') || '1';
-      console.log(`正在刪除對話: ${sessionId}`);
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log(`正在刪除對話: ${sessionId}`, "專案 ID:", projectId || '未指定');
 
       let ragflowDeleteSuccess = false;
       try {
@@ -500,7 +523,8 @@ export const useChatSession = () => {
 
       let dbDeleteSuccess = false;
       try {
-        await deleteSessionMessages(userId, sessionId);
+        // ✅ 傳遞 projectId 參數（如果存在）
+        await deleteSessionMessages(userId, sessionId, projectId);
         console.log("已從資料庫刪除會話訊息");
         dbDeleteSuccess = true;
       } catch (dbError) {
@@ -547,12 +571,17 @@ export const useChatSession = () => {
   };
 
   // 刷新對話歷史列表
+  // ✅ v2.0: 加入專案隔離（0破壞性）
   const refreshChatSessions = async () => {
     try {
       console.log("正在刷新對話歷史列表...");
 
       const userId = localStorage.getItem('id') || '1';
-      const sessions = await getUserSessions(userId);
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log("刷新對話列表，專案 ID:", projectId || '未指定');
+
+      // ✅ 傳遞 projectId 參數（如果存在）
+      const sessions = await getUserSessions(userId, projectId);
 
       const formattedSessions = sessions.map((session, index) => {
         let displayName;
