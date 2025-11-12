@@ -3,6 +3,7 @@ import { getGuidance, createChatTurn, completeChatTurn, getChatHistory } from '.
 import { getKanbanColumns } from '../api/kanban';
 import { socket } from '../utils/socket';
 import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
+import MessageContent from './MessageContent';
 
 export default function AssistantChat({ projectId, currentStage, currentSubStage, autoGreet = true, embedded = false }) {
   const currentUsername = useUsername(); // 取得當前使用者名稱
@@ -68,7 +69,11 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
         setMessages(prev => [...prev, { role: 'assistant', content: data.message, followup: data.followup }]);
         try { await createChatTurn({ projectId, body: { assistantContent: data.message, assistantUsername: 'AI 導師' } }); } catch (_) {}
       } catch (e) {
-        // noop
+        // 自動問候，提供友好的降級體驗
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: '我是 AI 導師，隨時準備回答你的問題！有任何疑惑都可以問我。'
+        }]);
       } finally {
         setIsSubmitting(false);
       }
@@ -144,7 +149,16 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
         }
       } catch (_) {}
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，我暫時無法回覆，稍後再試試看。' }]);
+      // 根據錯誤類型提供更具體的反饋
+      let errorMsg = '抱歉，我暫時無法回覆。';
+      if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
+        errorMsg = '回應時間過長，請稍後再試。如果問題持續發生，請嘗試簡化你的問題。';
+      } else if (e.response?.status === 500) {
+        errorMsg = '伺服器暫時出現問題，請稍後再試。';
+      } else if (!navigator.onLine) {
+        errorMsg = '網路連線中斷，請檢查你的網路連線。';
+      }
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -220,7 +234,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
             {historyMessages.map((m, idx) => (
               <div key={`h-${idx}`} className={m.role === 'assistant' ? 'text-sm text-gray-800' : 'text-sm text-right'}>
                 <div className={m.role === 'assistant' ? 'inline-block px-3 py-2 bg-gray-50 border rounded-lg' : 'inline-block px-3 py-2 bg-gray-200 text-gray-800 rounded-lg'}>
-                  {m.content}
+                  {m.role === 'assistant' ? <MessageContent content={m.content} /> : m.content}
                 </div>
               </div>
             ))}
@@ -233,7 +247,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'assistant' ? 'text-sm text-gray-800' : 'text-sm text-right'}>
             <div className={m.role === 'assistant' ? 'inline-block px-3 py-2 bg-gray-100 rounded-lg' : 'inline-block px-3 py-2 bg-teal-600 text-white rounded-lg'}>
-              {m.content}
+              {m.role === 'assistant' ? <MessageContent content={m.content} /> : m.content}
             </div>
           </div>
         ))}

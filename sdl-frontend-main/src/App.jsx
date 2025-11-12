@@ -27,6 +27,7 @@ import StudentOverview from './pages/overview/StudentOverview';
 import TeacherOverview from './pages/overview/TeacherOverview';
 import ClassObservationPage from './pages/observation/ClassObservationPage';
 import Profile from './pages/profile/Profile';
+import StreamdownDemo from './pages/StreamdownDemo';
 
 export default function App() {
   const router = createBrowserRouter(
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="teacher-overview" element={<TeacherOverview />} />
           <Route path="observation" element={<ClassObservationPage />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="streamdown-demo" element={<StreamdownDemo />} />
           <Route path="project/:projectId" element={<ProjectLayout />}>
             <Route path="kanban" element={<Kanban />} />
             <Route path="submitTask" element={<SubmitTask />} />

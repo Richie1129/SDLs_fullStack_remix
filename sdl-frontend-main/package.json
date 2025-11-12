@@ -34,6 +34,7 @@
     "recharts": "^2.15.1",
     "remark-gfm": "^4.0.1",
     "socket.io-client": "^4.6.1",
+    "streamdown": "^1.4.0",
     "styled-components": "^6.1.8",
     "sweetalert2": "^11.10.5",
     "swiper": "^11.1.1",

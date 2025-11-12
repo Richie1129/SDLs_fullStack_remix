@@ -16,6 +16,8 @@ export const getGuidance = async ({ projectId, currentStage, currentSubStage, us
     history,
     tasksMode,
     tasksCount,
+  }, {
+    timeout: 60000, // AI 響應可能較慢，給 60 秒超時
   });
   return res.data;
 };

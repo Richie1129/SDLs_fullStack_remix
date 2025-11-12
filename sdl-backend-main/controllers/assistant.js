@@ -1210,6 +1210,12 @@ exports.chatWithStreaming = async (req, res) => {
   } catch (error) {
     console.error('Chat streaming error:', error);
 
+    // 檢查 response 是否已經結束（避免重複寫入）
+    if (res.writableEnded) {
+      console.log('⚠️ Response already ended, skipping error write');
+      return;
+    }
+
     // 如果還沒開始傳送 SSE，用 JSON 回傳錯誤
     if (!res.headersSent) {
       res.status(500).json({
@@ -1218,11 +1224,15 @@ exports.chatWithStreaming = async (req, res) => {
       });
     } else {
       // 如果已經開始 streaming，用 SSE 格式傳送錯誤
-      res.write(`data: ${JSON.stringify({
-        type: 'error',
-        error: '發生錯誤，請稍後再試'
-      })}\n\n`);
-      res.end();
+      try {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          error: '發生錯誤，請稍後再試'
+        })}\n\n`);
+        res.end();
+      } catch (writeError) {
+        console.error('❌ Error writing to already-ended stream:', writeError.message);
+      }
     }
   }
 };

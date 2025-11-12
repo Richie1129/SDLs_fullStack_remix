@@ -6,6 +6,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 const apiClient = axios.create({
   baseURL,
   withCredentials: true,
+  timeout: 30000, // 30秒全局超時，避免請求永久掛起
 });
 
 // Attach token on every request
