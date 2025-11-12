@@ -6,6 +6,7 @@ const Stage = require('../models/stage');
 const { logSubmitChange, logSubmitFieldChanges } = require('../utils/submitChangeLogger');
 const sequelize = require('../util/database');
 const { createErrorResponse, getHttpStatusByErrorCode } = require('../constants/dailyErrorCodes');
+const { invalidateProjectCache } = require('./assistant');
 
 exports.createSubmit = async(req, res) => {
     const { currentStage, currentSubStage, content, projectId } = req.body;
@@ -130,6 +131,9 @@ exports.createSubmit = async(req, res) => {
                 });
             }
         }
+
+        // v2.3: 清除專案快取（階段完成狀態已變更）
+        invalidateProjectCache(projectId);
 
         await t.commit();
         res.status(200).json({

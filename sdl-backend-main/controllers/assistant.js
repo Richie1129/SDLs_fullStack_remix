@@ -81,8 +81,10 @@ async function getProjectContext(projectId, projectData, forceRefresh = false) {
   // 快取未命中或強制刷新，重新查詢資料庫
   console.log(`📊 [Cache Miss] 開始撈取 ProjectContext (${projectId})`);
 
-  const [stageMeta, kanban, ideaWall, submissions] = await Promise.all([
+  const [stageMeta, stageStructure, stageCompletion, kanban, ideaWall, submissions] = await Promise.all([
     getStageMeta(projectData.project),
+    getCompleteStageStructure(projectId),
+    getStageCompletionStatus(projectId, projectData.project.currentStage, projectData.project.currentSubStage),
     getKanbanSnapshot(projectId),
     getIdeaWallSnapshot(projectId),
     getSubmissions(projectId),
@@ -100,6 +102,19 @@ async function getProjectContext(projectId, projectData, forceRefresh = false) {
       子階段名稱: stageMeta?.meta.name || null,
       子階段說明: stageMeta?.meta.description || null,
       需填寫欄位: stageMeta?.meta.requiredFields || []
+    },
+
+    完整階段結構: {
+      hasData: !!stageStructure && stageStructure.length > 0,
+      總階段數: stageStructure?.length || 0,
+      所有階段: stageStructure || [],
+      當前階段ID: projectData.project.currentStage,
+      當前子階段ID: projectData.project.currentSubStage
+    },
+
+    階段完成狀態: stageCompletion || {
+      hasData: false,
+      message: "無階段完成資料"
     },
 
     看板狀況: {
@@ -323,6 +338,234 @@ async function getStageMeta(project) {
       requiredFields: subStage.userSubmit || [],
     },
   };
+}
+
+/**
+ * 取得完整階段結構（所有階段和子階段）
+ *
+ * Linus 設計哲學：
+ * - 資料結構優先：讓 AI 能看到完整專案流程
+ * - 簡單實用：一次查詢取得所有資料
+ * - 消除特殊情況：所有階段使用相同格式
+ *
+ * @param {number} projectId - 專案 ID
+ * @returns {Promise<Object|null>} 完整階段結構或 null
+ */
+async function getCompleteStageStructure(projectId) {
+  try {
+    // 查詢專案的 Process，包含所有 Stage 和 Sub_stage
+    const process = await Process.findOne({
+      where: { projectId },
+      include: [
+        {
+          model: Stage,
+          include: [
+            {
+              model: Sub_stage,
+              attributes: ['id', 'name', 'description', 'userSubmit'],
+            },
+          ],
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    if (!process || !process.stages || process.stages.length === 0) {
+      console.log(`⚠️ [Stage Structure] 專案 ${projectId} 沒有階段資料`);
+      return null;
+    }
+
+    // 轉換為 AI 友善的格式
+    const stageStructure = process.stages.map((stage) => ({
+      階段ID: stage.id,
+      階段名稱: stage.name,
+      子階段: (stage.sub_stages || []).map((subStage) => ({
+        子階段ID: subStage.id,
+        子階段名稱: subStage.name,
+        子階段說明: subStage.description || '無說明',
+        需填寫欄位: subStage.userSubmit || {},
+      })),
+    }));
+
+    console.log(`✅ [Stage Structure] 成功載入 ${process.stages.length} 個階段`);
+    return stageStructure;
+  } catch (error) {
+    console.error(`❌ [Stage Structure] 查詢失敗:`, error);
+    return null;
+  }
+}
+
+/**
+ * 取得階段完成狀態（整合提交記錄）
+ *
+ * v2.3 新功能：
+ * - 整合階段結構與提交記錄
+ * - 檢查每個子階段的提交狀態
+ * - 分析欄位完整性（已填寫 vs 遺漏）
+ * - 計算完成度百分比
+ *
+ * Linus 設計哲學：
+ * - 資料結構優先：一次查詢，清晰整合
+ * - 消除特殊情況：所有子階段統一格式
+ * - 簡單實用：邏輯清晰，無複雜分支
+ *
+ * @param {number} projectId - 專案 ID
+ * @param {number} currentStageId - 當前階段 ID
+ * @param {number} currentSubStageId - 當前子階段 ID
+ * @returns {Promise<Object|null>} 階段完成狀態或 null
+ */
+async function getStageCompletionStatus(projectId, currentStageId, currentSubStageId) {
+  try {
+    // 第 1 步：查詢完整階段結構
+    const process = await Process.findOne({
+      where: { projectId },
+      include: [
+        {
+          model: Stage,
+          include: [
+            {
+              model: Sub_stage,
+              attributes: ['id', 'name', 'description', 'userSubmit'],
+            },
+          ],
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    if (!process || !process.stages || process.stages.length === 0) {
+      console.log(`⚠️ [Stage Completion] 專案 ${projectId} 沒有階段資料`);
+      return null;
+    }
+
+    // 第 2 步：查詢所有提交記錄（不限制數量）
+    const allSubmissions = await Submit.findAll({
+      where: { projectId },
+      attributes: ['id', 'stage', 'content', 'createdAt', 'userId'],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // 建立提交記錄索引：stage -> submission
+    const submissionMap = new Map();
+    allSubmissions.forEach(sub => {
+      // 每個階段可能有多次提交，取最新的
+      if (!submissionMap.has(sub.stage)) {
+        submissionMap.set(sub.stage, sub);
+      }
+    });
+
+    // 第 3 步：遍歷階段，整合提交狀態
+    let totalSubStages = 0;
+    let completedSubStages = 0;
+
+    const stageCompletionData = process.stages.map((stage) => {
+      const subStageStatusList = (stage.sub_stages || []).map((subStage) => {
+        totalSubStages++;
+        const stageKey = `${stage.id}-${subStage.id}`;
+        const submission = submissionMap.get(stageKey);
+
+        // 取得需填寫欄位
+        const requiredFields = Object.keys(subStage.userSubmit || {});
+
+        let subStageStatus;
+        if (submission) {
+          // 有提交記錄：檢查欄位完整性
+          const submittedContent = submission.content || {};
+          const submittedFields = Object.keys(submittedContent);
+
+          // 檢查哪些欄位已填寫（非空）
+          const filledFields = requiredFields.filter(key => {
+            const value = submittedContent[key];
+            // 嚴格檢查：排除 null、undefined、空字串、空陣列
+            if (value === null || value === undefined) return false;
+            if (typeof value === 'string' && value.trim() === '') return false;
+            if (Array.isArray(value) && value.length === 0) return false;
+            return true;
+          });
+
+          const missingFields = requiredFields.filter(key => !filledFields.includes(key));
+          const completeness = requiredFields.length > 0
+            ? Math.round((filledFields.length / requiredFields.length) * 100)
+            : 100;
+
+          // 如果完成度 100%，計為完成
+          if (completeness === 100) {
+            completedSubStages++;
+          }
+
+          subStageStatus = {
+            子階段ID: subStage.id,
+            子階段名稱: subStage.name,
+            需填寫欄位: subStage.userSubmit || {},
+            提交狀態: '已提交',
+            提交時間: submission.createdAt,
+            提交ID: submission.id,
+            欄位完整性: {
+              已填寫: filledFields,
+              遺漏: missingFields,
+              完整度: `${completeness}%`,
+            },
+          };
+        } else {
+          // 無提交記錄
+          const isCurrentStage = (stage.id === currentStageId && subStage.id === currentSubStageId);
+
+          subStageStatus = {
+            子階段ID: subStage.id,
+            子階段名稱: subStage.name,
+            需填寫欄位: subStage.userSubmit || {},
+            提交狀態: isCurrentStage ? '當前階段，進行中' : '未提交',
+            欄位完整性: {
+              已填寫: [],
+              遺漏: requiredFields,
+              完整度: '0%',
+            },
+          };
+        }
+
+        return subStageStatus;
+      });
+
+      // 計算該階段的完成度
+      const stageTotal = subStageStatusList.length;
+      const stageCompleted = subStageStatusList.filter(
+        sub => sub.欄位完整性.完整度 === '100%'
+      ).length;
+      const stageCompleteness = stageTotal > 0
+        ? Math.round((stageCompleted / stageTotal) * 100)
+        : 0;
+
+      return {
+        階段ID: stage.id,
+        階段名稱: stage.name,
+        階段完成度: `${stageCompleteness}%`,
+        子階段狀況: subStageStatusList,
+      };
+    });
+
+    // 計算總完成度
+    const totalCompleteness = totalSubStages > 0
+      ? Math.round((completedSubStages / totalSubStages) * 100)
+      : 0;
+
+    const result = {
+      hasData: true,
+      當前階段: { 階段ID: currentStageId, 子階段ID: currentSubStageId },
+      總完成度: `${totalCompleteness}%`,
+      統計: {
+        總子階段數: totalSubStages,
+        已完成數: completedSubStages,
+        未完成數: totalSubStages - completedSubStages,
+      },
+      各階段狀況: stageCompletionData,
+    };
+
+    console.log(`✅ [Stage Completion] 成功分析 ${process.stages.length} 個階段，總完成度: ${totalCompleteness}%`);
+    return result;
+  } catch (error) {
+    console.error(`❌ [Stage Completion] 查詢失敗:`, error);
+    return null;
+  }
 }
 
 async function getKanbanSnapshot(projectId) {
