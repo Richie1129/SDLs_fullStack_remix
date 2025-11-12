@@ -21,8 +21,42 @@ export function useAssistantChat() {
 
   // Session management state
   const [chatSessions, setChatSessions] = useState([]);
-  const [currentSessionId, setCurrentSessionId] = useState('default');
+  const [currentSessionId, setCurrentSessionId] = useState(() => {
+    // 🔑 0破壞性改進：從 localStorage 讀取上次的 sessionId（如果有）
+    // 如果沒有，預設使用 'default'（向後相容）
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('assistant_current_session');
+      return saved || 'default';
+    }
+    return 'default';
+  });
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  /**
+   * 🔑 生成唯一的 UUID（替代簡單的時間戳）
+   * 使用 crypto.randomUUID() 如果可用，否則 fallback 到簡單實作
+   */
+  const generateSessionId = useCallback(() => {
+    if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+      return window.crypto.randomUUID();
+    }
+    // Fallback: 簡單的 UUID v4 實作
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }, []);
+
+  /**
+   * 🔑 更新 currentSessionId 並同步到 localStorage（確保持久化）
+   */
+  const updateCurrentSessionId = useCallback((sessionId) => {
+    setCurrentSessionId(sessionId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('assistant_current_session', sessionId);
+    }
+  }, []);
 
   /**
    * 發送訊息給 AI 助理
@@ -294,23 +328,17 @@ export function useAssistantChat() {
     if (!projectId) return;
 
     try {
-      // Generate a unique session ID
-      const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      // 🔑 使用標準 UUID 生成唯一 session ID（0破壞性改進）
+      const newSessionId = generateSessionId();
 
-      setCurrentSessionId(newSessionId);
+      // 🔑 使用統一的更新函數（自動同步 localStorage）
+      updateCurrentSessionId(newSessionId);
       setMessages([]);
       setError(null);
 
-      // Refresh sessions list manually without calling fetchSessions
-      try {
-        setIsLoadingSessions(true);
-        const sessions = await getChatSessions({ projectId });
-        setChatSessions(sessions);
-      } catch (err) {
-        console.error('載入 sessions 失敗:', err);
-      } finally {
-        setIsLoadingSessions(false);
-      }
+      // 🔧 移除刷新邏輯：創建新對話時不需要刷新 sessions 列表
+      // 原因：後端還沒有這個 session 的記錄（要等發送第一條訊息後才會創建）
+      // sessions 列表會在發送訊息後自動更新，或者用戶切換到其他對話時再刷新
 
       console.log(`✨ [前端] 建立新對話: ${newSessionId}`);
       return newSessionId;
@@ -318,7 +346,7 @@ export function useAssistantChat() {
       console.error('建立新對話失敗:', err);
       setError('建立新對話失敗');
     }
-  }, []); // Remove fetchSessions dependency
+  }, [generateSessionId, updateCurrentSessionId]); // Add dependencies for stable functions
 
   /**
    * 切換到不同的 session
@@ -329,7 +357,8 @@ export function useAssistantChat() {
     if (!projectId || !sessionId) return;
 
     try {
-      setCurrentSessionId(sessionId);
+      // 🔑 使用統一的更新函數（自動同步 localStorage）
+      updateCurrentSessionId(sessionId);
       setMessages([]);
       setError(null);
 
@@ -364,7 +393,7 @@ export function useAssistantChat() {
       console.error('切換對話失敗:', err);
       setError('切換對話失敗');
     }
-  }, []); // Remove currentSessionId dependency
+  }, [updateCurrentSessionId]); // Add dependency for stable function
 
   /**
    * 刪除對話 session
@@ -382,47 +411,49 @@ export function useAssistantChat() {
         const updated = prev.filter(s => s.id !== sessionId);
 
         // If we deleted the current session, switch to first available
-        setCurrentSessionId(current => {
-          if (sessionId === current) {
-            if (updated.length > 0) {
-              // Switch to first available session
-              const newSessionId = updated[0].id;
-              // Load history for the new session asynchronously
-              getChatHistory({ projectId, sessionId: newSessionId }).then(history => {
-                const flattened = [];
-                for (const turn of (history || [])) {
-                  if (turn.userContent) {
-                    flattened.push({
-                      role: 'user',
-                      content: turn.userContent,
-                      username: turn.username,
-                      timestamp: turn.createdAt,
-                    });
-                  }
-                  if (turn.assistantContent) {
-                    flattened.push({
-                      role: 'assistant',
-                      content: turn.assistantContent,
-                      thinking: turn.thinkingContent || '',
-                      username: turn.assistantUsername || 'AI 導師',
-                      timestamp: turn.updatedAt || turn.createdAt,
-                    });
-                  }
+        if (sessionId === currentSessionId) {
+          if (updated.length > 0) {
+            // Switch to first available session
+            const newSessionId = updated[0].id;
+            // 🔑 更新 localStorage
+            updateCurrentSessionId(newSessionId);
+
+            // Load history for the new session asynchronously
+            getChatHistory({ projectId, sessionId: newSessionId }).then(history => {
+              const flattened = [];
+              for (const turn of (history || [])) {
+                if (turn.userContent) {
+                  flattened.push({
+                    role: 'user',
+                    content: turn.userContent,
+                    username: turn.username,
+                    timestamp: turn.createdAt,
+                  });
                 }
-                setMessages(flattened);
-              }).catch(err => {
-                console.error('載入對話歷史失敗:', err);
-                setMessages([]);
-              });
-              return newSessionId;
-            } else {
-              // No sessions left, reset to default
+                if (turn.assistantContent) {
+                  flattened.push({
+                    role: 'assistant',
+                    content: turn.assistantContent,
+                    thinking: turn.thinkingContent || '',
+                    username: turn.assistantUsername || 'AI 導師',
+                    timestamp: turn.updatedAt || turn.createdAt,
+                  });
+                }
+              }
+              setMessages(flattened);
+            }).catch(err => {
+              console.error('載入對話歷史失敗:', err);
               setMessages([]);
-              return 'default';
-            }
+            });
+          } else {
+            // No sessions left, reset to default
+            // 🔑 生成新的 UUID session（而不是使用 'default'）
+            const freshSessionId = generateSessionId();
+            updateCurrentSessionId(freshSessionId);
+            setMessages([]);
+            console.log(`🆕 [前端] 所有對話已刪除，建立新對話: ${freshSessionId}`);
           }
-          return current;
-        });
+        }
 
         return updated;
       });
@@ -432,7 +463,62 @@ export function useAssistantChat() {
       console.error('刪除對話失敗:', err);
       setError('刪除對話失敗');
     }
-  }, []); // Remove all dependencies
+  }, [currentSessionId, generateSessionId, updateCurrentSessionId]); // Add necessary dependencies
+
+  /**
+   * 🔑 智能初始化邏輯（0破壞性）
+   *
+   * 策略：
+   * 1. 如果 currentSessionId 是 'default' 且沒有舊對話，生成新 UUID
+   * 2. 如果 localStorage 保存的 sessionId 在伺服器不存在，切換到最新對話
+   * 3. 完全向後相容：舊的 'default' 對話會被正常載入
+   * 4. 🔧 修正：如果 currentSessionId 已經是最新狀態，不要覆蓋（避免創建新對話時被切回舊對話）
+   */
+  useEffect(() => {
+    // 只在 sessions 載入完成後執行一次初始化
+    if (isLoadingSessions || chatSessions.length === 0) return;
+
+    const savedSessionId = typeof window !== 'undefined'
+      ? localStorage.getItem('assistant_current_session')
+      : null;
+
+    // 🔧 關鍵修正：如果 currentSessionId 和 savedSessionId 相同，說明已經同步，不需要切換
+    // 這樣可以避免「創建新對話後，因為後端還沒有記錄，又被切回舊對話」的問題
+    if (currentSessionId === savedSessionId) {
+      // currentSessionId 已經是最新狀態，不需要切換
+      return;
+    }
+
+    // 檢查 savedSessionId 是否存在於 sessions 列表中
+    const sessionExists = chatSessions.some(s => s.id === savedSessionId);
+
+    if (!sessionExists) {
+      // localStorage 的 session 不存在（可能被刪除了）
+      // 切換到最新的 session（第一個）
+      const latestSession = chatSessions[0];
+      if (latestSession) {
+        console.log(`🔄 [前端] localStorage session 不存在，切換到最新對話: ${latestSession.id}`);
+        updateCurrentSessionId(latestSession.id);
+      }
+    }
+  }, [chatSessions, isLoadingSessions, updateCurrentSessionId, currentSessionId]);
+
+  /**
+   * 🔑 首次發送訊息時，如果還在用 'default'，自動生成新 UUID
+   * 這樣可以確保新對話都有唯一 ID，同時不破壞舊資料
+   */
+  useEffect(() => {
+    if (currentSessionId === 'default' && messages.length === 0 && chatSessions.length === 0) {
+      // 只有在「新用戶首次使用」或「清空所有對話後」才會觸發
+      // 不影響已有 'default' 對話的用戶
+      const hasDefaultSession = chatSessions.some(s => s.id === 'default');
+      if (!hasDefaultSession) {
+        const newSessionId = generateSessionId();
+        updateCurrentSessionId(newSessionId);
+        console.log(`🆕 [前端] 首次使用，生成新對話 ID: ${newSessionId}`);
+      }
+    }
+  }, [currentSessionId, messages.length, chatSessions, generateSessionId, updateCurrentSessionId]);
 
   return {
     messages,

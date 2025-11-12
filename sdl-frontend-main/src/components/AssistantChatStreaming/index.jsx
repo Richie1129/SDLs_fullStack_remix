@@ -59,6 +59,36 @@ export default function AssistantChatStreaming({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]); // fetchSessions has empty deps array, so it's stable - no need to include it
 
+  // 🔑 首次載入時，如果 currentSessionId 不是新生成的，自動載入該 session 的歷史記錄
+  useEffect(() => {
+    if (projectId && currentSessionId && messages.length === 0 && !isLoading) {
+      // 檢查是否有該 session 的歷史記錄
+      const sessionExists = chatSessions.some(s => s.id === currentSessionId);
+      if (sessionExists) {
+        console.log(`📚 [前端] 自動載入 session 歷史: ${currentSessionId}`);
+        switchSession(projectId, currentSessionId);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, currentSessionId, chatSessions.length]); // 只在 projectId, currentSessionId 或 sessions 列表變化時執行
+
+  // 🔑 發送第一條訊息後，刷新 sessions 列表（這樣新對話會出現在左側）
+  useEffect(() => {
+    // 當訊息數量 >= 2（user + assistant）且當前 session 不在列表中，刷新列表
+    // 這表示剛完成第一輪對話，後端已經創建了記錄
+    if (projectId && messages.length >= 2 && !isLoading) {
+      const sessionExists = chatSessions.some(s => s.id === currentSessionId);
+      if (!sessionExists) {
+        console.log(`🔄 [前端] 檢測到新對話的第一輪完成，刷新 sessions 列表`);
+        // 使用 setTimeout 確保後端已經保存記錄
+        setTimeout(() => {
+          fetchSessions(projectId);
+        }, 500); // 延遲 500ms 確保後端寫入完成
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length, projectId, currentSessionId, isLoading]); // 監聽訊息數量和 loading 狀態變化
+
   // 自動滾動到底部
   const scrollToBottom = (smooth = true) => {
     if (chatContainerRef.current) {
