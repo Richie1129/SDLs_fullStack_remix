@@ -236,7 +236,7 @@ async function callGeminiAPI(prompt, options = {}) {
 
     // ✅ 修復：攤平 config 結構，符合 @google/genai API 規範
     const response = await genAI.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         systemInstruction,  // ✅ 修復：加入 systemInstruction
@@ -252,7 +252,7 @@ async function callGeminiAPI(prompt, options = {}) {
 
     return {
       success: true,
-      provider: "gemini-2.0-flash",
+      provider: "gemini-2.5-flash",
       content: text,
     };
 

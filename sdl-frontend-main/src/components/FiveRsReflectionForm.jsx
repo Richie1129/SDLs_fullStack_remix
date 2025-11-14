@@ -489,7 +489,7 @@ const FiveRsReflectionForm = ({
               >
                 <option value="auto">自動選擇</option>
                 <option value="gpt">gpt-4o-mini</option>
-                <option value="gemini">gemini-2.0-flash</option>
+                <option value="gemini">gemini-2.5-flash</option>
                 {/* <option value="gpt-nano">gpt-4.1-nano</option> */}
               </select>
               <button

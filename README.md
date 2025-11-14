@@ -33,7 +33,7 @@
 
 ### 🧠 AI 反思分析系統
 - **5Rs 反思框架**：Reporting → Responding → Relating → Reasoning → Reconstructing
-- **雙 AI 引擎支援**：GPT-4o-mini + Gemini-2.0-Flash，自動容錯機制
+- **雙 AI 引擎支援**：GPT-4o-mini + gemini-2.5-flash，自動容錯機制
 - **專業回饋生成**：針對每個反思層次提供個人化改進建議
 - **學習品質評估**：自動分析反思深度與完整度
 
@@ -74,7 +74,7 @@
 - **身份驗證**：JWT + Bcrypt（[Refresh Token 實作](Reference/REFRESH_TOKEN_IMPLEMENTATION.md)）
 - **即時通訊**：Socket.io v4.6
 - **檔案處理**：MinIO Object Storage + AWS SDK v3
-- **AI 整合**：OpenAI GPT-4o-mini + Google Gemini-2.0-Flash
+- **AI 整合**：OpenAI GPT-4o-mini + Google gemini-2.5-flash
 
 #### DevOps 基礎設施
 - **容器化**：Docker + Docker Compose
@@ -292,7 +292,7 @@ SDLs_fullStack_remix/
 
 #### ✨ 新功能
 - **5Rs 反思框架與 AI 智能分析功能**
-  - 雙 AI 引擎支援（GPT-4o-mini + Gemini-2.0-Flash）
+  - 雙 AI 引擎支援（GPT-4o-mini + gemini-2.5-flash）
   - 結構化反思模型與專業回饋生成
 - **儀表板系統模組化重構**
   - 學生儀表板：1000+ 行 → 14 個模組
