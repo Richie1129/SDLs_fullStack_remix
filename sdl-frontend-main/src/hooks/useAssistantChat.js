@@ -159,6 +159,7 @@ export function useAssistantChat() {
                 // Received thinking process (sent as complete chunk)
                 aiThinking = data.content;
                 console.log(`💭 [前端] 收到思考過程 - ${aiThinking.length} 個字元`);
+                console.log(`💭 [前端] 思考內容預覽:`, aiThinking.substring(0, 100) + '...');
 
                 // Update UI with thinking content
                 setMessages(prev => {
@@ -170,6 +171,12 @@ export function useAssistantChat() {
                       thinking: aiThinking,
                       timestamp: new Date().toISOString(),
                     };
+                    
+                    // Debug: 確認 thinking 已設定
+                    console.log(`✅ [前端] thinking 已更新到 message:`, {
+                      hasThinking: !!newMessages[lastIndex].thinking,
+                      thinkingLength: newMessages[lastIndex].thinking?.length || 0
+                    });
                   }
                   return newMessages;
                 });
@@ -199,6 +206,29 @@ export function useAssistantChat() {
                 // 串流完成
                 console.log(`✅ [前端] 串流完成 - 收到 ${chunkCount} 個 chunks`);
                 console.log(`📊 [前端] 思考: ${aiThinking.length} 字元, 答案: ${aiResponse.length} 字元`);
+                
+                // 最終檢查：確認 thinking 是否正確保存
+                setMessages(prev => {
+                  const lastMessage = prev[prev.length - 1];
+                  if (lastMessage && lastMessage.role === 'assistant') {
+                    console.log(`🔍 [前端] 最終檢查 - thinking 狀態:`, {
+                      hasThinking: !!lastMessage.thinking,
+                      thinkingLength: lastMessage.thinking?.length || 0,
+                      thinkingPreview: lastMessage.thinking?.substring(0, 50) || '(無)'
+                    });
+                    
+                    // 如果 thinking 未設定但變數有值（異常情況），強制更新
+                    if (!lastMessage.thinking && aiThinking) {
+                      console.warn(`⚠️ [前端] 偵測到 thinking 遺失，強制更新`);
+                      return prev.map((msg, idx) => 
+                        idx === prev.length - 1 
+                          ? { ...msg, thinking: aiThinking }
+                          : msg
+                      );
+                    }
+                  }
+                  return prev;
+                });
 
               } else if (data.type === 'error') {
                 // 收到錯誤

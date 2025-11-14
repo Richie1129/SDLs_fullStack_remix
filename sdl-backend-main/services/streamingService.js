@@ -80,6 +80,10 @@ async function streamOpenAIResponse(messages, res, options = {}) {
     console.log('✅ [OpenAI] API 回應成功');
 
     // State machine for parsing <thinking> tags
+    // Support flexible tag formats: <thinking>, <Thinking>, < thinking >, etc.
+    const thinkingStartRegex = /<thinking\s*>/i;
+    const thinkingEndRegex = /<\/thinking\s*>/i;
+    
     let buffer = '';
     let inThinking = false;
     let thinkingContent = '';
@@ -95,13 +99,14 @@ async function streamOpenAIResponse(messages, res, options = {}) {
         totalChars += content.length;
         buffer += content;
 
-        // Check for <thinking> tag
-        if (buffer.includes('<thinking>') && !inThinking) {
-          const parts = buffer.split('<thinking>');
-
+        // Check for <thinking> tag (case-insensitive, allows spaces)
+        if (thinkingStartRegex.test(buffer) && !inThinking) {
+          const match = buffer.match(thinkingStartRegex);
+          const splitIndex = match.index + match[0].length;
+          const beforeThinking = buffer.substring(0, match.index);
+          
           // Send any content before <thinking> as normal content
-          if (parts[0].trim()) {
-            const beforeThinking = parts[0];
+          if (beforeThinking.trim()) {
             assistantContent += beforeThinking;
             res.write(`data: ${JSON.stringify({
               type: 'content',
@@ -110,25 +115,27 @@ async function streamOpenAIResponse(messages, res, options = {}) {
           }
 
           inThinking = true;
-          buffer = parts[1] || '';
+          buffer = buffer.substring(splitIndex);
           thinkingContent = '';
+          console.log(`🔍 [OpenAI] 偵測到 <thinking> 標籤，開始收集思考內容`);
           continue;
         }
 
-        // Check for </thinking> tag
-        if (buffer.includes('</thinking>') && inThinking) {
-          const parts = buffer.split('</thinking>');
-          thinkingContent += parts[0];
+        // Check for </thinking> tag (case-insensitive, allows spaces)
+        if (thinkingEndRegex.test(buffer) && inThinking) {
+          const match = buffer.match(thinkingEndRegex);
+          thinkingContent += buffer.substring(0, match.index);
 
           // Send complete thinking content as one message
           console.log(`💭 [OpenAI] 思考過程長度: ${thinkingContent.length} 字元`);
+          console.log(`💭 [OpenAI] 思考內容預覽: ${thinkingContent.substring(0, 100)}...`);
           res.write(`data: ${JSON.stringify({
             type: 'thinking',
             content: thinkingContent.trim()
           })}\n\n`);
 
           inThinking = false;
-          buffer = parts[1] || '';
+          buffer = buffer.substring(match.index + match[0].length);
 
           // Send content after </thinking>
           if (buffer.trim()) {
@@ -277,6 +284,10 @@ async function streamGeminiResponse(prompt, res, options = {}) {
     console.log('✅ [Gemini] generateContentStream 回應成功');
 
     // State machine for parsing <thinking> tags
+    // Support flexible tag formats: <thinking>, <Thinking>, < thinking >, etc.
+    const thinkingStartRegex = /<thinking\s*>/i;
+    const thinkingEndRegex = /<\/thinking\s*>/i;
+    
     let buffer = '';
     let inThinking = false;
     let thinkingContent = '';
@@ -292,13 +303,14 @@ async function streamGeminiResponse(prompt, res, options = {}) {
         totalChars += text.length;
         buffer += text;
 
-        // Check for <thinking> tag
-        if (buffer.includes('<thinking>') && !inThinking) {
-          const parts = buffer.split('<thinking>');
-
+        // Check for <thinking> tag (case-insensitive, allows spaces)
+        if (thinkingStartRegex.test(buffer) && !inThinking) {
+          const match = buffer.match(thinkingStartRegex);
+          const splitIndex = match.index + match[0].length;
+          const beforeThinking = buffer.substring(0, match.index);
+          
           // Send any content before <thinking> as normal content
-          if (parts[0].trim()) {
-            const beforeThinking = parts[0];
+          if (beforeThinking.trim()) {
             assistantContent += beforeThinking;
             res.write(`data: ${JSON.stringify({
               type: 'content',
@@ -307,25 +319,27 @@ async function streamGeminiResponse(prompt, res, options = {}) {
           }
 
           inThinking = true;
-          buffer = parts[1] || '';
+          buffer = buffer.substring(splitIndex);
           thinkingContent = '';
+          console.log(`🔍 [Gemini] 偵測到 <thinking> 標籤，開始收集思考內容`);
           continue;
         }
 
-        // Check for </thinking> tag
-        if (buffer.includes('</thinking>') && inThinking) {
-          const parts = buffer.split('</thinking>');
-          thinkingContent += parts[0];
+        // Check for </thinking> tag (case-insensitive, allows spaces)
+        if (thinkingEndRegex.test(buffer) && inThinking) {
+          const match = buffer.match(thinkingEndRegex);
+          thinkingContent += buffer.substring(0, match.index);
 
           // Send complete thinking content as one message
           console.log(`💭 [Gemini] 思考過程長度: ${thinkingContent.length} 字元`);
+          console.log(`💭 [Gemini] 思考內容預覽: ${thinkingContent.substring(0, 100)}...`);
           res.write(`data: ${JSON.stringify({
             type: 'thinking',
             content: thinkingContent.trim()
           })}\n\n`);
 
           inThinking = false;
-          buffer = parts[1] || '';
+          buffer = buffer.substring(match.index + match[0].length);
 
           // Send content after </thinking>
           if (buffer.trim()) {
