@@ -18,7 +18,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import Lottie from "lottie-react";
 import Adding_icon from "../../assets/AnimationAddingNode.json";
 import Timer from './components/Timer';
-import Idea_development from './components/Idea_development';
+import KB_Coach from './components/KB_Coach';
 import KnowledgeForumScaffolds from './components/KnowledgeForumScaffolds';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
@@ -61,7 +61,7 @@ export default function IdeaWall() {
         "#5BA491", "#26547C", "#F25757", "#AF7A6D", "#183446", "#9395D3", "#FF6542", "#78290F", "#DEA47E", "#9DACFF", "#2F3061", "#FFD166"
     ];
 
-    const [aiDevelopmentModalOpen, setAiDevelopmentModalOpen] = useState(false);
+    const [kbCoachModalOpen, setKbCoachModalOpen] = useState(false); // KB Coach modal
     const [showNodeChangeHistory, setShowNodeChangeHistory] = useState(false);
 
     // 使用觀摩模式 hook
@@ -479,8 +479,8 @@ export default function IdeaWall() {
         setHovering(false);
     };
 
-    const handleAiDevelopment = () => {
-        setAiDevelopmentModalOpen(true);
+    const handleKbCoach = () => {
+        setKbCoachModalOpen(true);
     };
 
     const handleNewNodeFromAI = (nodeData) => {
@@ -730,14 +730,21 @@ export default function IdeaWall() {
                                         刪除
                                     </button>
                                 )}
-                                <div className='flex'>
-                                    {/* <button
-                                        onClick={handleAiDevelopment}
-                                        className="w-32 h-7 bg-purple-500 rounded font-bold text-sm sm:text-base text-white mr-2"
-                                    >
-                                        AI 輔助發展
-                                    </button> */}
-                                    {/* 延伸想法按鈕 - 觀摩模式隱藏 */}
+                                <div className='flex flex-col gap-2 mb-3'>
+                                    {/* KB Coach按鈕（新版，推薦） */}
+                                    {!isObservationMode && (
+                                        <button
+                                            onClick={handleKbCoach}
+                                            className="w-full h-9 bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg font-bold text-sm text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                                            title="基於Knowledge Building 12原則的深度引導"
+                                        >
+                                            <span className="text-lg">🎓</span>
+                                            <span>KB Coach</span>
+                                            <span className="text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold">推薦</span>
+                                        </button>
+                                    )}
+                                    
+                                    {/* 延伸想法按鈕 */}
                                     {!isObservationMode && (
                                         <button
                                             onClick={() => {
@@ -748,11 +755,13 @@ export default function IdeaWall() {
                                                 setUpdateNodeModalOpen(false);
                                                 setCreateNodeModalOpen(true);
                                             }}
-                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white mr-2"
+                                            className="w-full h-7 bg-green-500 rounded font-bold text-sm text-white hover:bg-green-600 transition-colors"
                                         >
                                             延伸想法
                                         </button>
                                     )}
+                                </div>
+                                <div className='flex justify-end gap-2'>
                                     <button onClick={() => setUpdateNodeModalOpen(false)} className="w-16 h-7 bg-customgray rounded font-bold text-sm sm:text-bas text-black/60 mr-2">
                                         取消
                                     </button>
@@ -802,10 +811,10 @@ export default function IdeaWall() {
                 </Modal>
             )}
             {!isObservationMode && (
-                <Modal open={aiDevelopmentModalOpen} onClose={() => setAiDevelopmentModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                    <Idea_development
+                <Modal open={kbCoachModalOpen} onClose={() => setKbCoachModalOpen(false)} opacity={false} position={"justify-center items-center"}>
+                    <KB_Coach
                         nodeInfo={selectNodeInfo}
-                        onClose={() => setAiDevelopmentModalOpen(false)}
+                        onClose={() => setKbCoachModalOpen(false)}
                         onNewNode={handleNewNodeFromAI}
                     />
                 </Modal>

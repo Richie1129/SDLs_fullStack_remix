@@ -1,7 +1,7 @@
 const { GoogleGenAI } = require('@google/genai');
 
 async function callGeminiAPI(prompt, options = {}) {
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   // Build key candidates: primary then secondary
   const primaryKey = process.env.GEMINI_API_KEY;
@@ -84,7 +84,7 @@ async function callGeminiAPI(prompt, options = {}) {
  * 只返回外部連結，不返回答案（避免與 RAGFlow 衝突）
  */
 async function callGeminiGrounding(question, options = {}) {
-  const modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   // Build key candidates
   const primaryKey = process.env.GEMINI_API_KEY;

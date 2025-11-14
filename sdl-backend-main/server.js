@@ -33,7 +33,7 @@ app.set('io', io);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(require('cors')(config.cors));
-app.options('*', require('cors')());
+app.options('*', require('cors')(config.cors)); // 修復：預檢請求也使用相同CORS配置
 
 // HTTP 日誌
 try {
@@ -161,6 +161,7 @@ app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/llm', require('./routes/llm'));
+app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));
