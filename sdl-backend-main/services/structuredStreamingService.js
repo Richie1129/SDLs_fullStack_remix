@@ -30,11 +30,11 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  *
  * @param {String} prompt - 完整的 prompt
  * @param {Object} res - Express response 物件
- * @param {Object} options - 額外選項 (model)
+ * @param {Object} options - 額外選項 (model, systemInstruction)
  * @returns {Object} { thinkingContent, assistantContent }
  */
 async function streamGeminiResponseStructured(prompt, res, options = {}) {
-  const { model = 'gemini-2.5-flash' } = options;
+  const { model = 'gemini-2.5-flash', systemInstruction } = options;
 
   console.log(`🧪 [Gemini Structured] 開始串流回應 - 使用模型: ${model}`);
   console.log(`📝 [Gemini Structured] Prompt 長度: ${prompt.length} 字元`);
@@ -59,21 +59,30 @@ async function streamGeminiResponseStructured(prompt, res, options = {}) {
         },
         answer: {
           type: Type.STRING,
-          description: '正式答案：回答使用者問題'
+          description: '正式答案（必須使用 Markdown 格式）：回答使用者問題，使用 ## 標題、**粗體**、列表等格式'
         }
       },
       required: ['thinking', 'answer'],
       propertyOrdering: ['thinking', 'answer']
     };
 
-    const stream = await genAI.models.generateContentStream({
+    // ✅ 建構 API 請求配置
+    const streamConfig = {
       model,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
         responseSchema
       }
-    });
+    };
+
+    // 如果有 systemInstruction，加入到 config 中
+    if (systemInstruction) {
+      streamConfig.config.systemInstruction = systemInstruction;
+      console.log('✅ [Gemini Structured] 已設定 systemInstruction (Markdown 格式)');
+    }
+
+    const stream = await genAI.models.generateContentStream(streamConfig);
 
     console.log('✅ [Gemini Structured] API 回應成功');
 

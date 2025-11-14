@@ -1081,6 +1081,18 @@ exports.chatWithStreaming = async (req, res) => {
       // 使用 Gemini（預設）
       console.log('🚀 [Assistant Chat] 使用 Gemini 開始串流...');
 
+      // ✅ 設定 systemInstruction，強制 Markdown 格式輸出
+      const systemInstruction = `你是專業的專案導師 AI 助手。
+
+**重要格式要求（必須嚴格遵守）**：
+- 必須使用 Markdown 格式回覆
+- 使用 ## 或 ### 標題組織答案結構
+- 使用 **粗體** 標記重要資訊（如任務名稱、階段名稱、關鍵數字）
+- 使用列表（- 或 1.）讓內容更清晰
+- 程式碼或檔名使用 \`反引號\`
+- 需要比較時使用表格格式
+- 使用繁體中文回覆`;
+
       // 檢查是否啟用 Structured Output（實驗性功能）
       const useStructuredOutput = process.env.USE_STRUCTURED_OUTPUT === 'true';
       let result;
@@ -1102,7 +1114,10 @@ exports.chatWithStreaming = async (req, res) => {
           console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
 
           // 嘗試使用 Structured Output
-          result = await streamGeminiResponseStructured(structuredPrompt, res, { model: 'gemini-2.5-flash' });
+          result = await streamGeminiResponseStructured(structuredPrompt, res, {
+            model: 'gemini-2.5-flash',
+            systemInstruction  // ✅ 傳入 Markdown 格式要求
+          });
           console.log('✅ [Assistant Chat] Structured Output 成功');
 
         } catch (structuredError) {
@@ -1114,7 +1129,10 @@ exports.chatWithStreaming = async (req, res) => {
           // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
           const prompt = promptBuilder.forGemini(message);
 
-          result = await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
+          result = await streamGeminiResponse(prompt, res, {
+            model: 'gemini-2.5-flash',
+            systemInstruction  // ✅ 傳入 Markdown 格式要求
+          });
         }
 
       } else {
@@ -1133,7 +1151,10 @@ exports.chatWithStreaming = async (req, res) => {
         console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
 
         // Stream response and get thinking + content
-        result = await streamGeminiResponse(prompt, res, { model: 'gemini-2.5-flash' });
+        result = await streamGeminiResponse(prompt, res, {
+          model: 'gemini-2.5-flash',
+          systemInstruction  // ✅ 傳入 Markdown 格式要求
+        });
       }
 
       // Save to database (async, don't block response)

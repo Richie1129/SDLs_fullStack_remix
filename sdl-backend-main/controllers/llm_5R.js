@@ -214,7 +214,7 @@ async function callGPTNanoAPI(prompt) {
 }
 
 // Gemini API 呼叫函數 (使用新版 SDK)
-async function callGeminiAPI(prompt) {
+async function callGeminiAPI(prompt, options = {}) {
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
@@ -223,12 +223,9 @@ async function callGeminiAPI(prompt) {
 
     const genAI = new GoogleGenAI({ apiKey });
 
-    const generationConfig = {
-      temperature: 0.7,
-      topP: 1,
-      topK: 1,
-      maxOutputTokens: 2048,
-    };
+    // ✅ 修復：加入 systemInstruction 支援
+    const systemInstruction = options.systemInstruction ||
+      '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。';
 
     const safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
@@ -237,11 +234,16 @@ async function callGeminiAPI(prompt) {
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
     ];
 
+    // ✅ 修復：攤平 config 結構，符合 @google/genai API 規範
     const response = await genAI.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
-        generationConfig,
+        systemInstruction,  // ✅ 修復：加入 systemInstruction
+        temperature: 0.7,   // ✅ 修復：攤平到 config 層級
+        topP: 1,
+        topK: 1,
+        maxOutputTokens: 2048,
         safetySettings,
       }
     });

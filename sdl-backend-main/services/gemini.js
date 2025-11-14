@@ -28,7 +28,15 @@ async function callGeminiAPI(prompt, options = {}) {
   ];
 
   const systemInstruction = options.systemInstruction
-    || '你是專業的AI助手，請使用繁體中文回覆用戶的問題。';
+    || `你是專業的 AI 助手。
+
+**重要格式要求**：
+- 必須使用 Markdown 格式回覆
+- 使用 ## 標題組織答案結構
+- 使用 **粗體** 標記重要資訊
+- 使用列表（-）讓內容更清晰
+- 程式碼或檔名使用 \`反引號\`
+- 使用繁體中文回覆`;
 
   let lastError = null;
 
@@ -41,8 +49,9 @@ async function callGeminiAPI(prompt, options = {}) {
 
       const result = await ai.models.generateContent({
         model: modelName,
-        contents: systemInstruction + '\n\n上下文：' + prompt,
+        contents: prompt,
         config: {
+          systemInstruction,  // ✅ 正確：使用 API 的 systemInstruction 參數
           temperature: generationConfig.temperature,
           topP: generationConfig.topP,
           topK: generationConfig.topK,
@@ -86,6 +95,10 @@ async function callGeminiGrounding(question, options = {}) {
     throw new Error('GEMINI_API_KEY 或 GEMINI_API_KEY_2 未設定');
   }
 
+  // ✅ 加入 systemInstruction 支援（保持與其他 Gemini 函數一致）
+  const systemInstruction = options.systemInstruction ||
+    '你是專業的資訊檢索助手。請搜尋相關資料並返回最相關的網頁連結。使用繁體中文回覆。';
+
   let lastError = null;
 
   for (let i = 0; i < keyCandidates.length; i++) {
@@ -103,6 +116,7 @@ async function callGeminiGrounding(question, options = {}) {
         model: modelName,
         contents: question,
         config: {
+          systemInstruction,  // ✅ 修復：加入 systemInstruction
           tools: [{ googleSearch: {} }],  // ✅ 啟用 grounding
         },
       });

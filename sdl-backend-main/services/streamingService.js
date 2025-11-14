@@ -241,11 +241,11 @@ async function streamOpenAIResponse(messages, res, options = {}) {
  *
  * @param {String} prompt - 完整的 prompt
  * @param {Object} res - Express response 物件
- * @param {Object} options - 額外選項 (model)
+ * @param {Object} options - 額外選項 (model, systemInstruction)
  * @returns {Object} { thinkingContent, assistantContent } - 累積的思考過程和最終答案
  */
 async function streamGeminiResponse(prompt, res, options = {}) {
-  const { model = 'gemini-2.5-flash' } = options;
+  const { model = 'gemini-2.5-flash', systemInstruction } = options;
 
   console.log(`🤖 [Gemini] 開始串流回應 - 使用模型: ${model}`);
   console.log(`📝 [Gemini] Prompt 長度: ${prompt.length} 字元`);
@@ -260,10 +260,20 @@ async function streamGeminiResponse(prompt, res, options = {}) {
     console.log('✅ [Gemini] SSE headers 已設定');
     console.log('🚀 [Gemini] 開始呼叫 generateContentStream...');
 
-    const stream = await genAI.models.generateContentStream({
+    // ✅ 使用正確的 Gemini API 結構
+    const streamConfig = {
       model,
-      contents: prompt
-    });
+      contents: prompt,
+      config: {}
+    };
+
+    // 如果有 systemInstruction，加入到 config 中
+    if (systemInstruction) {
+      streamConfig.config.systemInstruction = systemInstruction;
+      console.log('✅ [Gemini] 已設定 systemInstruction (Markdown 格式)');
+    }
+
+    const stream = await genAI.models.generateContentStream(streamConfig);
     console.log('✅ [Gemini] generateContentStream 回應成功');
 
     // State machine for parsing <thinking> tags
