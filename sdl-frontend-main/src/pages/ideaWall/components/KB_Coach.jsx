@@ -10,9 +10,10 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import apiClient from '../../../api/client';
 
-const KB_Coach = ({ nodeInfo, onClose, onNewNode }) => {
+const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [coaching, setCoaching] = useState(null);
+    const [showPrinciples, setShowPrinciples] = useState(false);
 
     /**
      * 行動圖示映射
@@ -28,16 +29,30 @@ const KB_Coach = ({ nodeInfo, onClose, onNewNode }) => {
     };
 
     /**
+     * 取得相關節點上下文
+     * 簡單啟發式：取最近的10個節點（排除當前節點）
+     */
+    const getRelatedNodes = () => {
+        if (!nodes || nodes.length === 0) return [];
+        return nodes
+            .filter(n => n.id !== nodeInfo.id && n.title && n.content)
+            .slice(-10) // 取最後10個
+            .map(n => ({ title: n.title, content: n.content, owner: n.owner }));
+    };
+
+    /**
      * 取得KB Coach建議
      */
     const getGuidance = async () => {
         try {
             setIsLoading(true);
+            const related = getRelatedNodes();
             const response = await apiClient.post('/kb-coach/guidance', {
                 title: nodeInfo.title,
                 content: nodeInfo.content,
                 nodeId: nodeInfo.id,
-                relatedNodes: [] // Phase 2可以加入相關節點
+                projectId: nodeInfo.projectId, // 傳遞 projectId 以啟用全域上下文
+                relatedNodes: related
             });
 
             if (response.data) {
@@ -57,9 +72,14 @@ const KB_Coach = ({ nodeInfo, onClose, onNewNode }) => {
      */
     const executeSuggestion = (suggestion) => {
         if (suggestion.action === 'CREATE_NODE') {
+            // 優先使用推薦的第一個鷹架，若無則留空
+            const scaffold = (coaching.recommendedScaffolds && coaching.recommendedScaffolds.length > 0)
+                ? coaching.recommendedScaffolds[0]
+                : '';
+
             const newNodeData = {
                 title: `[延伸] ${nodeInfo.title}`,
-                content: suggestion.description,
+                content: scaffold, // 僅預填鷹架，絕不代寫內容！
                 from_id: nodeInfo.id,
                 ideaWallId: nodeInfo.ideaWallId,
                 owner: localStorage.getItem("username") || "學生",
@@ -68,8 +88,7 @@ const KB_Coach = ({ nodeInfo, onClose, onNewNode }) => {
             };
             
             onNewNode(newNodeData);
-            onClose();
-            toast.success('已建立延伸想法節點！');
+            // onClose(); // 讓 IdeaWall 決定是否關閉
         } else {
             toast.info(`建議：${suggestion.description}`);
         }
@@ -84,7 +103,7 @@ const KB_Coach = ({ nodeInfo, onClose, onNewNode }) => {
                     KB Coach - 知識翻新教練
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                    基於Knowledge Building 12原則，引導你深化想法
+                    基於全域知識庫，引導你深化想法
                 </p>
             </div>
 
@@ -98,41 +117,26 @@ const KB_Coach = ({ nodeInfo, onClose, onNewNode }) => {
             {/* 建議結果 */}
             {coaching && (
                 <div className="space-y-6">
-                    {/* KB原則 */}
+                    {/* 引導問題 - 對話式氣泡設計 */}
                     <div>
                         <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                            <span className="mr-2">📚</span>
-                            適用的KB原則
+                            <span className="mr-2">💬</span>
+                            教練的思考引導
                         </h4>
-                        <div className="flex flex-wrap gap-2">
-                            {coaching.principles.map((principle, idx) => (
-                                <div
-                                    key={idx}
-                                    className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm"
-                                    title={principle.description}
-                                >
-                                    {principle.name}
+                        <div className="space-y-4">
+                            {coaching.questions.map((question, idx) => (
+                                <div key={idx} className="flex items-start">
+                                    <div className="flex-shrink-0 mr-3">
+                                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-lg">
+                                            🤖
+                                        </div>
+                                    </div>
+                                    <div className="bg-blue-50 p-3 rounded-2xl rounded-tl-none text-gray-800 shadow-sm border border-blue-100">
+                                        {question}
+                                    </div>
                                 </div>
                             ))}
                         </div>
-                    </div>
-
-                    {/* 引導問題 */}
-                    <div>
-                        <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                            <span className="mr-2">💭</span>
-                            引導問題
-                        </h4>
-                        <ul className="space-y-3">
-                            {coaching.questions.map((question, idx) => (
-                                <li
-                                    key={idx}
-                                    className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-gray-800"
-                                >
-                                    {question}
-                                </li>
-                            ))}
-                        </ul>
                     </div>
 
                     {/* 推薦的思考鷹架 */}
@@ -198,9 +202,10 @@ const KB_Coach = ({ nodeInfo, onClose, onNewNode }) => {
                                         {suggestion.action === 'CREATE_NODE' && (
                                             <button
                                                 onClick={() => executeSuggestion(suggestion)}
-                                                className="ml-3 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition whitespace-nowrap"
+                                                className="ml-3 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition whitespace-nowrap flex items-center"
                                             >
-                                                執行
+                                                <span className="mr-1">✨</span>
+                                                幫我起草
                                             </button>
                                         )}
                                     </div>

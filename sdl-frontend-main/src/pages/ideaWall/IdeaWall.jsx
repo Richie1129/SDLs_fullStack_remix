@@ -484,15 +484,23 @@ export default function IdeaWall() {
     };
 
     const handleNewNodeFromAI = (nodeData) => {
-        console.log("發送新節點數據:", nodeData);
-        socket.emit('nodeCreate', {
+        console.log("AI建議開啟新節點:", nodeData);
+        // 不直接建立，而是開啟編輯視窗讓學生填寫
+        setNodeData({
             ...nodeData,
-            projectId,
-            user: {
-                username: currentUsername,
-                id: parseInt(localStorage.getItem('id')) || null,
-            },
+            ideaWallId: ideaWallInfo?.id,
+            projectId: projectId,
+            owner: currentUsername,
+            colorindex: userId
         });
+        setTitle(nodeData.title || "");
+        setContent(nodeData.content || ""); // 這裡應該只包含鷹架
+        setBuildOnId(nodeData.from_id || ""); // 如果是延伸想法
+        
+        setKbCoachModalOpen(false); // 關閉教練視窗
+        setCreateNodeModalOpen(true); // 開啟建立視窗
+        
+        toast.success('已為您準備好節點，請繼續完成您的想法！', { icon: '📝' });
     };
 
     return (
@@ -814,6 +822,7 @@ export default function IdeaWall() {
                 <Modal open={kbCoachModalOpen} onClose={() => setKbCoachModalOpen(false)} opacity={false} position={"justify-center items-center"}>
                     <KB_Coach
                         nodeInfo={selectNodeInfo}
+                        nodes={nodes} // 傳入所有節點以供上下文分析
                         onClose={() => setKbCoachModalOpen(false)}
                         onNewNode={handleNewNodeFromAI}
                     />

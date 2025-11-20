@@ -12,6 +12,9 @@
 
 const { GoogleGenAI } = require('@google/genai');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+const Node = require('../models/node');
+const IdeaWall = require('../models/idea_wall');
+const { Op } = require('sequelize');
 
 // 初始化Gemini客戶端
 const genai = new GoogleGenAI({
@@ -133,37 +136,43 @@ function buildSystemPrompt() {
     .map(p => `- ${p.name}：${p.description}`)
     .join('\n');
 
-  return `你是一位Knowledge Building教練，基於KB 12原則引導學生深化想法。
+  return `你是一位與學生並肩作戰的 Knowledge Building (KB) 協作者。你的目標是透過「連結」與「提問」來推進社群的知識邊界。
 
-核心原則：
+核心原則（內化於心，無需對學生說教）：
 ${principlesText}
 
-你的職責：
-1. 識別學生想法適用的KB原則（1-3個）
-2. 提出引導性問題（不給答案）
-3. 建議可執行的行動
-4. 推薦適合的Knowledge Forum思考鷹架（根據原則選擇1-3個）
+你的核心任務：
+1. **織網 (Weaving)**：你擁有「全域記憶」。你必須找出當前想法與**過去任何時間點**的其他想法之間的關聯。
+   - **強制要求**：如果發現相關的舊想法，**必須**明確引用：「這讓我想起 [作者] 在 [標題] 提到的...」。
+   - 尋找矛盾、互補或重複的觀點。
+2. **向上提升 (Rise Above)**：不要停留在事實層面。
+   - 如果學生在描述現象，問他們背後的機制。
+   - 如果學生在爭論細節，問他們如何整合出一個更通用的理論。
+3. **把球丟回去 (Epistemic Agency)**：
+   - 不要告訴他們做什麼，而是問他們：「考慮到 [某個舊觀點]，你覺得你的理論需要調整嗎？」
+
+你的輸出要求：
+1. **識別原則**：(系統內部使用，選出最相關的即可)。
+2. **引導問題**：提出 2-3 個像「對話」一樣的問題。
+   - 語氣要自然，像是在聊天，而不是考試。
+   - **必須**包含具體的引用（如果有的話）。
+3. **建議行動**：具體、可執行。
+   - 如果建議「建立新節點」，請說明這個新節點應該解決什麼問題（例如：「整合你和 Bob 的觀點」）。
+4. **推薦鷹架**：推薦最能幫助他們「下一步」的鷹架。
 
 可用的思考鷹架：
-- 我的理論：適用於提出新理論、初步假設（對應：真實想法、可改進想法）
-- 我需要了解：適用於探索問題、提出疑問（對應：真實想法、知識主導權）
-- 新資訊：適用於分享發現、提供證據（對應：社群知識、知識翻新對話）
-- 這種理論無法解釋：適用於質疑、發現矛盾（對應：可改進想法、想法多樣性）
-- 更好的理論：適用於改進、提出替代方案（對應：可改進想法、想法多樣性）
-- 整合我們的知識：適用於綜合、連結想法（對應：社群知識、知識翻新對話）
-
-特殊處理：
-- 如果學生想法過於簡短或不清楚，優先使用「真實想法」和「知識主導權」原則
-- 引導學生說明：這是什麼？為什麼重要？想探索什麼？
-- 不要批判內容，而是幫助學生展開思考
-- 推薦「我需要了解」或「我的理論」鷹架
+- 我的理論：提出假設。
+- 我需要了解：提出問題。
+- 新資訊：提供證據。
+- 這種理論無法解釋：指出矛盾。
+- 更好的理論：改進觀點。
+- 整合我們的知識：綜合整理。
 
 鐵律：
-- 只引導，不給答案
-- 問題要啟發思考，不是測驗
-- 建議要具體可執行
-- 鷹架推薦要符合KB原則邏輯
-- 尊重學生的知識主導權，即使內容看似簡單`;
+- **禁止說教**。不要說「根據 KB 原則...」。
+- **禁止廢話**。直接切入想法的內容。
+- **必須引用**。利用你看到的歷史上下文，這是你最大的價值。
+- **語氣**：好奇、平視、具啟發性。`;
 }
 
 /**
@@ -171,7 +180,7 @@ ${principlesText}
  */
 exports.provideGuidance = async (req, res) => {
   try {
-    const { title, content, nodeId, relatedNodes = [] } = req.body;
+    const { title, content, nodeId, relatedNodes = [], projectId } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ error: '缺少必要參數：title, content' });
@@ -182,12 +191,52 @@ exports.provideGuidance = async (req, res) => {
 標題：${title}
 內容：${content}`;
 
+    let contextNodes = [];
+
+    // 優先使用 projectId 獲取全域上下文 (Deep Context)
+    if (projectId) {
+        try {
+            const ideaWalls = await IdeaWall.findAll({
+                where: { projectId: projectId },
+                attributes: ['id']
+            });
+            
+            if (ideaWalls.length > 0) {
+                const ideaWallIds = ideaWalls.map(iw => iw.id);
+                // 查詢專案中的所有節點 (限制 500 筆，倒序)
+                contextNodes = await Node.findAll({
+                    where: { 
+                        ideaWallId: { [Op.in]: ideaWallIds },
+                        // 排除當前節點
+                        id: { [Op.ne]: nodeId || -1 } 
+                    },
+                    order: [['createdAt', 'DESC']],
+                    limit: 500, 
+                    attributes: ['title', 'content', 'owner', 'createdAt']
+                });
+            }
+        } catch (dbError) {
+            console.error('Error fetching project nodes for KB Coach:', dbError);
+            // Fallback to relatedNodes if DB fails
+            contextNodes = relatedNodes; 
+        }
+    } else {
+        // Fallback for legacy frontend
+        contextNodes = relatedNodes;
+    }
+
     // 如果有相關節點，加入上下文
-    if (relatedNodes.length > 0) {
-      const relatedContext = relatedNodes
-        .map(node => `- ${node.title}: ${node.content.substring(0, 100)}`)
+    if (contextNodes.length > 0) {
+      const relatedContext = contextNodes
+        .map(node => {
+            const nodeTitle = node.title || '無標題';
+            const nodeContent = (node.content || '').substring(0, 300); // 增加上下文長度
+            const nodeOwner = node.owner || '同學';
+            const timeStr = node.createdAt ? ` (${new Date(node.createdAt).toLocaleDateString()})` : '';
+            return `- [作者: ${nodeOwner}${timeStr}] ${nodeTitle}: ${nodeContent}`;
+        })
         .join('\n');
-      userPrompt += `\n\n相關想法：\n${relatedContext}`;
+      userPrompt += `\n\n社群中的歷史想法（這是你的全域記憶，請從中尋找關聯）：\n${relatedContext}`;
     }
 
     // 呼叫Gemini Function Calling
@@ -207,7 +256,7 @@ exports.provideGuidance = async (req, res) => {
     if (!responseText) {
       throw new Error('Gemini API返回空回應');
     }
-    
+
     const coaching = JSON.parse(responseText);
 
     // 豐富化原則資訊
@@ -257,7 +306,7 @@ exports.provideGuidance = async (req, res) => {
 
   } catch (error) {
     console.error('Error in KB Coach provideGuidance:', error);
-    
+
     // 如果是Gemini API錯誤
     if (error.message?.includes('API key')) {
       return res.status(500).json({ error: 'AI服務設定錯誤，請聯繫管理員' });
