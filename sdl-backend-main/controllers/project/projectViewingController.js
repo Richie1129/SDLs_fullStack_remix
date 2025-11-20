@@ -423,9 +423,8 @@ exports.batchUpdateViewingSettings = async (req, res) => {
 
         console.log(`找到 ${projects.length} 個 ${sourceClass} 班級的專案`);
 
-        // 3. 批量更新觀摩設定
-        const updateResults = [];
-        for (const project of projects) {
+        // 3. 批量更新觀摩設定 (使用 Promise.all 並行處理)
+        const updatePromises = projects.map(async (project) => {
             const currentAllowed = project.allowed_classes || [];
 
             // 合併現有允許的班級和新的目標班級(去重)
@@ -436,13 +435,15 @@ exports.batchUpdateViewingSettings = async (req, res) => {
 
             await project.save({ transaction: t });
 
-            updateResults.push({
+            return {
                 projectId: project.id,
                 projectName: project.name,
                 previousAllowed: currentAllowed,
                 newAllowed: newAllowed
-            });
-        }
+            };
+        });
+
+        const updateResults = await Promise.all(updatePromises);
 
         await t.commit();
 

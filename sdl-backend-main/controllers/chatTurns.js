@@ -33,10 +33,11 @@ exports.listByProject = async (req, res) => {
 exports.listSessions = async (req, res) => {
   try {
     const { projectId } = req.params;
+    const pid = parseInt(projectId, 10);
 
     // Query to get distinct sessions with first message as session name
     const sessions = await ChatTurn.findAll({
-      where: { projectId: parseInt(projectId, 10) },
+      where: { projectId: pid },
       attributes: [
         'sessionId',
         [sequelize.fn('MIN', sequelize.col('createdAt')), 'createdAt'],
@@ -48,29 +49,43 @@ exports.listSessions = async (req, res) => {
       raw: true,
     });
 
-    // Get first user message for each session as session name
-    const enrichedSessions = await Promise.all(
-      sessions.map(async (session) => {
-        const firstMessage = await ChatTurn.findOne({
-          where: {
-            projectId: parseInt(projectId, 10),
-            sessionId: session.sessionId,
-            userContent: { [Op.ne]: null },
-          },
-          order: [['createdAt', 'ASC']],
-          attributes: ['userContent'],
+    // Batch fetch first user messages to avoid N+1
+    let firstMessagesMap = new Map();
+    
+    if (sessions.length > 0) {
+        // Use a raw query to find the first user message content for each session efficiently
+        // Finds the message with the minimum ID (earliest) for each session where userContent exists
+        const query = `
+            SELECT ct.sessionId, ct.userContent
+            FROM chat_turns ct
+            INNER JOIN (
+                SELECT MIN(id) as id
+                FROM chat_turns
+                WHERE projectId = :projectId 
+                AND userContent IS NOT NULL
+                GROUP BY sessionId
+            ) first_ids ON ct.id = first_ids.id
+        `;
+        
+        const firstMessages = await sequelize.query(query, {
+            replacements: { projectId: pid },
+            type: sequelize.QueryTypes.SELECT
         });
+        
+        firstMessagesMap = new Map(firstMessages.map(m => [m.sessionId, m.userContent]));
+    }
 
+    const enrichedSessions = sessions.map(session => {
+        const userContent = firstMessagesMap.get(session.sessionId);
         return {
           id: session.sessionId,
           sessionId: session.sessionId,
-          name: firstMessage?.userContent?.substring(0, 50) || `對話 ${session.sessionId.substring(0, 8)}`,
+          name: userContent?.substring(0, 50) || `對話 ${session.sessionId.substring(0, 8)}`,
           messageCount: parseInt(session.messageCount, 10),
           createdAt: session.createdAt,
           updatedAt: session.updatedAt,
         };
-      })
-    );
+    });
 
     res.json(enrichedSessions);
   } catch (error) {
