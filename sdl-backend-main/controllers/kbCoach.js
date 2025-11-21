@@ -1,13 +1,12 @@
 /**
- * KB Coach Controller
+ * KB Coach Controller (AI-Scaffold Orchestrator - Phase 1 MVP)
  * 
- * 基於Knowledge Building 12原則的AI教練系統
- * 使用Gemini 2.5 Flash Function Calling提供引導式問題
+ * 基於 Multi-Agent System 的知識翻新協作系統
+ * 支援三種 Agent 人格：Improver, Synthesizer, Devil's Advocate
  * 
  * 設計哲學：
- * - "好品味"：一次API呼叫消除兩階段特殊情況
- * - 零破壞性：獨立控制器，不影響現有llm.js
- * - 實用主義：信任Gemini Function Calling，不做防禦性編程
+ * - "好品味"：統一的 AgentFactory 與 Schema，避免重複代碼
+ * - 實用主義：Phase 1 僅實作手動觸發，為自動化鋪路
  */
 
 const { GoogleGenAI } = require('@google/genai');
@@ -22,157 +21,101 @@ const genai = new GoogleGenAI({
 });
 
 /**
- * Knowledge Forum 思考鷹架
- * 與KB原則對應，提供具體的寫作支架
+ * Agent Personas & System Prompts
  */
-const KF_SCAFFOLDS = {
-  MY_THEORY: { text: '我的理論：', label: '我的理論', kbPrinciples: ['real_ideas', 'improvable_ideas'] },
-  NEED_TO_UNDERSTAND: { text: '我需要了解：', label: '我需要了解', kbPrinciples: ['real_ideas', 'epistemic_agency'] },
-  NEW_INFO: { text: '新資訊：', label: '新資訊', kbPrinciples: ['community_knowledge', 'kb_discourse'] },
-  THEORY_LIMITATION: { text: '這種理論無法解釋：', label: '這種理論無法解釋', kbPrinciples: ['improvable_ideas', 'idea_diversity'] },
-  BETTER_THEORY: { text: '更好的理論：', label: '更好的理論', kbPrinciples: ['improvable_ideas', 'idea_diversity'] },
-  INTEGRATE_KNOWLEDGE: { text: '整合我們的知識：', label: '整合我們的知識', kbPrinciples: ['community_knowledge', 'kb_discourse'] }
-};
+const AGENT_PERSONAS = {
+  IMPROVER: {
+    role: 'Idea Improver',
+    tone: 'Socratic, Curious, Encouraging',
+    description: '針對單一或少數觀點，指出邏輯缺口，提出引導式問題。',
+    prompt: `你是一位「想法改進者 (Idea Improver)」。
+你的目標是幫助學生深化他們的單一想法。
+語氣：蘇格拉底式、好奇、鼓勵性。
 
-/**
- * KB 12原則的核心6個（Phase 1實作）
- */
-const KB_PRINCIPLES = {
-  REAL_IDEAS: {
-    id: 'real_ideas',
-    name: '真實想法，真實問題',
-    description: '知識問題源於努力理解世界，想法與實際接觸的事物一樣真實',
-    keywords: ['好奇心', '真實世界', '個人關心']
+任務：
+1. 仔細閱讀學生的想法。
+2. 找出邏輯缺口、未解釋的假設或模糊的概念。
+3. 提出 1-2 個具體的引導式問題，幫助他們澄清或深入。
+4. 不要直接給答案，而是引導他們自己發現。`
   },
-  IMPROVABLE_IDEAS: {
-    id: 'improvable_ideas',
-    name: '可改進的想法',
-    description: '所有想法都可改進，持續提高品質、連貫性和實用性',
-    keywords: ['成長心態', '迭代', '改進']
+  SYNTHESIZER: {
+    role: 'Synthesizer',
+    tone: 'Objective, Clear, Structured',
+    description: '針對多篇觀點，提取共識與張力，繪製知識地圖。',
+    prompt: `你是一位「綜合者 (Synthesizer)」。
+你的目標是整理社群中的多個觀點，找出共識與分歧。
+語氣：客觀、清晰、結構化、像圖書館員。
+
+任務：
+1. 閱讀提供的所有相關想法。
+2. 識別出主要的討論主題或流派。
+3. 指出哪些觀點是互補的，哪些是衝突的。
+4. 建議如何將這些碎片化的想法整合成一個更完整的理論。`
   },
-  IDEA_DIVERSITY: {
-    id: 'idea_diversity',
-    name: '想法多樣性',
-    description: '不同想法創造動態環境，對比和互補促進想法演化',
-    keywords: ['多元觀點', '對比', '互補']
-  },
-  EPISTEMIC_AGENCY: {
-    id: 'epistemic_agency',
-    name: '知識主導權',
-    description: '學生對自己的想法負責，決定學習成果和過程',
-    keywords: ['自主', '責任', '協商']
-  },
-  COMMUNITY_KNOWLEDGE: {
-    id: 'community_knowledge',
-    name: '社群知識，集體責任',
-    description: '對共同目標的貢獻受到重視，集體推進知識',
-    keywords: ['協作', '共同責任', '知識共享']
-  },
-  KB_DISCOURSE: {
-    id: 'kb_discourse',
-    name: '知識翻新對話',
-    description: '協作交流帶來更好的解決方案，推進理解到超越個人的水平',
-    keywords: ['對話', '協作', '集體智慧']
+  DEVIL: {
+    role: "Devil's Advocate",
+    tone: 'Polite Challenger, "What if..." scenarios',
+    description: '針對過度一致的觀點，提出反例或不同視角。',
+    prompt: `你是一位「魔鬼代言人 (Devil's Advocate)」。
+你的目標是打破同溫層，挑戰過度一致的觀點，激發批判性思考。
+語氣：禮貌的挑戰者、提供「如果...會怎樣」的情境。
+
+任務：
+1. 尋找討論中的盲點或過度自信的假設。
+2. 提出一個反例或極端情境，測試理論的穩健性。
+3. 問：「如果情況完全相反，會發生什麼？」
+4. 保持尊重，挑戰的是「想法」而不是「人」。`
   }
 };
 
 /**
- * Gemini Function Calling Schema
- * 結構化輸出保證格式穩定
+ * Generic Output Schema
+ * 適用於所有 Agent 的通用結構
  */
-const KB_COACHING_SCHEMA = {
+const AGENT_OUTPUT_SCHEMA = {
   type: 'object',
   properties: {
-    principles: {
-      type: 'array',
-      description: '適用的KB原則ID列表（從6個核心原則中選擇）',
-      items: {
-        type: 'string',
-        enum: ['real_ideas', 'improvable_ideas', 'idea_diversity', 'epistemic_agency', 'community_knowledge', 'kb_discourse']
-      }
+    thinkingProcess: {
+      type: 'string',
+      description: '你的思考過程 (Chain of Thought)。解釋你觀察到了什麼，以及為什麼決定這樣回應。'
     },
-    questions: {
-      type: 'array',
-      description: '引導性問題（不包含答案）。範例：「你認為X和Y之間的關係是什麼？」',
-      items: { type: 'string' },
-      minItems: 2,
-      maxItems: 4
+    content: {
+      type: 'string',
+      description: '你要發布給學生的具體回應內容。請使用 Markdown 格式。'
     },
-    suggestions: {
+    suggestedActions: {
       type: 'array',
-      description: '可執行的建議行動',
+      description: '建議學生採取的後續行動',
       items: {
         type: 'object',
         properties: {
-          action: {
-            type: 'string',
-            enum: ['CREATE_NODE', 'CONNECT_IDEA', 'RESEARCH_TOPIC', 'COLLABORATE']
-          },
-          description: { type: 'string' },
-          reason: { type: 'string' }
+          label: { type: 'string', description: '按鈕文字' },
+          actionType: { type: 'string', enum: ['REPLY', 'CREATE_NEW', 'READ_MORE'] },
+          payload: { type: 'string', description: '行動的參數或預填內容' }
         },
-        required: ['action', 'description', 'reason']
-      },
-      maxItems: 3
-    },
-    recommendedScaffolds: {
-      type: 'array',
-      description: '推薦的Knowledge Forum思考鷹架（根據適用的KB原則推薦）',
-      items: {
-        type: 'string',
-        enum: ['我的理論：', '我需要了解：', '新資訊：', '這種理論無法解釋：', '更好的理論：', '整合我們的知識：']
-      },
-      maxItems: 3
+        required: ['label', 'actionType']
+      }
     }
   },
-  required: ['principles', 'questions', 'suggestions']
+  required: ['thinkingProcess', 'content', 'suggestedActions']
 };
 
 /**
  * 建構系統提示詞
  */
-function buildSystemPrompt() {
-  const principlesText = Object.values(KB_PRINCIPLES)
-    .map(p => `- ${p.name}：${p.description}`)
-    .join('\n');
+function buildSystemPrompt(agentType) {
+  const persona = AGENT_PERSONAS[agentType] || AGENT_PERSONAS.IMPROVER;
+  
+  return `你是一個 Knowledge Building (KB) 協作系統中的 AI 代理人。
+你的角色是：${persona.role}
+你的語氣：${persona.tone}
+你的任務描述：${persona.description}
+${persona.prompt}
 
-  return `你是一位與學生並肩作戰的 Knowledge Building (KB) 協作者。你的目標是透過「連結」與「提問」來推進社群的知識邊界。
-
-核心原則（內化於心，無需對學生說教）：
-${principlesText}
-
-你的核心任務：
-1. **織網 (Weaving)**：你擁有「全域記憶」。你必須找出當前想法與**過去任何時間點**的其他想法之間的關聯。
-   - **強制要求**：如果發現相關的舊想法，**必須**明確引用：「這讓我想起 [作者] 在 [標題] 提到的...」。
-   - 尋找矛盾、互補或重複的觀點。
-2. **向上提升 (Rise Above)**：不要停留在事實層面。
-   - 如果學生在描述現象，問他們背後的機制。
-   - 如果學生在爭論細節，問他們如何整合出一個更通用的理論。
-3. **把球丟回去 (Epistemic Agency)**：
-   - 不要告訴他們做什麼，而是問他們：「考慮到 [某個舊觀點]，你覺得你的理論需要調整嗎？」
-
-你的輸出要求：
-1. **識別原則**：(系統內部使用，選出最相關的即可)。
-2. **引導問題**：提出 2-3 個像「對話」一樣的問題。
-   - 語氣要自然，像是在聊天，而不是考試。
-   - **必須**包含具體的引用（如果有的話）。
-3. **建議行動**：具體、可執行。
-   - 如果建議「建立新節點」，請說明這個新節點應該解決什麼問題（例如：「整合你和 Bob 的觀點」）。
-4. **推薦鷹架**：推薦最能幫助他們「下一步」的鷹架。
-
-可用的思考鷹架：
-- 我的理論：提出假設。
-- 我需要了解：提出問題。
-- 新資訊：提供證據。
-- 這種理論無法解釋：指出矛盾。
-- 更好的理論：改進觀點。
-- 整合我們的知識：綜合整理。
-
-鐵律：
-- **禁止說教**。不要說「根據 KB 原則...」。
-- **禁止廢話**。直接切入想法的內容。
-- **必須引用**。利用你看到的歷史上下文，這是你最大的價值。
-- **語氣**：好奇、平視、具啟發性。`;
+通用規則：
+1. **引用**：如果參考了上下文中的特定想法，請明確引用（例如：「正如 @Alice 在 [標題] 中提到的...」）。
+2. **簡潔**：回應要精簡有力，不要長篇大論。
+3. **繁體中文**：始終使用繁體中文回應。`;
 }
 
 /**
@@ -180,20 +123,22 @@ ${principlesText}
  */
 exports.provideGuidance = async (req, res) => {
   try {
-    const { title, content, nodeId, relatedNodes = [], projectId } = req.body;
+    const { title, content, nodeId, relatedNodes = [], projectId, agentType = 'IMPROVER' } = req.body;
 
-    if (!title || !content) {
-      return res.status(400).json({ error: '缺少必要參數：title, content' });
+    // 驗證 agentType
+    if (!['IMPROVER', 'SYNTHESIZER', 'DEVIL'].includes(agentType)) {
+        return res.status(400).json({ error: '無效的 Agent 類型' });
     }
 
     // 建構使用者提示詞
-    let userPrompt = `學生想法：
-標題：${title}
-內容：${content}`;
+    let userPrompt = `當前焦點想法：
+標題：${title || '無標題'}
+內容：${content || '無內容'}
+`;
 
     let contextNodes = [];
 
-    // 優先使用 projectId 獲取全域上下文 (Deep Context)
+    // 優先使用 projectId 獲取全域上下文 (Sliding Window N=10)
     if (projectId) {
         try {
             const ideaWalls = await IdeaWall.findAll({
@@ -203,7 +148,7 @@ exports.provideGuidance = async (req, res) => {
             
             if (ideaWalls.length > 0) {
                 const ideaWallIds = ideaWalls.map(iw => iw.id);
-                // 查詢專案中的所有節點 (限制 500 筆，倒序)
+                // 查詢專案中的最近 10 筆節點 (Sliding Window)
                 contextNodes = await Node.findAll({
                     where: { 
                         ideaWallId: { [Op.in]: ideaWallIds },
@@ -211,43 +156,41 @@ exports.provideGuidance = async (req, res) => {
                         id: { [Op.ne]: nodeId || -1 } 
                     },
                     order: [['createdAt', 'DESC']],
-                    limit: 500, 
+                    limit: 10, 
                     attributes: ['title', 'content', 'owner', 'createdAt']
                 });
             }
         } catch (dbError) {
             console.error('Error fetching project nodes for KB Coach:', dbError);
-            // Fallback to relatedNodes if DB fails
             contextNodes = relatedNodes; 
         }
     } else {
-        // Fallback for legacy frontend
         contextNodes = relatedNodes;
     }
 
-    // 如果有相關節點，加入上下文
+    // 加入上下文
     if (contextNodes.length > 0) {
       const relatedContext = contextNodes
         .map(node => {
             const nodeTitle = node.title || '無標題';
-            const nodeContent = (node.content || '').substring(0, 300); // 增加上下文長度
+            const nodeContent = (node.content || '').substring(0, 300);
             const nodeOwner = node.owner || '同學';
             const timeStr = node.createdAt ? ` (${new Date(node.createdAt).toLocaleDateString()})` : '';
             return `- [作者: ${nodeOwner}${timeStr}] ${nodeTitle}: ${nodeContent}`;
         })
         .join('\n');
-      userPrompt += `\n\n社群中的歷史想法（這是你的全域記憶，請從中尋找關聯）：\n${relatedContext}`;
+      userPrompt += `\n\n最近的討論上下文 (Sliding Window N=10)：\n${relatedContext}`;
     }
 
     // 呼叫Gemini Function Calling
     const result = await genai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
-        { role: 'user', parts: [{ text: buildSystemPrompt() + '\n\n' + userPrompt }] }
+        { role: 'user', parts: [{ text: buildSystemPrompt(agentType) + '\n\n' + userPrompt }] }
       ],
       config: {
         responseMimeType: 'application/json',
-        responseSchema: KB_COACHING_SCHEMA,
+        responseSchema: AGENT_OUTPUT_SCHEMA,
         temperature: 0.7,
       }
     });
@@ -259,17 +202,11 @@ exports.provideGuidance = async (req, res) => {
 
     const coaching = JSON.parse(responseText);
 
-    // 豐富化原則資訊
-    const enrichedPrinciples = coaching.principles.map(id => {
-      const principle = Object.values(KB_PRINCIPLES).find(p => p.id === id);
-      return principle || { id, name: '未知原則', description: '' };
-    });
-
     const responseData = {
-      principles: enrichedPrinciples,
-      questions: coaching.questions,
-      suggestions: coaching.suggestions,
-      recommendedScaffolds: coaching.recommendedScaffolds || [],
+      agentType,
+      thinkingProcess: coaching.thinkingProcess,
+      content: coaching.content,
+      suggestedActions: coaching.suggestedActions || [],
       metadata: {
         nodeId,
         timestamp: new Date().toISOString(),
@@ -286,14 +223,13 @@ exports.provideGuidance = async (req, res) => {
         projectId: null,
         metadata: clampMetadataSize({
           input: {
+            agentType,
             title: summarizeText(title),
-            content: summarizeText(content),
-            relatedNodesCount: relatedNodes.length
+            contextCount: contextNodes.length
           },
           output: {
-            principlesCount: coaching.principles.length,
-            questionsCount: coaching.questions.length,
-            suggestionsCount: coaching.suggestions.length
+            thinkingProcessLength: coaching.thinkingProcess?.length,
+            contentLength: coaching.content?.length
           },
           provider: 'gemini-2.5-flash'
         })
@@ -306,27 +242,23 @@ exports.provideGuidance = async (req, res) => {
 
   } catch (error) {
     console.error('Error in KB Coach provideGuidance:', error);
-
-    // 如果是Gemini API錯誤
     if (error.message?.includes('API key')) {
       return res.status(500).json({ error: 'AI服務設定錯誤，請聯繫管理員' });
     }
-
     res.status(500).json({ error: 'KB Coach處理時發生錯誤' });
   }
 };
 
 /**
- * 輔助端點：取得KB原則列表
+ * 輔助端點：取得 Agent 列表 (Optional for frontend dynamic rendering)
  */
 exports.getPrinciples = async (req, res) => {
-  try {
+    // 為了相容性保留此端點，但回傳 Agent 資訊
     res.status(200).json({
-      principles: Object.values(KB_PRINCIPLES),
-      version: 'Phase 1 - Core 6 Principles'
+        agents: Object.keys(AGENT_PERSONAS).map(key => ({
+            id: key,
+            ...AGENT_PERSONAS[key]
+        })),
+        version: 'Phase 1 - Multi-Agent MVP'
     });
-  } catch (error) {
-    console.error('Error in getPrinciples:', error);
-    res.status(500).json({ error: '取得原則列表時發生錯誤' });
-  }
 };

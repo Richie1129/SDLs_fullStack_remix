@@ -498,6 +498,7 @@ export default function IdeaWall() {
         setBuildOnId(nodeData.from_id || ""); // 如果是延伸想法
         
         setKbCoachModalOpen(false); // 關閉教練視窗
+        setUpdateNodeModalOpen(false); // 關閉檢視便利貼視窗
         setCreateNodeModalOpen(true); // 開啟建立視窗
         
         toast.success('已為您準備好節點，請繼續完成您的想法！', { icon: '📝' });

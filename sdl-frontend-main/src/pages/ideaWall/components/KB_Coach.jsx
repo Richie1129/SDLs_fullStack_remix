@@ -1,36 +1,29 @@
 /**
- * KB Coach Component
+ * KB Coach Component (AI-Scaffold Orchestrator - Phase 1 MVP)
  * 
- * 基於Knowledge Building 12原則的AI教練面板
- * 零破壞性設計：與Idea_development.jsx並存
+ * 支援三種 Agent 人格的手動觸發介面
  */
 
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import apiClient from '../../../api/client';
+import ReactMarkdown from 'react-markdown';
 
 const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
     const [isLoading, setIsLoading] = useState(false);
+    const [activeAgent, setActiveAgent] = useState(null); // 'IMPROVER', 'SYNTHESIZER', 'DEVIL'
     const [coaching, setCoaching] = useState(null);
-    const [showPrinciples, setShowPrinciples] = useState(false);
+    const [showThinking, setShowThinking] = useState(false);
+
+    // 當節點變更時，清空舊狀態
+    useEffect(() => {
+        setCoaching(null);
+        setActiveAgent(null);
+        setShowThinking(false);
+    }, [nodeInfo.id]);
 
     /**
-     * 行動圖示映射
-     */
-    const getActionIcon = (action) => {
-        const icons = {
-            CREATE_NODE: '📝',
-            CONNECT_IDEA: '🔗',
-            RESEARCH_TOPIC: '🔍',
-            COLLABORATE: '👥'
-        };
-        return icons[action] || '💡';
-    };
-
-    /**
-     * 取得相關節點上下文
-     * 簡單啟發式：取最近的10個節點（排除當前節點）
+     * 取得相關節點上下文 (Client-side fallback)
      */
     const getRelatedNodes = () => {
         if (!nodes || nodes.length === 0) return [];
@@ -41,45 +34,44 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
     };
 
     /**
-     * 取得KB Coach建議
+     * 觸發特定 Agent
      */
-    const getGuidance = async () => {
+    const triggerAgent = async (agentType) => {
         try {
             setIsLoading(true);
+            setActiveAgent(agentType);
+            setCoaching(null); // 清除舊結果
+
             const related = getRelatedNodes();
             const response = await apiClient.post('/kb-coach/guidance', {
                 title: nodeInfo.title,
                 content: nodeInfo.content,
                 nodeId: nodeInfo.id,
-                projectId: nodeInfo.projectId, // 傳遞 projectId 以啟用全域上下文
-                relatedNodes: related
+                projectId: nodeInfo.projectId,
+                relatedNodes: related,
+                agentType: agentType
             });
 
             if (response.data) {
                 setCoaching(response.data);
-                toast.success('KB Coach建議已生成！');
+                toast.success(`${agentType} 分析完成！`);
             }
         } catch (error) {
             console.error('Error getting KB guidance:', error);
-            toast.error('取得KB Coach建議時發生錯誤');
+            toast.error('取得建議時發生錯誤');
         } finally {
             setIsLoading(false);
         }
     };
 
     /**
-     * 執行建議行動（以CREATE_NODE為例）
+     * 執行建議行動
      */
-    const executeSuggestion = (suggestion) => {
-        if (suggestion.action === 'CREATE_NODE') {
-            // 優先使用推薦的第一個鷹架，若無則留空
-            const scaffold = (coaching.recommendedScaffolds && coaching.recommendedScaffolds.length > 0)
-                ? coaching.recommendedScaffolds[0]
-                : '';
-
+    const executeAction = (action) => {
+        if (action.actionType === 'CREATE_NEW' || action.actionType === 'REPLY') {
             const newNodeData = {
-                title: `[延伸] ${nodeInfo.title}`,
-                content: scaffold, // 僅預填鷹架，絕不代寫內容！
+                title: action.actionType === 'REPLY' ? `[回覆] ${nodeInfo.title}` : `[回應] ${nodeInfo.title}`,
+                content: action.payload || '',
                 from_id: nodeInfo.id,
                 ideaWallId: nodeInfo.ideaWallId,
                 owner: localStorage.getItem("username") || "學生",
@@ -87,151 +79,141 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
                 colorindex: localStorage.getItem("id")
             };
             
+            // 先關閉 KB Coach 視窗
+            onClose();
+            
+            // 立即開啟新節點，由父層處理視窗切換
             onNewNode(newNodeData);
-            // onClose(); // 讓 IdeaWall 決定是否關閉
         } else {
-            toast.info(`建議：${suggestion.description}`);
+            toast.info(`建議行動：${action.label}`);
         }
     };
 
     return (
-        <div className="p-6 bg-white rounded-lg shadow-lg max-w-3xl max-h-[80vh] overflow-y-auto">
+        <div className="p-6 bg-white rounded-lg shadow-lg max-w-3xl max-h-[80vh] overflow-y-auto flex flex-col h-full">
             {/* 標題 */}
-            <div className="mb-4 pb-4 border-b">
-                <h3 className="text-xl font-bold text-gray-800 flex items-center">
-                    <span className="mr-2">🎓</span>
-                    KB Coach - 知識翻新教練
-                </h3>
-                <p className="text-sm text-gray-500 mt-1">
-                    基於全域知識庫，引導你深化想法
-                </p>
+            <div className="mb-4 pb-4 border-b flex justify-between items-center">
+                <div>
+                    <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                        <span className="mr-2">🤖</span>
+                        AI 協作夥伴
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                        選擇一位夥伴來協助你深化想法
+                    </p>
+                </div>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    ✕
+                </button>
             </div>
 
-            {/* 原始想法 */}
-            <div className="mb-6 p-4 bg-gray-50 rounded">
-                <p className="font-semibold text-gray-700 mb-2">你的想法：</p>
-                <p className="text-gray-900 font-medium">{nodeInfo.title}</p>
-                <p className="text-gray-600 mt-2 text-sm">{nodeInfo.content}</p>
+            {/* 原始想法摘要 */}
+            <div className="mb-6 p-3 bg-gray-50 rounded border border-gray-100 text-sm text-gray-600 truncate">
+                <span className="font-bold mr-2">當前想法:</span> {nodeInfo.title}
             </div>
 
-            {/* 建議結果 */}
-            {coaching && (
-                <div className="space-y-6">
-                    {/* 引導問題 - 對話式氣泡設計 */}
-                    <div>
-                        <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                            <span className="mr-2">💬</span>
-                            教練的思考引導
-                        </h4>
-                        <div className="space-y-4">
-                            {coaching.questions.map((question, idx) => (
-                                <div key={idx} className="flex items-start">
-                                    <div className="flex-shrink-0 mr-3">
-                                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-lg">
-                                            🤖
-                                        </div>
-                                    </div>
-                                    <div className="bg-blue-50 p-3 rounded-2xl rounded-tl-none text-gray-800 shadow-sm border border-blue-100">
-                                        {question}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+            {/* Agent 選擇區 */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+                <button
+                    onClick={() => triggerAgent('IMPROVER')}
+                    disabled={isLoading}
+                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                        activeAgent === 'IMPROVER' 
+                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-600'
+                    }`}
+                >
+                    <div className="text-3xl mb-2">🛠️</div>
+                    <div className="font-bold mb-1">想法改進者</div>
+                    <div className="text-xs opacity-80">深化單一觀點</div>
+                </button>
 
-                    {/* 推薦的思考鷹架 */}
-                    {coaching.recommendedScaffolds && coaching.recommendedScaffolds.length > 0 && (
-                        <div>
-                            <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                                <span className="mr-2">🧭</span>
-                                推薦的思考鷹架
-                            </h4>
-                            <p className="text-sm text-gray-600 mb-3">
-                                點擊按鈕可將鷹架文字複製，然後在編輯想法時貼上使用
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                {coaching.recommendedScaffolds.map((scaffold, idx) => {
-                                    const scaffoldColors = {
-                                        '我的理論：': 'bg-blue-100 hover:bg-blue-200 text-blue-800',
-                                        '我需要了解：': 'bg-green-100 hover:bg-green-200 text-green-800',
-                                        '新資訊：': 'bg-yellow-100 hover:bg-yellow-200 text-yellow-800',
-                                        '這種理論無法解釋：': 'bg-red-100 hover:bg-red-200 text-red-800',
-                                        '更好的理論：': 'bg-purple-100 hover:bg-purple-200 text-purple-800',
-                                        '整合我們的知識：': 'bg-pink-100 hover:bg-pink-200 text-pink-800'
-                                    };
-                                    return (
-                                        <button
-                                            key={idx}
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(scaffold);
-                                                toast.success(`已複製「${scaffold.replace('：', '')}」`);
-                                            }}
-                                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${scaffoldColors[scaffold] || 'bg-gray-100 hover:bg-gray-200 text-gray-800'}`}
-                                            title="點擊複製此鷹架文字"
-                                        >
-                                            {scaffold.replace('：', '')}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
+                <button
+                    onClick={() => triggerAgent('SYNTHESIZER')}
+                    disabled={isLoading}
+                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                        activeAgent === 'SYNTHESIZER' 
+                            ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                            : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50 text-gray-600'
+                    }`}
+                >
+                    <div className="text-3xl mb-2">🔗</div>
+                    <div className="font-bold mb-1">綜合者</div>
+                    <div className="text-xs opacity-80">連結多個想法</div>
+                </button>
 
-                    {/* 建議行動 */}
-                    <div>
-                        <h4 className="font-bold text-gray-800 mb-3 flex items-center">
-                            <span className="mr-2">🚀</span>
-                            建議行動
-                        </h4>
-                        <div className="space-y-3">
-                            {coaching.suggestions.map((suggestion, idx) => (
-                                <div
-                                    key={idx}
-                                    className="p-4 bg-green-50 border border-green-200 rounded-lg"
-                                >
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1">
-                                            <p className="font-semibold text-gray-800 mb-1">
-                                                <span className="mr-2">{getActionIcon(suggestion.action)}</span>
-                                                {suggestion.description}
-                                            </p>
-                                            <p className="text-sm text-gray-600">
-                                                原因：{suggestion.reason}
-                                            </p>
-                                        </div>
-                                        {suggestion.action === 'CREATE_NODE' && (
-                                            <button
-                                                onClick={() => executeSuggestion(suggestion)}
-                                                className="ml-3 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition whitespace-nowrap flex items-center"
-                                            >
-                                                <span className="mr-1">✨</span>
-                                                幫我起草
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                <button
+                    onClick={() => triggerAgent('DEVIL')}
+                    disabled={isLoading}
+                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                        activeAgent === 'DEVIL' 
+                            ? 'border-red-500 bg-red-50 text-red-700' 
+                            : 'border-gray-200 hover:border-red-300 hover:bg-gray-50 text-gray-600'
+                    }`}
+                >
+                    <div className="text-3xl mb-2">😈</div>
+                    <div className="font-bold mb-1">魔鬼代言人</div>
+                    <div className="text-xs opacity-80">挑戰既有觀點</div>
+                </button>
+            </div>
+
+            {/* Loading State */}
+            {isLoading && (
+                <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-500 animate-pulse">
+                    <div className="text-4xl mb-4">🤔</div>
+                    <p>AI 正在閱讀上下文並思考中...</p>
                 </div>
             )}
 
-            {/* 操作按鈕 */}
-            <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
-                <button
-                    onClick={onClose}
-                    className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
-                >
-                    關閉
-                </button>
-                <button
-                    onClick={getGuidance}
-                    disabled={isLoading}
-                    className="px-5 py-2 bg-customgreen text-white rounded-lg hover:bg-opacity-90 disabled:opacity-50 transition"
-                >
-                    {isLoading ? '分析中...' : (coaching ? '🔄 重新分析' : '取得KB Coach建議')}
-                </button>
-            </div>
+            {/* 結果顯示區 */}
+            {!isLoading && coaching && (
+                <div className="flex-1 overflow-y-auto pr-2">
+                    {/* Thinking Process (Collapsible) */}
+                    {coaching.thinkingProcess && (
+                        <div className="mb-4">
+                            <button 
+                                onClick={() => setShowThinking(!showThinking)}
+                                className="text-xs text-gray-400 hover:text-gray-600 flex items-center mb-2"
+                            >
+                                {showThinking ? '▼ 隱藏思考過程' : '▶ 顯示 AI 思考過程 (CoT)'}
+                            </button>
+                            {showThinking && (
+                                <div className="p-3 bg-gray-100 rounded text-xs text-gray-600 font-mono whitespace-pre-wrap border border-gray-200">
+                                    {coaching.thinkingProcess}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Main Content */}
+                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6">
+                        <div className="prose prose-sm max-w-none text-gray-800">
+                            <ReactMarkdown>{coaching.content}</ReactMarkdown>
+                        </div>
+                    </div>
+
+                    {/* Suggested Actions */}
+                    {coaching.suggestedActions && coaching.suggestedActions.length > 0 && (
+                        <div>
+                            <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
+                                建議行動
+                            </h4>
+                            <div className="flex flex-wrap gap-3">
+                                {coaching.suggestedActions.map((action, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => executeAction(action)}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm flex items-center text-sm font-medium"
+                                    >
+                                        <span className="mr-2">✨</span>
+                                        {action.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
