@@ -3,6 +3,7 @@ history_file.txt
 sql/
 insert.js
 insert_2.js
+insert_3.js
 
 # Logs
 logs
