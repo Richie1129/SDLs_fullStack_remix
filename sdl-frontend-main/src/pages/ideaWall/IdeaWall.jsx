@@ -19,6 +19,7 @@ import Lottie from "lottie-react";
 import Adding_icon from "../../assets/AnimationAddingNode.json";
 import Timer from './components/Timer';
 import KB_Coach from './components/KB_Coach';
+import OrchestratorMonitor from './components/OrchestratorMonitor'; // Phase 2 監控元件
 import KnowledgeForumScaffolds from './components/KnowledgeForumScaffolds';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
@@ -830,6 +831,17 @@ export default function IdeaWall() {
                 </Modal>
             )}
             <Timer />
+            
+            {/* Phase 2 Orchestrator 監控面板 */}
+            {!isObservationMode && ideaWallInfo?.id && (
+                <div className="absolute top-4 right-4 w-80 z-40">
+                    <OrchestratorMonitor 
+                        ideaWallId={ideaWallInfo.id} 
+                        projectId={parseInt(projectId)}
+                    />
+                </div>
+            )}
+            
             {!isObservationMode && (
                 <button
                     onMouseEnter={handleMouseEnter}

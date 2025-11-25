@@ -42,14 +42,20 @@ graph TD
     A[學生發布新貼文] --> B{檢查冷卻時間};
     B -- 冷卻中 --> C[結束 / 不動作];
     B -- 無冷卻 --> D[中控大腦讀取對話紀錄];
-    D --> E[LLM 進行 CoT 推理評估];
+    D --> E[規則引擎計算討論指標<br/>Depth/Diversity/Convergence];
     E --> F{決定行動?};
     F -- 不需要介入 --> C;
-    F -- 需要介入 --> G[路由至指定 Agent (Improver/Synthesizer/Devil)];
-    G --> H[生成回應內容];
+    F -- 需要介入 --> G[路由至指定 Agent<br/>Improver/Synthesizer/Devil];
+    G --> H[LLM 生成回應內容];
     H --> I[發布回應至討論區];
     I --> J[重置冷卻計時器];
 ```
+
+> **⚠️ 技術決策說明**：Orchestrator 使用**規則引擎**而非 LLM 做決策，原因是：
+> 1. **延遲**：規則引擎 60ms vs LLM 2000ms
+> 2. **成本**：規則引擎 $0 vs LLM $0.001/次
+> 3. **可預測性**：規則引擎 100% 確定性輸出，LLM 有隨機性
+> 4. **可調參**：規則引擎改數字重啟即可，LLM 需要調 prompt 反覆測試
 
 ---
 
@@ -73,28 +79,64 @@ graph TD
 
 ---
 
-### Phase 2: The Silent Orchestrator (Automation Core) - 🚧 待執行
+### Phase 2: The Silent Orchestrator (Automation Core) - ✅ 已完成
 **目標**：實作「中控大腦」與「冷卻機制」，讓系統具備自主性。
 
-#### 1. The Brain (`services/orchestrator.js`)
--   **Orchestrator Agent**: 一個不直接對話的後台 Agent。
+#### 1. The Brain (`services/orchestrator.js`) ✅
+-   **Orchestrator Agent**: 背景 Agent，不直接對話，負責診斷與派單。
 -   **Reasoning Loop**:
-    -   Input: 最近 N 篇貼文 + 討論區元數據 (Depth, Diversity)。
-    -   Output: JSON 指令 `{ action: "TRIGGER" | "WAIT", role: "...", targetIds: [...] }`。
--   **決策門檻 (Thresholds)**:
-    -   `Depth < Low` -> Trigger Improver
-    -   `Diversity < Low` -> Trigger Devil's Advocate
-    -   `Entropy > High` -> Trigger Synthesizer
+    -   Input: 最近 N 篇貼文 + 討論區元數據 (Depth, Diversity, Convergence)。
+    -   Output: JSON 指令 `{ action: "TRIGGER" | "WAIT", role: "...", reason: "..." }`。
+-   **決策規則引擎**:
+    -   `Depth < 40 AND NodeCount >= 3` -> Trigger Improver
+    -   `Diversity <= 40 AND Convergence >= 40` -> Trigger Devil's Advocate
+    -   `NodeCount >= 10 AND Convergence < 30` -> Trigger Synthesizer
+    -   否則保持靜默 (WAIT)
 
-#### 2. Cooldown Mechanism (`utils/cooldownManager.js`)
--   **State Management**: 使用 Redis 或記憶體快取記錄 `LastInterventionTime`。
--   **規則**:
-    -   同一討論串冷卻時間 > 20 分鐘。
-    -   或新增貼文數 > 3 篇。
+#### 2. Cooldown Mechanism (`utils/cooldownManager.js`) ✅
+-   **State Management**: 記憶體 Map 快取 `LastInterventionTime` + `PostCount`。
+-   **冷卻規則**:
+    -   時間維度：同一討論串 20 分鐘冷卻。
+    -   活動維度：或新增 3 篇貼文後允許再次介入。
+-   **記憶體管理**: 
+    -   定期清理 24 小時無活動的記錄。
+    -   使用 `unref()` 避免阻塞測試進程退出。
 
-#### 3. Simulation Testbed
--   建立測試腳本，餵入歷史討論串資料。
--   記錄 Orchestrator 的決策日誌，調整 Prompt 閾值以避免過度干擾。
+#### 3. Discussion Analyzer (`services/discussionAnalyzer.js`) ✅
+-   **三大指標計算**:
+    -   **Depth (深度)**: 平均內容長度 (調整為中文適用門檻)。
+    -   **Diversity (多樣性)**: 獨特作者數量。
+    -   **Convergence (收斂度)**: 關鍵詞重複率（簡化版分詞）。
+-   **討論分類**: SHALLOW | ECHO_CHAMBER | OVERLOAD | HEALTHY
+
+#### 4. Integration Hook (`controllers/node.js`) ✅
+-   **Event-Driven**: 在 `createNode` 成功後，使用 `setImmediate()` 非同步觸發 Orchestrator。
+-   **零破壞性**: 
+    -   立即回應使用者 (`res.status(200)`)。
+    -   Orchestrator 失敗不影響發文流程（靜默失敗）。
+-   **環境控制**: 可透過 `ORCHESTRATOR_ENABLED=false` 關閉功能。
+
+#### 5. Testing & Validation ✅
+-   **測試腳本**: `tests/orchestrator.test.js` 涵蓋 4 種討論情境。
+-   **所有測試通過**: 
+    -   ✅ 淺層討論 -> Improver
+    -   ✅ 同溫層 -> Devil's Advocate  
+    -   ✅ 資訊過載 -> Synthesizer
+    -   ✅ 健康討論 -> 保持靜默
+    -   ✅ 冷卻機制驗證
+    -   ✅ 空討論邊界處理
+
+#### 6. Debug 監控面板 (`components/OrchestratorMonitor.jsx`) ✅
+-   **功能**: 讓開發者在前端即時查看 Orchestrator 的決策結果。
+-   **位置**: 想法牆頁面右上角（僅限非觀摩模式）。
+-   **顯示內容**:
+    -   冷卻狀態（可介入/冷卻中）
+    -   討論品質指標（Depth/Diversity/Convergence）
+    -   決策結果（TRIGGER/WAIT/COOLDOWN）
+    -   建議 Agent 類型
+-   **API 端點**:
+    -   `GET /api/kb-coach/orchestrator/status/:ideaWallId` - 查詢冷卻狀態
+    -   `POST /api/kb-coach/orchestrator/analyze` - 手動觸發分析（Debug 用）
 
 ---
 
@@ -118,10 +160,33 @@ graph TD
 
 ## 關鍵技術指標 (Key Technical Specs)
 
--   **LLM 模型**:
-    -   Orchestrator: 建議使用 `gpt-4o` 或 `claude-3-5-sonnet` (高推理能力)。
+-   **決策引擎**:
+    -   **Orchestrator**: 使用**規則引擎** (非 LLM)，基於統計指標做決策。
+        -   ✅ 延遲：< 100ms
+        -   ✅ 成本：$0
+        -   ✅ 可預測性：100%
+    -   **未來考量**: 若規則引擎失敗率 > 30%（透過 Feedback Loop 收集），才考慮引入 LLM 輔助決策。
+-   **LLM 模型**（僅用於 Worker Agents 生成內容）:
     -   Worker Agents: 使用 `gemini-2.5-flash` 或 `gpt-4o-mini` (高性價比)。
 -   **Prompt Engineering**:
-    -   必須使用 **Chain-of-Thought (CoT)**，要求 AI 先輸出思考過程再輸出決策。
+    -   必須使用 **Chain-of-Thought (CoT)**，要求 AI 先輸出思考過程再輸出建議。
 -   **Latency**:
+    -   Orchestrator 決策：< 100ms（規則引擎）
+    -   Worker Agent 回應生成：1-3 秒（LLM）
     -   Phase 3 的自動分析必須是非同步 (Async)，不可阻塞使用者發文流程。
+
+---
+
+## Phase 2 新增檔案清單
+
+| 檔案路徑 | 用途 | 移除時機 |
+|---------|------|--------|
+| `services/orchestrator.js` | 核心決策引擎 | 永久保留 |
+| `services/discussionAnalyzer.js` | 討論品質分析 | 永久保留 |
+| `utils/cooldownManager.js` | 冷卻機制管理 | 永久保留 |
+| `tests/orchestrator.test.js` | 測試腳本 | 視需要保留 |
+| `routes/kbCoach.js` (擴充) | 新增 Orchestrator API 端點 | 永久保留 |
+| `controllers/node.js` (修改) | 新增 Orchestrator Hook | 永久保留 |
+| `components/OrchestratorMonitor.jsx` | Debug 監控面板 | **Phase 3 正式上線後可移除** |
+| `HOW_TO_VERIFY_PHASE2.md` | 驗證文件 | Phase 3 後可移除 |
+| `PHASE_COMPARISON.md` | Phase 差異說明 | Phase 3 後可移除 |
