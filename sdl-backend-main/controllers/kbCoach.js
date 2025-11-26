@@ -13,6 +13,7 @@ const { GoogleGenAI } = require('@google/genai');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
 const Node = require('../models/node');
 const IdeaWall = require('../models/idea_wall');
+const AiFeedback = require('../models/ai_feedback');
 const { Op } = require('sequelize');
 
 // 初始化Gemini客戶端
@@ -261,4 +262,101 @@ exports.getPrinciples = async (req, res) => {
         })),
         version: 'Phase 1 - Multi-Agent MVP'
     });
+};
+
+/**
+ * Phase 3: 接收並儲存用戶回饋
+ * POST /api/kb-coach/feedback
+ */
+exports.saveFeedback = async (req, res) => {
+    try {
+        const { projectId, ideaWallId, nodeId, agentType, feedbackType, responseId, userId } = req.body;
+
+        // 驗證必要欄位
+        if (!feedbackType || !['helpful', 'not_helpful'].includes(feedbackType)) {
+            return res.status(400).json({ error: '無效的回饋類型' });
+        }
+
+        // 建立回饋記錄
+        const feedback = await AiFeedback.create({
+            projectId: projectId || null,
+            ideaWallId: ideaWallId || null,
+            nodeId: nodeId || null,
+            agentType: agentType || 'UNKNOWN',
+            feedbackType: feedbackType,
+            userId: userId || null,
+            sessionId: responseId || null
+        });
+
+        // 審計日誌（非阻塞）
+        try {
+            await logAudit(req, {
+                action: 'AI_FEEDBACK_SUBMITTED',
+                targetType: 'ai_feedback',
+                targetId: feedback.id,
+                projectId: projectId || null,
+                metadata: clampMetadataSize({
+                    agentType,
+                    feedbackType,
+                    nodeId
+                })
+            });
+        } catch (auditError) {
+            console.error('Audit logging failed (non-blocking):', auditError);
+        }
+
+        res.status(201).json({ 
+            success: true, 
+            message: '感謝您的回饋！',
+            feedbackId: feedback.id 
+        });
+
+    } catch (error) {
+        console.error('Error saving AI feedback:', error);
+        res.status(500).json({ error: '儲存回饋時發生錯誤' });
+    }
+};
+
+/**
+ * Phase 3: 取得回饋統計 (供管理者查看)
+ * GET /api/kb-coach/feedback/stats
+ */
+exports.getFeedbackStats = async (req, res) => {
+    try {
+        const { projectId } = req.query;
+
+        const whereClause = projectId ? { projectId: parseInt(projectId) } : {};
+
+        const stats = await AiFeedback.findAll({
+            where: whereClause,
+            attributes: [
+                'agentType',
+                'feedbackType',
+                [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'count']
+            ],
+            group: ['agentType', 'feedbackType'],
+            raw: true
+        });
+
+        // 轉換成更友善的格式
+        const result = {
+            IMPROVER: { helpful: 0, not_helpful: 0 },
+            SYNTHESIZER: { helpful: 0, not_helpful: 0 },
+            DEVIL: { helpful: 0, not_helpful: 0 },
+            total: { helpful: 0, not_helpful: 0 }
+        };
+
+        stats.forEach(row => {
+            if (result[row.agentType]) {
+                result[row.agentType][row.feedbackType] = parseInt(row.count);
+            }
+            result.total[row.feedbackType] += parseInt(row.count);
+        });
+
+        res.status(200).json(result);
+
+    } catch (error) {
+        console.error('Error getting feedback stats:', error);
+        res.status(500).json({ error: '取得統計時發生錯誤' });
+    }
 };

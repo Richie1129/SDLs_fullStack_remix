@@ -1,5 +1,5 @@
 /**
- * Orchestrator Service (Phase 2 - The Silent Brain)
+ * Orchestrator Service (Phase 2 + Phase 3 - The Silent Brain)
  * 
  * Linus 式設計哲學：
  * "This is the real meat of the system."
@@ -10,7 +10,7 @@
  * 3. 應用決策規則（Rule Engine）
  * 4. 檢查冷卻機制
  * 5. 決定是否介入 & 選擇 Agent
- * 6. 如需介入，自動呼叫 KB Coach 生成回應
+ * 6. Phase 3: 透過 Socket.io 通知前端
  * 
  * 零破壞性保證：
  * - 背景執行，不阻塞使用者操作
@@ -28,6 +28,26 @@ const { logAudit, clampMetadataSize } = require('./auditService');
 
 // 引入 KB Coach 的 Agent Personas（重用 Phase 1 代碼）
 const kbCoachController = require('../controllers/kbCoach');
+
+// Phase 3: Socket.io 通知支援
+let socketIO = null;
+
+/**
+ * 設定 Socket.io 實例（由 server.js 或 controller 注入）
+ * 
+ * @param {Object} io - Socket.io server instance
+ */
+function setSocketIO(io) {
+    socketIO = io;
+    console.log('✅ [Orchestrator] Socket.io instance configured for Phase 3 notifications');
+}
+
+/**
+ * 取得 Socket.io 實例
+ */
+function getSocketIO() {
+    return socketIO;
+}
 
 // 初始化Gemini客戶端
 const genai = new GoogleGenAI({
@@ -295,18 +315,53 @@ async function generateAndPostResponse(ideaWallId, projectId, agentRole, context
  * 
  * @param {number} ideaWallId
  * @param {number} projectId
+ * @param {Object} options - { io: Socket.io instance (optional) }
  * @returns {Promise<Object>}
  */
-async function orchestrate(ideaWallId, projectId) {
+async function orchestrate(ideaWallId, projectId, options = {}) {
     console.log(`🧠 [Orchestrator] Analyzing ideaWall ${ideaWallId} in project ${projectId}...`);
+
+    // 允許從 options 傳入 io，或使用全域設定的 socketIO
+    const io = options.io || socketIO;
 
     const decision = await analyzeAndDecide(ideaWallId, projectId);
 
     console.log(`🧠 [Orchestrator] Decision: ${decision.action} - ${decision.reason}`);
 
-    // 如果決定介入，生成回應
+    // ========================================================================
+    // Phase 3: 如果決定介入，透過 Socket.io 通知前端
+    // ========================================================================
     if (decision.action === 'TRIGGER' && decision.role) {
         console.log(`🤖 [Orchestrator] Triggering ${decision.role}...`);
+        
+        // Phase 3: 發送 Socket 通知
+        if (io) {
+            // 注意：messageHandler 使用 projectId 作為房間名（不是 `project-${projectId}`）
+            const roomName = String(projectId);
+            
+            // Debug: 檢查房間狀態
+            const room = io.sockets.adapter.rooms.get(roomName);
+            const clientsInRoom = room ? room.size : 0;
+            console.log(`🔍 [Phase 3 Debug] Room "${roomName}" has ${clientsInRoom} clients`);
+            if (room) {
+                console.log(`🔍 [Phase 3 Debug] Client IDs:`, Array.from(room));
+            }
+            
+            io.to(roomName).emit('aiSuggestion', {
+                type: 'AI_COACH_SUGGESTION',
+                timestamp: new Date().toISOString(),
+                projectId,
+                ideaWallId,
+                action: decision.action,
+                role: decision.role,
+                reason: decision.reason,
+                analysis: decision.analysis,
+                discussionType: decision.discussionType
+            });
+            console.log(`📢 [Phase 3] AI suggestion broadcasted to room ${roomName}`);
+        } else {
+            console.log('⚠️ [Phase 3] Socket.io not available, skipping notification');
+        }
         
         // 重新取得上下文（因為 analyzeAndDecide 沒有返回完整節點）
         const ideaWalls = await IdeaWall.findAll({
@@ -325,7 +380,8 @@ async function orchestrate(ideaWallId, projectId) {
         
         return {
             ...decision,
-            response
+            response,
+            notificationSent: !!io
         };
     }
 
@@ -336,6 +392,9 @@ module.exports = {
     orchestrate,
     analyzeAndDecide,
     generateAndPostResponse,
+    // Phase 3: Socket.io 配置
+    setSocketIO,
+    getSocketIO,
     // 匯出供測試使用
     applyDecisionRules,
     ORCHESTRATOR_ENABLED

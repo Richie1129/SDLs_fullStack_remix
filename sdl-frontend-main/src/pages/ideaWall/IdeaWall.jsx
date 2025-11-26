@@ -64,6 +64,10 @@ export default function IdeaWall() {
 
     const [kbCoachModalOpen, setKbCoachModalOpen] = useState(false); // KB Coach modal
     const [showNodeChangeHistory, setShowNodeChangeHistory] = useState(false);
+    
+    // Phase 3: AI 建議通知狀態
+    const [aiSuggestion, setAiSuggestion] = useState(null);
+    const [suggestedAgentType, setSuggestedAgentType] = useState(null);
 
     // 使用觀摩模式 hook
     const { isObservationMode } = useObservationMode();
@@ -194,6 +198,61 @@ export default function IdeaWall() {
         socket.on('nodeUpdateSuccess', handleNodeSuccess);
         socket.on('nodeDeleteSuccess', handleNodeSuccess);
 
+        // ================================================================
+        // Phase 3: 監聽 AI 建議通知
+        // ================================================================
+        const handleAiSuggestion = (data) => {
+            console.log('🤖 [Phase 3] Received AI suggestion:', data);
+            
+            // 儲存建議資訊
+            setAiSuggestion(data);
+            setSuggestedAgentType(data.role);
+            
+            // 顯示 Toast 通知
+            const agentNames = {
+                'IMPROVER': '🛠️ 想法改進者',
+                'SYNTHESIZER': '🔗 知識整合者',
+                'DEVIL': '😈 魔鬼代言人'
+            };
+            const agentName = agentNames[data.role] || 'AI 助教';
+            
+            toast((t) => (
+                <div className="flex flex-col gap-2">
+                    <div className="font-medium">{agentName} 有建議給你！</div>
+                    <div className="text-sm text-gray-600">{data.reason}</div>
+                    <div className="flex gap-2 mt-2">
+                        <button
+                            onClick={() => {
+                                toast.dismiss(t.id);
+                                setKbCoachModalOpen(true);
+                            }}
+                            className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                        >
+                            查看建議
+                        </button>
+                        <button
+                            onClick={() => toast.dismiss(t.id)}
+                            className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+                        >
+                            稍後
+                        </button>
+                    </div>
+                </div>
+            ), {
+                duration: 10000,
+                position: 'top-right',
+                style: {
+                    background: '#f0f9ff',
+                    border: '1px solid #0ea5e9',
+                    padding: '16px',
+                    maxWidth: '400px'
+                }
+            });
+        };
+
+        socket.off('aiSuggestion', handleAiSuggestion);
+        socket.on('aiSuggestion', handleAiSuggestion);
+
         return () => {
             socket.off("nodeUpdated", nodeUpdateEvent);
             socket.off('nodeCreateError', handleNodeError);
@@ -202,6 +261,7 @@ export default function IdeaWall() {
             socket.off('nodeCreateSuccess', handleNodeSuccess);
             socket.off('nodeUpdateSuccess', handleNodeSuccess);
             socket.off('nodeDeleteSuccess', handleNodeSuccess);
+            socket.off('aiSuggestion', handleAiSuggestion);
         }
     }, [socket, projectId, getNodesQuery, getNodeRelationQuery]);
 
@@ -821,12 +881,19 @@ export default function IdeaWall() {
                 </Modal>
             )}
             {!isObservationMode && (
-                <Modal open={kbCoachModalOpen} onClose={() => setKbCoachModalOpen(false)} opacity={false} position={"justify-center items-center"}>
+                <Modal open={kbCoachModalOpen} onClose={() => {
+                    setKbCoachModalOpen(false);
+                    setSuggestedAgentType(null); // Phase 3: 關閉時清除建議
+                }} opacity={false} position={"justify-center items-center"}>
                     <KB_Coach
                         nodeInfo={selectNodeInfo}
                         nodes={nodes} // 傳入所有節點以供上下文分析
-                        onClose={() => setKbCoachModalOpen(false)}
+                        onClose={() => {
+                            setKbCoachModalOpen(false);
+                            setSuggestedAgentType(null); // Phase 3: 關閉時清除建議
+                        }}
                         onNewNode={handleNewNodeFromAI}
+                        suggestedAgent={suggestedAgentType} // Phase 3: 傳入建議的 Agent 類型
                     />
                 </Modal>
             )}

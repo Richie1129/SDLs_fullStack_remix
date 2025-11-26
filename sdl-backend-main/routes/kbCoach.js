@@ -21,6 +21,16 @@ router.post('/guidance', kbCoachController.provideGuidance);
 router.get('/principles', kbCoachController.getPrinciples);
 
 // ============================================================================
+// Phase 3 新增端點：回饋機制
+// ============================================================================
+
+// 儲存用戶回饋
+router.post('/feedback', kbCoachController.saveFeedback);
+
+// 取得回饋統計 (供管理者查看)
+router.get('/feedback/stats', kbCoachController.getFeedbackStats);
+
+// ============================================================================
 // Phase 2 新增端點：查詢 Orchestrator 狀態
 // ============================================================================
 
@@ -71,7 +81,9 @@ router.post('/orchestrator/analyze', async (req, res) => {
             return res.status(400).json({ error: 'Missing ideaWallId or projectId' });
         }
         
-        const decision = await orchestrate(ideaWallId, projectId);
+        // 從 app 取得 io 實例，確保使用同一個 Socket.io 伺服器
+        const io = req.app.get('io');
+        const decision = await orchestrate(ideaWallId, projectId, { io });
         
         res.status(200).json(decision);
     } catch (error) {

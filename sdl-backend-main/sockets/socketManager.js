@@ -8,6 +8,7 @@ const ColumnHandler = require('./handlers/columnHandler');
 const MessageHandler = require('./handlers/messageHandler');
 const NodeHandler = require('./handlers/nodeHandler');
 const AnnouncementHandler = require('./handlers/announcementHandler');
+const AiCoachHandler = require('./handlers/aiCoachHandler'); // Phase 3
 
 /**
  * Socket.IO 管理器 - 統一管理所有 Socket 事件和認證
@@ -88,6 +89,9 @@ class SocketManager {
             
             // 公告相關事件
             AnnouncementHandler.registerEvents(this.io, socket);
+            
+            // AI Coach 相關事件 (Phase 3)
+            AiCoachHandler.registerEvents(this.io, socket);
 
             console.log(`✅ 所有事件處理器已註冊完成 for ${socket.id}`);
 

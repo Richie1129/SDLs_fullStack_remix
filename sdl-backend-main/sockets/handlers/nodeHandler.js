@@ -4,6 +4,9 @@ const Node_relation = require('../../models/node_relation');
 const Project = require('../../models/project');
 const { logNodeChange, logNodeFieldChanges } = require('../../utils/nodeChangeLogger');
 
+// Phase 3: 引入 Orchestrator
+const { orchestrate } = require('../../services/orchestrator');
+
 /**
  * 節點相關 Socket 事件處理器
  */
@@ -115,6 +118,24 @@ class NodeHandler {
             });
             
             console.log(`✅ 節點創建成功: ${createdNode.id} - ${createdNode.title}`);
+
+            // ================================================================
+            // Phase 3 Hook: 非同步觸發 Orchestrator 分析
+            // Linus 原則：「零破壞性 - 失敗不影響正常流程」
+            // ================================================================
+            setImmediate(async () => {
+                try {
+                    if (actualIdeaWallId && projectId) {
+                        console.log(`🔔 [Hook] New node created via Socket, triggering Orchestrator...`);
+                        // 從 socket.io instance 取得 io（透過 this.io）
+                        const io = this.io;
+                        await orchestrate(actualIdeaWallId, projectId, { io });
+                    }
+                } catch (orchError) {
+                    // 靜默失敗，不影響使用者體驗
+                    console.error('Orchestrator hook failed (non-blocking):', orchError.message);
+                }
+            });
 
         } catch (error) {
             console.error("創建節點時發生錯誤:", error);

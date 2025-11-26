@@ -27,6 +27,14 @@ const io = new Server(server, {
 // 初始化 Socket 管理器
 const socketManager = new SocketManager(io);
 
+// Phase 3: 注入 Socket.io 到 Orchestrator
+try {
+    const { setSocketIO } = require('./services/orchestrator');
+    setSocketIO(io);
+} catch (error) {
+    console.warn('Orchestrator Socket.io 注入失敗 (非關鍵):', error.message);
+}
+
 // 基礎中間件設定
 app.set('trust proxy', 1);
 app.set('io', io);

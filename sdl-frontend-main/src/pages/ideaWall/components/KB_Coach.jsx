@@ -1,26 +1,43 @@
 /**
- * KB Coach Component (AI-Scaffold Orchestrator - Phase 1 MVP)
+ * KB Coach Component (AI-Scaffold Orchestrator - Phase 1 MVP + Phase 3 Enhancement)
  * 
  * 支援三種 Agent 人格的手動觸發介面
+ * Phase 3: 支援接收 Orchestrator 建議的 Agent 類型 + Feedback 機制
  */
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import apiClient from '../../../api/client';
 import ReactMarkdown from 'react-markdown';
+import { socket } from '../../../utils/socket';
 
-const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
+const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = null }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [activeAgent, setActiveAgent] = useState(null); // 'IMPROVER', 'SYNTHESIZER', 'DEVIL'
     const [coaching, setCoaching] = useState(null);
     const [showThinking, setShowThinking] = useState(false);
+    const [feedbackGiven, setFeedbackGiven] = useState(false); // Phase 3: 追蹤是否已給過回饋
+    const [responseId, setResponseId] = useState(null); // 用於追蹤特定回應
 
     // 當節點變更時，清空舊狀態
     useEffect(() => {
         setCoaching(null);
         setActiveAgent(null);
         setShowThinking(false);
+        setFeedbackGiven(false);
+        setResponseId(null);
     }, [nodeInfo.id]);
+
+    // Phase 3: 如果有建議的 Agent 類型，自動觸發
+    useEffect(() => {
+        if (suggestedAgent && !coaching && !isLoading) {
+            // 延遲一點再觸發，讓使用者看到是哪個 Agent 被選中
+            const timer = setTimeout(() => {
+                triggerAgent(suggestedAgent);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [suggestedAgent]);
 
     /**
      * 取得相關節點上下文 (Client-side fallback)
@@ -54,6 +71,8 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
 
             if (response.data) {
                 setCoaching(response.data);
+                setResponseId(Date.now().toString()); // 用於追蹤此次回應
+                setFeedbackGiven(false); // 重置回饋狀態
                 toast.success(`${agentType} 分析完成！`);
             }
         } catch (error) {
@@ -86,6 +105,29 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
             onNewNode(newNodeData);
         } else {
             toast.info(`建議行動：${action.label}`);
+        }
+    };
+
+    /**
+     * Phase 3: 發送用戶回饋
+     */
+    const handleFeedback = async (feedbackType) => {
+        try {
+            // 發送 Socket 事件
+            socket.emit('aiCoachFeedback', {
+                projectId: nodeInfo.projectId,
+                ideaWallId: nodeInfo.ideaWallId,
+                nodeId: nodeInfo.id,
+                agentType: activeAgent,
+                feedbackType: feedbackType, // 'helpful' or 'not_helpful'
+                responseId: responseId,
+                userId: localStorage.getItem("id")
+            });
+
+            setFeedbackGiven(true);
+            toast.success(feedbackType === 'helpful' ? '感謝您的回饋！👍' : '感謝您的回饋，我們會持續改進！');
+        } catch (error) {
+            console.error('Error sending feedback:', error);
         }
     };
 
@@ -212,6 +254,33 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode }) => {
                             </div>
                         </div>
                     )}
+
+                    {/* Phase 3: Feedback Section */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                            <span className="text-sm text-gray-500">這個建議對你有幫助嗎？</span>
+                            {!feedbackGiven ? (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleFeedback('helpful')}
+                                        className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition flex items-center text-sm"
+                                    >
+                                        <span className="mr-1">👍</span> 有幫助
+                                    </button>
+                                    <button
+                                        onClick={() => handleFeedback('not_helpful')}
+                                        className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition flex items-center text-sm"
+                                    >
+                                        <span className="mr-1">👎</span> 需改進
+                                    </button>
+                                </div>
+                            ) : (
+                                <span className="text-sm text-green-600 flex items-center">
+                                    <span className="mr-1">✓</span> 感謝回饋！
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

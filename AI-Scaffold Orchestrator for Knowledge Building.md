@@ -109,12 +109,15 @@ graph TD
     -   **Convergence (收斂度)**: 關鍵詞重複率（簡化版分詞）。
 -   **討論分類**: SHALLOW | ECHO_CHAMBER | OVERLOAD | HEALTHY
 
-#### 4. Integration Hook (`controllers/node.js`) ✅
--   **Event-Driven**: 在 `createNode` 成功後，使用 `setImmediate()` 非同步觸發 Orchestrator。
+#### 4. Integration Hook ✅
+-   **Event-Driven**: 
+    -   HTTP API: `controllers/node.js` - 使用 `setImmediate()` 非同步觸發。
+    -   **Socket**: `sockets/handlers/nodeHandler.js` - 前端主要使用此路徑建立節點。
 -   **零破壞性**: 
-    -   立即回應使用者 (`res.status(200)`)。
+    -   立即回應使用者（HTTP 200 或 Socket Success）。
     -   Orchestrator 失敗不影響發文流程（靜默失敗）。
 -   **環境控制**: 可透過 `ORCHESTRATOR_ENABLED=false` 關閉功能。
+-   **⚠️ 重要**: 新建節點與延伸節點都會觸發 Orchestrator。
 
 #### 5. Testing & Validation ✅
 -   **測試腳本**: `tests/orchestrator.test.js` 涵蓋 4 種討論情境。
@@ -140,21 +143,76 @@ graph TD
 
 ---
 
-### Phase 3: Full Integration (Deployment) - 📅 規劃中
+### Phase 3: Full Integration (Deployment) - ✅ 已完成
 **目標**：前端自動化接入，讓 AI 成為討論區的隱形參與者。
 
-#### 1. Event-Driven Trigger
--   在 `createNode` Controller 中埋入 Hook。
--   當新節點建立 -> 非同步觸發 Orchestrator 分析。
+> **⚠️ 設計決策說明**：Phase 3 採用「通知 + 確認」模式，而非「自動插入 AI 節點」。
+> 原因：自動插入可能干擾學生思考，應該讓學生主動決定是否採納 AI 建議。
 
-#### 2. Frontend Notification
--   **即時通知**: 使用 Socket.io 或 Polling 機制。
--   **UI 呈現**: 顯示「AI 助教正在輸入...」或「AI 建議...」的提示。
--   **自動插入**: 經使用者確認或自動將 AI 回應轉為新節點。
+#### 1. Event-Driven Trigger ✅
+-   **觸發點**（兩個入口都有 Hook）:
+    -   HTTP API: `controllers/node.js` (較少使用)
+    -   **Socket**: `sockets/handlers/nodeHandler.js` (前端主要路徑)
+-   **觸發時機**: 新建節點 & 延伸節點都會觸發。
+-   **Orchestrator Socket 整合** (`orchestrator.js` 新增):
+    -   `setSocketIO(io)`: 注入 Socket.io 實例（server.js 啟動時）。
+    -   傳入 `{ io }` 選項確保使用正確的 Socket 實例。
+-   **房間名稱規則**: 使用 `String(projectId)` 作為房間名（如 `"71"`，非 `"project-71"`）。
 
-#### 3. Feedback Loop
--   允許學生對 AI 回應按讚/倒讚。
--   收集數據以優化 System Prompts 和 Orchestrator 的判斷邏輯。
+#### 2. Frontend Notification ✅
+-   **即時通知**: 使用 Socket.io 實現。
+    -   後端發送: `aiSuggestion` 事件到專案房間。
+    -   前端監聽: `IdeaWall.jsx` 中註冊 Socket 監聽器。
+-   **UI 呈現**: 
+    -   Toast 通知：「🤖 AI 助教有建議給你！」+ 「查看建議」按鈕。
+    -   點擊後開啟 KB Coach Modal，並帶入建議的 Agent 類型。
+-   **KB Coach 增強** (`KB_Coach.jsx` 修改):
+    -   新增 `suggestedAgent` prop，支援自動觸發指定的 Agent。
+    -   若有建議的 Agent，延遲 500ms 後自動開始分析。
+
+#### 3. Feedback Loop ✅
+-   **前端 UI**: KB Coach 結果顯示後，下方出現「👍 有幫助」/「👎 需改進」按鈕。
+-   **Socket 事件**: 點擊按鈕發送 `aiCoachFeedback` 事件。
+-   **資料儲存**: 
+    -   新增 `ai_feedback` Model 儲存回饋數據。
+    -   資料庫遷移: `migrations/20251126000000-create-ai-feedbacks.js`
+    -   Socket Handler 接收並寫入資料庫。
+-   **API 端點**:
+    -   `POST /api/kb-coach/feedback` - 儲存回饋。
+    -   `GET /api/kb-coach/feedback/stats` - 取得統計（供管理者查看）。
+
+---
+
+### Phase 4: 智能學習 - 📅 未來規劃
+**目標**：利用 Feedback 數據優化系統。
+
+#### 1. Feedback 分析
+-   分析各 Agent 的 helpful/not_helpful 比例。
+-   識別哪些情境下哪個 Agent 最有效。
+
+#### 2. 動態調參
+-   根據 Feedback 調整決策門檻。
+-   A/B Testing 不同的介入策略。
+
+#### 3. LLM 輔助決策
+-   若規則引擎的 not_helpful 率 > 30%，考慮引入 LLM 做更細緻的判斷。
+
+---
+
+### Phase 5: 教師儀表板 - 📅 未來規劃
+**目標**：提供教師視角的監控與調整介面。
+
+#### 1. 決策歷史視覺化
+-   時間軸顯示 Orchestrator 的所有決策。
+-   每個決策可展開查看詳細的分析結果。
+
+#### 2. Feedback 趨勢圖
+-   各 Agent 的滿意度趨勢。
+-   按專案/班級分組統計。
+
+#### 3. 手動調整
+-   讓教師可以微調冷卻時間、決策門檻等參數。
+-   即時生效，無需重啟服務。
 
 ---
 
@@ -187,6 +245,25 @@ graph TD
 | `tests/orchestrator.test.js` | 測試腳本 | 視需要保留 |
 | `routes/kbCoach.js` (擴充) | 新增 Orchestrator API 端點 | 永久保留 |
 | `controllers/node.js` (修改) | 新增 Orchestrator Hook | 永久保留 |
-| `components/OrchestratorMonitor.jsx` | Debug 監控面板 | **Phase 3 正式上線後可移除** |
-| `HOW_TO_VERIFY_PHASE2.md` | 驗證文件 | Phase 3 後可移除 |
-| `PHASE_COMPARISON.md` | Phase 差異說明 | Phase 3 後可移除 |
+| `components/OrchestratorMonitor.jsx` | Debug 監控面板 | **正式上線後可移除** |
+| `HOW_TO_VERIFY_PHASE2.md` | 驗證文件 | 正式上線後可移除 |
+| `PHASE_COMPARISON.md` | Phase 差異說明 | 正式上線後可移除 |
+
+---
+
+## Phase 3 新增檔案清單
+
+| 檔案路徑 | 用途 | 移除時機 |
+|---------|------|--------|
+| `sockets/handlers/aiCoachHandler.js` | AI Coach Socket 事件處理 | 永久保留 |
+| `models/ai_feedback.js` | Feedback 資料模型 | 永久保留 |
+| `migrations/20251126000000-create-ai-feedbacks.js` | 資料庫遷移檔 | 永久保留 |
+| `sockets/socketManager.js` (修改) | 註冊 AI Coach Handler | 永久保留 |
+| `sockets/handlers/nodeHandler.js` (修改) | 新增 Orchestrator Hook (Socket 路徑) | 永久保留 |
+| `services/orchestrator.js` (修改) | 新增 Socket 通知功能 | 永久保留 |
+| `server.js` (修改) | 注入 Socket.io 到 Orchestrator | 永久保留 |
+| `controllers/kbCoach.js` (修改) | 新增 Feedback API | 永久保留 |
+| `routes/kbCoach.js` (修改) | 新增 Feedback 路由 + io 注入 | 永久保留 |
+| `pages/ideaWall/IdeaWall.jsx` (修改) | Socket 監聽 + Toast 通知 | 永久保留 |
+| `pages/ideaWall/components/KB_Coach.jsx` (修改) | 建議 Agent + Feedback UI | 永久保留 |
+| `docs/HOW_TO_VERIFY_PHASE3.md` | 驗證文件 | 正式上線後可移除 |
