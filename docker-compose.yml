@@ -73,7 +73,7 @@ services:
       - agent_network
 
   postgres:
-    image: postgres
+    image: postgres:16
     restart: unless-stopped
     environment:
       - POSTGRES_DB=postgres
@@ -151,7 +151,7 @@ services:
 
   # Refresh Token 清理任務 - 每 6 小時執行一次
   token-cleanup:
-    image: postgres:latest
+    image: postgres:16
     restart: unless-stopped
     environment:
       - PGPASSWORD=postgres
