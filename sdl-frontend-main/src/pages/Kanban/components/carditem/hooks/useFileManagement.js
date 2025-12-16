@@ -90,6 +90,24 @@ export function useFileManagement(cardData, setCardData) {
   }, []);
 
   /**
+   * 下載圖片
+   */
+  const handleImageDownload = useCallback(async (imageUrl) => {
+    try {
+      const response = await axios.get(imageUrl, {
+        responseType: 'blob'
+      });
+      // 從 URL 提取檔名，如果失敗則使用預設值
+      const fileName = imageUrl.split('/').pop() || 'download_image.png';
+      FileDownload(response.data, fileName);
+      toast.success('圖片下載成功');
+    } catch (err) {
+      console.error('圖片下載失敗:', err);
+      toast.error('圖片下載失敗');
+    }
+  }, []);
+
+  /**
    * 刪除文件（原始邏輯）
    */
   const removeFile = useCallback(async (index) => {
@@ -185,8 +203,7 @@ export function useFileManagement(cardData, setCardData) {
 
   return {
     handleFileUpload,
-    handleFileDownload,
-    removeFile,
+    handleFileDownload,    handleImageDownload,    removeFile,
     removeImage
   };
 }

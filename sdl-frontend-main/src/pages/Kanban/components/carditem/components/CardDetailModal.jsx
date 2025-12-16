@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import Modal from '../../../../../components/Modal';
 import AssignMember from '../../AssignMember';
 import { GrFormClose } from "react-icons/gr";
+import { AiOutlineCloudDownload } from "react-icons/ai";
 import { CircleArrowLeft, CircleArrowRight } from "lucide-react";
 import { socket } from '../../../../../utils/socket';
 import { getUserForSocket, isCurrentUser, getCurrentUsername } from '../../../../../utils/userUtils';
@@ -271,6 +272,7 @@ export function CardDetailModal({
                   cardData={cardData}
                   handleFileUpload={fileOperations.handleFileUpload}
                   handleFileDownload={fileOperations.handleFileDownload}
+                  handleImageDownload={fileOperations.handleImageDownload}
                   removeFile={fileOperations.removeFile}
                   removeImage={fileOperations.removeImage}
                   openImageModal={openImageModal}
@@ -341,6 +343,13 @@ export function CardDetailModal({
         >
           <button onClick={closeImageModal} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
             <GrFormClose className="w-6 h-6" />
+          </button>
+          <button 
+            onClick={() => fileOperations.handleImageDownload(cardData.images[selectedImageIndex])}
+            className='absolute top-2 right-12 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'
+            title="下載圖片"
+          >
+            <AiOutlineCloudDownload className="w-6 h-6 text-gray-700" />
           </button>
           <div className="relative max-w-4xl w-full">
             <img

@@ -26,6 +26,7 @@ export function FileManager({
   cardData,
   handleFileUpload,
   handleFileDownload,
+  handleImageDownload,
   removeFile,
   removeImage,
   openImageModal,
@@ -81,10 +82,27 @@ export function FileManager({
                     className='w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200 bg-gray-50'
                     onClick={() => openImageModal(index)}
                   />
+                  
+                  {/* 下載按鈕 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleImageDownload(image);
+                    }}
+                    className={`absolute top-2 ${!isObservationMode ? 'right-10' : 'right-2'} p-1.5 bg-white/90 text-gray-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm hover:bg-white`}
+                    title="下載圖片"
+                  >
+                    <AiOutlineCloudDownload size={14} />
+                  </button>
+
                   {!isObservationMode && (
                     <button
-                      onClick={() => removeImage(index)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeImage(index);
+                      }}
                       className='absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm hover:bg-white'
+                      title="刪除圖片"
                     >
                       <GrFormClose size={14} />
                     </button>
