@@ -45,7 +45,13 @@ const Daily_personal = sequelize.define('daily_personal', {
     }
 }, {
     tableName: 'daily_personals',
-    timestamps: true
+    timestamps: true,
+    indexes: [
+        { fields: ['projectId'] },               // 專案查詢
+        { fields: ['userId'] },                  // 用戶查詢
+        { fields: ['projectId', 'userId'] },     // 複合索引最重要
+        { fields: ['createdAt'] }                // 時間排序
+    ]
 });
 
 module.exports = Daily_personal;

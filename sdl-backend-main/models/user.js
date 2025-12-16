@@ -39,7 +39,13 @@ const User = sequelize.define('user', {
         allowNull:true
     }
 }, {
-    tableName: 'users'
+    tableName: 'users',
+    indexes: [
+        { fields: ['account'], unique: true },  // 登入查詢
+        { fields: ['role'] },                    // 角色篩選
+        { fields: ['class'] },                   // 班級分組
+        { fields: ['role', 'class'] }           // 複合查詢
+    ]
 });
 
 

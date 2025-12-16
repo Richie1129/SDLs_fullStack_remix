@@ -524,21 +524,34 @@ exports.deleteProject = async (req, res) => {
         const allFileNames = [];
 
         try {
-            // 1. 收集任務相關檔案
+            // 1. 收集任務相關檔案 - 使用 Eager Loading 避免 N+1 查詢
             const kanban = await Kanban.findOne({ where: { projectId } });
-            if (kanban && kanban.column) {
-                for (const columnId of kanban.column) {
-                    const column = await Column.findByPk(columnId);
-                    if (column && column.task) {
-                        for (const taskId of column.task) {
-                            const task = await Task.findByPk(taskId);
-                            if (task) {
-                                const taskFileNames = extractTaskFileNames(task);
-                                allFileNames.push(...taskFileNames);
-                                console.log(`📋 任務 ${taskId} 發現 ${taskFileNames.length} 個檔案`);
-                            }
-                        }
-                    }
+
+            if (kanban && kanban.column && kanban.column.length > 0) {
+                // 批量查詢所有 Columns 和 Tasks (1 query instead of N+M queries)
+                const columns = await Column.findAll({
+                    where: { id: kanban.column },
+                    attributes: ['id', 'task']
+                });
+
+                // 收集所有 task IDs
+                const allTaskIds = columns
+                    .filter(col => col.task && col.task.length > 0)
+                    .flatMap(col => col.task);
+
+                if (allTaskIds.length > 0) {
+                    // 批量查詢所有 Tasks
+                    const tasks = await Task.findAll({
+                        where: { id: allTaskIds },
+                        attributes: ['id', 'images', 'files']
+                    });
+
+                    // 提取所有檔案名
+                    tasks.forEach(task => {
+                        const taskFileNames = extractTaskFileNames(task);
+                        allFileNames.push(...taskFileNames);
+                        console.log(`📋 任務 ${task.id} 發現 ${taskFileNames.length} 個檔案`);
+                    });
                 }
             }
 

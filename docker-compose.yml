@@ -32,6 +32,7 @@ services:
       - RAGFLOW_BASE_URL=${RAGFLOW_BASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - METRICS_TOKEN=${METRICS_TOKEN}
       # MinIO 環境變數
       - MINIO_ENDPOINT=http://minio:9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
@@ -72,7 +73,7 @@ services:
       - agent_network
 
   postgres:
-    image: postgres
+    image: postgres:16
     restart: unless-stopped
     environment:
       - POSTGRES_DB=postgres
@@ -150,7 +151,7 @@ services:
 
   # Refresh Token 清理任務 - 每 6 小時執行一次
   token-cleanup:
-    image: postgres:latest
+    image: postgres:16
     restart: unless-stopped
     environment:
       - PGPASSWORD=postgres
