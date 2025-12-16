@@ -12,7 +12,7 @@ import { Draggable } from 'react-beautiful-dnd';
 import { socket } from '../../../utils/socket';
 import toast, { Toaster } from 'react-hot-toast';
 import { fetchComments, createComment, toggleCommentLike, updateComment as updateCommentApi, deleteComment as deleteCommentApi } from '../../../api/comments';
-import axios from 'axios';
+import apiClient from '../../../api/client';
 import { CircleArrowLeft, CircleArrowRight } from "lucide-react"
 import FileDownload from 'js-file-download';
 import { AiOutlineCloudDownload, AiOutlinePaperClip, AiOutlineLike, AiFillLike } from "react-icons/ai";
@@ -48,6 +48,7 @@ const FileManagementModal = ({
   cardData, 
   handleFileUpload, 
   handleFileDownload, 
+  handleImageDownload,
   removeFile, 
   removeImage, 
   openImageModal,
@@ -105,14 +106,30 @@ const FileManagementModal = ({
                     className='w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200 bg-gray-50'
                     onClick={() => openImageModal(index)}
                   />
-                  {!isObservationMode && (
+                  <div className='absolute top-2 right-2 flex space-x-1'>
                     <button
-                      onClick={() => removeImage(index)}
-                      className='absolute top-2 right-2 p-1.5 bg-white/90 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm hover:bg-white'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleImageDownload(image);
+                      }}
+                      className='p-1.5 bg-white/90 text-customgreen rounded-full shadow-sm hover:bg-white'
+                      title="下載圖片"
                     >
-                      <GrFormClose size={14} />
+                      <AiOutlineCloudDownload size={14} />
                     </button>
-                  )}
+                    {!isObservationMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeImage(index);
+                        }}
+                        className='p-1.5 bg-white/90 text-red-500 rounded-full shadow-sm hover:bg-white'
+                        title="刪除圖片"
+                      >
+                        <GrFormClose size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -443,10 +460,25 @@ function Carditem({ data, index, columnIndex }) {
   // 取得評論附件下載 URL 並觸發下載
   const handleCommentAttachmentDownload = async (attachment) => {
     try {
-      const fileName = attachment.fileName;
-      const url = buildFileDownloadUrl(fileName);
-      // 直接打開下載 URL
-      window.open(url, '_blank');
+      let downloadPath;
+      
+      if (attachment.fileName) {
+         // MinIO 檔案
+         downloadPath = `/file/direct/${attachment.fileName}`;
+      } else {
+         // 舊路徑兼容
+         downloadPath = attachment.path;
+         const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+         if (downloadPath && downloadPath.startsWith(apiBaseUrl)) {
+            downloadPath = downloadPath.replace(apiBaseUrl, '');
+         }
+      }
+
+      const response = await apiClient.get(downloadPath, {
+        responseType: 'blob'
+      });
+      
+      FileDownload(response.data, attachment.originalName || attachment.fileName);
     } catch (err) {
       console.error('下載附件失敗:', err);
       toast.error('下載附件失敗');
@@ -611,16 +643,81 @@ function Carditem({ data, index, columnIndex }) {
     }
   };
 
+  const handleImageDownload = async (imageUrl) => {
+    try {
+      // 如果 imageUrl 已經是完整的 URL (包含 http/https)，則直接使用
+      // 否則，如果它是相對路徑，apiClient 會自動加上 baseURL
+      // 但這裡要注意，如果 imageUrl 已經包含了 /api 前綴，而 apiClient 的 baseURL 也有 /api，就會重複
+      
+      let requestUrl = imageUrl;
+      
+      // 檢查是否已經包含 baseURL 的路徑部分
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+      if (requestUrl.startsWith(apiBaseUrl)) {
+         // 如果已經包含 /api，我們需要移除它，因為 apiClient 會自動加上
+         // 但這取決於 imageUrl 是怎麼來的。
+         // 如果 imageUrl 是 http://localhost/api/file/image/... 
+         // 而 apiClient baseURL 是 /api
+         // apiClient.get(imageUrl) 會變成 /api/http://localhost/api/file/image/... (錯誤)
+         // 或者如果 imageUrl 是 /api/file/image/...
+         // apiClient.get(imageUrl) 會變成 /api/api/file/image/... (錯誤，這就是你遇到的問題)
+         
+         requestUrl = requestUrl.replace(apiBaseUrl, '');
+      }
+
+      const response = await apiClient.get(requestUrl, {
+        responseType: 'blob'
+      });
+      
+      // 嘗試從 URL 獲取檔名
+      let fileName = 'image.jpg';
+      try {
+        // 處理可能的 URL 編碼
+        const decodedUrl = decodeURIComponent(imageUrl);
+        const urlParts = decodedUrl.split('/');
+        const lastPart = urlParts[urlParts.length - 1];
+        // 移除可能的 query parameters
+        fileName = lastPart.split('?')[0];
+      } catch (e) {
+        console.warn('檔名解析失敗，使用預設檔名', e);
+      }
+
+      if (!fileName || fileName.trim() === '') {
+        fileName = `image_${Date.now()}.jpg`;
+      }
+
+      FileDownload(response.data, fileName);
+      toast.success('圖片下載成功');
+    } catch (err) {
+      console.error('圖片下載失敗:', err);
+      toast.error('圖片下載失敗');
+    }
+  };
+
   const handleFileDownload = async (file) => {
     try {
       // 統一使用後端 API 代理下載（支援 MinIO 和 BLOB）
-      const downloadUrl = file.fileName
-        ? buildFileDownloadUrl(file.fileName) // MinIO 檔案
-        : buildApiUrl(file.url); // 向後相容舊的路徑
+      // buildFileDownloadUrl 返回的是完整的 URL (例如 /api/file/direct/...)
+      // 但 apiClient 已經配置了 baseURL (例如 /api)
+      // 所以我們需要傳入不帶 baseURL 的路徑
+      
+      let downloadPath;
+      
+      if (file.fileName) {
+         // MinIO 檔案: /file/direct/{fileName}
+         downloadPath = `/file/direct/${file.fileName}`;
+      } else {
+         // 舊路徑兼容
+         downloadPath = file.url;
+         const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+         if (downloadPath.startsWith(apiBaseUrl)) {
+            downloadPath = downloadPath.replace(apiBaseUrl, '');
+         }
+      }
 
-      console.log('下載檔案 URL:', downloadUrl);
+      console.log('下載檔案路徑:', downloadPath);
 
-      const response = await axios.get(downloadUrl, {
+      const response = await apiClient.get(downloadPath, {
         responseType: 'blob'
       });
       FileDownload(response.data, file.originalName || file.fileName || 'download');
@@ -902,6 +999,14 @@ function Carditem({ data, index, columnIndex }) {
           <button onClick={() => setSelectedImageIndex(null)} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
             <GrFormClose className="w-6 h-6" />
           </button>
+          
+          <button 
+            onClick={() => handleImageDownload(cardData.images[selectedImageIndex])}
+            className='absolute top-2 right-12 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'
+            title="下載圖片"
+          >
+            <AiOutlineCloudDownload className="w-6 h-6 text-customgreen" />
+          </button>
 
           <div className="relative max-w-4xl w-full">
             <img 
@@ -1079,6 +1184,7 @@ function Carditem({ data, index, columnIndex }) {
                   cardData={cardData}
                   handleFileUpload={handleFileUpload}
                   handleFileDownload={handleFileDownload}
+                  handleImageDownload={handleImageDownload}
                   removeFile={removeFile}
                   removeImage={removeImage}
                   openImageModal={openImageModal}
