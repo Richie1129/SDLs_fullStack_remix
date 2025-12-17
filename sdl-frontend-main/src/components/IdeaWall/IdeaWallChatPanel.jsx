@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 import { FiX, FiSend } from 'react-icons/fi';
 
 const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, onClose }) => {
-    const { messages, sendMessage, filterNodeId, setFilterNodeId, loading } = useIdeaWallChat(ideaWallId);
+    const { messages, sendMessage, filterNodeId, setFilterNodeId, loading, wallContext } = useIdeaWallChat(ideaWallId);
     const [inputValue, setInputValue] = useState("");
     const messagesEndRef = useRef(null);
+    const [showContext, setShowContext] = useState(true);
 
     // 當外部選取的節點改變時，更新過濾器
     useEffect(() => {
@@ -52,6 +53,29 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, onClose }) => {
                     <FiX className="h-5 w-5" />
                 </button>
             </div>
+
+            {/* AI Context Summary (Global Mode Only) */}
+            {!filterNodeId && wallContext && showContext && (
+                <div className="bg-blue-50 p-3 border-b border-blue-100 relative">
+                    <button 
+                        onClick={() => setShowContext(false)}
+                        className="absolute top-1 right-1 text-blue-400 hover:text-blue-600"
+                    >
+                        <FiX className="h-3 w-3" />
+                    </button>
+                    <div className="flex items-start space-x-2">
+                        <span className="text-lg">🤖</span>
+                        <div>
+                            <p className="text-xs font-bold text-blue-800 mb-1">
+                                AI 觀察報告 (已捕捉 {wallContext.nodeCount} 個想法)
+                            </p>
+                            <p className="text-xs text-blue-700 leading-relaxed">
+                                {wallContext.summary}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-3 bg-gray-50 space-y-3 scrollbar-thin">

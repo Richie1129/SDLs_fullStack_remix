@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getIdeaWallMessages, createIdeaWallMessage } from '../api/ideaWallMessage';
+import { getIdeaWallMessages, createIdeaWallMessage, getIdeaWallContext } from '../api/ideaWallMessage';
 import { socket } from '../utils/socket';
 import { getCurrentUsername } from '../utils/userUtils';
 
 export const useIdeaWallChat = (ideaWallId) => {
     const [allMessages, setAllMessages] = useState([]);
+    const [wallContext, setWallContext] = useState(null); // New State for Context
     const [filterNodeId, setFilterNodeId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -21,7 +22,18 @@ export const useIdeaWallChat = (ideaWallId) => {
 
                 // 載入歷史訊息 (全域)
                 const data = await getIdeaWallMessages(ideaWallId);
-                setAllMessages(data);
+                if (Array.isArray(data)) {
+                    setAllMessages(data);
+                } else {
+                    console.error("Unexpected response format for messages:", data);
+                    setAllMessages([]);
+                }
+
+                // 載入牆面摘要 (非同步，不阻塞 UI)
+                getIdeaWallContext(ideaWallId).then(ctx => {
+                    setWallContext(ctx);
+                }).catch(err => console.warn("Failed to load wall context:", err));
+
             } catch (err) {
                 console.error("Failed to load chat messages:", err);
                 setError(err);
@@ -91,13 +103,14 @@ export const useIdeaWallChat = (ideaWallId) => {
         // 格式化訊息以符合 UI 需求
         return msgs.map(msg => ({
             ...msg,
-            senderName: msg.user ? (msg.user.username || msg.user.account) : "未知用戶",
+            senderName: msg.isAiIntervention ? "AI 學習助手" : (msg.user ? (msg.user.username || msg.user.account) : "未知用戶"),
             isSelf: msg.user?.account === getCurrentUsername() // 假設 getCurrentUsername 回傳 account
         }));
     }, [allMessages, filterNodeId]);
 
     return {
         messages: filteredMessages,
+        wallContext, // Export context
         sendMessage,
         filterNodeId,
         setFilterNodeId,

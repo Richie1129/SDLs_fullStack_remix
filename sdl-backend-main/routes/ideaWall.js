@@ -46,6 +46,11 @@ const optionalProjectPermission = async (req, res, next) => {
     }
 };
 
+// IdeaWall Message Routes (Specific routes first)
+router.post('/:wallId/messages', validateToken, messageController.createMessage);
+router.get('/:wallId/messages', validateToken, messageController.getMessages);
+router.get('/:wallId/context', validateToken, controller.getWallContext); // New Context Route
+
 // 只讀路由 - 允許觀摩者存取
 router.get('/:projectId/:stage', optionalAuth, optionalProjectPermission, controller.getIdeaWall); // 向後相容
 router.get('/:projectId', optionalAuth, optionalProjectPermission, controller.getIdeaWall); // 新的簡化路由
@@ -53,9 +58,5 @@ router.get('/', optionalAuth, optionalProjectPermission, controller.getAllIdeaWa
 
 // 寫入路由 - 需要完整權限，禁止觀摩者操作
 router.post('/', validateToken, checkProjectViewingPermission, checkWritePermission, controller.createIdeaWall);
-
-// IdeaWall Message Routes
-router.post('/:wallId/messages', validateToken, messageController.createMessage);
-router.get('/:wallId/messages', validateToken, messageController.getMessages);
 
 module.exports = router;

@@ -22,10 +22,12 @@ const { GoogleGenAI } = require('@google/genai');
 const Node = require('../models/node');
 const IdeaWall = require('../models/idea_wall');
 const IdeaWallMessage = require('../models/idea_wall_message'); // Added for Phase 3
+const User = require('../models/user'); // Added for Phase 4
 const { Op } = require('sequelize');
 const { analyzeDiscussion, classifyDiscussion } = require('./discussionAnalyzer');
 const { getCooldownManager } = require('../utils/cooldownManager');
 const { logAudit, clampMetadataSize } = require('./auditService');
+const { generateChatIntervention } = require('./chatLlmService'); // Phase 4 LLM Service
 
 // 引入 KB Coach 的 Agent Personas（重用 Phase 1 代碼）
 const kbCoachController = require('../controllers/kbCoach');
@@ -493,19 +495,84 @@ async function shouldInterveneChat(wallId) {
 }
 
 /**
- * Placeholder for Phase 4 Chat Intervention
+ * Phase 4: Real Chat Intervention
  */
 async function triggerChatIntervention(wallId, relatedNodeId) {
-    // In Phase 4, this will call the LLM Service
-    console.log('✨ [MOCK] AI is generating a chat response...');
-    
-    // For MVP verification, we can emit a special socket event to the frontend
-    // to show that the Orchestrator is "thinking" or "watching".
-    if (socketIO) {
-        socketIO.to(`ideawall_${wallId}`).emit('ORCHESTRATOR_DEBUG', {
-            status: 'TRIGGERED',
-            wallId,
-            timestamp: new Date()
+    console.log(`✨ [Chat Orchestrator] Generating AI response for Wall #${wallId}...`);
+
+    try {
+        // 1. Fetch Context (Last 20 messages)
+        const messages = await IdeaWallMessage.findAll({
+            where: { ideaWallId: wallId },
+            order: [['createdAt', 'DESC']],
+            limit: 20,
+            include: [{
+                model: User,
+                attributes: ['username', 'account']
+            }]
         });
+        
+        // Reverse to chronological order
+        const contextMessages = messages.reverse();
+
+        // 2. Fetch Context Data (Node or Wall Overview)
+        let relatedNode = null;
+        let wallNodes = [];
+
+        if (relatedNodeId) {
+            relatedNode = await Node.findByPk(relatedNodeId);
+        } else {
+            // Global Mode: Fetch all nodes in this wall to provide context
+            // Linus: "Don't fetch everything. Just what you need."
+            wallNodes = await Node.findAll({
+                where: { ideaWallId: wallId },
+                attributes: ['id', 'title', 'content', 'owner'],
+                limit: 30 // Prevent context overflow
+            });
+        }
+
+        // 3. Call LLM Service
+        const aiContent = await generateChatIntervention(contextMessages, relatedNode, wallNodes);
+
+        if (!aiContent) {
+            console.warn('⚠️ [Chat Orchestrator] AI generated empty content. Aborting.');
+            return;
+        }
+
+        // 4. Save AI Message to DB
+        // Note: We need a system user ID for the AI. 
+        // For now, we'll assume ID 0 or 1 is system, or we should find a "Bot" user.
+        // MVP: Use a fixed ID (e.g., 999 or find an admin). 
+        // Better: Create a specific AI User in migration.
+        // Here we assume senderId=1 (Admin) or we need to handle this.
+        // Let's try to find a user with role 'admin' or just use 1.
+        const aiSenderId = 1; // FIXME: Should be a dedicated AI user ID
+
+        const aiMessage = await IdeaWallMessage.create({
+            content: aiContent,
+            senderId: aiSenderId,
+            ideaWallId: wallId,
+            relatedNodeId: relatedNodeId || null,
+            isAiIntervention: true
+        });
+
+        console.log(`✅ [Chat Orchestrator] AI Message Created: ID #${aiMessage.id}`);
+
+        // 5. Emit Socket Event
+        if (socketIO) {
+            // We need to fetch the message again to include User info (even if it's fake/admin)
+            const messageWithSender = await IdeaWallMessage.findByPk(aiMessage.id, {
+                include: [{
+                    model: User,
+                    attributes: ['id', 'username', 'account']
+                }]
+            });
+
+            // Override sender name for display if needed, but frontend handles isAiIntervention
+            socketIO.to(`ideawall_${wallId}`).emit('EVENT_IDEA_WALL_MSG', messageWithSender);
+        }
+
+    } catch (error) {
+        console.error('❌ [Chat Orchestrator] Intervention Failed:', error);
     }
 }

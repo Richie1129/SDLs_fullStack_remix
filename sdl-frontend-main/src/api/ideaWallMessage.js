@@ -14,3 +14,8 @@ export const createIdeaWallMessage = async (wallId, data) => {
     const response = await apiClient.post(`/ideaWall/${wallId}/messages`, data);
     return response.data;
 }
+
+export const getIdeaWallContext = async (wallId) => {
+    const response = await apiClient.get(`/ideaWall/${wallId}/context`);
+    return response.data;
+}

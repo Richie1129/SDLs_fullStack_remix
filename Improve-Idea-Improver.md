@@ -59,18 +59,20 @@
 ## Phase 4: AI 大腦接入 (The Brain) - 賦予靈魂
 *(最後才做這個，因為這是最不可控的部分)*
 
-- [ ] **4.1 整合 LLM Service**
-    - [ ] 實作 `analyzeContext(messages)`: 呼叫輕量模型 (gpt-4o-mini) 判斷意圖 (Conflict/Question/Social)。
-    - [ ] 實作 `generateIntervention(context)`: 呼叫強力模型 (gpt-4o) 生成引導語。
+- [x] **4.1 整合 LLM Service**
+    - [x] 實作 `analyzeContext(messages)`: 呼叫輕量模型 (gpt-4o-mini) 判斷意圖 (Conflict/Question/Social)。
+    - [x] 實作 `generateIntervention(context)`: 呼叫強力模型 (gpt-4o) 生成引導語。
+    - [x] **Fallback 機制:** 優先使用 `gemini-2.5-flash`，失敗時降級至 `gpt-5-nano` (模擬) / `gpt-4o-mini`。
 
-- [ ] **4.2 自動介入實作**
-    - [ ] 當 Orchestrator 決定介入時，呼叫 `IdeaWallMessage.create()`。
-    - [ ] 設定 `senderId` 為系統機器人 ID。
-    - [ ] 設定 `isAiIntervention = true`。
+- [x] **4.2 自動介入實作**
+    - [x] 當 Orchestrator 決定介入時，呼叫 `IdeaWallMessage.create()`。
+    - [x] 設定 `senderId` 為系統機器人 ID (目前暫定為 1)。
+    - [x] 設定 `isAiIntervention = true`。
 
 ## Phase 5: 驗證與測試 (Verification)
 
-- [ ] **5.1 單元測試**
-    - [ ] 測試 `shouldIntervene` 邏輯是否正確阻擋頻繁請求。
-- [ ] **5.2 整合測試**
-    - [ ] 模擬使用者 A 和 B 對話，驗證 AI 是否在滿足條件後自動插入訊息。
+- [x] **5.1 單元測試**
+    - [x] 測試 `shouldIntervene` 邏輯是否正確阻擋頻繁請求。
+- [x] **5.2 整合測試**
+    - [x] 模擬使用者 A 和 B 對話，驗證 AI 是否在滿足條件後自動插入訊息。
+    - [x] 驗證 LLM Service 的 Fallback 機制與錯誤處理。
