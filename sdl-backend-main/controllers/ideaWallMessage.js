@@ -1,6 +1,7 @@
 const IdeaWallMessage = require('../models/idea_wall_message');
 const User = require('../models/user');
 const { Op } = require("sequelize");
+const { orchestrateChat } = require('../services/orchestrator');
 
 exports.createMessage = async (req, res) => {
     const { wallId } = req.params;
@@ -37,6 +38,12 @@ exports.createMessage = async (req, res) => {
             // Note: Frontend needs to join this room: `ideawall_${wallId}`
             io.to(`ideawall_${wallId}`).emit('EVENT_IDEA_WALL_MSG', messageWithSender);
         }
+
+        // Phase 3: Trigger Shadow Orchestrator (Async, Fire-and-Forget)
+        // We pass the plain object to avoid Sequelize instance issues if any
+        orchestrateChat(message.toJSON()).catch(err => {
+            console.error('Orchestrator Trigger Error:', err);
+        });
 
         res.status(201).json(messageWithSender);
     } catch (error) {

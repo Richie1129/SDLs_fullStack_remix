@@ -46,15 +46,15 @@
 ## Phase 3: 影子中控 (The Shadow Orchestrator) - 邏輯層
 *(Good Taste: 邏輯與 I/O 分離)*
 
-- [ ] **3.1 建立 Orchestrator Service**
-    - [ ] 檔案: `sdl-backend-main/services/orchestrator.js`
-    - [ ] 機制: 訂閱 `IdeaWallMessage` 的建立事件 (使用 Sequelize Hooks 或 Event Emitter)。
+- [x] **3.1 建立 Orchestrator Service**
+    - [x] 檔案: `sdl-backend-main/services/orchestrator.js`
+    - [x] 機制: 訂閱 `IdeaWallMessage` 的建立事件 (使用 Sequelize Hooks 或 Event Emitter)。
 
-- [ ] **3.2 實作「死規則」過濾器 (The Gatekeeper)**
-    - [ ] 實作 `shouldIntervene(wallId)` 函數。
-    - [ ] **規則 1 (冷卻):** 檢查該牆面最後一次 AI 介入時間 (例如 10 分鐘內不介入)。
-    - [ ] **規則 2 (累積):** 檢查自上次介入後的新訊息數量 (例如 < 5 則不介入)。
-    - [ ] *MVP 驗證:* 先只做 `console.log('Orchestrator Triggered')`，確認觸發邏輯正確。
+- [x] **3.2 實作「死規則」過濾器 (The Gatekeeper)**
+    - [x] 實作 `shouldIntervene(wallId)` 函數。
+    - [x] **規則 1 (冷卻):** 檢查該牆面最後一次 AI 介入時間 (例如 10 分鐘內不介入)。
+    - [x] **規則 2 (累積):** 檢查自上次介入後的新訊息數量 (例如 < 5 則不介入)。
+    - [x] *MVP 驗證:* 先只做 `console.log('Orchestrator Triggered')`，確認觸發邏輯正確。
 
 ## Phase 4: AI 大腦接入 (The Brain) - 賦予靈魂
 *(最後才做這個，因為這是最不可控的部分)*
