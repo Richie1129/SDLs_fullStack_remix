@@ -20,6 +20,7 @@ import Adding_icon from "../../assets/AnimationAddingNode.json";
 import Timer from './components/Timer';
 import KB_Coach from './components/KB_Coach';
 import OrchestratorMonitor from './components/OrchestratorMonitor'; // Phase 2 監控元件
+import IdeaWallChatPanel from '../../components/IdeaWall/IdeaWallChatPanel'; // Phase 2 討論室元件
 import KnowledgeForumScaffolds from './components/KnowledgeForumScaffolds';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
@@ -64,6 +65,7 @@ export default function IdeaWall() {
 
     const [kbCoachModalOpen, setKbCoachModalOpen] = useState(false); // KB Coach modal
     const [showNodeChangeHistory, setShowNodeChangeHistory] = useState(false);
+    const [isChatPanelOpen, setIsChatPanelOpen] = useState(false); // Phase 2: 討論室開關
     
     // Phase 3: AI 建議通知狀態
     const [aiSuggestion, setAiSuggestion] = useState(null);
@@ -931,6 +933,35 @@ export default function IdeaWall() {
                     />
                 </button>
             )}
+
+            {/* Phase 2: IdeaWall Chat Panel */}
+            {!isObservationMode && (
+                <>
+                    {isChatPanelOpen ? (
+                        <IdeaWallChatPanel 
+                            ideaWallId={ideaWallInfo.id} 
+                            selectedNodeId={selectNodeInfo.id} 
+                            onClose={() => setIsChatPanelOpen(false)} 
+                        />
+                    ) : (
+                        <button 
+                            onClick={() => setIsChatPanelOpen(true)}
+                            className="fixed right-0 bottom-48 bg-white text-gray-600 border border-gray-200 shadow-lg rounded-l-xl py-4 px-1 z-40 hover:bg-gray-50 transition-all duration-300 flex flex-col items-center gap-1"
+                            title="開啟討論室"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <div className="flex flex-col items-center text-xs font-medium leading-tight space-y-1">
+                                <span>討</span>
+                                <span>論</span>
+                                <span>室</span>
+                            </div>
+                        </button>
+                    )}
+                </>
+            )}
+
             <Toaster />
         </div>
     )
