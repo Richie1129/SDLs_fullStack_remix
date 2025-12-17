@@ -61,7 +61,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, onClose }) => {
                     </div>
                 ) : (
                     messages.map((msg) => (
-                        <div key={msg.id} className={`flex flex-col ${msg.senderName === "我" ? "items-end" : "items-start"}`}>
+                        <div key={msg.id} className={`flex flex-col ${msg.isSelf ? "items-end" : "items-start"}`}>
                             <div className="flex items-baseline space-x-2 mb-1">
                                 <span className={`text-xs font-bold ${msg.isAiIntervention ? "text-purple-600" : "text-gray-600"}`}>
                                     {msg.isAiIntervention ? "🤖 " + msg.senderName : msg.senderName}
@@ -74,7 +74,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, onClose }) => {
                                 className={`max-w-[85%] rounded-lg p-2 text-sm shadow-sm 
                                     ${msg.isAiIntervention 
                                         ? "bg-purple-50 border border-purple-200 text-purple-900" 
-                                        : msg.senderName === "我" 
+                                        : msg.isSelf 
                                             ? "bg-blue-500 text-white" 
                                             : "bg-white border border-gray-200 text-gray-800"
                                     }`}

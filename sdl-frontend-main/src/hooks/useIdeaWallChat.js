@@ -1,68 +1,107 @@
-import { useState, useEffect } from 'react';
-
-// Mock data for MVP
-const MOCK_MESSAGES = [
-    { id: 1, senderId: 101, senderName: "小明", content: "大家覺得這個想法牆怎麼樣？", relatedNodeId: null, isAiIntervention: false, createdAt: new Date(Date.now() - 1000000).toISOString() },
-    { id: 2, senderId: 102, senderName: "小華", content: "我覺得還不錯，但是節點有點亂。", relatedNodeId: null, isAiIntervention: false, createdAt: new Date(Date.now() - 900000).toISOString() },
-    { id: 3, senderId: 101, senderName: "小明", content: "關於這個「光合作用」的節點，我覺得資料有點少。", relatedNodeId: 1, isAiIntervention: false, createdAt: new Date(Date.now() - 800000).toISOString() },
-    { id: 4, senderId: 102, senderName: "小華", content: "確實，我們應該補充一些實驗數據。", relatedNodeId: 1, isAiIntervention: false, createdAt: new Date(Date.now() - 700000).toISOString() },
-    { id: 5, senderId: 999, senderName: "AI 引導員", content: "這是一個很好的觀察。小明和小華，你們能具體提出一個實驗設計來驗證這個觀點嗎？", relatedNodeId: 1, isAiIntervention: true, createdAt: new Date(Date.now() - 600000).toISOString() },
-    { id: 6, senderId: 103, senderName: "小美", content: "我剛剛加了一個關於「呼吸作用」的節點。", relatedNodeId: 2, isAiIntervention: false, createdAt: new Date(Date.now() - 500000).toISOString() },
-];
+import { useState, useEffect, useMemo } from 'react';
+import { getIdeaWallMessages, createIdeaWallMessage } from '../api/ideaWallMessage';
+import { socket } from '../utils/socket';
+import { getCurrentUsername } from '../utils/userUtils';
 
 export const useIdeaWallChat = (ideaWallId) => {
-    const [messages, setMessages] = useState(MOCK_MESSAGES);
+    const [allMessages, setAllMessages] = useState([]);
     const [filterNodeId, setFilterNodeId] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    // 模擬接收 Socket 訊息
+    // 1. 初始化：加入房間並載入歷史訊息
     useEffect(() => {
-        const interval = setInterval(() => {
-            // 模擬隨機收到訊息
-            if (Math.random() > 0.8) {
-                const newMsg = {
-                    id: Date.now(),
-                    senderId: 102,
-                    senderName: "小華",
-                    content: "這是一個模擬的新訊息 " + new Date().toLocaleTimeString(),
-                    relatedNodeId: Math.random() > 0.5 ? 1 : null,
-                    isAiIntervention: false,
-                    createdAt: new Date().toISOString()
-                };
-                setMessages(prev => [...prev, newMsg]);
-            }
-        }, 5000);
-        return () => clearInterval(interval);
-    }, []);
+        if (!ideaWallId) return;
 
-    const sendMessage = async (content, relatedNodeId = null) => {
-        setLoading(true);
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const newMessage = {
-            id: Date.now(),
-            senderId: 1, // Current User
-            senderName: "我",
-            content,
-            relatedNodeId,
-            isAiIntervention: false,
-            createdAt: new Date().toISOString()
+        const initChat = async () => {
+            setLoading(true);
+            try {
+                // 加入 Socket 房間
+                socket.emit('join_ideawall', ideaWallId);
+
+                // 載入歷史訊息 (全域)
+                const data = await getIdeaWallMessages(ideaWallId);
+                setAllMessages(data);
+            } catch (err) {
+                console.error("Failed to load chat messages:", err);
+                setError(err);
+            } finally {
+                setLoading(false);
+            }
         };
+
+        initChat();
+
+        // 清理：離開房間 (如果需要的話，目前後端沒有 leave_ideawall，但 socket 斷線會自動處理)
+        return () => {
+            // socket.emit('leave_ideawall', ideaWallId); 
+        };
+    }, [ideaWallId]);
+
+    // 2. 監聽即時訊息
+    useEffect(() => {
+        if (!ideaWallId) return;
+
+        const handleNewMessage = (newMessage) => {
+            console.log("收到新訊息:", newMessage);
+            setAllMessages(prev => {
+                // 避免重複 (以防萬一)
+                if (prev.some(m => m.id === newMessage.id)) return prev;
+                return [...prev, newMessage];
+            });
+        };
+
+        socket.on('EVENT_IDEA_WALL_MSG', handleNewMessage);
+
+        return () => {
+            socket.off('EVENT_IDEA_WALL_MSG', handleNewMessage);
+        };
+    }, [ideaWallId]);
+
+    // 3. 發送訊息
+    const sendMessage = async (content, relatedNodeId = null) => {
+        if (!content.trim()) return;
         
-        setMessages(prev => [...prev, newMessage]);
-        setLoading(false);
+        // Optimistic UI update (optional, but safer to wait for server ack in this case)
+        // 這裡我們選擇等待伺服器回應，確保資料一致性
+        try {
+            await createIdeaWallMessage(ideaWallId, {
+                content,
+                relatedNodeId
+            });
+            // 不需要手動 setMessages，因為 Socket 會廣播回來 (包括給發送者)
+            // 但如果 Socket 延遲，可以考慮在這裡先 append
+        } catch (err) {
+            console.error("Failed to send message:", err);
+            // TODO: Show toast error
+        }
     };
 
-    const filteredMessages = filterNodeId 
-        ? messages.filter(m => m.relatedNodeId === filterNodeId || m.relatedNodeId === parseInt(filterNodeId))
-        : messages;
+    // 4. 根據 filterNodeId 過濾訊息
+    const filteredMessages = useMemo(() => {
+        let msgs = allMessages;
+        
+        if (filterNodeId) {
+            msgs = msgs.filter(m => 
+                m.relatedNodeId === filterNodeId || 
+                m.relatedNodeId === parseInt(filterNodeId)
+            );
+        }
+
+        // 格式化訊息以符合 UI 需求
+        return msgs.map(msg => ({
+            ...msg,
+            senderName: msg.user ? (msg.user.username || msg.user.account) : "未知用戶",
+            isSelf: msg.user?.account === getCurrentUsername() // 假設 getCurrentUsername 回傳 account
+        }));
+    }, [allMessages, filterNodeId]);
 
     return {
         messages: filteredMessages,
         sendMessage,
         filterNodeId,
         setFilterNodeId,
-        loading
+        loading,
+        error
     };
 };

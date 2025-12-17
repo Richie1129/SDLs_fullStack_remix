@@ -38,10 +38,10 @@
     - [x] 支援 **「全域模式」** (顯示該牆所有訊息)。
     - [x] 支援 **「節點模式」** (當使用者點擊 Node 時，只顯示該 Node 的相關討論)。
 
-- [ ] **2.2 狀態管理與 API 串接**
-    - [ ] 實作 `useIdeaWallChat` hook。
-    - [ ] 監聽 Socket 事件，即時更新訊息列表。
-    - [ ] 處理「點擊節點」事件，切換聊天室的篩選狀態 (Filter)。
+- [x] **2.2 狀態管理與 API 串接**
+    - [x] 實作 `useIdeaWallChat` hook。
+    - [x] 監聽 Socket 事件，即時更新訊息列表。
+    - [x] 處理「點擊節點」事件，切換聊天室的篩選狀態 (Filter)。
 
 ## Phase 3: 影子中控 (The Shadow Orchestrator) - 邏輯層
 *(Good Taste: 邏輯與 I/O 分離)*
