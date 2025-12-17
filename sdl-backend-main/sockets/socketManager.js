@@ -8,6 +8,7 @@ const ColumnHandler = require('./handlers/columnHandler');
 const MessageHandler = require('./handlers/messageHandler');
 const NodeHandler = require('./handlers/nodeHandler');
 const AnnouncementHandler = require('./handlers/announcementHandler');
+const IdeaWallMessageHandler = require('./handlers/ideaWallMessageHandler');
 const AiCoachHandler = require('./handlers/aiCoachHandler'); // Phase 3
 
 /**
@@ -89,6 +90,9 @@ class SocketManager {
             
             // 公告相關事件
             AnnouncementHandler.registerEvents(this.io, socket);
+
+            // IdeaWall 訊息相關事件
+            IdeaWallMessageHandler.registerEvents(this.io, socket);
             
             // AI Coach 相關事件 (Phase 3)
             AiCoachHandler.registerEvents(this.io, socket);

@@ -1,4 +1,5 @@
 const controller = require('../controllers/ideaWall');
+const messageController = require('../controllers/ideaWallMessage');
 const router = require('express').Router();
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const { checkProjectViewingPermission, checkWritePermission } = require('../middlewares/projectViewingMiddleware');
@@ -52,5 +53,9 @@ router.get('/', optionalAuth, optionalProjectPermission, controller.getAllIdeaWa
 
 // 寫入路由 - 需要完整權限，禁止觀摩者操作
 router.post('/', validateToken, checkProjectViewingPermission, checkWritePermission, controller.createIdeaWall);
+
+// IdeaWall Message Routes
+router.post('/:wallId/messages', validateToken, messageController.createMessage);
+router.get('/:wallId/messages', validateToken, messageController.getMessages);
 
 module.exports = router;

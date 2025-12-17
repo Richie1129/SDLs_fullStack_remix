@@ -5,28 +5,28 @@
 ## Phase 1: 後端核心 (Backend Core) - 資料結構優先
 *(Talk is cheap, show me the data structure.)*
 
-- [ ] **1.1 建立 Model: `IdeaWallMessage`**
-    - [ ] 檔案路徑: `sdl-backend-main/models/idea_wall_message.js`
-    - [ ] Schema 定義:
+- [x] **1.1 建立 Model: `IdeaWallMessage`**
+    - [x] 檔案路徑: `sdl-backend-main/models/idea_wall_message.js`
+    - [x] Schema 定義:
         - `content`: TEXT (Not Null)
         - `senderId`: INTEGER (FK -> Users)
         - `ideaWallId`: INTEGER (FK -> IdeaWalls) - **關鍵：定義訊息屬於哪個空間**
         - `relatedNodeId`: INTEGER (FK -> Nodes, Nullable) - **關鍵：定義訊息屬於哪個上下文**
         - `isAiIntervention`: BOOLEAN (Default: false) - **關鍵：區分人類與 AI**
-    - [ ] 設定關聯 (Associations): 在 `models/index.js` 中設定 `IdeaWall` hasMany `IdeaWallMessage`。
+    - [x] 設定關聯 (Associations): 在 `models/index.js` 中設定 `IdeaWall` hasMany `IdeaWallMessage`。
 
-- [ ] **1.2 API 實作: 訊息 CRUD**
-    - [ ] Controller: `sdl-backend-main/controllers/ideaWallMessage.js`
-    - [ ] `POST /api/ideawall/:wallId/messages`: 
+- [x] **1.2 API 實作: 訊息 CRUD**
+    - [x] Controller: `sdl-backend-main/controllers/ideaWallMessage.js`
+    - [x] `POST /api/ideawall/:wallId/messages`: 
         - 接收 `content`, `relatedNodeId` (可選)。
         - 寫入 DB 後，**必須** 觸發 Socket 事件。
-    - [ ] `GET /api/ideawall/:wallId/messages`: 
+    - [x] `GET /api/ideawall/:wallId/messages`: 
         - 支援 Query Param `?nodeId=xxx`。
         - 若無 `nodeId`，回傳該牆面所有訊息。
 
-- [ ] **1.3 Socket.io 事件定義**
-    - [ ] 定義事件名稱: `EVENT_IDEA_WALL_MSG`。
-    - [ ] 確保 Payload 結構包含 `relatedNodeId`，以便前端過濾。
+- [x] **1.3 Socket.io 事件定義**
+    - [x] 定義事件名稱: `EVENT_IDEA_WALL_MSG`。
+    - [x] 確保 Payload 結構包含 `relatedNodeId`，以便前端過濾。
 
 ## Phase 2: 前端整合 (Frontend Integration) - 視圖實作
 *(Never break userspace. UI 必須直覺。)*

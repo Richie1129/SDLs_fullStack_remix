@@ -1,6 +1,7 @@
 const { DataTypes} = require('sequelize');
 const sequelize = require('../util/database');
 const Node = require('./node');
+const IdeaWallMessage = require('./idea_wall_message');
 
 const Idea_wall = sequelize.define('idea_wall', {
     name: {
@@ -24,6 +25,8 @@ const Idea_wall = sequelize.define('idea_wall', {
 });
 Idea_wall.hasMany(Node);
 Node.belongsTo(Idea_wall, { foreignKey: 'ideaWallId' });
-// Removed invalid association to Node_relation (no ideaWallId in join table)
+
+Idea_wall.hasMany(IdeaWallMessage, { foreignKey: 'ideaWallId' });
+IdeaWallMessage.belongsTo(Idea_wall, { foreignKey: 'ideaWallId' });
 
 module.exports = Idea_wall;
