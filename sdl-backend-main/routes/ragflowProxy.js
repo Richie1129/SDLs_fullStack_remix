@@ -153,6 +153,35 @@ router.delete('/:chatId/sessions/:sessionId', async (req, res) => {
     }
 });
 
+// RAGFlow 檢索請求
+router.post('/retrieval', async (req, res) => {
+    try {
+        console.log("RAGFlow 檢索請求 - body:", req.body);
+
+        const response = await axios.post(
+            `${config.ragflow.baseUrl}/api/v1/retrieval`,
+            req.body,
+            {
+                headers: {
+                    Authorization: `Bearer ${config.apiKeys.ragflow}`,
+                    "Content-Type": "application/json",
+                },
+                httpsAgent: agent,
+            }
+        );
+
+        console.log("RAGFlow 檢索成功:", response.data);
+        res.status(200).json(response.data);
+    } catch (error) {
+        console.error("RAGFlow 代理請求失敗 (retrieval):", error.message);
+        res.status(error.response?.status || 500).json({ 
+            message: "代理請求失敗", 
+            error: error.message,
+            details: error.response?.data 
+        });
+    }
+});
+
 // 健康檢查端點
 router.get('/health', (req, res) => {
     res.status(200).json({

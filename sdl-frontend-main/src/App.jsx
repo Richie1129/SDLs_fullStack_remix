@@ -28,6 +28,7 @@ import TeacherOverview from './pages/overview/TeacherOverview';
 import ClassObservationPage from './pages/observation/ClassObservationPage';
 import Profile from './pages/profile/Profile';
 import StreamdownDemo from './pages/StreamdownDemo';
+import TestRag from './pages/TestRag';
 
 export default function App() {
   const router = createBrowserRouter(
@@ -42,6 +43,7 @@ export default function App() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="homepage" element={<HomePage />} />
+          <Route path="test-rag" element={<TestRag />} />
           <Route path="bulletin" element={<Bulletin />} />
           <Route path="List" element={<List />} />
           <Route path="overView" element={<ManagementOverview />} />
