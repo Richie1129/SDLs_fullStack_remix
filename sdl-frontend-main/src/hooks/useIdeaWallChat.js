@@ -6,9 +6,23 @@ import { getCurrentUsername } from '../utils/userUtils';
 export const useIdeaWallChat = (ideaWallId) => {
     const [allMessages, setAllMessages] = useState([]);
     const [wallContext, setWallContext] = useState(null); // New State for Context
+    const [contextLoading, setContextLoading] = useState(false);
     const [filterNodeId, setFilterNodeId] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+
+    const refreshWallContext = async () => {
+        if (!ideaWallId) return;
+        setContextLoading(true);
+        try {
+            const ctx = await getIdeaWallContext(ideaWallId);
+            setWallContext(ctx);
+        } catch (err) {
+            console.warn("Failed to load wall context:", err);
+        } finally {
+            setContextLoading(false);
+        }
+    };
 
     // 1. 初始化：加入房間並載入歷史訊息
     useEffect(() => {
@@ -30,9 +44,7 @@ export const useIdeaWallChat = (ideaWallId) => {
                 }
 
                 // 載入牆面摘要 (非同步，不阻塞 UI)
-                getIdeaWallContext(ideaWallId).then(ctx => {
-                    setWallContext(ctx);
-                }).catch(err => console.warn("Failed to load wall context:", err));
+                // refreshWallContext(); // 改為手動觸發，節省資源
 
             } catch (err) {
                 console.error("Failed to load chat messages:", err);
@@ -111,6 +123,8 @@ export const useIdeaWallChat = (ideaWallId) => {
     return {
         messages: filteredMessages,
         wallContext, // Export context
+        contextLoading,
+        refreshWallContext, // Export refresh function
         sendMessage,
         filterNodeId,
         setFilterNodeId,

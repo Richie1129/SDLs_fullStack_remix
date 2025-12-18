@@ -941,6 +941,7 @@ export default function IdeaWall() {
                         <IdeaWallChatPanel 
                             ideaWallId={ideaWallInfo.id} 
                             selectedNodeId={selectNodeInfo.id} 
+                            nodes={nodes}
                             onClose={() => setIsChatPanelOpen(false)} 
                         />
                     ) : (
