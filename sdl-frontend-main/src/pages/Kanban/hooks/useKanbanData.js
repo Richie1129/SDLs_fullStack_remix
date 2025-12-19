@@ -250,6 +250,77 @@ export const useKanbanData = (projectId) => {
     });
   }, [kanbanData, projectId, queryClient]);
 
+  const addPhaseTemplate = useCallback((columnsToAdd) => {
+    console.log(`🚀 Optimistically creating multiple columns from template`, columnsToAdd);
+    
+    const username = getCurrentUsername();
+    const userId = parseInt(localStorage.getItem("id")) || null;
+    
+    let currentKanbanData = [...kanbanData];
+    const newColumns = [];
+
+    // 1. Update Local State Optimistically
+    columnsToAdd.forEach((colTemplate, idx) => {
+      const optimisticColumn = {
+        id: `temp-col-${Date.now()}-${idx}`,
+        name: colTemplate.title,
+        task: colTemplate.defaultCards ? colTemplate.defaultCards.map((card, cIdx) => ({
+          id: `temp-card-${Date.now()}-${idx}-${cIdx}`,
+          title: card.title,
+          content: card.content || '',
+          labels: [],
+          assignees: [],
+          createdAt: new Date().toISOString(),
+          createdBy: username
+        })) : [],
+        order: currentKanbanData.length + idx
+      };
+      newColumns.push(optimisticColumn);
+    });
+
+    const updatedKanbanData = [...currentKanbanData, ...newColumns];
+    setKanbanData(updatedKanbanData);
+    queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
+
+    // 2. Emit Socket Events Sequentially
+    // Note: We rely on the server processing these in order.
+    // Since we don't have a bulk create API, we fire individual events.
+    newColumns.forEach((col, idx) => {
+      // A. Create Column
+      socket.emit("ColumnCreated", {
+        eventType: 'columnCreate',
+        projectId,
+        newGroupName: col.name,
+        user: { username, id: userId }
+      });
+
+      // B. Create Tasks (if any)
+      // We assume the column index is (original_length + idx)
+      // This is fragile if other users are adding columns simultaneously, 
+      // but acceptable for this "Good Taste" refactor step.
+      const targetColumnIndex = kanbanData.length + idx;
+      
+      if (col.task && col.task.length > 0) {
+        col.task.forEach(task => {
+          socket.emit("taskItemCreated", {
+            eventType: 'taskItemCreated',
+            selectedcolumn: targetColumnIndex,
+            item: {
+              title: task.title,
+              content: task.content || "",
+              labels: [],
+              assignees: []
+            },
+            kanbanData: updatedKanbanData, // Pass the *updated* data context if needed by server logic
+            projectId,
+            user: { username, id: userId }
+          });
+        });
+      }
+    });
+
+  }, [kanbanData, projectId, queryClient]);
+
   const addColumn = useCallback((name) => {
     console.log(`🚀 Optimistically creating new column: ${name}`);
     
@@ -390,6 +461,7 @@ export const useKanbanData = (projectId) => {
     actions: {
       addCard,
       addColumn,
+      addPhaseTemplate,
       deleteColumn,
       reorderColumn,
       moveCard

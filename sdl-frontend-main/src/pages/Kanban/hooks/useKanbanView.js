@@ -48,7 +48,7 @@ export const useKanbanView = (kanbanData, viewConfig) => {
     if (viewConfig.groupBy === 'assignee') {
       const assigneeMap = new Map();
       const unassignedTasks = [];
-
+      
       // Flatten all tasks from all status columns
       processedData.forEach(column => {
         if (!column.task) return;
@@ -73,32 +73,27 @@ export const useKanbanView = (kanbanData, viewConfig) => {
                 isVirtual: true
               });
             }
-            
+            // Avoid duplicates in the same column
             const userColumn = assigneeMap.get(assignee.id);
-            // Check for duplicates in this column
             if (!userColumn.task.find(t => t.id === task.id)) {
-              userColumn.task.push({ ...task }); // Clone task
+              userColumn.task.push(task);
             }
           });
         });
       });
 
-      const newColumns = Array.from(assigneeMap.values());
-      
-      // Add Unassigned column if needed
-      if (unassignedTasks.length > 0) {
-        newColumns.push({
-          id: 'unassigned',
-          title: 'Unassigned',
-          task: unassignedTasks,
-          isVirtual: true
-        });
-      }
-      
-      return newColumns;
+      // Convert Map to Array
+      processedData = [
+        { id: 'unassigned', title: 'Unassigned', task: unassignedTasks, isVirtual: true },
+        ...Array.from(assigneeMap.values())
+      ];
     }
 
-    // 3. Sorting (Placeholder for Phase 3)
+    // 3. Phase Filtering (Removed)
+    // User requested to revert to original view without phase filtering.
+    // All columns are shown.
+
+    // 4. Sorting (Placeholder for Phase 3)
     // if (viewConfig.sortBy === 'dueDate') { ... }
 
     return processedData;

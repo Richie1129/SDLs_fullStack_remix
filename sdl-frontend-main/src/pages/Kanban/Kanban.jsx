@@ -16,6 +16,7 @@ import KanbanErrorBoundary from '../../components/ErrorBoundary/KanbanErrorBound
 import { useKanbanData } from './hooks/useKanbanData';
 import { useKanbanView } from './hooks/useKanbanView';
 import KanbanColumn from './components/KanbanColumn';
+import { PHASE_TEMPLATES, PHASES } from '../../config/kanbanTemplates';
 
 /**
  * Kanban Component (Refactored)
@@ -47,13 +48,16 @@ export default function Kanban() {
   // --- Local UI State ---
   const [showAddGroupInput, setShowAddGroupInput] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+  const [selectedTemplatePhase, setSelectedTemplatePhase] = useState(null);
+  const [selectedTemplateColumns, setSelectedTemplateColumns] = useState([]);
   
   // --- Stage Management ---
   const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
   const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
   const currentStage = currentStageIndex;
   const currentSubStage = currentSubStageIndex;
-  
+
   const { isObservationMode } = useObservationMode();
   const kanbanContainerRef = useRef(null);
 
@@ -109,6 +113,49 @@ export default function Kanban() {
   }, [projectId, setCurrentStageIndex, setCurrentSubStageIndex]);
 
   // --- Handlers ---
+
+  const handleAddTemplate = (phaseKey) => {
+    if (isObservationMode) return;
+    const template = PHASE_TEMPLATES[phaseKey];
+    if (!template) return;
+
+    // Open Selection Modal
+    setSelectedTemplatePhase(phaseKey);
+    // Default select all columns
+    setSelectedTemplateColumns(template.columns.map((_, idx) => idx));
+    setShowTemplateMenu(false);
+  };
+
+  const handleConfirmTemplate = () => {
+    if (!selectedTemplatePhase) return;
+    const template = PHASE_TEMPLATES[selectedTemplatePhase];
+    
+    // Filter columns based on selection
+    const columnsToAdd = template.columns.filter((_, idx) => selectedTemplateColumns.includes(idx));
+    
+    if (columnsToAdd.length > 0) {
+      if (actions.addPhaseTemplate) {
+        actions.addPhaseTemplate(columnsToAdd);
+      } else {
+        // Fallback
+        columnsToAdd.forEach(col => actions.addColumn(col.title));
+      }
+    }
+    
+    // Reset
+    setSelectedTemplatePhase(null);
+    setSelectedTemplateColumns([]);
+  };
+
+  const toggleTemplateColumnSelection = (index) => {
+    setSelectedTemplateColumns(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
+  };
 
   const onDragEnd = useCallback((result) => {
     if (isObservationMode) {
@@ -193,6 +240,74 @@ export default function Kanban() {
       onDataReload={handleDataReload}
     >
       <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
+      
+      {/* Template Selection Modal */}
+      {selectedTemplatePhase && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">
+                選擇要新增的列表 ({PHASE_TEMPLATES[selectedTemplatePhase].label})
+              </h3>
+              <button 
+                onClick={() => setSelectedTemplatePhase(null)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <RxCross2 className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+              <p className="text-sm text-gray-500 mb-4">
+                勾選您想要加入看板的列表。包含範例卡片的列表將會一併匯入卡片。
+              </p>
+              <div className="space-y-3">
+                {PHASE_TEMPLATES[selectedTemplatePhase].columns.map((col, idx) => (
+                  <label key={idx} className="flex items-start space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-[#5BA491] focus:ring-[#5BA491] border-gray-300 rounded mt-1"
+                      checked={selectedTemplateColumns.includes(idx)}
+                      onChange={() => toggleTemplateColumnSelection(idx)}
+                    />
+                    <div className="flex-1">
+                      <span className="block text-sm font-medium text-gray-900">
+                        {col.title}
+                      </span>
+                      {col.defaultCards && col.defaultCards.length > 0 && (
+                        <span className="block text-xs text-gray-500 mt-1">
+                          包含 {col.defaultCards.length} 張範例卡片
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+              <button
+                onClick={() => setSelectedTemplatePhase(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5BA491]"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmTemplate}
+                disabled={selectedTemplateColumns.length === 0}
+                className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5BA491] ${
+                  selectedTemplateColumns.length === 0
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-[#5BA491] hover:bg-[#5BA491]/90'
+                }`}
+              >
+                確認新增
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isObservationMode && (
         <DraggableImage 
           containerRef={kanbanContainerRef}
@@ -286,14 +401,48 @@ export default function Kanban() {
               >
                 <div className="flex flex-row flex-wrap items-start gap-4 h-auto md:inline-flex md:flex-nowrap md:space-x-4 md:gap-0 md:h-full ">
                 
-                {/* Only show Add Column in Status View */}
+                {/* Add Column & Add Template Buttons */}
                 {viewConfig.groupBy === 'status' && !showAddGroupInput && !isObservationMode && (
-                  <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7" onClick={toggleAddGroupInput}>
-                    <FaPlus className="text-white mr-2 md:m-3" />
-                    <b className="text-sm md:text-base text-white">
-                      新增列表
-                    </b>
-                  </button>
+                  <div className="flex flex-col gap-4 w-full md:w-60 shrink-0">
+                    <button 
+                      className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7" 
+                      onClick={toggleAddGroupInput}
+                    >
+                      <FaPlus className="text-white mr-2 md:m-3" />
+                      <b className="text-sm md:text-base text-white">
+                        新增列表
+                      </b>
+                    </button>
+
+                    <div className="relative w-full h-20 md:h-24">
+                      <button 
+                        className="w-full h-full bg-white border-2 border-dashed border-gray-300 hover:border-[#5BA491] hover:text-[#5BA491] text-gray-500 flex flex-col items-center justify-center rounded-lg p-4 transition-colors"
+                        onClick={() => setShowTemplateMenu(!showTemplateMenu)}
+                      >
+                        <span className="text-2xl mb-1">+</span>
+                        <b className="text-sm md:text-base">
+                          從範例新增
+                        </b>
+                      </button>
+                      
+                      {showTemplateMenu && (
+                        <div className="absolute top-full left-0 mt-2 w-60 bg-white rounded-md shadow-lg z-50 border border-gray-200 py-1">
+                          <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            選擇階段範例
+                          </div>
+                          {PHASES.map(phaseKey => (
+                            <button
+                              key={phaseKey}
+                              onClick={() => handleAddTemplate(phaseKey)}
+                              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-[#5BA491]"
+                            >
+                              {PHASE_TEMPLATES[phaseKey].label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
                 
                 {viewConfig.groupBy === 'status' && showAddGroupInput && !isObservationMode && (
