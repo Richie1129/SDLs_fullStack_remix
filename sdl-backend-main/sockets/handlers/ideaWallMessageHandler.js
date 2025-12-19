@@ -2,7 +2,7 @@ const { SocketHandlerFactory } = require('../socketHandlers');
 
 class IdeaWallMessageHandler {
     static registerEvents(io, socket) {
-        SocketHandlerFactory.registerOnceEvent(socket, 'join_ideawall', this.handleJoinIdeaWall);
+        SocketHandlerFactory.registerSimpleEvent(socket, 'join_ideawall', this.handleJoinIdeaWall);
     }
 
     static async handleJoinIdeaWall(wallId) {

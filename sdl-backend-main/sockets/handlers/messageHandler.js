@@ -33,9 +33,9 @@ class MessageHandler {
         );
 
         // 房間相關事件
-        SocketHandlerFactory.registerOnceEvent(socket, 'join_room', this.handleJoinRoom);
-        SocketHandlerFactory.registerOnceEvent(socket, 'join_QuestionRoom', this.handleJoinQuestionRoom);
-        SocketHandlerFactory.registerOnceEvent(socket, 'join_project', this.handleJoinProject);
+        SocketHandlerFactory.registerSimpleEvent(socket, 'join_room', this.handleJoinRoom);
+        SocketHandlerFactory.registerSimpleEvent(socket, 'join_QuestionRoom', this.handleJoinQuestionRoom);
+        SocketHandlerFactory.registerSimpleEvent(socket, 'join_project', this.handleJoinProject);
     }
 
     /**

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getIdeaWallMessages, createIdeaWallMessage, getIdeaWallContext } from '../api/ideaWallMessage';
 import { socket } from '../utils/socket';
-import { getCurrentUsername } from '../utils/userUtils';
+import { getCurrentUsername, getCurrentUserId } from '../utils/userUtils';
 
 export const useIdeaWallChat = (ideaWallId) => {
     const [allMessages, setAllMessages] = useState([]);
@@ -116,7 +116,7 @@ export const useIdeaWallChat = (ideaWallId) => {
         return msgs.map(msg => ({
             ...msg,
             senderName: msg.isAiIntervention ? "AI 學習助手" : (msg.user ? (msg.user.username || msg.user.account) : "未知用戶"),
-            isSelf: msg.user?.account === getCurrentUsername() // 假設 getCurrentUsername 回傳 account
+            isSelf: msg.user?.id === getCurrentUserId()
         }));
     }, [allMessages, filterNodeId]);
 
