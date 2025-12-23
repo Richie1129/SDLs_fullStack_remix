@@ -38,18 +38,28 @@ export const useResponsive = () => {
       left = rightSideLeft;
     } else {
       // 左右都不夠，強制夾在畫面內
-      left = Math.min(
-        Math.max(padding, preferLeft),
-        viewW - containerW - padding
-      );
+      const maxLeft = viewW - containerW - padding;
+      if (maxLeft < padding) {
+        left = padding;
+      } else {
+        left = Math.min(
+          Math.max(padding, preferLeft),
+          maxLeft
+        );
+      }
     }
 
     // 垂直方向也做夾取，避免超出上下邊界
     let top = position.y - 200;
-    top = Math.min(
-      Math.max(padding, top),
-      viewH - containerH - padding
-    );
+    const maxTop = viewH - containerH - padding;
+    if (maxTop < padding) {
+      top = padding;
+    } else {
+      top = Math.min(
+        Math.max(padding, top),
+        maxTop
+      );
+    }
 
     return { left, top };
   };

@@ -160,7 +160,13 @@ exports.createSubmit = async(req, res) => {
 };
 
 exports.getAllSubmit = async(req, res) => {
-    const { projectId } = req.query;
+    // Linus: 處理參數大小寫不一致的問題 (projectid vs projectId)
+    // "Be liberal in what you accept, and conservative in what you send"
+    const projectId = req.query.projectId || req.query.projectid;
+
+    if (!projectId) {
+        return res.status(400).json(createErrorResponse('MISSING_PARAMETER', 'projectId is required'));
+    }
 
     try {
         const allSubmit = await Submit.findAll({

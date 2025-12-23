@@ -146,6 +146,12 @@ app.post('/api/upload', uploadToMinio('files', 10), (req, res) => {
 const RAGFlowProxy = require('./routes/ragflowProxy');
 app.use('/proxy/api/v1/chats', RAGFlowProxy);
 
+// 錯誤收集路由 (Linus: 消除 404 噪音)
+app.post('/api/errors', (req, res) => {
+    // 這裡可以接入真實的日誌系統，目前先靜默接收
+    res.status(200).json({ received: true });
+});
+
 // API 路由
 app.use('/api/users', require('./routes/user'));
 app.use('/api/projects', require('./routes/project'));
