@@ -1324,17 +1324,19 @@ export default function Reflection() {
         onClose={() => handle5RsCancel()}
         opacity={true}
         position={"justify-center items-center"}
-        custom="w-[60vw] max-w-none"
+        custom="w-11/12 lg:w-[60vw] max-w-none"
       >
-        <button
-          onClick={() => handle5RsCancel()}
-          className="absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200"
-        >
-          <GrFormClose className="w-6 h-6" />
-        </button>
-        <div className="w-full h-[80vh] flex flex-col">
-          {/* Tabs for 5Rs modal */}
-          <div className="flex border-b border-gray-200 mb-3 flex-shrink-0">
+        <div className="relative w-full h-[80vh] flex flex-col">
+          {/* 關閉按鈕 - 移到容器內部並固定在右上角 */}
+          <button
+            onClick={() => handle5RsCancel()}
+            className="absolute top-0 right-0 p-2 rounded-lg bg-white hover:bg-slate-200 z-10"
+          >
+            <GrFormClose className="w-6 h-6" />
+          </button>
+
+          {/* Tabs for 5Rs modal - 增加右側 padding 避免被關閉按鈕遮擋 */}
+          <div className="flex border-b border-gray-200 mb-3 flex-shrink-0 pr-10">
             <button
               onClick={() => setFiveRsTab('edit')}
               className={`px-4 py-2 font-medium text-sm ${fiveRsTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}

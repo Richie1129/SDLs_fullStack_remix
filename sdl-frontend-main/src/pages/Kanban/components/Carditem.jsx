@@ -600,7 +600,9 @@ function Carditem({ data, index, columnIndex }) {
     });
 
     try {
-      const response = await axios.post(buildApiUrl('/upload'), formData, {
+      // Linus: 使用 apiClient 取代 axios，確保帶上 token 並統一處理 baseURL
+      // 同時修正 ReferenceError: axios is not defined
+      const response = await apiClient.post('/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -636,10 +638,42 @@ function Carditem({ data, index, columnIndex }) {
           : uploadedImages,
       }));
 
-      toast.success('檔案上傳成功');
+      // Linus: 顯示詳細的上傳成功資訊 (檔案名稱與大小)
+      const formatSize = (bytes) => {
+        if (!bytes && bytes !== 0) return '未知大小';
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      };
+
+      const allUploaded = response.data.files || [];
+      if (allUploaded.length > 0) {
+        // 如果檔案太多，只顯示前 3 個，避免 Toast 太長
+        const displayFiles = allUploaded.slice(0, 3);
+        const fileDetails = displayFiles.map(f => `${f.originalName} (${formatSize(f.size)})`).join(', ');
+        const moreCount = allUploaded.length - 3;
+        const moreText = moreCount > 0 ? `... 等 ${allUploaded.length} 個檔案` : '';
+        
+        toast.success(`上傳成功: ${fileDetails}${moreText}`, {
+          duration: 5000, // 稍微延長顯示時間讓用戶看清楚
+        });
+      } else {
+        toast.success('檔案上傳成功');
+      }
     } catch (err) {
       console.error('檔案上傳失敗:', err);
-      toast.error('檔案上傳失敗');
+      
+      // Linus: 顯示後端回傳的具體錯誤訊息，而不是籠統的 "失敗"
+      const errorMessage = err.response?.data?.message || '檔案上傳失敗';
+      const errorDetail = err.response?.data?.error;
+      
+      if (errorDetail) {
+          toast.error(`${errorMessage}: ${errorDetail}`);
+      } else {
+          toast.error(errorMessage);
+      }
     }
   };
 
@@ -1092,12 +1126,20 @@ function Carditem({ data, index, columnIndex }) {
         </Modal>
       )}
 
-      <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"} custom={"w-11/12 sm:w-5/6 lg:w-3/4 xl:w-2/3 p-0"}>
+      <Modal open={open} onClose={() => setOpen(false)} opacity={true} position={"justify-center items-center"} custom={"w-11/12 sm:w-5/6 lg:w-3/4 xl:w-2/3 p-0 relative"}>
+        {/* Linus: 新增右上角關閉按鈕，這是基本人權 */}
+        <button 
+          onClick={() => setOpen(false)} 
+          className="absolute top-2 right-2 p-2 rounded-lg bg-white hover:bg-slate-200 z-50 shadow-sm border border-gray-100"
+        >
+          <GrFormClose className="w-6 h-6 text-gray-600" />
+        </button>
+
         <div className='flex flex-col lg:flex-row w-full lg:h-[80vh]'>
           {/* 左側：卡片編輯區 */}
-          <div className='w-full lg:w-2/3 p-4 sm:p-6 lg:p-8 lg:min-h-0 lg:overflow-y-auto'>
-            {/* 標籤頁導航 */}
-            <div className='flex border-b border-gray-200 mb-4'>
+          <div className='w-full lg:w-2/3 p-4 sm:p-6 lg:p-8 lg:min-h-0 lg:overflow-y-auto relative flex flex-col'>
+            {/* 標籤頁導航 - 增加右側 padding 避免被關閉按鈕遮擋 */}
+            <div className='flex border-b border-gray-200 mb-4 pr-10'>
               <button
                 onClick={() => setShowChangeHistory(false)}
                 className={`px-4 py-2 font-medium text-sm ${
@@ -1192,25 +1234,26 @@ function Carditem({ data, index, columnIndex }) {
                   isObservationMode={isObservationMode}
                 />
 
-                <div className='flex justify-end mt-4 space-x-2'>
+                {/* Linus: 底部操作列改為 sticky，確保永遠可見 */}
+                <div className='sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 p-4 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 lg:-mx-8 lg:-mb-8 mt-auto flex justify-end space-x-2 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]'>
                   {!isObservationMode && (
                     <button
                       onClick={cardHandleDelete}
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+                      className="px-4 py-2 bg-red-50 text-red-600 border border-red-100 rounded-lg hover:bg-red-100 transition-colors duration-200 text-sm font-medium"
                     >
                       刪除
                     </button>
                   )}
                   <button
                     onClick={() => setOpen(false)}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors duration-200 text-sm font-medium"
                   >
                     {isObservationMode ? '關閉' : '取消'}
                   </button>
                   {!isObservationMode && (
                     <button
                       onClick={cardHandleSubmit}
-                      className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
+                      className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200 text-sm font-medium shadow-sm"
                     >
                       儲存
                     </button>

@@ -54,9 +54,22 @@ const uploadToMinio = (fieldName, maxCount = 10) => {
         uploadHandler(req, res, async (err) => {
             if (err) {
                 console.error('Multer 錯誤:', err);
+                
+                // Linus: 提供有用的錯誤訊息，而不是只說 "Error"
+                let message = '檔案上傳失敗';
+                let detail = err.message;
+
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                    message = '檔案過大';
+                    detail = `單一檔案大小不能超過 100MB`;
+                } else if (err.message && err.message.includes('不支援的檔案類型')) {
+                    message = '檔案格式不支援';
+                }
+
                 return res.status(400).json({ 
-                    message: '檔案上傳失敗', 
-                    error: err.message 
+                    message: message, 
+                    error: detail,
+                    code: err.code || 'UPLOAD_ERROR'
                 });
             }
 

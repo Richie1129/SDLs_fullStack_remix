@@ -126,7 +126,9 @@ router.get('/direct/:fileName', async (req, res) => {
         const fileBuffer = await downloadFileFromMinio(fileName);
         
         // 設置響應頭
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        // Linus: 使用 RFC 5987 編碼處理非 ASCII 檔名，避免 ERR_INVALID_CHAR 崩潰
+        const encodedFileName = encodeURIComponent(fileName);
+        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFileName}`);
         res.setHeader('Content-Type', 'application/octet-stream');
         
         console.log('✅ 檔案下載成功:', fileName);
