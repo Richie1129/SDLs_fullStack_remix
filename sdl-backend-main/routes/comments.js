@@ -13,6 +13,16 @@ const getProjectIdFromTask = async (req, res, next) => {
     const Kanban = require('../models/kanban');
     const taskId = req.params.taskId || req.body.taskId || req.params.commentIdTaskId;
 
+    // Fix: Handle temp- IDs (optimistic UI)
+    if (taskId && taskId.toString().startsWith('temp-')) {
+        // Skip database check for temp IDs, let controller handle it or return empty
+        // But wait, we need projectId for permission check.
+        // If it's a temp task, it might not exist in DB yet.
+        // We should probably return 404 or handle it gracefully.
+        // For now, let's just return 404 to avoid 500 error in findByPk
+        return res.status(404).json({ message: '暫存任務無法獲取評論' });
+    }
+
     if (!taskId) return res.status(400).json({ message: '缺少 taskId 參數' });
 
     const task = await Task.findByPk(taskId, {

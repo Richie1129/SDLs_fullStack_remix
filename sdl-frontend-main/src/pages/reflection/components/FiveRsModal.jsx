@@ -34,17 +34,17 @@ export function FiveRsModal({
       onClose={onCancel}
       opacity={true}
       position={"justify-center items-center"}
-      custom="w-[60vw] max-w-none"
+      custom="w-11/12 md:w-3/4 lg:w-[60vw] max-w-none"
     >
-      <button
-        onClick={onCancel}
-        className="absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200"
-      >
-        <GrFormClose className="w-6 h-6" />
-      </button>
-      <div className="w-full h-[80vh] flex flex-col">
+      <div className="w-full h-[80vh] flex flex-col relative">
+        <button
+          onClick={onCancel}
+          className="absolute top-0 right-0 rounded-lg bg-white hover:bg-slate-200 z-10 p-1"
+        >
+          <GrFormClose className="w-6 h-6" />
+        </button>
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 mb-3 flex-shrink-0">
+        <div className="flex border-b border-gray-200 mb-3 flex-shrink-0 mr-8">
           <button
             onClick={() => setActiveTab('edit')}
             className={`px-4 py-2 font-medium text-sm ${activeTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
@@ -58,7 +58,7 @@ export function FiveRsModal({
             變更歷史
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className={`flex-1 ${activeTab === 'edit' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {activeTab === 'edit' && (
             <FiveRsReflectionForm
               initialData={editingReflectionData}

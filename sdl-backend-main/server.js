@@ -43,6 +43,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(require('cors')(config.cors));
 app.options('*', require('cors')(config.cors)); // 修復：預檢請求也使用相同CORS配置
 
+// Linus: 消除前端錯誤回報的 404 噪音
+app.post('/api/errors', (req, res) => {
+    // 靜默接收前端錯誤，未來可以接上日誌系統
+    res.status(200).json({ status: 'ok' });
+});
+
 // HTTP 日誌
 try {
     app.use(httpLogger);

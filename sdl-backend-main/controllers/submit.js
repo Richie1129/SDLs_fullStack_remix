@@ -9,9 +9,12 @@ const { createErrorResponse, getHttpStatusByErrorCode } = require('../constants/
 const { invalidateProjectCache } = require('./assistant');
 
 exports.createSubmit = async(req, res) => {
-    const { currentStage, currentSubStage, content, projectId } = req.body;
+    const { currentStage, currentSubStage, content, projectId, projectid } = req.body;
     const currentStageInt = parseInt(currentStage);
     const currentSubStageInt = parseInt(currentSubStage);
+
+    // Fix: Handle case sensitivity for projectId (frontend might send projectid)
+    const pId = projectId || projectid;
 
     if (!content) {
         const errorResponse = createErrorResponse('EMPTY_CONTENT');
@@ -28,7 +31,7 @@ exports.createSubmit = async(req, res) => {
                 return Submit.create({
                     stage: `${currentStageInt}-${currentSubStageInt}`,
                     content: content,
-                    projectId: projectId,
+                    projectId: pId,
                     userId: req.userId,
                     // 改為儲存 MinIO 相關資訊，而非 BLOB
                     fileName: file.fileName,        // MinIO 檔案名
@@ -45,7 +48,7 @@ exports.createSubmit = async(req, res) => {
             await Submit.create({
                 stage: `${currentStageInt}-${currentSubStageInt}`,
                 content: content,
-                projectId: projectId,
+                projectId: pId,
                 userId: req.userId,
             }, { req, transaction: t });
         }

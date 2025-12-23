@@ -54,6 +54,13 @@ const uploadToMinio = (fieldName, maxCount = 10) => {
         uploadHandler(req, res, async (err) => {
             if (err) {
                 console.error('Multer 錯誤:', err);
+                // Linus: 改進錯誤回報
+                if (err.code === 'LIMIT_FILE_SIZE') {
+                     return res.status(400).json({ 
+                        message: '檔案過大 (超過 100MB)', 
+                        code: 'LIMIT_FILE_SIZE' 
+                    });
+                }
                 return res.status(400).json({ 
                     message: '檔案上傳失敗', 
                     error: err.message 

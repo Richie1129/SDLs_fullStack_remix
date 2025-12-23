@@ -46,10 +46,16 @@ export const useResponsive = () => {
 
     // 垂直方向也做夾取，避免超出上下邊界
     let top = position.y - 200;
-    top = Math.min(
-      Math.max(padding, top),
-      viewH - containerH - padding
-    );
+    
+    // Linus: 修復小螢幕計算錯誤
+    // 1. 絕對優先：Top 必須 >= padding (保證標題列可見)
+    top = Math.max(padding, top);
+
+    // 2. 只有在螢幕高度足夠時，才考慮底部邊界
+    // 如果 viewH < containerH，這個檢查會被忽略，top 維持在 padding
+    if (viewH > containerH + padding * 2) {
+      top = Math.min(top, viewH - containerH - padding);
+    }
 
     return { left, top };
   };

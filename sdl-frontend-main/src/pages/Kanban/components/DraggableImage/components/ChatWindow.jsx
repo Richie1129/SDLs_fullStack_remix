@@ -68,7 +68,7 @@ const ChatWindow = ({
       className={`chat-container fixed ${
         isFullscreen
           ? 'w-screen rounded-none shadow-none z-[9999]'
-          : `${showSidebar ? 'w-[580px]' : 'w-[380px]'} rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] z-[1002]`
+          : `${showSidebar ? 'w-[580px]' : 'w-[380px]'} rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] z-[1002] max-w-[95vw] max-h-[90vh]`
       } ${isMinimized ? 'h-[60px] overflow-hidden' : (isFullscreen ? 'h-screen' : 'h-[520px]')} bg-white transition-all duration-300 ease-in-out flex ${
         isFullscreen && screenWidth < 768 ? 'flex-col' : 'flex-row'
       }`.trim()}

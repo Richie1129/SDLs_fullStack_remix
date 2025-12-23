@@ -270,7 +270,8 @@ const FiveRsReflectionForm = ({
           }
         `}
       </style>
-      <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg">
+      <div className="max-w-4xl mx-auto bg-white rounded-lg h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto p-6">
       {/* 標題輸入 */}
       <div className="mb-6">
         <label className="block text-lg font-semibold text-gray-700 mb-2">
@@ -516,9 +517,10 @@ const FiveRsReflectionForm = ({
           </p>
         </motion.div>
       )}
+      </div>
 
-      {/* 操作按鈕 */}
-      <div className="flex justify-end space-x-3 mt-6">
+      {/* 操作按鈕 - 固定在底部 */}
+      <div className="flex justify-end space-x-3 p-4 border-t border-gray-200 bg-white">
         <button
           onClick={onCancel}
           className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"

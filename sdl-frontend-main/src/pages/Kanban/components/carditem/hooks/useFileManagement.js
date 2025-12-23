@@ -1,8 +1,16 @@
 import { useCallback } from 'react';
-import axios from 'axios';
+import apiClient from '@/api/client';
 import FileDownload from 'js-file-download';
 import toast from 'react-hot-toast';
 import { buildApiUrl, buildFileImageUrl, buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+
+const formatSize = (bytes) => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
 
 /**
  * useFileManagement - 文件操作邏輯
@@ -23,7 +31,8 @@ export function useFileManagement(cardData, setCardData) {
     });
 
     try {
-      const response = await axios.post(buildApiUrl('/upload'), formData, {
+      // Fix: Use apiClient and remove buildApiUrl (apiClient handles baseURL)
+      const response = await apiClient.post('/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -36,11 +45,15 @@ export function useFileManagement(cardData, setCardData) {
           url: file.fileName ? buildFileDownloadUrl(file.fileName) : file.url,
           originalName: file.originalName,
           mimeType: file.mimeType,
-          fileName: file.fileName // 保存 MinIO 檔名
+          fileName: file.fileName, // 保存 MinIO 檔名
+          size: file.size
         }));
 
-      const uploadedImages = response.data.files
-        .filter((file) => file.mimeType.startsWith("image/"))
+      // Linus: 分離原始圖片資料與 URL，以便顯示詳細資訊
+      const rawImageFiles = response.data.files
+        .filter((file) => file.mimeType.startsWith("image/"));
+
+      const uploadedImages = rawImageFiles
         .map((file) => {
           // 使用 MinIO 檔名建構圖片 URL
           if (file.fileName) {
@@ -59,10 +72,27 @@ export function useFileManagement(cardData, setCardData) {
           : uploadedImages,
       }));
 
-      toast.success('檔案上傳成功');
+      // Fix: Improved UX with file details
+      if (uploadedFiles.length > 0) {
+        const file = uploadedFiles[0]; // Show first file info
+        const sizeInfo = file.size ? ` (${formatSize(file.size)})` : '';
+        const countInfo = uploadedFiles.length > 1 ? ` ...等 ${uploadedFiles.length} 個檔案` : '';
+        toast.success(`上傳成功: ${file.originalName}${sizeInfo}${countInfo}`, { duration: 5000 });
+      } else if (uploadedImages.length > 0) {
+         // Linus: 顯示圖片詳細資訊
+         const file = rawImageFiles[0];
+         const sizeInfo = file.size ? ` (${formatSize(file.size)})` : '';
+         const countInfo = rawImageFiles.length > 1 ? ` ...等 ${rawImageFiles.length} 張圖片` : '';
+         toast.success(`圖片上傳成功: ${file.originalName}${sizeInfo}${countInfo}`, { duration: 5000 });
+      } else {
+         toast.success('檔案上傳成功');
+      }
     } catch (err) {
       console.error('檔案上傳失敗:', err);
-      toast.error('檔案上傳失敗');
+      // Linus: 顯示詳細錯誤訊息
+      const errorMessage = err.response?.data?.message || '檔案上傳失敗';
+      const errorDetail = err.response?.data?.error;
+      toast.error(errorDetail ? `${errorMessage}: ${errorDetail}` : errorMessage);
     }
   }, [setCardData]);
 
@@ -78,8 +108,10 @@ export function useFileManagement(cardData, setCardData) {
 
       console.log('下載檔案 URL:', downloadUrl);
 
-      const response = await axios.get(downloadUrl, {
-        responseType: 'blob'
+      // Fix: Use apiClient. Override baseURL to empty because downloadUrl is already full path (from buildApiUrl)
+      const response = await apiClient.get(downloadUrl, {
+        responseType: 'blob',
+        baseURL: '' 
       });
       FileDownload(response.data, file.originalName || file.fileName || 'download');
       toast.success(`下載成功: ${file.originalName || file.fileName}`);
@@ -94,8 +126,10 @@ export function useFileManagement(cardData, setCardData) {
    */
   const handleImageDownload = useCallback(async (imageUrl) => {
     try {
-      const response = await axios.get(imageUrl, {
-        responseType: 'blob'
+      // Fix: Use apiClient with baseURL: ''
+      const response = await apiClient.get(imageUrl, {
+        responseType: 'blob',
+        baseURL: ''
       });
       // 從 URL 提取檔名，如果失敗則使用預設值
       const fileName = imageUrl.split('/').pop() || 'download_image.png';
@@ -125,7 +159,8 @@ export function useFileManagement(cardData, setCardData) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(buildApiUrl(`/file/${fileName}`));
+        // Linus: 使用 apiClient 替代 axios，並移除 buildApiUrl
+        await apiClient.delete(`/file/${fileName}`);
         console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
       }
 
@@ -138,16 +173,19 @@ export function useFileManagement(cardData, setCardData) {
 
       toast.success(`檔案移除成功: ${fileToRemove.originalName || fileName}`);
     } catch (error) {
-      console.error('檔案刪除失敗:', error);
-      if (error.response?.status === 404) {
+      // Linus: 優先檢查 404 錯誤 (檔案已不存在 = 刪除成功)
+      if (error.response?.status == 404 || error.message?.includes('404')) {
+        console.warn('檔案在伺服器上不存在 (404)，僅從前端移除');
+        
         // 檔案在 MinIO 中不存在，只從前端移除
         setCardData((prev) => {
           const newFiles = [...prev.files];
           newFiles.splice(index, 1);
           return { ...prev, files: newFiles };
         });
-        toast.success('檔案已移除');
+        toast.success('檔案已移除 (檔案原先已不存在)');
       } else {
+        console.error('檔案刪除失敗:', error);
         toast.error('檔案刪除失敗');
       }
     }
@@ -173,7 +211,8 @@ export function useFileManagement(cardData, setCardData) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(buildApiUrl(`/file/${fileName}`));
+        // Linus: 使用 apiClient 替代 axios，並移除 buildApiUrl
+        await apiClient.delete(`/file/${fileName}`);
         console.log(`✅ MinIO 圖片刪除成功: ${fileName}`);
       }
 
@@ -186,17 +225,26 @@ export function useFileManagement(cardData, setCardData) {
 
       toast.success('圖片移除成功');
     } catch (error) {
-      console.error('圖片刪除失敗:', error);
-      if (error.response?.status === 404) {
+      // Linus: 優先檢查 404 錯誤 (檔案已不存在 = 刪除成功)
+      if (error.response?.status == 404 || error.message?.includes('404')) {
+        console.warn('圖片在伺服器上不存在 (404)，僅從前端移除');
+
         // 檔案在 MinIO 中不存在，只從前端移除
         setCardData((prev) => {
           const newImages = [...prev.images];
           newImages.splice(index, 1);
           return { ...prev, images: newImages };
         });
-        toast.success('圖片已移除');
+        toast.success('圖片已移除 (檔案原先已不存在)');
       } else {
-        toast.error('圖片刪除失敗');
+        console.error('圖片刪除失敗:', error);
+        console.log('Error details:', {
+          status: error.response?.status,
+          message: error.message,
+          code: error.code
+        });
+        const errorMsg = error.response?.data?.message || '圖片刪除失敗';
+        toast.error(errorMsg);
       }
     }
   }, [cardData.images, setCardData]);

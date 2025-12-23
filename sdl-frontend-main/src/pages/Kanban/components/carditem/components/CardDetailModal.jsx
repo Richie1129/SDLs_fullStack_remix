@@ -184,7 +184,13 @@ export function CardDetailModal({
   return (
     <>
       <Modal open={open} onClose={onClose} opacity={true} position={"justify-center items-center"} custom={"w-11/12 sm:w-5/6 lg:w-3/4 xl:w-2/3 p-0"}>
-        <div className='flex flex-col lg:flex-row w-full lg:max-h-[80vh]'>
+        <div className='flex flex-col lg:flex-row w-full lg:max-h-[80vh] relative'>
+          <button 
+            onClick={onClose} 
+            className="absolute top-2 right-2 z-50 p-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm"
+          >
+            <GrFormClose className="w-6 h-6" />
+          </button>
           {/* 左側：卡片編輯區 */}
           <div className='w-full lg:w-2/3 p-4 sm:p-6 lg:p-8 lg:max-h-[80vh] lg:overflow-y-auto'>
             {/* 標籤頁導航 */}
@@ -280,7 +286,7 @@ export function CardDetailModal({
                   isObservationMode={!permissions.canEdit}
                 />
 
-                <div className='flex justify-end mt-4 space-x-2'>
+                <div className='flex justify-end mt-4 space-x-2 sticky bottom-0 bg-white/95 backdrop-blur-sm p-4 -mx-4 sm:-mx-6 lg:-mx-8 -mb-4 sm:-mb-6 lg:-mb-8 border-t border-gray-100 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]'>
                   {permissions.canDelete && (
                     <button
                       onClick={cardHandleDelete}

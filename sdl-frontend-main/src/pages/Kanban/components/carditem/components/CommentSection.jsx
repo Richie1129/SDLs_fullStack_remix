@@ -112,7 +112,10 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
   const { data: comments = [] } = useQuery(
     ['comments', taskId],
     () => fetchComments(taskId),
-    { enabled: !!taskId }
+    { 
+      // Linus: Don't fetch comments for temp IDs. It's a waste of bandwidth and causes errors.
+      enabled: !!taskId && !taskId.toString().startsWith('temp-') 
+    }
   );
 
   // 新增評論
