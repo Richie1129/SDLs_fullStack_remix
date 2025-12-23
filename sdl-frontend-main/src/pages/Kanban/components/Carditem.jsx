@@ -777,7 +777,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(buildApiUrl(`/file/${fileName}`));
+        await apiClient.delete(`/file/${fileName}`);
         console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
       }
 
@@ -822,7 +822,7 @@ function Carditem({ data, index, columnIndex }) {
 
       // 如果有 MinIO 檔案名稱，先從 MinIO 刪除
       if (fileName) {
-        await axios.delete(buildApiUrl(`/file/${fileName}`));
+        await apiClient.delete(`/file/${fileName}`);
         console.log(`✅ MinIO 圖片刪除成功: ${fileName}`);
       }
 
