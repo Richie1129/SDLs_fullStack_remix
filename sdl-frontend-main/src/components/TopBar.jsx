@@ -1,16 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { IoIosNotificationsOutline } from "react-icons/io";
-import { BsChevronDown, BsPlusCircleDotted } from "react-icons/bs";
-import { FiActivity } from "react-icons/fi"; // 引入活動圖示
-import { FaComments } from "react-icons/fa"; // 引入評論圖示
-import { RiDashboardLine } from "react-icons/ri"; // 添加儀表板圖示
-import { FaEye, FaEyeSlash } from "react-icons/fa"; // 添加觀摩圖示
+import { Activity, ChevronDown, Eye, MessageSquare, PlusCircle, X } from 'lucide-react';
 import { getProjectUser } from '../api/users';
 import { getProject, getProjectsByMentor } from '../api/project';
 import { logout } from '../api/auth';  // 引入 logout API
 import { useQuery } from 'react-query';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
-import { GrFormClose } from "react-icons/gr";
 import Modal from './Modal';
 import Swal from 'sweetalert2';
 import { socket } from '../utils/socket';
@@ -293,7 +287,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
               className="flex items-center space-x-1 mr-3 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-3 py-2 text-sm font-semibold transition-colors"
               title="跨班專案觀摩"
             >
-              <FaEye className="text-sm" />
+              <Eye className="h-4 w-4" />
               <span>觀摩</span>
             </button>
           )}
@@ -305,7 +299,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
               title="用戶選單"
             >
               {userName}
-              <BsChevronDown className={`text-xs transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-3 w-3 transition-transform ${userDropdownOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {userDropdownOpen && (
@@ -353,7 +347,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         {/* 觀摩模式指示器 */}
         {isObservationMode && !isOverviewPage && (
           <div className="flex items-center ml-3 px-2 py-1 bg-yellow-100 border border-yellow-400 rounded-md">
-            <FaEye className="text-yellow-600 mr-1" size={16} />
+            <Eye className="text-yellow-600 mr-1 h-4 w-4" />
             <span className="text-yellow-700 text-sm font-semibold">觀摩模式</span>
           </div>
         )}
@@ -376,7 +370,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           }
           <li>
             <button className="p-1 rounded-md text-gray-500 hover:text-gray-900 ">
-              <BsPlusCircleDotted size={32} onClick={() => setReferralCodeModalOpen(true)} />
+              <PlusCircle className="h-8 w-8" onClick={() => setReferralCodeModalOpen(true)} />
             </button>
           </li>
         </ul>
@@ -402,7 +396,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
             }
             title="專案評論"
           >
-            <FaComments size={20} />
+            <MessageSquare className="h-5 w-5" />
           </button>
         )}
         {/* 專案活動按鈕 - 只在專案頁面顯示 */}
@@ -416,7 +410,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
             }
             title="專案活動"
           >
-            <FiActivity size={20} />
+            <Activity className="h-5 w-5" />
           </button>
         )}
         </div>
@@ -434,7 +428,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
       </div>
       <Modal open={referralCodeModalOpen} onClose={() => setReferralCodeModalOpen(false)} opacity={true} position={"justify-center items-center"}>
         <button onClick={() => setReferralCodeModalOpen(false)} className=' absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
-          <GrFormClose className=' w-6 h-6' />
+          <X className=' w-6 h-6' />
         </button>
         <div className='flex flex-col p-3'>
           <h3 className=' font-bold text-base mb-3'>專案邀請碼:</h3>

@@ -1,34 +1,41 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route } from "react-router-dom";
 import { ProtectedLogin, ProtectedRoute } from "./utils/ProtectedRoute";
 import { AuthProvider } from "./utils/AuthContext";
-import HomePage from "./pages/home/HomePage";
-import Login from "./pages/login/Login";
-import Register from "./pages/login/Register";
-import ForgotPassword from "./pages/login/ForgotPassword";
-import ResetPassword from "./pages/login/ResetPassword";
-import Kanban from "./pages/Kanban/Kanban";
 import RootLayout from "./layouts/RootLayout";
-import ProjectLayout from "./layouts/ProjectLayout";
-import Bulletin from "./pages/bulletin/Bulletin";
-import List from "./pages/list/List";
-import SubmitTask from "./pages/submit/SubmitTask";
-import AskQuestion from "./pages/AskQuestion/AskQuestion";
-import Reflection from "./pages/reflection/Reflection";
-import Protfolio from './pages/protfolio/Protfolio';
-import ManageIdeaWall from "./pages/manageIdeaWall/ManageIdeaWall";
-import IdeaWall from "./pages/ideaWall/IdeaWall";
-import ExportPreview from "./pages/ExportPreview";
-import NotFound from "./pages/notFound/NotFound";
-import TeacherManagementDashboard from './pages/teacher-dashboard';
-import ManagementOverview from './pages/overview/ManagementOverview';
-import StudentDashboard from './pages/student-dashboard';
-import StudentOverview from './pages/overview/StudentOverview';
-import TeacherOverview from './pages/overview/TeacherOverview';
-import ClassObservationPage from './pages/observation/ClassObservationPage';
-import Profile from './pages/profile/Profile';
-import StreamdownDemo from './pages/StreamdownDemo';
-import TestRag from './pages/TestRag';
+
+const HomePage = lazy(() => import("./pages/home/HomePage"));
+const Login = lazy(() => import("./pages/login/Login"));
+const Register = lazy(() => import("./pages/login/Register"));
+const ForgotPassword = lazy(() => import("./pages/login/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/login/ResetPassword"));
+const Kanban = lazy(() => import("./pages/Kanban/Kanban"));
+const Bulletin = lazy(() => import("./pages/bulletin/Bulletin"));
+const List = lazy(() => import("./pages/list/List"));
+const SubmitTask = lazy(() => import("./pages/submit/SubmitTask"));
+const AskQuestion = lazy(() => import("./pages/AskQuestion/AskQuestion"));
+const Reflection = lazy(() => import("./pages/reflection/Reflection"));
+const Protfolio = lazy(() => import('./pages/protfolio/Protfolio'));
+const ManageIdeaWall = lazy(() => import("./pages/manageIdeaWall/ManageIdeaWall"));
+const IdeaWall = lazy(() => import("./pages/ideaWall/IdeaWall"));
+const ExportPreview = lazy(() => import("./pages/ExportPreview"));
+const NotFound = lazy(() => import("./pages/notFound/NotFound"));
+const TeacherManagementDashboard = lazy(() => import('./pages/teacher-dashboard'));
+const ManagementOverview = lazy(() => import('./pages/overview/ManagementOverview'));
+const StudentDashboard = lazy(() => import('./pages/student-dashboard'));
+const StudentOverview = lazy(() => import('./pages/overview/StudentOverview'));
+const TeacherOverview = lazy(() => import('./pages/overview/TeacherOverview'));
+const ClassObservationPage = lazy(() => import('./pages/observation/ClassObservationPage'));
+const Profile = lazy(() => import('./pages/profile/Profile'));
+const StreamdownDemo = lazy(() => import('./pages/StreamdownDemo'));
+const TestRag = lazy(() => import('./pages/TestRag'));
+const ProjectLayout = lazy(() => import("./layouts/ProjectLayout"));
+
+const RouteFallback = () => (
+  <div className="min-h-screen w-full flex items-center justify-center bg-gray-100">
+    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#5BA491]" />
+  </div>
+);
 
 export default function App() {
   const router = createBrowserRouter(
@@ -73,8 +80,9 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <Suspense fallback={<RouteFallback />}>
+        <RouterProvider router={router} />
+      </Suspense>
     </AuthProvider>
   )
 }
-

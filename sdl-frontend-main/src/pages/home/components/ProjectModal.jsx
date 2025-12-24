@@ -1,6 +1,6 @@
 import React from 'react';
 import Modal from '../../../components/Modal';
-import { GrFormClose } from "react-icons/gr";
+import { X } from 'lucide-react';
 
 const ProjectModal = ({
   isOpen,
@@ -36,7 +36,7 @@ const ProjectModal = ({
         onClick={handleClose}
         className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'
       >
-        <GrFormClose className='w-6 h-6' />
+        <X className='w-6 h-6' />
       </button>
 
       <form onSubmit={handleSubmit} className='flex flex-col p-3'>

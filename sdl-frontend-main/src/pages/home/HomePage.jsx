@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation } from 'react-query';
 import Swal from 'sweetalert2';
 import { toast, Toaster } from 'react-hot-toast';
@@ -57,17 +57,19 @@ export default function HomePage() {
   const roleConfiguration = getRoleConfig(role);
 
   // 獲取用於篩選的班級列表
-  const availableClasses = Array.from(new Set(
-    members.map(m => m.class).filter(Boolean)
-  ));
+  const availableClasses = useMemo(() => (
+    Array.from(new Set(
+      members.map(m => m.class).filter(Boolean)
+    ))
+  ), [members]);
 
   // 專案資料映射 - 統一資料介面
-  const projectDataMap = {
+  const projectDataMap = useMemo(() => ({
     viewable: viewableProjects,
     normal: ongoing,
     completed: completed,
     done: done
-  };
+  }), [viewableProjects, ongoing, completed, done]);
 
   // 檢查是否是第一次使用
   useEffect(() => {

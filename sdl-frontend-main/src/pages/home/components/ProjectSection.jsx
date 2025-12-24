@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { FaChevronDown, FaChevronUp, FaEye } from 'react-icons/fa';
-import { MdAddchart } from "react-icons/md";
+import React, { useState, useRef, useLayoutEffect } from 'react';
+import { BarChart3, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import ProjectCard from './ProjectCard';
 
 const ProjectSection = ({
@@ -29,23 +28,27 @@ const ProjectSection = ({
   const [height, setHeight] = useState(0);
   const contentRef = useRef(null);
   const isActive = index === activeIndex;
+  const minContentHeight = 240;
 
   // 計算手風琴高度
-  useEffect(() => {
-    if (isActive && contentRef.current) {
-      const timer = setTimeout(() => {
-        setHeight(contentRef.current.scrollHeight);
-      }, 50);
-      return () => clearTimeout(timer);
-    } else {
+  useLayoutEffect(() => {
+    if (!isActive || !contentRef.current) {
       setHeight(0);
+      return;
     }
-  }, [isActive, projects]);
+
+    const frame = requestAnimationFrame(() => {
+      const nextHeight = Math.max(contentRef.current.scrollHeight, minContentHeight);
+      setHeight(nextHeight);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [isActive, projects.length]);
 
   const handleToggle = () => {
     setActiveIndex(isActive ? null : index);
     if (!isActive && contentRef.current) {
-      setHeight(contentRef.current.scrollHeight);
+      setHeight(Math.max(contentRef.current.scrollHeight, minContentHeight));
     } else {
       setHeight(0);
     }
@@ -53,7 +56,7 @@ const ProjectSection = ({
 
   // 預設空狀態配置
   const defaultEmptyStateConfig = {
-    icon: type === 'viewable' ? <FaEye className="mx-auto h-12 w-12 text-gray-400" /> : (
+    icon: type === 'viewable' ? <Eye className="mx-auto h-12 w-12 text-gray-400" /> : (
       <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
       </svg>
@@ -103,7 +106,7 @@ const ProjectSection = ({
             className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition duration-200 ease-in-out transform hover:scale-105"
             data-tour={role === "teacher" ? "create-project" : undefined}
           >
-            <MdAddchart className="mr-2" /> 建立活動
+            <BarChart3 className="mr-2 h-5 w-5" /> 建立活動
           </button>
         )}
         {showJoinButton && (
@@ -111,7 +114,7 @@ const ProjectSection = ({
             onClick={onJoinProject}
             className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition duration-200 ease-in-out transform hover:scale-105"
           >
-            <MdAddchart className="mr-2" /> 加入活動
+            <BarChart3 className="mr-2 h-5 w-5" /> 加入活動
           </button>
         )}
         {filterComponent}
@@ -135,13 +138,17 @@ const ProjectSection = ({
         onClick={handleToggle}
       >
         <span className="font-semibold">{title}</span>
-        {isActive ? <FaChevronUp className="w-3 h-3" /> : <FaChevronDown className="w-3 h-3" />}
+        {isActive ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
 
       {/* Accordion Content */}
       <div
         ref={contentRef}
-        style={{ height: isActive ? `${height}px` : "0px", overflow: 'hidden' }}
+        style={{
+          height: isActive ? `${height}px` : "0px",
+          minHeight: isActive ? `${minContentHeight}px` : "0px",
+          overflow: 'hidden'
+        }}
         className="transition-height bg-customgreen/5 duration-500 ease-in-out my-1"
       >
         <div className="text-left px-2 py-2">

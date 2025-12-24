@@ -6,13 +6,11 @@ import {
   updateProject,
   deleteProject
 } from '../../../api/project';
-import { getAllTeachers, getProjectUser, batchGetProjectUsers } from '../../../api/users';
+import { getAllTeachers, batchGetProjectUsers } from '../../../api/users';
 import { getCurrentUsername } from '../../../utils/userUtils';
 
 export const useProjectData = () => {
-  const [teachers, setTeachers] = useState([]);
   const [members, setMembers] = useState([]);
-  const [viewableProjects, setViewableProjects] = useState([]);
   const [classFilter, setClassFilter] = useState('all');
   const [completedSearch, setCompletedSearch] = useState('');
   const [doneSearch, setDoneSearch] = useState('');
@@ -54,6 +52,15 @@ export const useProjectData = () => {
     {
       enabled: !!userName && !!role,
       staleTime: 5 * 60 * 1000, // 5分鐘緩存
+    }
+  );
+
+  const { data: teachers = [] } = useQuery(
+    'teachers',
+    getAllTeachers,
+    {
+      staleTime: 10 * 60 * 1000,
+      select: (data) => data?.user || [],
     }
   );
 
@@ -111,15 +118,6 @@ export const useProjectData = () => {
     };
   }, [categorizedProjects, classFilter, completedSearch, doneSearch, members, role]);
 
-  // 載入教師列表
-  useEffect(() => {
-    getAllTeachers().then(data => {
-      setTeachers(data.user || []);
-    }).catch(error => {
-      console.error('Error fetching teachers:', error);
-    });
-  }, []);
-
   // 載入專案成員 - 使用批次 API 優化
   useEffect(() => {
     if (!role || !projectData?.length) return;
@@ -128,15 +126,7 @@ export const useProjectData = () => {
       try {
         let projectIds = [];
 
-        if (role === "teacher") {
-          const mentorName = getCurrentUsername();
-          if (!mentorName) return;
-
-          const mentorProjects = await getProjectsByMentor(mentorName);
-          projectIds = mentorProjects?.map(project => project.id) || [];
-        } else {
-          projectIds = projectData.map(project => project.id);
-        }
+        projectIds = projectData.map(project => project.id);
 
         if (projectIds.length === 0) return;
 
@@ -165,18 +155,15 @@ export const useProjectData = () => {
     fetchMembers();
   }, [role, projectData]);
 
-  // 載入可觀摩專案 - 僅學生角色
-  useEffect(() => {
-    if (role !== "student" || !userClass) return;
-
-    const fetchViewableProjects = async () => {
+  const { data: viewableProjectsData = [] } = useQuery(
+    ['viewableProjects', userClass, role],
+    async () => {
       try {
         const response = await getAllProject({
           params: { viewable_by: userClass },
           headers: { 'accessToken': localStorage.getItem('accessToken') }
         });
 
-        // 安全地取得專案陣列
         let projects = [];
         if (response?.error) {
           console.warn("getAllProject 回傳錯誤:", response.error);
@@ -186,25 +173,26 @@ export const useProjectData = () => {
           projects = response;
         }
 
-        // 過濾掉使用者自己參與的專案
         const myId = String(localStorage.getItem('id') || '');
         const myName = getCurrentUsername() || '';
-        projects = projects.filter(p => {
+        return projects.filter(p => {
           if (!Array.isArray(p?.members)) return true;
           return !p.members.some(m =>
             String(m?.id ?? '') === myId || (m?.username || '') === myName
           );
         });
-
-        setViewableProjects(projects);
       } catch (error) {
         console.error("獲取可觀摩專案失敗:", error);
-        setViewableProjects([]);
+        return [];
       }
-    };
+    },
+    {
+      enabled: role === 'student' && !!userClass,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
 
-    fetchViewableProjects();
-  }, [role, userClass]);
+  const viewableProjects = role === 'student' ? viewableProjectsData : [];
 
   // 返回所有狀態和函數
   return {

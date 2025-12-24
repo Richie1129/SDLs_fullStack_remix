@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { TbBell } from "react-icons/tb";
-import { IoChatbubbleEllipsesOutline } from "react-icons/io5";
+import { Bell, MessageCircle } from 'lucide-react';
 import Modal from './Modal';
 import Swal from 'sweetalert2';
 import { useQuery } from 'react-query';
 import { getAnnouncements, createAnnouncement } from '../api/announcement';
-import { getProjectUser } from '../api/users';
+import { getProjectUser, batchGetProjectUsers } from '../api/users';
 import { getProjectsByMentor } from '../api/project'; // 新增引入
 import { socket } from '../utils/socket';
 import { getCurrentUsername, addUserUpdateListener } from '../utils/userUtils';
@@ -112,43 +111,60 @@ export default function Announcement({ projectId, role, projectList }) {
                     const projectMembers = {}; // 專案成員對應表
                     const studentProjects = {}; // 學生專案對應表
                     const allStudents = []; // 所有學生列表
+                    const projectIds = projects.map(project => project.id).filter(Boolean);
 
-                    const studentPromises = projects.map(async (project) => {
-                        try {
-                            const students = await getProjectUser(project.id);
-                            
-                            // 建立專案成員對應表
-                            projectMembers[project.id] = students || [];
-                            
-                            // 建立學生專案對應表
-                            if (students) {
-                                students.forEach(student => {
-                                    if (!studentProjects[student.id]) {
-                                        studentProjects[student.id] = [];
-                                    }
-                                    studentProjects[student.id].push({
-                                        id: project.id,
-                                        name: project.name
-                                    });
+                    try {
+                        const usersByProject = await batchGetProjectUsers(projectIds);
+                        projects.forEach((project) => {
+                            const students = usersByProject?.[project.id] || [];
+                            projectMembers[project.id] = students;
+                            students.forEach(student => {
+                                if (!studentProjects[student.id]) {
+                                    studentProjects[student.id] = [];
+                                }
+                                studentProjects[student.id].push({
+                                    id: project.id,
+                                    name: project.name
                                 });
-                                
-                                // 收集所有學生（包含專案資訊）
-                                allStudents.push(...students.map(student => ({
+                                allStudents.push({
                                     ...student,
                                     projectId: project.id,
                                     projectName: project.name
-                                })));
+                                });
+                            });
+                        });
+                    } catch (error) {
+                        console.error("批次獲取學生失敗，改用逐專案請求:", error);
+                        const studentPromises = projects.map(async (project) => {
+                            try {
+                                const students = await getProjectUser(project.id);
+                                projectMembers[project.id] = students || [];
+                                if (students) {
+                                    students.forEach(student => {
+                                        if (!studentProjects[student.id]) {
+                                            studentProjects[student.id] = [];
+                                        }
+                                        studentProjects[student.id].push({
+                                            id: project.id,
+                                            name: project.name
+                                        });
+                                        allStudents.push({
+                                            ...student,
+                                            projectId: project.id,
+                                            projectName: project.name
+                                        });
+                                    });
+                                }
+                                return students || [];
+                            } catch (innerError) {
+                                console.error(`獲取專案 ${project.id} 學生失敗:`, innerError);
+                                projectMembers[project.id] = [];
+                                return [];
                             }
-                            
-                            return students || [];
-                        } catch (error) {
-                            console.error(`獲取專案 ${project.id} 學生失敗:`, error);
-                            projectMembers[project.id] = [];
-                            return [];
-                        }
-                    });
+                        });
 
-                    await Promise.all(studentPromises);
+                        await Promise.all(studentPromises);
+                    }
                     
                     // 去重複學生（同一個學生可能在多個專案中）
                     const uniqueStudents = Array.from(
@@ -222,9 +238,8 @@ export default function Announcement({ projectId, role, projectList }) {
 
     return (
         <div className="relative">
-            <TbBell
-                size={24}
-                className="ml-2 cursor-pointer"
+            <Bell
+                className="ml-2 h-6 w-6 cursor-pointer"
                 onClick={() => setShowNotifications(!showNotifications)}
             />
             {showNotifications && (
@@ -244,7 +259,7 @@ export default function Announcement({ projectId, role, projectList }) {
                                     onClick={() => setSelectedAnnouncement(notification)}
                                 >
                                     <div className="bg-green-100 text-green-600 rounded-full p-2 mt-1">
-                                        <IoChatbubbleEllipsesOutline size={20} />
+                                        <MessageCircle className="h-5 w-5" />
                                     </div>
                                     <div className="flex-1">
                                         <h4 className="text-sm font-semibold text-gray-900">{notification.title}</h4>

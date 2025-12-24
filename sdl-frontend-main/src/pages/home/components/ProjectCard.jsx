@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaEye } from 'react-icons/fa';
+import { Eye } from 'lucide-react';
 import dateFormat from 'dateformat';
 
 const Tooltip = ({ children, content }) => {
@@ -115,7 +115,7 @@ export default function ProjectCard({
           className='mt-2 bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 transition duration-200 ease-in-out font-semibold flex items-center justify-center'
           onClick={() => navigate(`/project/${project.id}/kanban?mode=observation`)}
         >
-          <FaEye className='mr-2' />
+          <Eye className='mr-2 h-4 w-4' />
           觀摩專案
         </button>
       );
@@ -196,7 +196,7 @@ export default function ProjectCard({
       {/* 標題區域 */}
       <div className='flex items-center justify-between'>
         <div className='flex items-center flex-1'>
-          {type === 'viewable' && <FaEye className='text-blue-600 mr-2' />}
+          {type === 'viewable' && <Eye className='text-blue-600 mr-2 h-4 w-4' />}
           <h3 className={`text-xl font-bold ${getTitleColor()}`}>{project.name}</h3>
           {type === 'completed' && (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 ml-2 text-[#5BA491]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
