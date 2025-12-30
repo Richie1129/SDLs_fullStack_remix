@@ -96,6 +96,15 @@ class SocketManager {
       console.error('❌ Socket 連接錯誤:', error);
       this.isConnecting = false;
 
+      // Linus: 如果是認證錯誤 (JWT Expired)，不要無限重試，避免灌爆伺服器日誌
+      // 這會導致前端資源被佔用，可能影響其他請求
+      if (error.message && (error.message.includes('jwt expired') || error.message.includes('Authentication error'))) {
+          console.warn('🛑 Socket 認證失敗 (JWT Expired)，停止自動重連。');
+          // 這裡不調用 scheduleReconnect，讓它停下來
+          // 用戶下次操作觸發 API 401 時會自動刷新 Token
+          return;
+      }
+
       // 上報錯誤
       const errorId = `socket_error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       errorReportingService.reportNetworkError(

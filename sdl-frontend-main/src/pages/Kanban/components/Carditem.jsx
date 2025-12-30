@@ -606,6 +606,7 @@ function Carditem({ data, index, columnIndex }) {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000, // Linus: 增加 60秒超時，避免請求無限掛起導致前端無反應
       });
 
       // 處理 MinIO 回傳的完整 URL 或本地相對路徑
@@ -1179,14 +1180,17 @@ function Carditem({ data, index, columnIndex }) {
                     readOnly={isObservationMode}
                   />
                 </div>
-                <textarea
-                  className={`rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4 ${isObservationMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                  rows={3}
-                  placeholder="內容"
-                  value={cardData.content}
-                  onChange={isObservationMode ? undefined : (e) => setCardData({ ...cardData, content: e.target.value })}
-                  readOnly={isObservationMode}
-                />
+                <div className="w-full mb-4">
+                  <textarea
+                    className={`rounded outline-none ring-2 ring-customgreen w-full p-2 block ${isObservationMode ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    style={{ minHeight: '120px', resize: 'vertical' }}
+                    rows={3}
+                    placeholder="內容"
+                    value={cardData.content}
+                    onChange={isObservationMode ? undefined : (e) => setCardData({ ...cardData, content: e.target.value })}
+                    readOnly={isObservationMode}
+                  />
+                </div>
 
                 {/* 時間資訊 */}
                 {(cardData.createdAt || cardData.updatedAt) && (
@@ -1234,8 +1238,8 @@ function Carditem({ data, index, columnIndex }) {
                   isObservationMode={isObservationMode}
                 />
 
-                {/* Linus: 底部操作列改為 sticky，確保永遠可見 */}
-                <div className='sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 p-4 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 lg:-mx-8 lg:-mb-8 mt-auto flex justify-end space-x-2 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]'>
+                {/* 底部操作列 */}
+                <div className='border-t border-gray-100 p-4 -mx-4 -mb-4 sm:-mx-6 sm:-mb-6 lg:-mx-8 lg:-mb-8 mt-auto flex justify-end space-x-2'>
                   {!isObservationMode && (
                     <button
                       onClick={cardHandleDelete}
