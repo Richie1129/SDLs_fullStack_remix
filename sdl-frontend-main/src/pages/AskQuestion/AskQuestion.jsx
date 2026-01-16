@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { TbSend } from "react-icons/tb";
 
 export default function AskQuestion() {
-    const [currentChat, setCurrentChat] = useState([]);
+    const [currentChat, setCurrentChat] = useState(null);  // ✅ 改為 null，因為它是物件不是陣列
     const [chats, setChats] = useState([]);
     const { projectId } = useParams();
     const [message, setMessage] = useState('');
@@ -33,9 +33,12 @@ export default function AskQuestion() {
             } else if (userRole === 'student') {
                 data = await getUserChatrooms(projectId, localStorage.getItem("id"));
             }
-            setChats(data);
+            // ✅ 確保 data 是陣列，否則設為空陣列
+            setChats(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to fetch data:', error);
+            // ✅ 錯誤時設為空陣列，避免 undefined
+            setChats([]);
         }
     };
 
@@ -130,7 +133,7 @@ export default function AskQuestion() {
                 // 如果用戶確認刪除
                 deleteChatroom(questionId).then(() => {
                     fetchChats();  // 刷新聊天室列表
-                    setCurrentChat([]);
+                    setCurrentChat(null);  // ✅ 改為 null
                     Swal.fire(
                         '已刪除！',
                         '聊天室已被刪除。',
@@ -193,7 +196,7 @@ export default function AskQuestion() {
                             </>
                         )}
                     </div>
-                    {chats.map(chat => (
+                    {Array.isArray(chats) && chats.map(chat => (
                         <div key={chat.id}
                             className={`p-component-sm mb-2 rounded shadow flex justify-between items-center cursor-pointer transition duration-300 ${selectedChatId === chat.id ? "bg-[#5BA491]/80 text-white font-semibold" : "bg-white hover:bg-[#5BA491]/50"}`}
                             onClick={() => fetchMessages(chat)}>
@@ -210,7 +213,7 @@ export default function AskQuestion() {
                     ))}
                 </div>
                 <div className="w-full lg:w-2/3 flex flex-col bg-white shadow-lg rounded-lg lg:min-h-0 mt-4 lg:mt-0">
-                    {currentChat.length === 0 ? (
+                    {!currentChat ? (
                         <div className="flex flex-col items-center gap-stack-md sm:gap-12 justify-center h-full p-component-base">
                             <Lottie className="w-48 sm:w-72 lg:w-96 max-w-full" animationData={Select_icon} />
                             <p className="text-body-lg sm:text-h3 font-bold text-center">請選擇左側聊天室列表</p>
