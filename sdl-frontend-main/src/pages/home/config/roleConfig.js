@@ -1,4 +1,6 @@
 // 角色配置 - 消除條件分支，統一行為管理
+import { getCurrentUserId } from '../../../utils/authUtils';
+
 export const roleConfig = {
   student: {
     // 顯示的區塊配置
@@ -58,7 +60,7 @@ export const roleConfig = {
 
     // 專案參數
     fetchParams: () => ({
-      params: { userId: localStorage.getItem("id") }
+      params: { userId: getCurrentUserId() }
     })
   },
 

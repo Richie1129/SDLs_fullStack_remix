@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
+import { getCurrentUser, getCurrentUserId, getCurrentUserRole } from '../utils/authUtils';
+import { userStorage } from '../services/storageService';
 
 // 自定義Hook用於管理用戶資訊並監聽更新
 export const useUserInfo = () => {
   const [userInfo, setUserInfo] = useState({
-    username: localStorage.getItem('username') || '',
-    account: localStorage.getItem('account') || '',
-    role: localStorage.getItem('role') || '',
-    class: localStorage.getItem('class') || '',
-    id: localStorage.getItem('id') || ''
+    username: userStorage.get('username', ''),
+    account: userStorage.get('account', ''),
+    role: getCurrentUserRole(),
+    class: userStorage.get('class', ''),
+    id: getCurrentUserId().toString()
   });
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export const useUserInfo = () => {
 
       // 同步更新localStorage（如果需要）
       if (userClass !== undefined) {
-        localStorage.setItem('class', userClass);
+        userStorage.set('class', userClass);
       }
     };
 
@@ -39,7 +41,7 @@ export const useUserInfo = () => {
 
 // 便捷的Hook，只返回username
 export const useUsername = () => {
-  const [username, setUsername] = useState(localStorage.getItem('username') || '');
+  const [username, setUsername] = useState(userStorage.get('username', ''));
 
   useEffect(() => {
     const handleUserProfileUpdated = (event) => {

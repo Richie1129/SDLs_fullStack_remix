@@ -12,6 +12,7 @@ import { getProject } from '../../api/project';
 import CongratulationsMain_icon from "../../assets/AnimationCongratulationsMain.json";
 import Congratulations_icon from "../../assets/AnimationCongratulations.json";
 import Lottie from "lottie-react";
+import { getStageInfo, setStageEnd, clearStageInfo } from '../../utils/authUtils';
 // import styles from "./bubble.module.css";
 
 export default function SubmitTask() {
@@ -26,7 +27,7 @@ export default function SubmitTask() {
         onSuccess: (res) => {
             if (res.message === "done") {
                 sucesssNotify("全部階段已完成")
-                localStorage.setItem('stageEnd', "true")
+                setStageEnd(true);
                 // 專案完成時，直接刷新當前頁面以顯示完成狀態
                 setTimeout(() => {
                     window.location.reload();
@@ -34,8 +35,7 @@ export default function SubmitTask() {
                 return; // 不執行後續的導航邏輯
             }
             sucesssNotify(res.message)
-            localStorage.removeItem("currentStage");
-            localStorage.removeItem("currentSubStage");
+            clearStageInfo();
             socket.emit('taskSubmitted', { projectId: projectId, message: 'Task updated' });
             navigate(`/project/${projectId}/kanban`)
         },
@@ -45,18 +45,20 @@ export default function SubmitTask() {
         }
     })
 
+    const { currentStage, currentSubStage } = getStageInfo();
+    
     const getSubStageQuery = useQuery("getSubStage", () => getSubStage({
         projectId: projectId,
-        currentStage: localStorage.getItem("currentStage"),
-        currentSubStage: localStorage.getItem("currentSubStage")
+        currentStage,
+        currentSubStage
     }),
         {
             onSuccess: (data) => {
                 setStageInfo(prev => ({
                     ...prev,
                     ...data,
-                    currentStage: localStorage.getItem("currentStage"),
-                    currentSubStage: localStorage.getItem("currentSubStage")
+                    currentStage,
+                    currentSubStage
                 }));
             },
             enabled: !!projectId
@@ -103,10 +105,11 @@ export default function SubmitTask() {
         }).then((result) => {
             if (result.isConfirmed) {
                 e.preventDefault();
+                const { currentStage, currentSubStage } = getStageInfo();
                 const formData = new FormData();
                 formData.append('projectId', projectId);
-                formData.append('currentStage', localStorage.getItem('currentStage'));
-                formData.append('currentSubStage', localStorage.getItem('currentSubStage'));
+                formData.append('currentStage', currentStage);
+                formData.append('currentSubStage', currentSubStage);
                 formData.append('content', JSON.stringify(taskData));
                 if (attachFile) {
                     for (let i = 0; i < attachFile.length; i++) {

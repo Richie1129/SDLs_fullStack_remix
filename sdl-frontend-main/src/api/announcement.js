@@ -1,10 +1,11 @@
 //frontend api for announcement.js
 import apiClient from './client';
+import { getCurrentUserId } from '../utils/authUtils';
 
 // 獲取公告列表
 export const getAnnouncements = async (projectId) => {
     try {
-        const userId = localStorage.getItem('id');
+        const userId = getCurrentUserId();
         let query = '';
 
         if (projectId) {

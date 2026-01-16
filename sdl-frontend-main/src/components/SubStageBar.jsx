@@ -6,6 +6,7 @@ import { getProject } from '../api/project';
 import { socket } from '../utils/socket';
 // import { useQuery } from 'react-query';
 import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
+import { getStageInfo, setStageInfo } from '../utils/authUtils';
 
 const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     const [animationClass, setAnimationClass] = useState('');
@@ -102,13 +103,12 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     }, [isOpen]);
 
     const handleOptionSelect = (option) => {
-        const currentStageIndex = parseInt(localStorage.getItem("currentStage"), 10) || 1;
-        const currentSubStageIndex = parseInt(localStorage.getItem('currentSubStage'), 10) || 1;
+        const { currentStage, currentSubStage } = getStageInfo();
         if (option === 'option1') {
-            setDialogContent(stageGoal[currentStageIndex - 1][currentSubStageIndex - 1] || '目前沒有設定子階段目標。');
+            setDialogContent(stageGoal[currentStage - 1][currentSubStage - 1] || '目前沒有設定子階段目標。');
         }
         if (option === 'option2') {
-            setDialogContent(stageProcess[currentStageIndex - 1][currentSubStageIndex - 1] || '目前沒有設定子階段流程。');
+            setDialogContent(stageProcess[currentStage - 1][currentSubStage - 1] || '目前沒有設定子階段流程。');
         }
         setShowOptions(false);
     };
@@ -203,8 +203,7 @@ export default function SubStageComponent() {
     const getProjectQuery = useQuery("getProject", () => getProject(projectId),
         {
             onSuccess: (data) => {
-                localStorage.setItem('currentStage', data.currentStage)
-                localStorage.setItem('currentSubStage', data.currentSubStage)
+                setStageInfo(data.currentStage, data.currentSubStage);
                 setCurrentStageIndex(data.currentStage)
                 setCurrentSubStageIndex(data.currentSubStage)
             },

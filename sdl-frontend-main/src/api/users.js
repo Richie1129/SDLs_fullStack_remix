@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { authStorage } from '../services/storageService';
 
 export const userLogin = async (userdata) => {
     const response = await apiClient.post(`/users/login`, userdata)
@@ -29,7 +30,7 @@ export const getAllTeachers = async () => {
 // get current user
 export const getCurrentUser = async () => {
     try {
-        const token = localStorage.getItem('authToken');
+        const token = authStorage.get('accessToken');
         const response = await apiClient.get('/users/me', {
             headers: {
                 'accessToken': token,

@@ -1,4 +1,5 @@
 import React from 'react';
+import { getCurrentUserId } from '../utils/authUtils';
 
 /**
  * 錯誤上報服務 - Linus式實用主義設計
@@ -169,7 +170,7 @@ class ErrorReportingService {
    */
   getUserId() {
     try {
-      const userId = localStorage.getItem('userId');
+      const userId = getCurrentUserId();
       // 生產環境可能需要匿名化處理
       return this.isDevelopment ? userId : (userId ? 'user_***' : 'anonymous');
     } catch {

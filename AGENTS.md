@@ -252,6 +252,202 @@ async function getUsers(req, res) {
 
 ---
 
+## 💾 StorageService - 統一的本地儲存管理
+
+### 為什麼需要 StorageService？
+
+原本專案中有 88+ 處直接使用 `localStorage`，存在以下問題：
+- ❌ 缺乏錯誤處理（localStorage 可能被禁用）
+- ❌ 沒有類型轉換（`getItem` 永遠返回字串）
+- ❌ 難以追蹤和維護
+- ❌ 缺乏命名空間隔離
+
+**StorageService** 提供統一、安全、易用的本地儲存介面。
+
+### 基礎使用
+
+```javascript
+import storageService from '@/services/storageService';
+
+// ✅ 基礎操作
+storageService.set('userId', 123);
+const userId = storageService.get('userId', 0); // 預設值 0
+
+// ✅ 物件儲存（自動 JSON 序列化）
+storageService.setObject('userProfile', { name: 'Alice', role: 'student' });
+const profile = storageService.getObject('userProfile');
+
+// ✅ 類型安全的取值
+const userId = storageService.getInt('id', 0);           // 返回數字
+const isActive = storageService.getBoolean('active');     // 返回布林值
+const score = storageService.getNumber('score', 0.0);     // 返回浮點數
+
+// ✅ 批量操作
+storageService.setMultiple({ userId: 123, role: 'teacher', class: 'A1' });
+const data = storageService.getMultiple(['userId', 'role']);
+
+// ✅ 刪除和清空
+storageService.remove('userId');
+storageService.clear(); // 清空所有資料
+```
+
+### 命名空間（推薦使用）
+
+```javascript
+import { authStorage, userStorage, projectStorage } from '@/services/storageService';
+
+// ✅ 認證資料
+authStorage.set('accessToken', 'eyJhbGci...');
+authStorage.set('refreshToken', 'refresh_token_123');
+
+// ✅ 使用者資料
+userStorage.setObject('profile', { id: 123, name: 'Alice' });
+userStorage.set('role', 'student');
+
+// ✅ 專案資料
+projectStorage.set('currentProjectId', 456);
+projectStorage.set('currentStage', 2);
+
+// ✅ 清空單個命名空間
+authStorage.clear(); // 只清空認證資料
+```
+
+### 認證工具函式（最佳實踐）
+
+```javascript
+import { 
+  getCurrentUserId, 
+  getCurrentUserRole, 
+  getCurrentUser,
+  isAuthenticated,
+  isTeacher,
+  setAuthTokens,
+  clearAuth 
+} from '@/utils/authUtils';
+
+// ✅ 獲取當前使用者資訊
+const userId = getCurrentUserId();           // 返回數字，預設 0
+const role = getCurrentUserRole();           // 返回 'student' | 'teacher' | 'admin' | 'guest'
+const user = getCurrentUser();               // 返回完整使用者物件
+
+// ✅ 權限檢查
+if (isAuthenticated()) {
+  // 使用者已登入
+}
+
+if (isTeacher()) {
+  // 顯示教師功能
+}
+
+// ✅ 登入時設定 Token
+setAuthTokens(accessToken, refreshToken);
+
+// ✅ 登出時清除資料
+clearAuth(); // 清除認證和使用者資料
+```
+
+### 遷移指南
+
+**舊寫法 ❌**:
+```javascript
+// 取值沒有預設值，可能返回 null
+const userId = localStorage.getItem('id');
+const role = localStorage.getItem('role');
+
+// 需要手動轉換類型
+const userIdNumber = parseInt(localStorage.getItem('id')) || 0;
+
+// 沒有錯誤處理
+localStorage.setItem('data', JSON.stringify(obj));
+```
+
+**新寫法 ✅**:
+```javascript
+import { getCurrentUserId, getCurrentUserRole } from '@/utils/authUtils';
+
+// 自動類型轉換，有預設值
+const userId = getCurrentUserId();      // 數字類型
+const role = getCurrentUserRole();      // 字串類型
+
+// 或使用 StorageService
+import { userStorage } from '@/services/storageService';
+const userId = userStorage.getInt('id', 0);
+const role = userStorage.get('role', 'guest');
+
+// 自動錯誤處理和 JSON 序列化
+userStorage.setObject('profile', obj);
+```
+
+### 常見場景
+
+**場景 1: 使用者登入**
+```javascript
+import { setAuthTokens, setUserData } from '@/utils/authUtils';
+
+// 登入成功後
+const loginResponse = await api.post('/auth/login', credentials);
+setAuthTokens(loginResponse.accessToken, loginResponse.refreshToken);
+setUserData({
+  id: loginResponse.id,
+  username: loginResponse.username,
+  role: loginResponse.role,
+  email: loginResponse.email
+});
+```
+
+**場景 2: 專案階段管理**
+```javascript
+import { getStageInfo, setStageInfo, clearStageInfo } from '@/utils/authUtils';
+
+// 獲取專案階段
+const { currentStage, currentSubStage, stageEnd } = getStageInfo();
+
+// 更新階段
+setStageInfo(2, 3); // 第 2 階段，第 3 子階段
+
+// 清除階段資訊
+clearStageInfo();
+```
+
+**場景 3: 取得使用者 ID（最常見）**
+```javascript
+// ❌ 舊寫法
+const currentUserId = parseInt(localStorage.getItem("id"));
+
+// ✅ 新寫法
+import { getCurrentUserId } from '@/utils/authUtils';
+const currentUserId = getCurrentUserId();
+```
+
+### 進階功能
+
+```javascript
+// 匯出資料（用於備份）
+const backup = storageService.export();
+
+// 匯入資料（用於還原）
+storageService.import(backup, true); // true = 先清空
+
+// 獲取使用統計
+const stats = storageService.getStats();
+// { itemCount: 15, estimatedSize: '2.34 KB', usage: '0.05%' }
+
+// 檢查 key 是否存在
+if (storageService.has('userId')) {
+  // key 存在
+}
+```
+
+### 錯誤處理
+
+StorageService 內建完整的錯誤處理：
+- ✅ localStorage 不可用時自動降級到記憶體儲存
+- ✅ 空間不足時自動清理舊資料
+- ✅ JSON 解析失敗時返回預設值
+- ✅ 敏感資料（token, password）自動遮蔽日誌
+
+---
+
 ## 🔒 錯誤處理規範
 
 ### 前端錯誤處理

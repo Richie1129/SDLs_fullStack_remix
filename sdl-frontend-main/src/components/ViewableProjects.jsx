@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import dateFormat from 'dateformat';
 import Loader from '../Loader';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../utils/userUtils';
+import { getCurrentUserId } from '../utils/authUtils';
+import { userStorage } from '../services/storageService';
 
 /**
  * 學生端觀摩專案區塊組件
@@ -13,7 +15,7 @@ import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../utils/us
  */
 const ViewableProjects = () => {
     const navigate = useNavigate();
-    const userClass = localStorage.getItem('userClass') || 'defaultClass'; // 假設儲存在 localStorage
+    const userClass = userStorage.get('userClass', 'defaultClass');
     const [expandedCard, setExpandedCard] = useState(null);
 
     // 取得可觀摩的專案
@@ -81,7 +83,7 @@ const ViewableProjects = () => {
     }
 
     // 過濾掉使用者自己參與的專案
-    const meId = String(localStorage.getItem('id') || '');
+    const meId = String(getCurrentUserId());
     const meName = getCurrentUsername() || '';
     const safeProjects = Array.isArray(viewableProjects?.projects) ? viewableProjects.projects : [];
     const filteredProjects = safeProjects.filter(p => {

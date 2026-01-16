@@ -12,6 +12,7 @@ import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import Announcement from './Announcement'; // 引入新的 Announcement 元件
 import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { getCurrentUsername, addUserUpdateListener } from '../utils/userUtils'; // 引入用戶資訊工具
+import { getCurrentUserRole, setStageInfo, clearStageInfo } from '../utils/authUtils';
 
 export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer }) {
   const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
@@ -66,7 +67,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     '/person/woman1.png', '/person/woman2.png', '/person/woman3.png'
   ];
 
-  const role = localStorage.getItem("role") || "guest"; // 預設值為 "guest"，避免空值
+  const role = getCurrentUserRole(); // 使用統一的認證工具
   const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
   const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
 
@@ -149,8 +150,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
                 }
 
                 setProjectInfo(projectData); // 保存當前專案資訊
-                localStorage.setItem("currentStage", projectData.currentStage);
-                localStorage.setItem("currentSubStage", projectData.currentSubStage);
+                setStageInfo(projectData.currentStage, projectData.currentSubStage);
                 setCurrentStageIndex(projectData.currentStage);
                 setCurrentSubStageIndex(projectData.currentSubStage);
             }
@@ -237,9 +237,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
 // }, [projectId, userName]); // 添加依賴 projectId 和 userName
   
   const cleanStage = () => {
-    localStorage.removeItem('currentStage');
-    localStorage.removeItem('currentSubStage');
-    localStorage.removeItem('stageEnd');
+    clearStageInfo();
   };
 
   const handleLogout = () => {

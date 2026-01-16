@@ -9,6 +9,8 @@ import {
   createNewSessionInDB
 } from "../../../../../api/rag";
 import { getCurrentUsername } from "../../../../../utils/userUtils";
+import { getCurrentUserId } from "../../../../../utils/authUtils";
+import storageService, { authStorage, projectStorage } from "../../../../../services/storageService";
 
 const API_URL = "/proxy/api/v1/chats/a159fe08e2d411efb3910242ac120004";
 const OPENING_MESSAGE = "嗨！我是一位專門輔導高中生科學探究與實作的自然科學導師。我會用適合高中生的語言，保持專業的同時，幫助你探索自然科學的奧秘，並引導你選擇一個有興趣的科展主題，以及更深入了解你的研究問題。什麼可以幫到你的嗎？";
@@ -19,10 +21,10 @@ const headers = {
 
 /**
  * ✅ 輔助函數：取得當前專案 ID（0破壞性）
- * 優先從 localStorage 取得，如果沒有則從 URL 解析
+ * 優先從 projectStorage 取得，如果沒有則從 URL 解析
  */
 const getCurrentProjectId = () => {
-  let projectIdRaw = localStorage.getItem('projectId');
+  let projectIdRaw = projectStorage.get('projectId');
 
   if (!projectIdRaw) {
     const m = window.location.pathname.match(/\/project\/(\d+)/);
@@ -41,17 +43,17 @@ export const useChatSession = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ 外部連結開關狀態（從 localStorage 讀取，預設關閉）
+  // ✅ 外部連結開關狀態（從 storageService 讀取，預設關閉）
   const [enableExternalLinks, setEnableExternalLinks] = useState(() => {
-    const saved = localStorage.getItem('science-assistant-external-links');
+    const saved = storageService.get('science-assistant-external-links');
     return saved === 'true';
   });
 
   const chatEndRef = useRef(null);
 
-  // ✅ 當開關狀態改變時，儲存到 localStorage
+  // ✅ 當開關狀態改變時，儲存到 storageService
   useEffect(() => {
-    localStorage.setItem('science-assistant-external-links', enableExternalLinks);
+    storageService.set('science-assistant-external-links', enableExternalLinks);
   }, [enableExternalLinks]);
 
   // ✅ 切換開關函數
@@ -88,7 +90,7 @@ export const useChatSession = () => {
       setIsLoadingSessions(true);
       console.log("正在獲取對話列表...");
 
-      const userId = localStorage.getItem('id') || '1';
+      const userId = getCurrentUserId() || 1;
       const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
       console.log("獲取用戶 ID:", userId, "專案 ID:", projectId || '未指定');
 
@@ -153,7 +155,7 @@ export const useChatSession = () => {
       setIsLoadingHistory(true);
       console.log(`正在載入對話歷史，Session ID: ${sessionId}`);
 
-      const userId = localStorage.getItem('id') || '1';
+      const userId = getCurrentUserId() || 1;
       const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
       console.log("使用用戶 ID:", userId, "專案 ID:", projectId || '未指定');
 
@@ -254,7 +256,7 @@ export const useChatSession = () => {
       setChatSessions(prevSessions => [newSession, ...prevSessions]);
 
       try {
-        const userId = localStorage.getItem('id') || '1';
+        const userId = getCurrentUserId() || 1;
         const userName = getCurrentUsername() || '未知用戶';
 
         await createNewSessionInDB(userId, newSessionId, userName);
@@ -311,7 +313,7 @@ export const useChatSession = () => {
         console.log("🔗 外部連結開關已開啟，將平行呼叫 RAGFlow 和 Gemini Grounding");
 
         // ✅ 取得認證令牌（優先使用 accessToken）
-        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        const token = authStorage.get('accessToken') || authStorage.get('token');
 
         const [ragflowResponse, geminiResponse] = await Promise.allSettled([
           // RAGFlow API 呼叫
@@ -403,10 +405,9 @@ export const useChatSession = () => {
       }
 
       // Socket 事件處理
-      const userIdRaw = localStorage.getItem('id') ?? localStorage.getItem('userId');
-      const userId = Number(userIdRaw);
+      const userId = getCurrentUserId();
       const userName = getCurrentUsername() || '未知用戶';
-      let projectIdRaw = localStorage.getItem('projectId');
+      let projectIdRaw = projectStorage.get('projectId');
 
       if (!projectIdRaw) {
         const m = window.location.pathname.match(/\/project\/(\d+)/);
@@ -504,7 +505,7 @@ export const useChatSession = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const userId = localStorage.getItem('id') || '1';
+      const userId = getCurrentUserId() || 1;
       const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
       console.log(`正在刪除對話: ${sessionId}`, "專案 ID:", projectId || '未指定');
 
@@ -576,7 +577,7 @@ export const useChatSession = () => {
     try {
       console.log("正在刷新對話歷史列表...");
 
-      const userId = localStorage.getItem('id') || '1';
+      const userId = getCurrentUserId() || 1;
       const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
       console.log("刷新對話列表，專案 ID:", projectId || '未指定');
 

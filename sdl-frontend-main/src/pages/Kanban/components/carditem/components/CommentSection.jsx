@@ -7,6 +7,7 @@ import { formatTime } from '../../../../../utils/timeUtils';
 import { formatUserDisplay } from '../../../../../utils/userDisplayUtils';
 import { buildFileImageUrl, buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 import { CommentErrorBoundary } from '../../../../../components/ErrorBoundary';
+import { getCurrentUserId } from '../../../../../utils/authUtils';
 
 const personImg = [
   '/person/man1.png', '/person/man2.png', '/person/man3.png',
@@ -237,7 +238,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                     </button>
                     {/* 編輯/刪除 */}
                     {(() => {
-                      const loggedInId = parseInt(localStorage.getItem('id')) || 0;
+                      const loggedInId = getCurrentUserId();
                       const isOwner = c.user?.id === loggedInId || c.userId === loggedInId;
                       return isOwner && !isObservationMode ? (
                         <CommentActions
@@ -256,7 +257,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
         {/* 新增評論輸入框 */}
         {!isObservationMode && (
           <div className='flex items-start space-x-3'>
-            <img src={(personImg[Math.abs(parseInt(localStorage.getItem('id')) || 0) % personImg.length])} alt='me' className='w-9 h-9 rounded-full object-cover' />
+            <img src={(personImg[Math.abs(getCurrentUserId()) % personImg.length])} alt='me' className='w-9 h-9 rounded-full object-cover' />
             <div className='flex-1'>
               <textarea
                 className='w-full border border-gray-300 rounded-md p-component-xs text-body-sm focus:outline-none focus:ring-2 focus:ring-customgreen'

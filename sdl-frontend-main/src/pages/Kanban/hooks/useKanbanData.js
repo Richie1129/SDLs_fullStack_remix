@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import { getKanbanColumns } from '../../../api/kanban';
 import { socket } from '../../../utils/socket';
 import { getCurrentUsername } from '../../../utils/userUtils';
+import { getCurrentUserId } from '../../../utils/authUtils';
 import Swal from 'sweetalert2';
 
 /**
@@ -206,7 +207,7 @@ export const useKanbanData = (projectId) => {
 
   const addCard = useCallback((title, columnIndex) => {
     const username = getCurrentUsername();
-    const userId = localStorage.getItem("id");
+    const userId = getCurrentUserId();
     console.log("🚀 Optimistically creating new task:", title, "in column:", columnIndex);
 
     const optimisticTask = {
@@ -245,7 +246,7 @@ export const useKanbanData = (projectId) => {
       projectId,
       user: { 
         username: username,
-        id: parseInt(userId) || null
+        id: userId || null
       }
     });
   }, [kanbanData, projectId, queryClient]);
@@ -254,7 +255,7 @@ export const useKanbanData = (projectId) => {
     console.log(`🚀 Optimistically creating multiple columns from template`, columnsToAdd);
     
     const username = getCurrentUsername();
-    const userId = parseInt(localStorage.getItem("id")) || null;
+    const userId = getCurrentUserId();
     
     let currentKanbanData = [...kanbanData];
     const newColumns = [];
@@ -341,7 +342,7 @@ export const useKanbanData = (projectId) => {
       newGroupName: name.trim(),
       user: {
         username: getCurrentUsername(),
-        id: parseInt(localStorage.getItem("id")) || null
+        id: getCurrentUserId() || null
       }
     });
   }, [kanbanData, projectId, queryClient]);
@@ -379,7 +380,7 @@ export const useKanbanData = (projectId) => {
       kanbanId: projectId,
       user: {
         username: getCurrentUsername(),
-        id: parseInt(localStorage.getItem('id')) || null
+        id: getCurrentUserId() || null
       }
     });
   }, [kanbanData, projectId, queryClient]);
@@ -398,7 +399,7 @@ export const useKanbanData = (projectId) => {
       columnOrder,
       user: {
         username: getCurrentUsername(),
-        id: parseInt(localStorage.getItem('id')) || null,
+        id: getCurrentUserId() || null,
       },
     });
   }, [kanbanData, projectId, queryClient]);
@@ -448,7 +449,7 @@ export const useKanbanData = (projectId) => {
       destination: { columnId: destColumnId, index: destination.index },
       user: {
         username: getCurrentUsername(),
-        id: parseInt(localStorage.getItem('id')) || null,
+        id: getCurrentUserId() || null,
       },
     });
   }, [kanbanData, projectId, queryClient]);

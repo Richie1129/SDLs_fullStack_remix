@@ -12,10 +12,11 @@ import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
 import TopBar from "../../components/TopBar";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { getCurrentUserId } from '../../utils/authUtils';
 
 const StudentOverview = () => {
   const navigate = useNavigate();
-  const userId = localStorage.getItem("id");
+  const userId = getCurrentUserId();
   const userName = getCurrentUsername();
   
   // 狀態管理

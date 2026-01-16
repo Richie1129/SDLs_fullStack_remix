@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { socket } from "../../utils/socket";
 import { getCurrentUsername } from '../../utils/userUtils';
+import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
 import { is5RsFormat } from "@/utils/5RsUtils.js";
 import { DAILY_ERROR_CODES } from '@/constants/dailyErrorCodes.js';
 
@@ -26,7 +27,7 @@ import { FiveRsViewModal } from "./components/FiveRsViewModal";
  */
 export default function ReflectionRefactored() {
   const { projectId } = useParams();
-  const userRole = localStorage.getItem("role");
+  const userRole = getCurrentUserRole();
 
   // Form states
   const [title, setTitle] = useState("");
@@ -55,7 +56,7 @@ export default function ReflectionRefactored() {
     setDailyData((prev) => ({
       ...prev,
       [name]: value,
-      userId: localStorage.getItem("id"),
+      userId: getCurrentUserId(),
     }));
     if (name === "title") setTitle(value);
     if (name === "content") setContent(value);

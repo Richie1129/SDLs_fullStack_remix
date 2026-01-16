@@ -17,6 +17,7 @@ import { useKanbanData } from './hooks/useKanbanData';
 import { useKanbanView } from './hooks/useKanbanView';
 import KanbanColumn from './components/KanbanColumn';
 import { PHASE_TEMPLATES, PHASES } from '../../config/kanbanTemplates';
+import { setStageInfo } from '../../utils/authUtils';
 
 /**
  * Kanban Component (Refactored)
@@ -83,8 +84,7 @@ export default function Kanban() {
       try {
         const proj = await getProject(projectId);
         if (proj?.currentStage && proj?.currentSubStage) {
-          localStorage.setItem('currentStage', proj.currentStage);
-          localStorage.setItem('currentSubStage', proj.currentSubStage);
+          setStageInfo(proj.currentStage, proj.currentSubStage);
           setCurrentStageIndex(proj.currentStage);
           setCurrentSubStageIndex(proj.currentSubStage);
         }
@@ -101,8 +101,7 @@ export default function Kanban() {
       try {
         const proj = await getProject(projectId);
         if (proj?.currentStage && proj?.currentSubStage) {
-          localStorage.setItem('currentStage', proj.currentStage);
-          localStorage.setItem('currentSubStage', proj.currentSubStage);
+          setStageInfo(proj.currentStage, proj.currentSubStage);
           setCurrentStageIndex(proj.currentStage);
           setCurrentSubStageIndex(proj.currentSubStage);
         }

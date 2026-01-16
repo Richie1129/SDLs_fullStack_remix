@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 
 // Hooks
 import { useTeacherDashboard } from "./hooks/useTeacherDashboard";
+import { getCurrentUserRole } from "../../utils/authUtils";
 
 // Components
 import ViewModeButtons from "./components/ViewModeButtons";
@@ -24,7 +25,7 @@ const TeacherManagementDashboard = () => {
   const [selectedGroup, setSelectedGroup] = useState(null);
   
   // 用戶角色
-  const userRole = localStorage.getItem("role");
+  const userRole = getCurrentUserRole();
   
   // 使用新的統合Hook獲取資料
   const {

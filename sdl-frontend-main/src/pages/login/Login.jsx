@@ -7,6 +7,7 @@ import { userLogin } from '../../api/users';
 import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
 import Swal from 'sweetalert2';
+import storageService, { authStorage, userStorage } from '../../services/storageService';
 
 export default function Login() {
   const [userContext, setUserContext] = useContext(AuthContext);
@@ -49,18 +50,25 @@ export default function Login() {
       },
       onSuccess: (res) => {
         console.log(res);
-        localStorage.setItem("accessToken", res.data.accessToken);
-        localStorage.setItem("refreshToken", res.data.refreshToken);  // 新增 refreshToken
-        localStorage.setItem("account", res.data.account);
-        localStorage.setItem("email", res.data.email);
-        localStorage.setItem("id", res.data.id);
-        localStorage.setItem("username", res.data.username);
-        localStorage.setItem("role", res.data.role);
+        
+        // 使用 StorageService 統一管理
+        authStorage.set('accessToken', res.data.accessToken);
+        authStorage.set('refreshToken', res.data.refreshToken);
+        
+        userStorage.setMultiple({
+          id: res.data.id,
+          account: res.data.account,
+          email: res.data.email,
+          username: res.data.username,
+          role: res.data.role
+        });
+        
+        // 可選資料
         if (res.data.class) {
-          localStorage.setItem("class", res.data.class);
+          userStorage.set('class', res.data.class);
         }
         if (res.data.seatNumber) {
-          localStorage.setItem("seatNumber", res.data.seatNumber);
+          userStorage.set('seatNumber', res.data.seatNumber);
         }
 
         setUserContext( prev =>{

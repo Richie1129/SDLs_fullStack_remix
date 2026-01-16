@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { getChatHistory, getChatSessions, deleteChatSession, createChatTurn } from '../api/assistant';
+import { authStorage, projectStorage } from '../services/storageService';
 
 /**
  * 專案助理聊天 Hook（支援 streaming + session management）
@@ -25,7 +26,7 @@ export function useAssistantChat() {
     // 🔑 0破壞性改進：從 localStorage 讀取上次的 sessionId（如果有）
     // 如果沒有，預設使用 'default'（向後相容）
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('assistant_current_session');
+      const saved = projectStorage.get('assistant_current_session');
       return saved || 'default';
     }
     return 'default';
@@ -54,7 +55,7 @@ export function useAssistantChat() {
   const updateCurrentSessionId = useCallback((sessionId) => {
     setCurrentSessionId(sessionId);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('assistant_current_session', sessionId);
+      projectStorage.set('assistant_current_session', sessionId);
     }
   }, []);
 
@@ -97,7 +98,7 @@ export function useAssistantChat() {
 
     try {
       // 取得 token（你的專案用 accessToken）
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const token = authStorage.get('accessToken') || authStorage.get('token');
 
       if (!token) {
         throw new Error('請先登入');
@@ -509,7 +510,7 @@ export function useAssistantChat() {
     if (isLoadingSessions || chatSessions.length === 0) return;
 
     const savedSessionId = typeof window !== 'undefined'
-      ? localStorage.getItem('assistant_current_session')
+      ? projectStorage.get('assistant_current_session')
       : null;
 
     // 🔧 關鍵修正：如果 currentSessionId 和 savedSessionId 相同，說明已經同步，不需要切換

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import dateFormat from 'dateformat';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';  // 引入Font Awesome圖標
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
 
 export default function ManagementOverview() {
   const [projectData, setProjectData] = useState([]);
@@ -22,7 +23,7 @@ export default function ManagementOverview() {
   const [classFilter, setClassFilter] = useState('all'); // 班級篩選
   const [completedSearch, setCompletedSearch] = useState(''); // 已結束活動搜尋
   const [doneSearch, setDoneSearch] = useState(''); // 已完成歷程搜尋
-  const role = localStorage.getItem("role");
+  const role = getCurrentUserRole();
   const userName = getCurrentUsername();
   const {
     isLoading,
@@ -30,7 +31,7 @@ export default function ManagementOverview() {
     error,
     data
   } = useQuery("projectDatas", () => getAllProject(
-    { params: { userId: localStorage.getItem("id") } }),
+    { params: { userId: getCurrentUserId() } }),
     { onSuccess: setProjectData }
   );
 

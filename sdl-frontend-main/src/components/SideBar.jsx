@@ -13,6 +13,7 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import ChatRoom from "./ChatRoom";
 import useObservationMode from "../hooks/useObservationMode"; // 引入觀摩模式 hook
+import { userStorage } from '../services/storageService';
 
 // Simple NavItem without framer-motion
 const NavItem = ({ children, selected, id, setSelected }) => {
@@ -136,7 +137,7 @@ export default function SideBar() {
   const { projectId } = useParams();
   const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
   const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
-  const role = localStorage.getItem("role");
+  const role = userStorage.get("role");
 
   // 使用觀摩模式 hook
   const { isObservationMode } = useObservationMode();

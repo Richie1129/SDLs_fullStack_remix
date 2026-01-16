@@ -8,6 +8,8 @@ import {
 } from '../../../api/project';
 import { getAllTeachers, batchGetProjectUsers } from '../../../api/users';
 import { getCurrentUsername } from '../../../utils/userUtils';
+import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
+import { userStorage, authStorage } from '../../../services/storageService';
 
 export const useProjectData = () => {
   const [members, setMembers] = useState([]);
@@ -15,9 +17,9 @@ export const useProjectData = () => {
   const [completedSearch, setCompletedSearch] = useState('');
   const [doneSearch, setDoneSearch] = useState('');
 
-  const role = localStorage.getItem("role");
+  const role = getCurrentUserRole();
   const userName = getCurrentUsername();
-  const userClass = localStorage.getItem('class');
+  const userClass = userStorage.get('class');
   const queryClient = useQueryClient();
 
   // 計算進度百分比
@@ -46,7 +48,7 @@ export const useProjectData = () => {
       if (role === "teacher") {
         return getProjectsByMentor(userName);
       } else {
-        return getAllProject({ params: { userId: localStorage.getItem("id") } });
+        return getAllProject({ params: { userId: getCurrentUserId() } });
       }
     },
     {
@@ -161,7 +163,7 @@ export const useProjectData = () => {
       try {
         const response = await getAllProject({
           params: { viewable_by: userClass },
-          headers: { 'accessToken': localStorage.getItem('accessToken') }
+          headers: { 'accessToken': authStorage.get('accessToken') }
         });
 
         let projects = [];
@@ -173,12 +175,12 @@ export const useProjectData = () => {
           projects = response;
         }
 
-        const myId = String(localStorage.getItem('id') || '');
+        const myId = getCurrentUserId();
         const myName = getCurrentUsername() || '';
         return projects.filter(p => {
           if (!Array.isArray(p?.members)) return true;
           return !p.members.some(m =>
-            String(m?.id ?? '') === myId || (m?.username || '') === myName
+            (m?.id ?? 0) === myId || (m?.username || '') === myName
           );
         });
       } catch (error) {

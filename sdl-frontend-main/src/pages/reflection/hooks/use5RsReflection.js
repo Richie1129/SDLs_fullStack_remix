@@ -4,6 +4,7 @@ import { is5RsFormat, parse5RsContent } from "@/utils/5RsUtils.js";
 import { analyze5RsReflection } from "@/api/llm5Rs.js";
 import { postClientAuditEvent } from "@/api/audit.js";
 import { DAILY_ERROR_CODES } from '@/constants/dailyErrorCodes.js';
+import { getCurrentUserId } from '@/utils/authUtils.js';
 
 /**
  * Hook for managing 5Rs reflection logic
@@ -75,7 +76,7 @@ export function use5RsReflection(projectId, updateMutation) {
       formData.append("projectId", projectId);
       formData.append("title", data.title);
       formData.append("content", data.content);
-      formData.append("userId", localStorage.getItem("id"));
+      formData.append("userId", getCurrentUserId());
 
       // Add attachments if any
       if (data.attachFile && data.attachFile.length > 0) {

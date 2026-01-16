@@ -15,6 +15,7 @@ import { deleteProjectCommentAttachment } from '../api/projectComments';
 import Modal from './Modal';
 import { formatUserDisplay } from '../utils/userDisplayUtils';
 import { buildFileDownloadUrl, buildFileImageUrl } from '@/utils/fileUrlBuilder.js';
+import { getCurrentUserId } from '../utils/authUtils';
 
 const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -31,7 +32,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const [replyTarget, setReplyTarget] = useState(null); // { id, username } | null
 
   const meId = useMemo(() => {
-    return parseInt(localStorage.getItem('id') || localStorage.getItem('userId') || '0');
+    return getCurrentUserId();
   }, []);
 
   const { data: comments = [], isLoading } = useQuery(

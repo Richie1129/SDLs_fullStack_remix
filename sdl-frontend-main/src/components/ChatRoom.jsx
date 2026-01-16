@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom';
 import { getChatroomHistory } from '../api/chatroom';  // 引入API函数
 import { formatTime } from '../utils/timeUtils';  // 使用統一的時間格式化函數
 import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
+import { getCurrentUserId } from '../utils/authUtils';
 
 export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
     const [currentMessage, setCurrentMessage] = useState("");
@@ -28,7 +29,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
             const messageData = {
                 room: projectId,
                 author: currentUsername,
-                creator: localStorage.getItem("id"),
+                creator: String(getCurrentUserId()),
                 message: currentMessage.trim(),  // 也可以在这里直接发送去除空格后的消息
                 createdAt: formatTime(new Date(), 'full')  // 使用格式化函数
             };

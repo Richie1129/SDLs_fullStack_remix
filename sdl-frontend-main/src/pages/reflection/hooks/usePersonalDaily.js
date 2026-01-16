@@ -10,6 +10,7 @@ import {
 } from "../../../api/reflection";
 import { extractErrorMessage } from '@/constants/dailyErrorCodes.js';
 import { getCurrentUsername } from '../../../utils/userUtils';
+import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
 
 /**
  * Hook for managing personal daily logs
@@ -17,8 +18,8 @@ import { getCurrentUsername } from '../../../utils/userUtils';
  */
 export function usePersonalDaily(projectId) {
   const queryClient = useQueryClient();
-  const userRole = localStorage.getItem("role");
-  const userId = localStorage.getItem("id");
+  const userRole = getCurrentUserRole();
+  const userId = getCurrentUserId();
 
   // State
   const [personalDaily, setPersonalDaily] = useState([]);

@@ -1,5 +1,6 @@
 import React from 'react';
 import errorReportingService from '../../services/errorReportingService';
+import { getCurrentUserId } from '../../utils/authUtils';
 
 /**
  * 評論系統專用錯誤邊界 - Linus式設計
@@ -51,7 +52,7 @@ class CommentErrorBoundary extends React.Component {
         errorId: this.state.errorId,
         component: 'CommentErrorBoundary',
         context: this.props.context || 'comment_system',
-        userId: localStorage.getItem('id') || 'unknown',
+        userId: getCurrentUserId() || 'unknown',
         url: window.location.href,
         userAgent: navigator.userAgent,
         timestamp: new Date().toISOString()

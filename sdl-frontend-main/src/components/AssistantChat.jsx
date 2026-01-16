@@ -4,6 +4,7 @@ import { getKanbanColumns } from '../api/kanban';
 import { socket } from '../utils/socket';
 import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
 import MessageContent from './MessageContent';
+import { getCurrentUserId } from '../utils/authUtils';
 
 export default function AssistantChat({ projectId, currentStage, currentSubStage, autoGreet = true, embedded = false }) {
   const currentUsername = useUsername(); // 取得當前使用者名稱
@@ -121,7 +122,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
       setIsSubmitting(true);
       // create chat turn with user message
       try {
-        const userId = parseInt(localStorage.getItem('id')) || null;
+        const userId = getCurrentUserId();
         const username = currentUsername || '未知';
         const turn = await createChatTurn({ projectId, body: { userId, username, userContent: text } });
         lastTurnIdRef.current = turn?.id || null;
@@ -188,7 +189,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
 
   async function handleCreateTaskFromSuggestion(suggest, preferColumnName = '待處理') {
     try {
-      const userId = parseInt(localStorage.getItem('id')) || null;
+      const userId = getCurrentUserId();
       const username = currentUsername || '未知';
       const kanbanData = await getKanbanColumns(projectId);
       // find column index by name; fallback to first column

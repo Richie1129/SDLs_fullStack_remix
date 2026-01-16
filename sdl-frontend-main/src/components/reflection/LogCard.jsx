@@ -8,6 +8,7 @@ import FileDownload from 'js-file-download';
 import { getAuditEvents } from '@/api/audit.js';
 import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
 import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { getCurrentUserId, getCurrentUserRole, isTeacher as checkIsTeacher } from '../../utils/authUtils';
 
 const LogCard = ({
   item,
@@ -28,9 +29,8 @@ const LogCard = ({
   const [historyItems, setHistoryItems] = useState([]);
 
   // 權限檢查：判斷當前用戶是否可以編輯此日誌
-  const currentUserId = parseInt(localStorage.getItem("id"));
-  const currentUserRole = localStorage.getItem("role");
-  const isTeacher = currentUserRole === "teacher";
+  const currentUserId = getCurrentUserId();
+  const isTeacher = checkIsTeacher();
   const isCreator = item.userId === currentUserId || item.user?.id === currentUserId;
   const isTeamLog = inferredTargetType === 'daily_team';
 

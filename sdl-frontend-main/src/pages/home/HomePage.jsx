@@ -15,6 +15,8 @@ import { useProjectData } from './hooks/useProjectData';
 import { useUsername } from '../../hooks/useUserInfo';
 import { createProject, inviteForProject, updateProject, deleteProject } from '../../api/project';
 import { getRoleConfig, hasPermission } from './config/roleConfig';
+import { getCurrentUserId } from '../../utils/authUtils';
+import storageService from '../../services/storageService';
 
 export default function HomePage() {
   // 狀態管理
@@ -73,7 +75,7 @@ export default function HomePage() {
 
   // 檢查是否是第一次使用
   useEffect(() => {
-    const hasSeenTour = localStorage.getItem(`hasSeenTour_${role}_${userName}`);
+    const hasSeenTour = storageService.get(`hasSeenTour_${role}_${userName}`);
     if (!hasSeenTour) {
       setShowOnboarding(true);
     }
@@ -81,7 +83,7 @@ export default function HomePage() {
 
   const handleTourComplete = () => {
     setShowOnboarding(false);
-    localStorage.setItem(`hasSeenTour_${role}_${userName}`, 'true');
+    storageService.set(`hasSeenTour_${role}_${userName}`, 'true');
   };
 
   // 建立專案 Mutation
@@ -152,7 +154,7 @@ export default function HomePage() {
       projectName,
       projectdescribe: projectDescription,
       projectMentor: selectedMentor,
-      userId: localStorage.getItem("id")
+      userId: getCurrentUserId()
     };
     createMutation.mutate(projectData);
   };
@@ -197,7 +199,7 @@ export default function HomePage() {
   const handleInviteProject = (referralCode) => {
     const inviteData = {
       referral_Code: referralCode,
-      userId: localStorage.getItem("id")
+      userId: getCurrentUserId()
     };
     inviteMutation.mutate(inviteData);
   };
