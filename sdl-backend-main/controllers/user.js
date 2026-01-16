@@ -142,13 +142,14 @@ exports.registerUser = (req, res) => {
     const role = req.body.role;
     const classField = req.body.class;
     const seatNumber = req.body.seatNumber;
-    console.log("Received username:", username);
-    console.log("Received account:", account);
-    console.log("Received email:", email);
-    console.log("Received password:", password);
-    console.log("Received role:", role);
-    console.log("Received class:", classField);
-    console.log("Received seatNumber:", seatNumber);
+    
+    const logger = require('../config/logger');
+    logger.info({ 
+        account, 
+        email, 
+        role, 
+        class: classField 
+    }, '收到註冊請求');
 
     // 檢查用戶是否已經存在
     User.findOne({

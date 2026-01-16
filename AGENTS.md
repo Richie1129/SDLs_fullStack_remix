@@ -280,14 +280,25 @@ async function fetchData() {
 }
 ```
 
-### 後端錯誤處理
+### 後端錯誤處理與日誌
+
+**使用統一的日誌系統** (`config/logger.js`):
 
 ```javascript
+const logger = require('../config/logger');
+
 // ✅ 所有 API 端點必須有 try-catch
 router.post('/create', validateToken, async (req, res) => {
   try {
     // 業務邏輯
     const result = await Model.create(req.body);
+    
+    // 使用結構化日誌記錄
+    logger.info({ 
+      userId: req.user.id, 
+      action: 'create',
+      resourceId: result.id 
+    }, '資源建立成功');
     
     // 審計記錄（關鍵操作）
     await auditService.logAction({
@@ -299,13 +310,44 @@ router.post('/create', validateToken, async (req, res) => {
     
     res.status(201).json(result);
   } catch (error) {
-    console.error('❌ 建立失敗:', error);
+    // ✅ 使用 logger.error 取代 console.error
+    logger.error({ 
+      err: error, 
+      userId: req.user.id,
+      body: req.body 
+    }, '建立資源失敗');
+    
     res.status(500).json({ 
       error: '操作失敗', 
       message: error.message 
     });
   }
 });
+```
+
+**日誌系統特性**:
+- ✅ 自動遮蔽敏感資訊 (password, token, apiKey)
+- ✅ 結構化日誌便於追蹤
+- ✅ 開發環境美化輸出，生產環境高效
+- ✅ 支援多種日誌等級 (debug, info, warn, error, fatal)
+
+**日誌使用範例**:
+```javascript
+const logger = require('../config/logger');
+
+// 基礎日誌
+logger.info('Server started on port 3000');
+logger.debug('Database connection established');
+
+// 結構化日誌
+logger.info({ userId: 123, action: 'login' }, 'User logged in');
+
+// 錯誤日誌
+logger.error({ err, userId: 123 }, 'Failed to process request');
+
+// 敏感資訊自動遮蔽
+logger.info({ email: 'user@example.com', password: '123456' }, 'Login');
+// 輸出: { email: 'user@example.com', password: '***REDACTED***' }
 ```
 
 ---
