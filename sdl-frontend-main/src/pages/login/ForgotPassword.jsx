@@ -52,18 +52,18 @@ export default function ForgotPassword() {
             wrapper="span"
             cursor={true}
             repeat={Infinity}
-            className="mx-auto font-press-start font-semibold text-2xl md:text-3xl lg:text-4xl mb-10 md:mb-20 text-center px-4"
+            className="mx-auto font-press-start font-semibold text-h2 md:text-h1 lg:text-display mb-10 md:mb-20 text-center px-4"
           />
           <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
         </div>
       </div>
 
       <div className="bg-white w-full md:max-w-md lg:max-w-full md:mx-auto md:w-1/2 xl:w-1/2 h-screen lg:px-36 xl:px-40 flex items-center justify-center">
-        <div className="bg-white w-full h-100 rounded-lg p-8 shadow-2xl">
-          <h1 className="text-lg font-bold mb-6 flex items-center justify-center">
+        <div className="bg-white w-full h-100 rounded-lg p-component-lg shadow-2xl">
+          <h1 className="text-body-lg font-bold mb-6 flex items-center justify-center">
             歡迎來到 <span style={{ color: "#5BA491" }} className="ml-2">SDLS</span>
           </h1>
-          <h1 className="text-4xl font-bold mb-6 flex items-center justify-center">忘記密碼</h1>
+          <h1 className="text-display font-bold mb-6 flex items-center justify-center">忘記密碼</h1>
 
           {!isSuccess ? (
             <form className="mt-6" onSubmit={handleSubmit}>
@@ -74,22 +74,22 @@ export default function ForgotPassword() {
               </div>
 
               <div>
-                <label className="block text-gray-700 text-base">電子郵件</label>
+                <label className="block text-gray-700 text-body">電子郵件</label>
                 <input
                   type="email"
                   name="email"
                   placeholder="請輸入電子郵件地址"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
+                  className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
                   required
                   autoFocus
                 />
               </div>
 
               {message && !isSuccess && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <span className="text-sm text-red-600">{message}</span>
+                <div className="mt-4 p-component-sm bg-red-50 border border-red-200 rounded-lg">
+                  <span className="text-body-sm text-red-600">{message}</span>
                 </div>
               )}
 
@@ -97,25 +97,25 @@ export default function ForgotPassword() {
                 type="submit"
                 disabled={forgotPasswordMutation.isLoading}
                 style={{ backgroundColor: "#5BA491" }}
-                className="w-full block text-white font-semibold rounded-lg px-4 py-3 mt-6 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full block text-white font-semibold rounded-lg px-4 py-3 mt-6 text-body disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {forgotPasswordMutation.isLoading ? '發送中...' : '發送重設郵件'}
               </button>
             </form>
           ) : (
             <div className="mt-6">
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="mb-6 p-component-base bg-green-50 border border-green-200 rounded-lg">
                 <div className="flex items-center">
                   <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
-                  <span className="text-sm text-green-700 font-medium">郵件發送成功！</span>
+                  <span className="text-body-sm text-green-700 font-medium">郵件發送成功！</span>
                 </div>
               </div>
 
               <div className="text-center mb-6">
                 <p className="text-gray-600 mb-4">{message}</p>
-                <p className="text-gray-500 text-sm">
+                <p className="text-gray-500 text-body-sm">
                   請檢查您的電子郵件收件匣（包含垃圾郵件資料夾），
                   並點擊郵件中的連結來重設密碼。
                 </p>
@@ -127,7 +127,7 @@ export default function ForgotPassword() {
                   setEmail('');
                   setMessage('');
                 }}
-                className="w-full block bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-4 py-3 mt-4 text-base"
+                className="w-full block bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-4 py-3 mt-4 text-body"
               >
                 重新發送
               </button>

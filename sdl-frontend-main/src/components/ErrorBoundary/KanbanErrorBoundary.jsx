@@ -201,8 +201,8 @@ class KanbanErrorBoundary extends React.Component {
       const { title, message, action } = this.getErrorMessage();
 
       return (
-        <div className="w-full h-full flex items-center justify-center bg-gray-50 p-6">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+        <div className="w-full h-full flex items-center justify-center bg-gray-50 p-component-md-lg">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-component-md-lg text-center">
             {/* 錯誤圖示 */}
             <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 mb-4">
               <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -212,18 +212,18 @@ class KanbanErrorBoundary extends React.Component {
             </div>
 
             {/* 錯誤標題 */}
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+            <h2 className="text-body-lg font-semibold text-gray-900 mb-2">
               {title}
             </h2>
 
             {/* 錯誤描述 */}
-            <p className="text-gray-600 mb-4 text-sm">
+            <p className="text-gray-600 mb-4 text-body-sm">
               {message}
             </p>
 
             {/* 自動恢復狀態 */}
             <div className="mb-6">
-              <p className="text-blue-600 text-sm mb-2">{action}</p>
+              <p className="text-blue-600 text-body-sm mb-2">{action}</p>
               <div className="w-full bg-blue-100 rounded-full h-2">
                 <div
                   className="bg-blue-600 h-2 rounded-full animate-pulse"
@@ -233,17 +233,17 @@ class KanbanErrorBoundary extends React.Component {
             </div>
 
             {/* 操作按鈕 */}
-            <div className="space-y-2">
+            <div className="space-y-stack-xs">
               <button
                 onClick={this.handleRetry}
-                className="w-full px-4 py-2 bg-customgreen text-white rounded-md hover:bg-teal-600 transition-colors text-sm"
+                className="w-full px-4 py-2 bg-customgreen text-white rounded-md hover:bg-teal-600 transition-colors text-body-sm"
               >
                 立即重試
               </button>
 
               <button
                 onClick={this.handleSaveAndReload}
-                className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors text-sm"
+                className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors text-body-sm"
               >
                 重新載入頁面
               </button>
@@ -252,23 +252,23 @@ class KanbanErrorBoundary extends React.Component {
             {/* 錯誤ID */}
             {this.state.errorId && (
               <div className="mt-4 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-500">
-                  錯誤ID: <code className="bg-gray-100 px-1 rounded text-xs">{this.state.errorId}</code>
+                <p className="text-caption text-gray-500">
+                  錯誤ID: <code className="bg-gray-100 px-1 rounded text-caption">{this.state.errorId}</code>
                 </p>
               </div>
             )}
 
             {/* 開發模式錯誤詳情 */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-4 p-3 bg-red-50 rounded border border-red-200 text-left">
-                <summary className="text-red-700 font-medium cursor-pointer text-xs">
+              <details className="mt-4 p-component-sm bg-red-50 rounded border border-red-200 text-left">
+                <summary className="text-red-700 font-medium cursor-pointer text-caption">
                   🔧 開發模式 - 錯誤詳情
                 </summary>
-                <div className="mt-2 text-xs text-red-600 font-mono">
+                <div className="mt-2 text-caption text-red-600 font-mono">
                   <p><strong>錯誤類型:</strong> {this.state.errorType}</p>
                   <p><strong>錯誤:</strong> {this.state.error.toString()}</p>
                   {this.state.errorInfo && (
-                    <pre className="mt-2 whitespace-pre-wrap text-xs overflow-auto max-h-32">
+                    <pre className="mt-2 whitespace-pre-wrap text-caption overflow-auto max-h-32">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   )}

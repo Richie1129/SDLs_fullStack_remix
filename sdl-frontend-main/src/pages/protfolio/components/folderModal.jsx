@@ -42,8 +42,8 @@ export default function FolderModal({folderModalOpen, setFolderModalOpen, modalD
                             const content = element[1];
                             return(
                                 <div className='mt-3' key={index}>
-                                <span className=' font-bold text-base '>{name}:</span>
-                                <span className=' font-bold text-base '>{content}</span>
+                                <span className=' font-bold text-body '>{name}:</span>
+                                <span className=' font-bold text-body '>{content}</span>
                                 </div>
                             )
                             
@@ -54,7 +54,7 @@ export default function FolderModal({folderModalOpen, setFolderModalOpen, modalD
                 {
                     (fileName || filename) ? 
                     <button 
-                        className="inline-flex items-center bg-white hover:bg-slate-200/80 text-slate-400 border-2 border-slate-400 font-semibold rounded-md p-1 mt-3 sm:px-4 text-base  min-w-[100px]"
+                        className="inline-flex items-center bg-white hover:bg-slate-200/80 text-slate-400 border-2 border-slate-400 font-semibold rounded-md p-1 mt-3 sm:px-4 text-body  min-w-[100px]"
                         onClick={handleDownload}
                     >
                         <AiOutlineCloudDownload size={32} className=" text-black mr-1"/> 

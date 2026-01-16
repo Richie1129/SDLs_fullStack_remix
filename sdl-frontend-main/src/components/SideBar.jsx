@@ -18,7 +18,7 @@ import useObservationMode from "../hooks/useObservationMode"; // 引入觀摩模
 const NavItem = ({ children, selected, id, setSelected }) => {
   return (
     <button
-      className="hover:bg-slate-100 transition-colors relative w-full rounded-md"
+      className="hover:bg-slate-100 transition-colors duration-fast relative w-full rounded-md"
       onClick={() => setSelected(id)}
     >
       <span className="block relative z-10 w-full">{children}</span>
@@ -34,18 +34,18 @@ const FloatingTooltip = ({ isVisible, position, content, onClose }) => {
   if (!isVisible) return null;
   return (
     <div
-      className="fixed z-50 bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-4 max-w-xs transition-opacity"
+      className="fixed z-50 bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-component-base max-w-xs transition-opacity"
       style={{ left: position.x + 10, top: position.y - 10 }}
     >
       <button
         onClick={onClose}
-        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors duration-fast"
       >
-        <span className="text-gray-500 text-sm">×</span>
+        <span className="text-gray-500 text-body-sm">×</span>
       </button>
       <div className="pr-8">
         <h3 className="font-bold text-[#5BA491] mb-2">{content.title}</h3>
-        <ul className="text-sm text-gray-700 space-y-1">
+        <ul className="text-body-sm text-gray-700 space-y-1">
           {content.items.map((item, index) => (
             <li key={index} className="flex items-start">
               <span className="text-[#5BA491] mr-2">•</span>
@@ -65,7 +65,7 @@ const HoverTooltip = ({ children, text, show = true }) => {
   return (
     <div className="relative group">
       {children}
-      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-lg text-sm font-semibold text-gray-900 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-white border border-gray-200 rounded-md shadow-lg text-body-sm font-semibold text-gray-900 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-fast pointer-events-none z-50">
         {text}
         <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-white"></div>
       </div>
@@ -93,7 +93,7 @@ const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick }) => {
         style={{ backgroundColor: getStageColor(stage.index) }}
         className="h-8 w-14 rounded-md flex items-center justify-center cursor-pointer mx-auto hover:shadow"
       >
-        <span className="text-xs font-semibold text-white tracking-wide">
+        <span className="text-caption font-semibold text-white tracking-wide">
           {stage.name}
         </span>
       </div>
@@ -107,7 +107,7 @@ const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick }) => {
       style={{ backgroundColor: getStageColor(stage.index) }}
       className="h-10 w-full flex items-center justify-center cursor-pointer rounded-lg hover:shadow"
     >
-      <span className="text-sm font-bold text-white">{stage.name}</span>
+      <span className="text-body-sm font-bold text-white">{stage.name}</span>
     </div>
   );
 };
@@ -293,7 +293,7 @@ export default function SideBar() {
         className={`z-10 bg-white flex flex-col flex-shrink-0 border-r-2 border-gray-200 h-full`}
       >
         {/* Header with Hamburger Button */}
-        <div className="flex-shrink-0 p-3 border-b border-gray-100">
+        <div className="flex-shrink-0 p-component-sm border-b border-gray-100">
           <div className={`flex ${open ? "justify-end" : "justify-center"}`}>
             <ToggleButton isOpen={open} onClick={() => setOpen(!open)} />
           </div>
@@ -314,7 +314,7 @@ export default function SideBar() {
                       >
                         <Link
                           to={menu?.link}
-                          className={`flex items-center text-sm font-medium p-3 rounded-lg w-full ${
+                          className={`flex items-center text-body-sm font-medium p-component-sm rounded-lg w-full ${
                             open ? "gap-3" : "justify-center"
                           }`}
                         >
@@ -322,7 +322,7 @@ export default function SideBar() {
                             {React.createElement(menu?.icon, { size: "24" })}
                           </div>
                           <span
-                                                    className={`whitespace-pre text-gray-700 overflow-hidden transition-opacity duration-300 ${open ? 'opacity-100' : 'opacity-0 w-0'}`}
+                                                    className={`whitespace-pre text-gray-700 overflow-hidden transition-opacity duration-normal ${open ? 'opacity-100' : 'opacity-0 w-0'}`}
                           >
                             {menu?.name}
                           </span>
@@ -338,17 +338,17 @@ export default function SideBar() {
         <div className="flex-shrink-0 border-t border-gray-100 bg-white">
           {/* Stage Progress Section */}
           {projectId && (
-            <div className="p-3">
+            <div className="p-component-sm">
               {/* Section Title for expanded state */}
               {open && (
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1 mb-3">
+                <div className="text-caption font-semibold text-gray-500 uppercase tracking-wide px-1 mb-3">
                   學習階段
                 </div>
               )}
 
               <div
                 className={`${
-                  open ? "space-y-2" : "flex flex-col items-center space-y-3"
+                  open ? "space-y-stack-xs" : "flex flex-col items-center space-y-3"
                 }`}
               >
                 {stages.map((stage) => (
@@ -366,11 +366,11 @@ export default function SideBar() {
 
           {/* Chat Room Button */}
           {projectId !== undefined && (
-            <div className="p-3 border-t border-gray-100">
+            <div className="p-component-sm border-t border-gray-100">
               <HoverTooltip text={!open ? "聊天室" : ""} show={!open}>
                 <div
                   onClick={() => setChatRoomOpen(true)}
-                  className={`flex items-center font-medium p-3 rounded-lg cursor-pointer bg-zinc-800 hover:bg-zinc-700 ${
+                  className={`flex items-center font-medium p-component-sm rounded-lg cursor-pointer bg-zinc-800 hover:bg-zinc-700 ${
                     open ? "gap-3" : "justify-center"
                   }`}
                 >
@@ -378,7 +378,7 @@ export default function SideBar() {
                     <BsChatDots size="24" className="text-white" />
                   </div>
                   <span
-                    className={`whitespace-pre text-sm text-white overflow-hidden transition-opacity duration-300 ${
+                    className={`whitespace-pre text-body-sm text-white overflow-hidden transition-opacity duration-normal ${
                       open ? "opacity-100" : "opacity-0 w-0"
                     }`}
                   >

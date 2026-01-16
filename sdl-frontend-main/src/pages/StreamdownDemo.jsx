@@ -251,11 +251,11 @@ console.log(message);
   const [currentExample, setCurrentExample] = useState('basic');
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-component-lg">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-display font-bold text-gray-900 mb-2">
             Streamdown 渲染效果示範
           </h1>
           <p className="text-gray-600">
@@ -264,27 +264,27 @@ console.log(message);
         </div>
 
         {/* Controls */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
-          <div className="flex items-center gap-4 mb-4">
-            <label className="flex items-center gap-2">
+        <div className="mb-6 bg-white rounded-lg shadow-sm p-component-base">
+          <div className="flex items-center gap-stack-sm mb-4">
+            <label className="flex items-center gap-stack-xs">
               <input
                 type="checkbox"
                 checked={isStreaming}
                 onChange={(e) => setIsStreaming(e.target.checked)}
                 className="rounded"
               />
-              <span className="text-sm text-gray-700">
+              <span className="text-body-sm text-gray-700">
                 模擬 Streaming 模式（啟用動畫效果）
               </span>
             </label>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-stack-xs">
             {Object.keys(examples).map((key) => (
               <button
                 key={key}
                 onClick={() => setCurrentExample(key)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-body-sm font-medium transition-colors ${
                   currentExample === key
                     ? 'bg-teal-600 text-white'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -302,28 +302,28 @@ console.log(message);
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-stack-md">
           {/* Raw Markdown */}
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-gray-800 text-white px-4 py-2 text-sm font-mono">
+            <div className="bg-gray-800 text-white px-4 py-2 text-body-sm font-mono">
               原始 Markdown
             </div>
-            <pre className="p-4 overflow-auto max-h-[600px] text-sm font-mono bg-gray-50">
+            <pre className="p-component-base overflow-auto max-h-[600px] text-body-sm font-mono bg-gray-50">
               {examples[currentExample]}
             </pre>
           </div>
 
           {/* Rendered Output */}
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="bg-teal-600 text-white px-4 py-2 text-sm font-semibold flex items-center justify-between">
+            <div className="bg-teal-600 text-white px-4 py-2 text-body-sm font-semibold flex items-center justify-between">
               <span>Streamdown 渲染結果</span>
               {isStreaming && (
-                <span className="text-xs bg-teal-700 px-2 py-1 rounded">
+                <span className="text-caption bg-teal-700 px-2 py-1 rounded">
                   🔄 Streaming 模式
                 </span>
               )}
             </div>
-            <div className="p-4 overflow-auto max-h-[600px]">
+            <div className="p-component-base overflow-auto max-h-[600px]">
               <MessageContent
                 content={examples[currentExample]}
                 isStreaming={isStreaming}
@@ -333,12 +333,12 @@ console.log(message);
         </div>
 
         {/* Feature Comparison */}
-        <div className="mt-8 bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+        <div className="mt-8 bg-white rounded-lg shadow-sm p-component-md-lg">
+          <h2 className="text-h2 font-bold text-gray-900 mb-4">
             vs react-markdown 對比
           </h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold">功能</th>
@@ -393,19 +393,19 @@ console.log(message);
         </div>
 
         {/* Instructions */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">
+        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-component-md-lg">
+          <h3 className="text-body-lg font-semibold text-blue-900 mb-2">
             💡 如何在專案助手中測試
           </h3>
-          <ol className="list-decimal list-inside space-y-2 text-blue-800">
+          <ol className="list-decimal list-inside space-y-stack-xs text-blue-800">
             <li>進入任意專案頁面</li>
             <li>開啟「AI 導師」（專案助手）</li>
             <li>輸入包含 Markdown 語法的訊息</li>
             <li>查看 AI 回應是否正確渲染</li>
           </ol>
-          <div className="mt-4 p-3 bg-white rounded border border-blue-200">
-            <p className="text-sm text-gray-700 mb-2 font-semibold">測試範例（複製貼到 AI 導師）：</p>
-            <code className="text-xs block bg-gray-50 p-2 rounded">
+          <div className="mt-4 p-component-sm bg-white rounded border border-blue-200">
+            <p className="text-body-sm text-gray-700 mb-2 font-semibold">測試範例（複製貼到 AI 導師）：</p>
+            <code className="text-caption block bg-gray-50 p-component-xs rounded">
               請用 Markdown 格式回覆：列出專案管理的**三個關鍵步驟**，並用表格展示每個步驟的重要性評分（1-5分）
             </code>
           </div>

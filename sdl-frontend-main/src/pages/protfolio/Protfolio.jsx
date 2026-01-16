@@ -218,20 +218,20 @@ export default function Protfolio() {
     return (
         <div className="h-full w-full bg-gray-50">
             {/* Two-Column Layout Container */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 h-full">
+            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 h-full">
                 
                 {/* Left Column - Stage Navigation (Sticky) */}
                 <div className="lg:col-span-1 flex flex-col bg-white lg:border-r border-gray-200">
                     {/* Header Section */}
-                    <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-[#5BA491]/5">
+                    <div className="flex-shrink-0 p-component-base sm:p-component-md-lg border-b border-gray-200 bg-gradient-to-r from-gray-50 to-[#5BA491]/5">
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-xl font-bold text-gray-800">學習歷程</h2>
+                            <h2 className="text-h3 font-bold text-gray-800">學習歷程</h2>
                         </div>
                         <button
                             onClick={handleExportPortfolio}
-                            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#5BA491] to-[#4a8f7c] text-white rounded-lg hover:shadow-lg hover:scale-[1.02] transition-all duration-200 font-medium"
+                            className="w-full flex items-center justify-center gap-stack-xs px-4 py-2.5 bg-gradient-to-r from-[#5BA491] to-[#4a8f7c] text-white rounded-lg hover:shadow-lg transition-shadow duration-fast font-medium"
                         >
-                            <AiOutlineCloudDownload className="text-xl" />
+                            <AiOutlineCloudDownload className="text-h3" />
                             <span>匯出學習歷程 PDF</span>
                         </button>
                     </div>
@@ -250,26 +250,26 @@ export default function Protfolio() {
                             showEmptyMessage && (
                                 <div className="h-full flex flex-col items-center justify-center py-12 px-4">
                                     <Lottie className="w-32 sm:w-48" animationData={ProtfoliioIcon} />
-                                    <p className="mt-4 text-sm sm:text-base text-gray-600 text-center">
+                                    <p className="mt-4 text-body-sm sm:text-body text-gray-600 text-center">
                                         目前還未新增歷程檔案，快和小組成員互相討論並記錄討論結果吧！
                                     </p>
                                 </div>
                             )
                         ) : (
-                            <div className="p-4 sm:p-6">
-                                <nav className="space-y-6">
+                            <div className="p-component-base sm:p-component-md-lg">
+                                <nav className="space-y-stack-md">
                                     {insertTitles.map((title, index) => (
                                         <div key={index} className="relative">
                                             {/* Stage Header */}
                                             <div className="flex items-center mb-4">
-                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-caption font-bold text-white ${
                                                     index < parseInt(currentStageIndex) - 1 ? 'bg-[#5BA491]' : 
                                                     index === parseInt(currentStageIndex) - 1 ? 'bg-[#5BA491]' : 
                                                     'bg-gray-300'
                                                 }`}>
                                                     {index < parseInt(currentStageIndex) - 1 ? '✓' : index + 1}
                                                 </div>
-                                                <h3 className={`ml-3 font-semibold text-lg ${
+                                                <h3 className={`ml-3 font-semibold text-body-lg ${
                                                     index < parseInt(currentStageIndex) ? 'text-gray-900' : 'text-gray-500'
                                                 }`}>
                                                     {title}
@@ -282,7 +282,7 @@ export default function Protfolio() {
                                             )}
                                             
                                             {/* Stage Items */}
-                                            <div className="ml-8 space-y-2">
+                                            <div className="ml-8 space-y-stack-xs">
                                                 {stagePortfolio
                                                     .filter(item => Math.floor(item.stage.split('-')[0]) === index + 1)
                                                     .map(item => (
@@ -304,7 +304,7 @@ export default function Protfolio() {
                                                                     } catch (_) { /* noop */ }
                                                                 }
                                                             }}
-                                                            className={`w-full text-left p-3 rounded-lg text-sm transition-all duration-200 relative group ${
+                                                            className={`w-full text-left p-component-sm rounded-lg text-body-sm transition-all duration-fast relative group ${
                                                                 activeItemId === item.id
                                                                     ? 'bg-[#5BA491] text-white shadow-lg scale-[1.02]'
                                                                     : 'text-gray-700 hover:bg-[#5BA491]/10 hover:shadow-md border border-gray-100'
@@ -321,7 +321,7 @@ export default function Protfolio() {
                                                                     {stageDescriptions[item.stage]}
                                                                 </span>
                                                                 <div className="flex items-center justify-between">
-                                                                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                                                    <span className={`text-caption font-medium px-2 py-1 rounded-full ${
                                                                         activeItemId === item.id 
                                                                             ? 'bg-white/20 text-white' 
                                                                             : 'bg-[#5BA491]/10 text-[#5BA491]'
@@ -329,7 +329,7 @@ export default function Protfolio() {
                                                                         {item.stage}
                                                                     </span>
                                                                     {item.createdAt && (
-                                                                        <span className={`text-xs ${
+                                                                        <span className={`text-caption ${
                                                                             activeItemId === item.id ? 'text-white/80' : 'text-gray-500'
                                                                         }`}>
                                                                             {formatTime(item.createdAt, 'date')}
@@ -352,14 +352,14 @@ export default function Protfolio() {
                 <div className="lg:col-span-2 flex flex-col bg-white border-t lg:border-t-0 border-gray-200">
                     {!activeItemId ? (
                         // Empty State - No item selected
-                        <div className="flex-1 flex-col flex items-center justify-center p-8">
+                        <div className="flex-1 flex-col flex items-center justify-center p-component-lg">
                             <div className="text-center max-w-md">
                                 <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-[#5BA491]/10 to-[#5BA491]/5 rounded-full flex items-center justify-center">
                                     <svg className="w-12 h-12 text-[#5BA491]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                     </svg>
                                 </div>
-                                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                                <h3 className="text-h3 font-semibold text-gray-800 mb-2">
                                     選擇階段項目
                                 </h3>
                                 <p className="text-gray-600 leading-relaxed">
@@ -371,13 +371,13 @@ export default function Protfolio() {
                         // Content Display - Item selected
                         <div className="flex-1 flex flex-col overflow-hidden">
                             {/* Header */}
-                            <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-[#5BA491]/10">
+                            <div className="flex-shrink-0 p-component-base sm:p-component-md-lg border-b border-gray-100 bg-gradient-to-r from-gray-50 to-[#5BA491]/10">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 min-w-0">
-                                        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+                                        <h2 className="text-h3 sm:text-h2 font-bold text-gray-900 mb-2">
                                             {stageDescriptions[modalData.stage]}
                                         </h2>
-                                        <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                                        <div className="flex flex-wrap gap-stack-sm text-body-sm text-gray-600">
                                             <span className="flex items-center">
                                                 <span className="w-2 h-2 bg-[#5BA491] rounded-full mr-2"></span>
                                                 階段: {modalData.stage}
@@ -405,7 +405,7 @@ export default function Protfolio() {
                                             setFolderModalOpen(false);
                                             setActiveItemId(null);
                                         }}
-                                        className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                        className="flex-shrink-0 p-component-xs text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                                     >
                                         <GrFormClose size={20} />
                                     </button>
@@ -415,10 +415,10 @@ export default function Protfolio() {
                             {/* Tabs Navigation */}
                             <div className="flex-shrink-0 border-b border-gray-200 bg-white">
                                 <div className="px-4 sm:px-6">
-                                    <nav className="flex space-x-8">
+                                    <nav className="flex space-x-stack-md-lg">
                                         <button
                                             onClick={() => setShowSubmitChangeHistory(false)}
-                                            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                            className={`py-4 px-1 border-b-2 font-medium text-body-sm transition-colors ${
                                                 !showSubmitChangeHistory 
                                                     ? 'border-[#5BA491] text-[#5BA491]' 
                                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -436,7 +436,7 @@ export default function Protfolio() {
                                                 setShowSubmitChangeHistory(true);
                                                 getSubmitChangeLogs(modalData.id).then(setSubmitChangeLogs).catch(console.error);
                                             }}
-                                            className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                                            className={`py-4 px-1 border-b-2 font-medium text-body-sm transition-colors ${
                                                 showSubmitChangeHistory 
                                                     ? 'border-[#5BA491] text-[#5BA491]' 
                                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -455,19 +455,19 @@ export default function Protfolio() {
 
                             {/* Content Area */}
                             <div className="flex-1 overflow-y-auto">
-                                <div className="p-4 sm:p-6">
+                                <div className="p-component-base sm:p-component-md-lg">
                                     {!showSubmitChangeHistory ? (
                                         // Edit Content Tab
-                                        <div className="space-y-6">
+                                        <div className="space-y-stack-md">
                                             {/* Content Form */}
-                                            <div className="space-y-6">
+                                            <div className="space-y-stack-md">
                                                 {Object.entries(editableContent).map(([key, value], index) => (
-                                                    <div key={index} className="space-y-2">
-                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                                    <div key={index} className="space-y-stack-xs">
+                                                        <label className="block text-body-sm font-semibold text-gray-700 mb-2">
                                                             {key}
                                                         </label>
                                                         <textarea
-                                                            className="w-full rounded-lg border-2 border-gray-200 bg-white text-sm p-4 shadow-sm transition-all duration-200 focus:border-[#5BA491] focus:ring-4 focus:ring-[#5BA491]/20 hover:border-gray-300 resize-none min-h-[100px]"
+                                                            className="w-full rounded-lg border-2 border-gray-200 bg-white text-body-sm p-component-base shadow-sm transition-all duration-fast focus:border-[#5BA491] focus:ring-4 focus:ring-[#5BA491]/20 hover:border-gray-300 resize-none min-h-[100px]"
                                                             rows={4}
                                                             value={value}
                                                             onChange={(e) => handleChange(key, e.target.value)}
@@ -480,20 +480,20 @@ export default function Protfolio() {
                                             </div>
 
                                             {/* File Section */}
-                                            <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                                            <div className="bg-gray-50 rounded-xl p-component-md-lg border border-gray-100">
                                                 <div className="mb-4">
-                                                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                                                    <h3 className="text-body-lg font-semibold text-gray-800 mb-2">
                                                         附加檔案
                                                     </h3>
-                                                    <p className="text-xs text-gray-500 mb-3">
+                                                    <p className="text-caption text-gray-500 mb-3">
                                                         💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB
                                                     </p>
                                                     {modalData.fileName ? (
-                                                        <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded border inline-block">
+                                                        <p className="text-body-sm text-gray-600 font-mono bg-white px-3 py-1 rounded border inline-block">
                                                             {modalData.fileName}
                                                         </p>
                                                     ) : (
-                                                        <p className="text-sm text-gray-500">無附加檔案</p>
+                                                        <p className="text-body-sm text-gray-500">無附加檔案</p>
                                                     )}
                                                 </div>
                                                 
@@ -509,7 +509,7 @@ export default function Protfolio() {
                                                                     FileDownload(blob, modalData.fileName || modalData.originalName || "downloaded-file");
                                                                 }
                                                             }}
-                                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors shadow-sm"
+                                                            className="inline-flex items-center px-4 py-2 border border-transparent text-body-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors shadow-sm"
                                                         >
                                                             <AiOutlineCloudDownload className="mr-2 w-4 h-4" />
                                                             下載
@@ -518,7 +518,7 @@ export default function Protfolio() {
                                                     {/* 上傳檔案按鈕 - 觀摩模式隱藏 */}
                                                     {!isObservationMode && (
                                                         <div className="flex flex-col gap-1">
-                                                            <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 cursor-pointer transition-colors shadow-sm">
+                                                            <label className="inline-flex items-center px-4 py-2 border border-transparent text-body-sm font-medium rounded-lg text-white bg-[#5BA491] hover:bg-[#5BA491]/80 cursor-pointer transition-colors shadow-sm">
                                                                 <AiOutlineUpload className="mr-2 w-4 h-4" />
                                                                 {modalData.fileData ? "重新上傳" : "上傳檔案"}
                                                                 <input
@@ -540,7 +540,7 @@ export default function Protfolio() {
                                                         setFolderModalOpen(false);
                                                         setActiveItemId(null);
                                                     }}
-                                                    className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                                                    className="px-6 py-2 border border-gray-300 rounded-lg text-body-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                                                 >
                                                     取消
                                                 </button>
@@ -548,7 +548,7 @@ export default function Protfolio() {
                                                 {!isObservationMode && (
                                                     <button
                                                         onClick={handleSave}
-                                                        className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
+                                                        className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-body-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
                                                     >
                                                         儲存變更
                                                     </button>
@@ -557,10 +557,10 @@ export default function Protfolio() {
                                         </div>
                                     ) : (
                                         // Change History Tab
-                                        <div className="space-y-4">
+                                        <div className="space-y-stack-sm">
                                             <div className="flex items-center justify-between">
-                                                <h3 className="text-lg font-semibold text-gray-800">變更歷史</h3>
-                                                <span className="text-sm text-gray-500">
+                                                <h3 className="text-body-lg font-semibold text-gray-800">變更歷史</h3>
+                                                <span className="text-body-sm text-gray-500">
                                                     {submitChangeLogs.length} 個變更
                                                 </span>
                                             </div>
@@ -575,16 +575,16 @@ export default function Protfolio() {
                                                     <p className="text-gray-500">無變更歷史記錄</p>
                                                 </div>
                                             ) : (
-                                                <div className="space-y-4 max-h-[600px] overflow-y-auto">
+                                                <div className="space-y-stack-sm max-h-[600px] overflow-y-auto">
                                                     {submitChangeLogs.map((log, index) => (
                                                         <div 
                                                             key={log.id || index} 
-                                                            className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow"
+                                                            className="bg-white border border-gray-200 rounded-xl p-component-md-lg shadow-sm hover:shadow-md transition-shadow"
                                                         >
                                                             <div className="flex items-center justify-between mb-4">
                                                                 <div className="flex items-center space-x-3">
                                                                     <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                                                                        <span className="text-xs font-medium text-gray-600">
+                                                                        <span className="text-caption font-medium text-gray-600">
                                                                             {(log.changedBy || 'U')[0].toUpperCase()}
                                                                         </span>
                                                                     </div>
@@ -592,7 +592,7 @@ export default function Protfolio() {
                                                                         <span className="font-medium text-gray-900">
                                                                             {log.changedBy || '未知使用者'}
                                                                         </span>
-                                                                        <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                                                                        <span className={`ml-2 px-2 py-1 rounded-full text-caption font-medium ${
                                                                             log.changeType === 'create' ? 'bg-green-100 text-green-700' : 
                                                                             log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : 
                                                                             'bg-red-100 text-red-700'
@@ -603,7 +603,7 @@ export default function Protfolio() {
                                                                         </span>
                                                                     </div>
                                                                 </div>
-                                                                <span className="text-xs text-gray-500">
+                                                                <span className="text-caption text-gray-500">
                                                                     {formatTime(log.createdAt, 'full')}
                                                                 </span>
                                                             </div>
@@ -614,18 +614,18 @@ export default function Protfolio() {
                                                             
                                                             {log.fieldName && (
                                                                 <div className="mb-4">
-                                                                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-xs font-medium rounded-full">
+                                                                    <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 text-caption font-medium rounded-full">
                                                                         欄位: {log.fieldName}
                                                                     </span>
                                                                 </div>
                                                             )}
                                                             
                                                             {(log.oldValue || log.newValue) && (
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-sm">
                                                                     {log.oldValue && (
-                                                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                                                            <div className="text-xs font-semibold text-red-700 mb-2 uppercase tracking-wide">原始值</div>
-                                                                            <div className="text-sm text-red-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                                                        <div className="bg-red-50 border border-red-200 rounded-lg p-component-base">
+                                                                            <div className="text-caption font-semibold text-red-700 mb-2 uppercase tracking-wide">原始值</div>
+                                                                            <div className="text-body-sm text-red-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
                                                                                 {log.fieldName === 'content' ? (
                                                                                     (() => {
                                                                                         try {
@@ -647,9 +647,9 @@ export default function Protfolio() {
                                                                     )}
                                                                     
                                                                     {log.newValue && (
-                                                                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                                                            <div className="text-xs font-semibold text-green-700 mb-2 uppercase tracking-wide">新值</div>
-                                                                            <div className="text-sm text-green-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                                                                        <div className="bg-green-50 border border-green-200 rounded-lg p-component-base">
+                                                                            <div className="text-caption font-semibold text-green-700 mb-2 uppercase tracking-wide">新值</div>
+                                                                            <div className="text-body-sm text-green-800 whitespace-pre-wrap max-h-32 overflow-y-auto">
                                                                                 {log.fieldName === 'content' ? (
                                                                                     (() => {
                                                                                         try {

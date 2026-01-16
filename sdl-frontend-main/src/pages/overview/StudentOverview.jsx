@@ -419,23 +419,23 @@ const StudentOverview = () => {
     <div className="relative h-screen bg-gray-50 overflow-hidden flex flex-col">
       <TopBar />
       <main className="flex-1 overflow-y-auto">
-        <div className="p-3 sm:p-6">
+        <div className="p-component-sm sm:p-component-md-lg">
           <div className="max-w-7xl mx-auto">
             {/* 頁面標題 */}
             <div className="mb-6 sm:mb-16">
               <div className="flex items-center mb-4">
                 <button
                   onClick={() => navigate("/homepage")}
-                  className="flex items-center p-2 mr-3 text-gray-600 hover:text-teal-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex items-center p-component-xs mr-3 text-gray-600 hover:text-teal-600 hover:bg-gray-100 rounded-lg transition-colors"
                   title="返回首頁"
                 >
                   <HiArrowLeft size={24} />
                 </button>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-teal-600 mb-2">
+                  <h1 className="text-h2 sm:text-h1 lg:text-display font-extrabold text-teal-600 mb-2">
                     我的學習歷程
                   </h1>
-                  <p className="text-base sm:text-lg text-gray-600">
+                  <p className="text-body sm:text-body-lg text-gray-600">
                     歡迎回來，{userName}！追踪你的整體學習進度與成長軌跡。
                   </p>
                 </div>
@@ -443,109 +443,109 @@ const StudentOverview = () => {
             </div>
 
             {/* 統計卡片區域（增強版） */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6 mb-6 sm:mb-8">
-              <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-4 sm:p-6 rounded-xl text-white">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
+              <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-teal-100 text-xs sm:text-sm">參與專案</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalProjects}</p>
+                    <p className="text-teal-100 text-caption sm:text-body-sm">參與專案</p>
+                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalProjects}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">📚</div>
+                  <div className="text-h1 sm:text-display">📚</div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 sm:p-6 rounded-xl text-white">
+              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-blue-100 text-xs sm:text-sm">平均進度</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.averageProgress}%</p>
+                    <p className="text-blue-100 text-caption sm:text-body-sm">平均進度</p>
+                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.averageProgress}%</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">📈</div>
+                  <div className="text-h1 sm:text-display">📈</div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-green-500 to-green-600 p-4 sm:p-6 rounded-xl text-white">
+              <div className="bg-gradient-to-r from-green-500 to-green-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-green-100 text-xs sm:text-sm">總任務數</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalTasks}</p>
+                    <p className="text-green-100 text-caption sm:text-body-sm">總任務數</p>
+                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalTasks}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">📋</div>
+                  <div className="text-h1 sm:text-display">📋</div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4 sm:p-6 rounded-xl text-white">
+              <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-orange-100 text-xs sm:text-sm">聊天互動</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalChatMessages}</p>
+                    <p className="text-orange-100 text-caption sm:text-body-sm">聊天互動</p>
+                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalChatMessages}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">💬</div>
+                  <div className="text-h1 sm:text-display">💬</div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 sm:p-6 rounded-xl text-white">
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-purple-100 text-xs sm:text-sm">想法節點</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalIdeaNodes}</p>
+                    <p className="text-purple-100 text-caption sm:text-body-sm">想法節點</p>
+                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalIdeaNodes}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">💡</div>
+                  <div className="text-h1 sm:text-display">💡</div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-4 sm:p-6 rounded-xl text-white">
+              <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-pink-100 text-xs sm:text-sm">AI互動</p>
-                    <p className="text-2xl sm:text-3xl font-bold">{personalStats.totalAiInteractions}</p>
+                    <p className="text-pink-100 text-caption sm:text-body-sm">AI互動</p>
+                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalAiInteractions}</p>
                   </div>
-                  <div className="text-3xl sm:text-4xl">🤖</div>
+                  <div className="text-h1 sm:text-display">🤖</div>
                 </div>
               </div>
             </div>
 
             {/* 主要內容區域 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-md sm:gap-stack-md-lg">
               {/* 左側 - 專案列表 */}
-              <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+              <div className="lg:col-span-2 space-y-stack-md sm:space-y-stack-md-lg">
                 {/* 我的專案 */}
-                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6">我的專案</h2>
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
+                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">我的專案</h2>
+                  <div className="space-y-stack-sm max-h-96 overflow-y-auto">
                     {allProjects.length > 0 ? (
                       allProjects.map((project, index) => {
                         const progress = calculateProgress(project.currentStage, project.currentSubStage);
                         const members = projectMembers[project.id] || [];
                         return (
-                          <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
-                              <h3 className="font-semibold text-gray-800 text-base sm:text-lg">{project.name}</h3>
-                              <div className="flex items-center space-x-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(progress)}`}>
+                          <div key={index} className="border border-gray-200 rounded-lg p-component-base hover:shadow-md transition-shadow">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-stack-xs sm:space-y-0">
+                              <h3 className="font-semibold text-gray-800 text-body sm:text-body-lg">{project.name}</h3>
+                              <div className="flex items-center space-x-stack-xs">
+                                <span className={`px-2 py-1 rounded-full text-caption font-medium ${getStatusColor(progress)}`}>
                                   {project.ProjectEnd ? "已完成" : `${progress}%`}
                                 </span>
                                 <button
                                   onClick={() => navigate(`/project/${project.id}/kanban`)}
-                                  className="px-3 py-1 bg-teal-600 text-white text-xs rounded-lg hover:bg-teal-700 transition-colors"
+                                  className="px-3 py-1 bg-teal-600 text-white text-caption rounded-lg hover:bg-teal-700 transition-colors"
                                 >
                                   進入專案
                                 </button>
                               </div>
                             </div>
                             
-                            <p className="text-gray-600 text-sm mb-2 truncate">{project.describe}</p>
+                            <p className="text-gray-600 text-body-sm mb-2 truncate">{project.describe}</p>
                             
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500 space-y-1 sm:space-y-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-caption text-gray-500 space-y-1 sm:space-y-0">
                               <span>階段: {project.currentStage}-{project.currentSubStage}</span>
                               <span>指導老師: {project.mentor}</span>
                             </div>
                             
-                            <div className="mt-2 flex items-center text-xs text-gray-500">
+                            <div className="mt-2 flex items-center text-caption text-gray-500">
                               <span className="mr-2">團隊成員:</span>
                               <div className="flex items-center space-x-1">
                                 {members.slice(0, 3).map((member, idx) => (
-                                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-xs">
+                                  <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-caption">
                                     {member.username}
                                   </span>
                                 ))}
@@ -557,13 +557,13 @@ const StudentOverview = () => {
                             
                             {!project.ProjectEnd && (
                               <div className="mt-3">
-                                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                <div className="flex justify-between text-caption text-gray-500 mb-1">
                                   <span>進度</span>
                                   <span>{progress}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
                                   <div 
-                                    className="bg-teal-600 h-2 rounded-full transition-all duration-500" 
+                                    className="bg-teal-600 h-2 rounded-full transition-all duration-slow" 
                                     style={{ width: `${progress}%` }}
                                   ></div>
                                 </div>
@@ -587,24 +587,24 @@ const StudentOverview = () => {
                 </div>
 
                 {/* 學習軌跡圖表 */}
-                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">學習進度軌跡</h2>
-                  <div className="space-y-4">
+                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
+                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">學習進度軌跡</h2>
+                  <div className="space-y-stack-sm">
                     {allProjects.map((project, index) => {
                       const progress = calculateProgress(project.currentStage, project.currentSubStage);
                       return (
-                        <div key={index} className="bg-gray-50 p-4 rounded-lg">
+                        <div key={index} className="bg-gray-50 p-component-base rounded-lg">
                           <div className="flex justify-between items-center mb-2">
                             <span className="font-medium text-gray-700">{project.name}</span>
-                            <span className="text-sm text-gray-500">{progress}%</span>
+                            <span className="text-body-sm text-gray-500">{progress}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">
                             <div 
-                              className="bg-gradient-to-r from-teal-500 to-teal-600 h-3 rounded-full transition-all duration-500" 
+                              className="bg-gradient-to-r from-teal-500 to-teal-600 h-3 rounded-full transition-all duration-slow" 
                               style={{ width: `${progress}%` }}
                             ></div>
                           </div>
-                          <div className="mt-2 text-xs text-gray-500">
+                          <div className="mt-2 text-caption text-gray-500">
                             目前階段: 第{project.currentStage}階段 - 子階段{project.currentSubStage}
                           </div>
                         </div>
@@ -615,22 +615,22 @@ const StudentOverview = () => {
               </div>
 
               {/* 右側 - 最近活動（增強版） */}
-              <div className="space-y-6 sm:space-y-8">
+              <div className="space-y-stack-md sm:space-y-stack-md-lg">
                 {/* 最近學習活動 */}
-                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 sm:mb-6">最近活動</h2>
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
+                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">最近活動</h2>
+                  <div className="space-y-stack-sm max-h-96 overflow-y-auto">
                     {recentActivities.length > 0 ? (
                       recentActivities.map((activity, index) => (
                         <div key={index} className="border-l-4 border-teal-500 pl-4 py-2">
-                          <div className="flex items-start space-x-2">
-                            <span className="text-lg flex-shrink-0">{getActivityIcon(activity.type)}</span>
+                          <div className="flex items-start space-x-stack-xs">
+                            <span className="text-body-lg flex-shrink-0">{getActivityIcon(activity.type)}</span>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-800 text-sm">{activity.title}</h4>
-                              <p className="text-xs text-gray-600 mt-1 break-words">{activity.description}</p>
+                              <h4 className="font-medium text-gray-800 text-body-sm">{activity.title}</h4>
+                              <p className="text-caption text-gray-600 mt-1 break-words">{activity.description}</p>
                               <div className="flex justify-between items-center mt-2">
-                                <span className="text-xs text-teal-600 font-medium truncate">{activity.projectName}</span>
-                                <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{activity.time}</span>
+                                <span className="text-caption text-teal-600 font-medium truncate">{activity.projectName}</span>
+                                <span className="text-caption text-gray-400 flex-shrink-0 ml-2">{activity.time}</span>
                               </div>
                             </div>
                           </div>
@@ -643,8 +643,8 @@ const StudentOverview = () => {
                 </div>
 
                 {/* 本週反思摘要 */}
-                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">本週反思</h2>
+                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
+                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">本週反思</h2>
                   <div className="space-y-3 max-h-64 overflow-y-auto">
                     {allReflections
                       .filter(r => {
@@ -654,12 +654,12 @@ const StudentOverview = () => {
                       })
                       .slice(0, 5)
                       .map((reflection, index) => (
-                        <div key={index} className="bg-gray-50 p-3 rounded-lg">
+                        <div key={index} className="bg-gray-50 p-component-sm rounded-lg">
                           <div className="flex justify-between items-start mb-2">
-                            <span className="text-sm font-medium text-teal-600">{reflection.projectName}</span>
-                            <span className="text-xs text-gray-400">{formatRelativeTime(reflection.createdAt)}</span>
+                            <span className="text-body-sm font-medium text-teal-600">{reflection.projectName}</span>
+                            <span className="text-caption text-gray-400">{formatRelativeTime(reflection.createdAt)}</span>
                           </div>
-                          <p className="text-sm text-gray-600 line-clamp-2">{reflection.content || "無內容"}</p>
+                          <p className="text-body-sm text-gray-600 line-clamp-2">{reflection.content || "無內容"}</p>
                         </div>
                       ))}
                     {personalStats.thisWeekReflections === 0 && (
@@ -669,9 +669,9 @@ const StudentOverview = () => {
                 </div>
 
                 {/* 學習統計（增強版） */}
-                <div className="bg-white p-4 sm:p-6 rounded-xl shadow-sm">
-                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-4">學習統計</h2>
-                  <div className="space-y-4">
+                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
+                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">學習統計</h2>
+                  <div className="space-y-stack-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">總反思數</span>
                       <span className="font-semibold text-gray-800">{personalStats.totalReflections}篇</span>
@@ -683,17 +683,17 @@ const StudentOverview = () => {
                     
                     {/* 任務狀況詳細分解 */}
                     <div className="border-t pt-3">
-                      <h3 className="text-sm font-medium text-gray-700 mb-3">任務狀況分布</h3>
-                      <div className="space-y-2">
+                      <h3 className="text-body-sm font-medium text-gray-700 mb-3">任務狀況分布</h3>
+                      <div className="space-y-stack-xs">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">📋 總任務</span>
+                          <span className="text-gray-600 text-body-sm">📋 總任務</span>
                           <span className="font-semibold text-gray-800">{personalStats.totalTasks}</span>
                         </div>
                         {personalStats.allColumnNames.map(columnName => {
                           const style = getColumnStyle(columnName);
                           return (
                             <div key={columnName} className="flex justify-between items-center">
-                              <span className="text-gray-600 text-sm">
+                              <span className="text-gray-600 text-body-sm">
                                 {style.icon} {columnName}
                               </span>
                               <span className={`font-semibold ${style.color}`}>

@@ -89,7 +89,7 @@ function Carditem({ data, index, columnIndex }) {
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...(!isObservationMode ? provided.dragHandleProps : {})}
-            className={`item-container rounded-lg mb-3 w-full transition-all duration-200 ${
+            className={`item-container rounded-lg mb-3 w-full transition-all duration-fast ${
               snapshot.isDragging
                 ? "shadow-xl bg-customgreen/90 text-white"
                 : "bg-white shadow-md hover:shadow-lg"
@@ -104,15 +104,15 @@ function Carditem({ data, index, columnIndex }) {
               />
             )}
 
-            <div className="p-3">
+            <div className="p-component-sm">
               {/* 標題與編輯按鈕 */}
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-base font-semibold text-gray-800 line-clamp-2 pr-2">
+                <h3 className="text-body font-semibold text-gray-800 line-clamp-2 pr-2">
                   {cardData.title}
                 </h3>
                 <button
                   onClick={handleCardClick}
-                  className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
                 >
                   <FiEdit size={16} />
                 </button>
@@ -120,7 +120,7 @@ function Carditem({ data, index, columnIndex }) {
 
               {/* 內容預覽 */}
               {cardData.content && (
-                <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                <p className="text-body-sm text-gray-600 line-clamp-2 mb-3">
                   {cardData.content}
                 </p>
               )}
@@ -146,8 +146,8 @@ function Carditem({ data, index, columnIndex }) {
               )}
 
               {/* 底部資訊 */}
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between text-caption text-gray-500">
+                <div className="flex items-center gap-stack-xs">
                   {cardData.images?.length > 0 && (
                     <span className="flex items-center gap-1">
                       <AiOutlineCloudDownload size={12} />
@@ -163,7 +163,7 @@ function Carditem({ data, index, columnIndex }) {
                 </div>
 
                 {cardData.createdAt && (
-                  <div className="text-xs text-gray-400">
+                  <div className="text-caption text-gray-400">
                     {formatTime(cardData.createdAt, 'relative')}
                   </div>
                 )}

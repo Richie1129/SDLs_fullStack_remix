@@ -247,24 +247,24 @@ export default function Announcement({ projectId, role, projectList }) {
                     className="absolute right-0 top-14 w-80 sm:w-96 bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden z-50"
                     style={{ maxWidth: "calc(100vw - 2rem)" }}
                 >
-                    <div className="p-3 bg-gray-50 border-b border-gray-200">
-                        <h3 className="text-base font-semibold text-gray-800">通知中心</h3>
+                    <div className="p-component-sm bg-gray-50 border-b border-gray-200">
+                        <h3 className="text-body font-semibold text-gray-800">通知中心</h3>
                     </div>
                     <div className="max-h-96 overflow-y-auto">
                         {notifications.length > 0 ? (
                             notifications.map((notification) => (
                                 <div
                                     key={notification.id}
-                                    className="flex items-start space-x-3 p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors duration-150"
+                                    className="flex items-start space-x-3 p-component-sm border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors duration-150"
                                     onClick={() => setSelectedAnnouncement(notification)}
                                 >
-                                    <div className="bg-green-100 text-green-600 rounded-full p-2 mt-1">
+                                    <div className="bg-green-100 text-green-600 rounded-full p-component-xs mt-1">
                                         <MessageCircle className="h-5 w-5" />
                                     </div>
                                     <div className="flex-1">
-                                        <h4 className="text-sm font-semibold text-gray-900">{notification.title}</h4>
-                                        <p className="text-xs text-gray-600 mt-1 truncate">{notification.content || "沒有內容"}</p>
-                                        <div className="text-xs text-gray-400 mt-2 flex justify-between items-center">
+                                        <h4 className="text-body-sm font-semibold text-gray-900">{notification.title}</h4>
+                                        <p className="text-caption text-gray-600 mt-1 truncate">{notification.content || "沒有內容"}</p>
+                                        <div className="text-caption text-gray-400 mt-2 flex justify-between items-center">
                                             <span className="font-medium">{notification.author}</span>
                                             <span>{formatDistanceToNow(notification.createdAt)}</span>
                                         </div>
@@ -276,9 +276,9 @@ export default function Announcement({ projectId, role, projectList }) {
                         )}
                     </div>
                     {role === "teacher" && (
-                        <div className="p-2 bg-gray-50 border-t border-gray-200">
+                        <div className="p-component-xs bg-gray-50 border-t border-gray-200">
                             <button
-                                className="w-full py-2 bg-[#5BA491] text-white text-sm font-semibold rounded-lg hover:bg-opacity-90 transition-all"
+                                className="w-full py-2 bg-[#5BA491] text-white text-body-sm font-semibold rounded-lg hover:bg-opacity-90 transition-all"
                                 onClick={handleAddNotification}
                             >
                                 + 發佈新公告
@@ -295,8 +295,8 @@ export default function Announcement({ projectId, role, projectList }) {
                 opacity={true}
                 position="justify-center items-center"
             >
-                <div className="p-6">
-                    <h3 className="text-2xl font-semibold mb-6 text-center">發佈新公告</h3>
+                <div className="p-component-md-lg">
+                    <h3 className="text-h2 font-semibold mb-6 text-center">發佈新公告</h3>
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         const newTitle = e.target.elements.newTitle.value;
@@ -305,10 +305,10 @@ export default function Announcement({ projectId, role, projectList }) {
                     }}>
                         {/* 發布模式選擇 */}
                         <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-body-sm font-medium text-gray-700 mb-2">
                                 發布模式
                             </label>
-                            <div className="flex space-x-4">
+                            <div className="flex space-x-stack-sm">
                                 <label className="flex items-center">
                                     <input
                                         type="radio"
@@ -318,7 +318,7 @@ export default function Announcement({ projectId, role, projectList }) {
                                         onChange={(e) => handleModeChange(e.target.value)}
                                         className="mr-2"
                                     />
-                                    <span className="text-sm">按專案發布</span>
+                                    <span className="text-body-sm">按專案發布</span>
                                 </label>
                                 <label className="flex items-center">
                                     <input
@@ -329,21 +329,21 @@ export default function Announcement({ projectId, role, projectList }) {
                                         onChange={(e) => handleModeChange(e.target.value)}
                                         className="mr-2"
                                     />
-                                    <span className="text-sm">按學生發布</span>
+                                    <span className="text-body-sm">按學生發布</span>
                                 </label>
                             </div>
                         </div>
 
                         {/* 發布對象選擇 */}
                         <div className="mb-4">
-                            <label htmlFor="targetSelect" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="targetSelect" className="block text-body-sm font-medium text-gray-700 mb-1">
                                 {announcementMode === 'project' ? '選擇專案' : '選擇學生'}
                             </label>
                             <select
                                 id="targetSelect"
                                 value={selectedTarget}
                                 onChange={(e) => setSelectedTarget(e.target.value)}
-                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                className="w-full p-component-sm border border-gray-300 rounded-lg"
                                 required
                             >
                                 <option value="">
@@ -379,8 +379,8 @@ export default function Announcement({ projectId, role, projectList }) {
 
                         {/* 顯示選中對象的詳細資訊 */}
                         {selectedTarget && selectedTarget !== 'all' && (
-                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <h4 className="text-sm font-semibold text-blue-800 mb-2">
+                            <div className="mb-4 p-component-sm bg-blue-50 border border-blue-200 rounded-lg">
+                                <h4 className="text-body-sm font-semibold text-blue-800 mb-2">
                                     {announcementMode === 'project' ? '📁 專案詳情' : '👤 學生詳情'}
                                 </h4>
                                 {announcementMode === 'project' ? (
@@ -390,14 +390,14 @@ export default function Announcement({ projectId, role, projectList }) {
                                             const members = projectMembersMap[selectedTarget] || [];
                                             return (
                                                 <div>
-                                                    <p className="text-sm text-blue-700">
+                                                    <p className="text-body-sm text-blue-700">
                                                         <strong>專案名稱：</strong>{project?.name || '未知專案'}
                                                     </p>
-                                                    <p className="text-sm text-blue-700">
+                                                    <p className="text-body-sm text-blue-700">
                                                         <strong>成員人數：</strong>{members.length} 人
                                                     </p>
                                                     {members.length > 0 && (
-                                                        <p className="text-sm text-blue-700">
+                                                        <p className="text-body-sm text-blue-700">
                                                             <strong>成員名單：</strong>
                                                             {members.map(member => member.username).join('、')}
                                                         </p>
@@ -413,14 +413,14 @@ export default function Announcement({ projectId, role, projectList }) {
                                             const projects = studentProjectsMap[selectedTarget] || [];
                                             return (
                                                 <div>
-                                                    <p className="text-sm text-blue-700">
+                                                    <p className="text-body-sm text-blue-700">
                                                         <strong>學生姓名：</strong>{student?.username || '未知學生'}
                                                     </p>
-                                                    <p className="text-sm text-blue-700">
+                                                    <p className="text-body-sm text-blue-700">
                                                         <strong>參與專案：</strong>{projects.length} 個
                                                     </p>
                                                     {projects.length > 0 && (
-                                                        <p className="text-sm text-blue-700">
+                                                        <p className="text-body-sm text-blue-700">
                                                             <strong>專案列表：</strong>
                                                             {projects.map(project => project.name).join('、')}
                                                         </p>
@@ -434,7 +434,7 @@ export default function Announcement({ projectId, role, projectList }) {
                         )}
 
                         <div className="mb-4">
-                            <label htmlFor="newTitle" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="newTitle" className="block text-body-sm font-medium text-gray-700 mb-1">
                                 標題
                             </label>
                             <input
@@ -442,12 +442,12 @@ export default function Announcement({ projectId, role, projectList }) {
                                 id="newTitle"
                                 name="newTitle"
                                 placeholder="請輸入公告標題"
-                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                className="w-full p-component-sm border border-gray-300 rounded-lg"
                                 required
                             />
                         </div>
                         <div className="mb-4">
-                            <label htmlFor="newDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                            <label htmlFor="newDescription" className="block text-body-sm font-medium text-gray-700 mb-1">
                                 內容
                             </label>
                             <textarea
@@ -455,7 +455,7 @@ export default function Announcement({ projectId, role, projectList }) {
                                 name="newDescription"
                                 placeholder="請輸入公告內容"
                                 rows="4"
-                                className="w-full p-3 border border-gray-300 rounded-lg"
+                                className="w-full p-component-sm border border-gray-300 rounded-lg"
                                 required
                             ></textarea>
                         </div>
@@ -486,10 +486,10 @@ export default function Announcement({ projectId, role, projectList }) {
                     opacity={true}
                     position="justify-center items-center"
                 >
-                    <div className="p-6">
+                    <div className="p-component-md-lg">
                         <div className="border-b-2 border-gray-200 pb-3 mb-4">
-                            <h3 className="text-2xl font-bold text-gray-800">{selectedAnnouncement.title}</h3>
-                            <p className="text-sm text-gray-500 mt-2">
+                            <h3 className="text-h2 font-bold text-gray-800">{selectedAnnouncement.title}</h3>
+                            <p className="text-body-sm text-gray-500 mt-2">
                                 由 <strong>{selectedAnnouncement.author}</strong> 發布於 {new Date(selectedAnnouncement.createdAt).toLocaleString('zh-TW', { dateStyle: 'long', timeStyle: 'short' })}
                             </p>
                         </div>

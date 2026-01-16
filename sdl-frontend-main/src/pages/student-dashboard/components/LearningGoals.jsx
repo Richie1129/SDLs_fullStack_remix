@@ -8,31 +8,31 @@ import { getPriorityColor } from '../utils';
  */
 const LearningGoals = ({ learningGoals }) => {
   return (
-    <div className="bg-white p-3 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 flex items-center">
+    <div className="bg-white p-component-sm sm:p-component-md-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <h2 className="text-body-lg sm:text-h3 font-semibold text-gray-800 mb-4 flex items-center">
         <span className="w-1 h-6 bg-gradient-to-b from-customgreen to-teal-600 rounded-full mr-3"></span>
         我的學習目標
       </h2>
-      <div className="space-y-3 sm:space-y-4 max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
+      <div className="space-y-3 sm:space-y-stack-sm max-h-80 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
         {Array.isArray(learningGoals) && learningGoals.map((goal) => {
           const isDone = Number(goal.progress) >= 100;
           const deadlineText = goal.deadline ? new Date(goal.deadline).toLocaleDateString('zh-TW') : '—';
           const current = goal.current ?? null;
           const target = goal.target ?? null;
           return (
-          <div key={goal.id} className="relative bg-gradient-to-r from-teal-50/50 to-white border border-teal-100 hover:border-teal-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-2 sm:space-y-0">
-              <h3 className="font-semibold text-gray-800 text-sm sm:text-base flex items-center">
+          <div key={goal.id} className="relative bg-gradient-to-r from-teal-50/50 to-white border border-teal-100 hover:border-teal-200 rounded-lg p-component-sm sm:p-component-base hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-stack-xs sm:space-y-0">
+              <h3 className="font-semibold text-gray-800 text-body-sm sm:text-body flex items-center">
                 <span className="w-2 h-2 bg-customgreen rounded-full mr-2"></span>
                 {goal.title}
               </h3>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold self-start shadow-sm ${getPriorityColor(goal.priority)}`}>
+              <span className={`px-3 py-1 rounded-full text-caption font-semibold self-start shadow-sm ${getPriorityColor(goal.priority)}`}>
                 {goal.priority === 'high' ? '🔥 高優先級' :
                  goal.priority === 'medium' ? '⚡ 中優先級' : '📝 低優先級'}
               </span>
             </div>
             <div className="mb-3">
-              <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
+              <div className="flex justify-between text-caption sm:text-body-sm text-gray-600 mb-2">
                 <span className="flex items-center font-medium">
                   <span className="w-1 h-1 bg-teal-500 rounded-full mr-1"></span>
                   進度
@@ -40,7 +40,7 @@ const LearningGoals = ({ learningGoals }) => {
                 <span className="font-semibold text-teal-700">
                   {goal.progress}%
                   {(current != null && target != null) && (
-                    <span className="text-[10px] sm:text-xs text-gray-400 ml-2 bg-gray-100 px-1 py-0.5 rounded">({current}/{target})</span>
+                    <span className="text-[10px] sm:text-caption text-gray-400 ml-2 bg-gray-100 px-1 py-0.5 rounded">({current}/{target})</span>
                   )}
                 </span>
               </div>
@@ -53,13 +53,13 @@ const LearningGoals = ({ learningGoals }) => {
                 ></div>
               </div>
             </div>
-            <div className="text-xs text-gray-600 flex items-center justify-between bg-gray-50 rounded-lg p-2">
+            <div className="text-caption text-gray-600 flex items-center justify-between bg-gray-50 rounded-lg p-component-xs">
               <span className="flex items-center">
                 <span className="w-1 h-1 bg-gray-400 rounded-full mr-1"></span>
                 截止日期: <span className="font-medium ml-1">{deadlineText}</span>
               </span>
               {isDone && (
-                <span className="text-green-600 font-bold bg-green-100 px-2 py-1 rounded-full text-[10px] sm:text-xs">
+                <span className="text-green-600 font-bold bg-green-100 px-2 py-1 rounded-full text-[10px] sm:text-caption">
                   達成 ✅
                 </span>
               )}

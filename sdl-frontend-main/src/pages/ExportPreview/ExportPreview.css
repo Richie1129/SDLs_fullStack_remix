@@ -37,7 +37,7 @@
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 200ms, box-shadow 200ms;
 }
 
 .btn-primary {
@@ -47,14 +47,12 @@
 
 .btn-primary:hover {
   background-color: #4a8f7c;
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(91, 164, 145, 0.3);
 }
 
 .btn-primary:disabled {
   background-color: #a0a0a0;
   cursor: not-allowed;
-  transform: none;
   box-shadow: none;
 }
 
@@ -149,7 +147,7 @@
   color: white;
   font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 200ms, box-shadow 200ms;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,7 +155,6 @@
 
 .btn-reorder:hover:not(:disabled) {
   background-color: #4a8f7c;
-  transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(91, 164, 145, 0.3);
 }
 

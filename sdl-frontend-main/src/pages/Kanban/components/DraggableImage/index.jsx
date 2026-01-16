@@ -98,11 +98,11 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       {/* 提示氣泡 */}
       {showMessage && (
         <div
-          className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-[1001] max-w-[300px] font-medium animate-fade-in"
+          className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-body-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-[1001] max-w-[300px] font-medium animate-fade-in"
           style={computeMessagePosition(position)}
           onClick={handleImageClick}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-stack-xs">
             <span>有什麼問題需要我幫你解答的嗎？</span>
             <button
               type="button"

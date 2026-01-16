@@ -12,7 +12,7 @@ const EmptyState = ({
         className="h-64 sm:h-72 lg:h-80 w-auto"
         animationData={animationData}
       />
-      <p className="font-bold text-zinc-600 text-sm sm:text-base lg:text-lg text-center leading-relaxed">
+      <p className="font-bold text-zinc-600 text-body-sm sm:text-body lg:text-body-lg text-center leading-relaxed">
         {message}
       </p>
     </div>

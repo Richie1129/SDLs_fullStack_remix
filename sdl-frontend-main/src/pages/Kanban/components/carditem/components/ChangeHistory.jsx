@@ -27,7 +27,7 @@ export function ChangeHistory({ taskId }) {
     return (
       <div className='text-center py-8'>
         <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-customgreen mx-auto'></div>
-        <p className='text-sm text-gray-500 mt-2'>載入中...</p>
+        <p className='text-body-sm text-gray-500 mt-2'>載入中...</p>
       </div>
     );
   }
@@ -36,12 +36,12 @@ export function ChangeHistory({ taskId }) {
     <div>
       <div className='flex items-center mb-4'>
         <FiClock className='mr-2 text-gray-500' />
-        <h4 className='text-lg font-medium text-gray-700'>變更歷史</h4>
+        <h4 className='text-body-lg font-medium text-gray-700'>變更歷史</h4>
       </div>
 
       {changeLogs.length === 0 ? (
         <div className='text-center py-8 text-gray-500'>
-          <FiEdit3 className='mx-auto mb-2 text-2xl' />
+          <FiEdit3 className='mx-auto mb-2 text-h2' />
           <p>尚無變更記錄</p>
         </div>
       ) : (
@@ -49,26 +49,26 @@ export function ChangeHistory({ taskId }) {
           {changeLogs.map((log, index) => (
             <div
               key={log.id || index}
-              className='bg-gray-50 rounded-lg p-3 border-l-4 border-blue-400'
+              className='bg-gray-50 rounded-lg p-component-sm border-l-4 border-blue-400'
             >
               <div className='flex items-center justify-between mb-2'>
                 <div className='flex items-center'>
                   <FiUser className='mr-1 text-gray-500' size={14} />
-                  <span className='text-sm font-medium text-gray-700'>
+                  <span className='text-body-sm font-medium text-gray-700'>
                     {log.changedBy}
                   </span>
                 </div>
-                <span className='text-xs text-gray-500'>
+                <span className='text-caption text-gray-500'>
                   {formatTime(log.createdAt, 'full')}
                 </span>
               </div>
 
-              <p className='text-sm text-gray-600 mb-2'>
+              <p className='text-body-sm text-gray-600 mb-2'>
                 {log.description}
               </p>
 
               {log.fieldName && (
-                <div className='text-xs text-gray-500'>
+                <div className='text-caption text-gray-500'>
                   <span className='font-medium'>欄位：</span>
                   {log.fieldName}
                   {log.oldValue && log.newValue && (
@@ -83,7 +83,7 @@ export function ChangeHistory({ taskId }) {
 
               <div className='flex items-center mt-2'>
                 <span className={`
-                  px-2 py-1 rounded-full text-xs font-medium
+                  px-2 py-1 rounded-full text-caption font-medium
                   ${log.changeType === 'create' ? 'bg-green-100 text-green-700' : ''}
                   ${log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : ''}
                   ${log.changeType === 'move' ? 'bg-purple-100 text-purple-700' : ''}

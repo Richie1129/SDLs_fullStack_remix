@@ -33,15 +33,15 @@ export default function ColorPicker() {
                 <ChromePicker className='mb-3 mr-2' color={currentBgColor} onChange={handleChangeBgColor} onChangeComplete={handleChangeBgColor}/>
                 <ChromePicker className='mb-3' color={currentTextColor} onChange={handleChangeTextColor} onChangeComplete={handleChangeTextColor}/>
             </div>
-            <p className=' text-base font-bold mb-2'>預覽標籤</p>
-            <div style={{backgroundColor: currentBgColor, color: currentTextColor}} className={`p-2 rounded-full text-xs font-bold text-center flex items-center w-fit h-[20px]`}>
+            <p className=' text-body font-bold mb-2'>預覽標籤</p>
+            <div style={{backgroundColor: currentBgColor, color: currentTextColor}} className={`p-component-xs rounded-full text-caption font-bold text-center flex items-center w-fit h-[20px]`}>
                 內容
             </div> 
             <div className='flex flex-row justify-end items-end'>
-                <button className="flex justify-center items-center w-1/3 h-7 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2" >
+                <button className="flex justify-center items-center w-1/3 h-7 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2" >
                 取消
                 </button>
-                <button className="flex justify-center items-center w-1/3 h-7 bg-customgreen rounded font-bold text-xs sm:text-sm text-white">
+                <button className="flex justify-center items-center w-1/3 h-7 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white">
                 儲存
                 </button>
             </div>

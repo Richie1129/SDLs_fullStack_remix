@@ -265,7 +265,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
       <div className='relative group'>
         {children}
         <div className='absolute  hidden group-hover:block'>
-          <div className='bg-gray-700 text-white text-xs rounded-lg py-1 px-2 whitespace-nowrap'>
+          <div className='bg-gray-700 text-white text-caption rounded-lg py-1 px-2 whitespace-nowrap'>
             {content}
           </div>
         </div>
@@ -276,7 +276,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   if (location.pathname === "/homepage") {
     return (
       <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2 flex-shrink-0">
-        <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-2xl">
+        <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-h2">
           <img src="/SDLS_Logo_2.png" alt="Logo" className="h-14 w-auto" />
         </Link>
         <div className="flex items-center">
@@ -284,7 +284,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           {role === "teacher" && (
             <button
               onClick={() => navigate("/observation")}
-              className="flex items-center space-x-1 mr-3 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-3 py-2 text-sm font-semibold transition-colors"
+              className="flex items-center space-x-1 mr-3 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-3 py-2 text-body-sm font-semibold transition-colors duration-fast"
               title="跨班專案觀摩"
             >
               <Eye className="h-4 w-4" />
@@ -294,7 +294,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           
           <div className="relative">
             <div
-              className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3 hover:bg-gray-100 transition-colors flex items-center gap-1"
+              className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3 hover:bg-gray-100 transition-colors duration-fast flex items-center gap-1"
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
               title="用戶選單"
             >
@@ -305,7 +305,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
             {userDropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="block w-full text-left px-4 py-2 text-body-sm text-gray-700 hover:bg-gray-100 transition-colors duration-fast"
                   onClick={() => {
                     navigate('/profile');
                     setUserDropdownOpen(false);
@@ -314,7 +314,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
                   個人資料
                 </button>
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                  className="block w-full text-left px-4 py-2 text-body-sm text-gray-700 hover:bg-gray-100 transition-colors duration-fast"
                   onClick={() => {
                     navigate(role === "teacher" ? "/teacher-overview" : "/student-overview");
                     setUserDropdownOpen(false);
@@ -327,7 +327,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           </div>
           {/* 移除 dashboard icon 按鈕 */}
           <Announcement projectId={projectId || 'all'} role={role} projectList={projectList} />
-          <button onClick={handleLogout} className="ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-2 font-semibold">
+          <button onClick={handleLogout} className="ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-component-xs font-semibold">
             登出
           </button>
         </div>
@@ -338,17 +338,17 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   return (
     <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
-        <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-lg sm:text-2xl">
+        <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-body-lg sm:text-h2">
           <img src="/SDLS_Logo_2.png" alt="Logo" className="h-10 sm:h-14 w-auto" />
         </Link>
         {!isOverviewPage && (
-        <p className="font-bold text-sm sm:text-xl text-teal-900 truncate">{projectInfo.name || "專案名稱"}</p>
+        <p className="font-bold text-body-sm sm:text-h3 text-teal-900 truncate">{projectInfo.name || "專案名稱"}</p>
         )}
         {/* 觀摩模式指示器 */}
         {isObservationMode && !isOverviewPage && (
           <div className="flex items-center ml-3 px-2 py-1 bg-yellow-100 border border-yellow-400 rounded-md">
             <Eye className="text-yellow-600 mr-1 h-4 w-4" />
-            <span className="text-yellow-700 text-sm font-semibold">觀摩模式</span>
+            <span className="text-yellow-700 text-body-sm font-semibold">觀摩模式</span>
           </div>
         )}
       </div>
@@ -357,7 +357,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         {!isOverviewPage && (
         <ul className="flex items-center justify-center space-x-1">
           {getProjectUserQuery.isLoading || projectId === undefined ? <></> :
-            getProjectUserQuery.isError ? <p className='font-bold text-2xl'>Error</p> :
+            getProjectUserQuery.isError ? <p className='font-bold text-h2'>Error</p> :
               projectUsers.map((projectUser, index) => {
                 const imgIndex = parseInt(projectUser.id) % 9;
                 const userImg = personImg[imgIndex];
@@ -378,7 +378,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         
         <div className="flex items-center">
         <h3
-          className="font-bold cursor-pointer p-1 mr-1 sm:mr-2 rounded-lg mx-1 sm:mx-3 text-sm sm:text-base hidden sm:block hover:bg-gray-100 transition-colors"
+          className="font-bold cursor-pointer p-1 mr-1 sm:mr-2 rounded-lg mx-1 sm:mx-3 text-body-sm sm:text-body hidden sm:block hover:bg-gray-100 transition-colors duration-fast"
           onClick={() => navigate(role === "teacher" ? "/teacher-overview" : "/student-overview")}
           title={role === "teacher" ? "教師總覽儀表板" : "個人學習儀表板"}
         >
@@ -390,7 +390,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           <button
             onClick={() => setShowProjectCommentDrawer(!showProjectCommentDrawer)}
             className={
-              `flex items-center justify-center mr-2 p-1 rounded-md transition-colors ${showProjectCommentDrawer 
+              `flex items-center justify-center mr-2 p-1 rounded-md transition-colors duration-fast ${showProjectCommentDrawer 
                 ? 'bg-customgreen text-white' 
                 : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`
             }
@@ -404,7 +404,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           <button
             onClick={() => setShowActivityStream(!showActivityStream)}
             className={
-              `flex items-center justify-center mr-2 p-1 rounded-md transition-colors ${showActivityStream 
+              `flex items-center justify-center mr-2 p-1 rounded-md transition-colors duration-fast ${showActivityStream 
                 ? 'bg-customgreen text-white' 
                 : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'}`
             }
@@ -416,7 +416,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         </div>
         <Announcement projectId={projectId} role={role} projectList={projectList} />
         <button
-          className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-1 sm:p-2 font-semibold text-xs sm:text-sm"
+          className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-1 sm:p-component-xs font-semibold text-caption sm:text-body-sm"
           onClick={async () => {
             socket.disconnect();
             await logout();  // 使用新的 logout API
@@ -430,9 +430,9 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         <button onClick={() => setReferralCodeModalOpen(false)} className=' absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
           <X className=' w-6 h-6' />
         </button>
-        <div className='flex flex-col p-3'>
-          <h3 className=' font-bold text-base mb-3'>專案邀請碼:</h3>
-          <h3 className=' text-center font-bold text-lg py-1 bg-slate-200/70 rounded-md'>
+        <div className='flex flex-col p-component-sm'>
+          <h3 className=' font-bold text-body mb-3'>專案邀請碼:</h3>
+          <h3 className=' text-center font-bold text-body-lg py-1 bg-slate-200/70 rounded-md'>
             {projectInfo.referral_code}
           </h3>
         </div>

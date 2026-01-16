@@ -44,19 +44,19 @@ const CommentActions = ({ comment, onAfterChange }) => {
         <textarea
           value={editText}
           onChange={(e) => setEditText(e.target.value)}
-          className='w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
+          className='w-full border border-gray-300 rounded-md p-component-xs text-body-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
           rows={3}
         />
-        <div className='mt-2 flex gap-2'>
+        <div className='mt-2 flex gap-stack-xs'>
           <button
             onClick={() => saveMutation.mutate({ commentId: comment.id, content: editText })}
-            className='px-3 py-1.5 bg-customgreen text-white rounded text-xs hover:bg-customgreen/90'
+            className='px-3 py-1.5 bg-customgreen text-white rounded text-caption hover:bg-customgreen/90'
           >
             儲存
           </button>
           <button
             onClick={() => { setEditing(false); setEditText(comment.content || ''); }}
-            className='px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300'
+            className='px-3 py-1.5 bg-gray-200 text-gray-700 rounded text-caption hover:bg-gray-300'
           >
             取消
           </button>
@@ -66,10 +66,10 @@ const CommentActions = ({ comment, onAfterChange }) => {
   }
 
   return (
-    <div className='flex items-center gap-2'>
+    <div className='flex items-center gap-stack-xs'>
       <button
         onClick={() => setEditing(true)}
-        className='text-xs text-gray-600 hover:underline'
+        className='text-caption text-gray-600 hover:underline'
       >
         編輯
       </button>
@@ -79,7 +79,7 @@ const CommentActions = ({ comment, onAfterChange }) => {
             delMutation.mutate({ commentId: comment.id });
           }
         }}
-        className='text-xs text-red-600 hover:underline'
+        className='text-caption text-red-600 hover:underline'
       >
         刪除
       </button>
@@ -167,13 +167,13 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
   };
 
   return (
-    <div className='space-y-4'>
-      <h3 className='text-xl font-semibold mb-3'>討論區</h3>
+    <div className='space-y-stack-sm'>
+      <h3 className='text-h3 font-semibold mb-3'>討論區</h3>
       <CommentErrorBoundary context="kanban_task_comments">
         {/* 評論列表 */}
-        <div className='space-y-4 mb-4'>
+        <div className='space-y-stack-sm mb-4'>
           {comments.length === 0 && (
-            <div className='text-sm text-gray-400 text-center py-6'>
+            <div className='text-body-sm text-gray-400 text-center py-6'>
               尚無評論，來發表第一則留言吧！
             </div>
           )}
@@ -185,15 +185,15 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                 <img src={userImg} alt={c.user?.username} className='w-9 h-9 rounded-full object-cover' />
                 <div className='flex-1'>
                   <div className='flex items-center justify-between'>
-                    <span className='text-sm font-medium text-gray-800'>{formatUserDisplay(c.user)}</span>
-                    <span className='text-xs text-gray-400'>{formatTime(c.createdAt, 'relative')}</span>
+                    <span className='text-body-sm font-medium text-gray-800'>{formatUserDisplay(c.user)}</span>
+                    <span className='text-caption text-gray-400'>{formatTime(c.createdAt, 'relative')}</span>
                   </div>
-                  <p className='text-sm text-gray-700 whitespace-pre-wrap mt-1'>
+                  <p className='text-body-sm text-gray-700 whitespace-pre-wrap mt-1'>
                     {c.content}
                   </p>
                   {/* 附件顯示 */}
                   {Array.isArray(c.attachments) && c.attachments.length > 0 && (
-                    <div className='mt-2 space-y-2'>
+                    <div className='mt-2 space-y-stack-xs'>
                       {c.attachments.map((a, i) => {
                         const isImage = (a.mimeType || '').startsWith('image/');
                         if (isImage) {
@@ -211,7 +211,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                         }
                         const dlUrl = buildFileDownloadUrl(a.fileName);
                         return (
-                          <div key={i} className='text-xs flex items-center gap-2'>
+                          <div key={i} className='text-caption flex items-center gap-stack-xs'>
                             <a href={dlUrl} target='_blank' rel='noreferrer' className='text-blue-600 hover:underline'>
                               {a.originalName}
                             </a>
@@ -230,7 +230,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                   <div className='mt-2 flex items-center gap-3'>
                     <button
                       onClick={() => likeMutation.mutate({ commentId: c.id })}
-                      className={`flex items-center gap-1 text-xs px-2 py-1 rounded transition-colors ${c.likedByCurrentUser ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                      className={`flex items-center gap-1 text-caption px-2 py-1 rounded transition-colors ${c.likedByCurrentUser ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                       title={c.likedByCurrentUser ? '已按讚' : '按讚'}
                     >
                       {c.likedByCurrentUser ? <AiFillLike size={14}/> : <AiOutlineLike size={14}/>} {c.likeCount || 0}
@@ -259,7 +259,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
             <img src={(personImg[Math.abs(parseInt(localStorage.getItem('id')) || 0) % personImg.length])} alt='me' className='w-9 h-9 rounded-full object-cover' />
             <div className='flex-1'>
               <textarea
-                className='w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
+                className='w-full border border-gray-300 rounded-md p-component-xs text-body-sm focus:outline-none focus:ring-2 focus:ring-customgreen'
                 rows={3}
                 placeholder='新增評論…'
                 value={newComment}
@@ -269,7 +269,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
               {filesToUpload.length > 0 && (
                 <div className='mt-2 space-y-1'>
                   {filesToUpload.map((f, idx) => (
-                    <div key={idx} className='flex items-center justify-between text-xs bg-gray-50 px-2 py-1 rounded'>
+                    <div key={idx} className='flex items-center justify-between text-caption bg-gray-50 px-2 py-1 rounded'>
                       <span className='truncate'>{f.name}</span>
                       <button className='text-red-500 hover:underline ml-2' onClick={() => removePendingFile(idx)}>移除</button>
                     </div>
@@ -281,7 +281,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                   <button
                     type='button'
                     onClick={() => commentFileInputRef.current && commentFileInputRef.current.click()}
-                    className={`inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800`}
+                    className={`inline-flex items-center gap-1 text-body-sm text-gray-600 hover:text-gray-800`}
                   >
                     <AiOutlinePaperClip />
                     附加檔案
@@ -296,7 +296,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                 </div>
                 <button
                   onClick={handleAddComment}
-                  className={`px-4 py-1.5 rounded-md text-sm bg-customgreen text-white hover:bg-customgreen/90`}
+                  className={`px-4 py-1.5 rounded-md text-body-sm bg-customgreen text-white hover:bg-customgreen/90`}
                 >
                   送出
                 </button>

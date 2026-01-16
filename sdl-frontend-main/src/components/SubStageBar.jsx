@@ -126,17 +126,17 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
 
 
     return (
-        <div className={`absolute right-2 sm:right-4 lg:right-40 bottom-0 mb-16 sm:mb-20 lg:mb-28 rounded-lg transform transition-all duration-500 ease-in-out ${animationClass} shadow-2xl dialog-box max-w-xs sm:max-w-sm lg:max-w-md`}>
-            <div className="bg-slate-100 p-3 sm:p-4 rounded-lg font-bold">
-                <p className="text-xs sm:text-sm lg:text-base">{displayedContent}</p>
+        <div className={`absolute right-2 sm:right-4 lg:right-40 bottom-0 mb-16 sm:mb-20 lg:mb-28 rounded-lg transform transition-all duration-slow ease-in-out ${animationClass} shadow-2xl dialog-box max-w-xs sm:max-w-sm lg:max-w-md`}>
+            <div className="bg-slate-100 p-component-sm sm:p-component-base rounded-lg font-bold">
+                <p className="text-caption sm:text-body-sm lg:text-body">{displayedContent}</p>
                 {showOptions && (
                     <>
-                        <button onClick={() => handleOptionSelect('option1')} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-xs sm:text-sm">階段目標說明</button>
-                        <button onClick={() => handleOptionSelect('option2')} className="bg-[#5BA491] text-white w-full rounded-lg py-1 sm:py-2 text-xs sm:text-sm">階段如何進行</button>
+                        <button onClick={() => handleOptionSelect('option1')} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-caption sm:text-body-sm">階段目標說明</button>
+                        <button onClick={() => handleOptionSelect('option2')} className="bg-[#5BA491] text-white w-full rounded-lg py-1 sm:py-2 text-caption sm:text-body-sm">階段如何進行</button>
                     </>
                 )}
                 {!showOptions && (
-                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-xs sm:text-sm">我了解了!</button>
+                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-caption sm:text-body-sm">我了解了!</button>
                 )}
             </div>
         </div>
@@ -283,14 +283,14 @@ export default function SubStageComponent() {
     }, [isDialogOpen]); // 依賴於 isDialogOpen 的變化來重新添加/移除事件監聽器
 
     return (
-        <div className="w-full bg-[#F5F5F5] h-12 sm:h-14 lg:h-16 duration-500 border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4">
-            <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-2 lg:p-4 overflow-x-auto" ref={dialogRef}>
-                <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 min-w-0 flex-1">
+        <div className="w-full bg-[#F5F5F5] h-12 sm:h-14 lg:h-16 duration-slow border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4">
+            <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-component-xs lg:p-component-base overflow-x-auto" ref={dialogRef}>
+                <div className="flex items-center space-x-1 sm:space-x-stack-xs lg:space-x-stack-sm min-w-0 flex-1">
                     {stages.map((subStage, index) => (
                         <React.Fragment key={index}>
                             <div 
                                 style={{ backgroundColor: getStageColor(index + 1) }} 
-                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner text-xs sm:text-sm lg:text-base whitespace-nowrap`}
+                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner text-caption sm:text-body-sm lg:text-body whitespace-nowrap`}
                             >
                                 {subStage}
                             </div>
@@ -306,7 +306,7 @@ export default function SubStageComponent() {
                     onClick={handleRobotClick}
                     className="ml-2 sm:ml-4 lg:ml-36 cursor-pointer flex-shrink-0"
                     style={{ width: '32px', height: '32px' }}>
-                    <img src={imageSrc} alt="Robot" className={`w-full h-full transition-all duration-300 ease-in-out ${isHovered ? 'scale-110 ' : 'scale-100'}`} />
+                    <img src={imageSrc} alt="Robot" className={`w-full h-full transition-opacity duration-normal ease-in-out ${isHovered ? 'opacity-80' : 'opacity-100'}`} />
                 </span>
                 <DialogBox
                     isOpen={isDialogOpen}

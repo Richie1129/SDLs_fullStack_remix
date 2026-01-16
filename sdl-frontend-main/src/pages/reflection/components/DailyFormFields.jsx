@@ -48,17 +48,17 @@ export function DailyFormFields({
         disabled={disabled || isTeacher}
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
       />
-      <p className="text-xs text-gray-500 mb-3">
+      <p className="text-caption text-gray-500 mb-3">
         💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
       </p>
 
       {/* Existing attachment (when editing) */}
       {editingId && currentRecord && (currentRecord.fileName || currentRecord.fileData) && (
-        <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="text-sm text-gray-700 break-all">
+        <div className="mb-3 p-component-sm bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-stack-xs">
+          <div className="text-body-sm text-gray-700 break-all">
             附件：{currentRecord.originalName || currentRecord.filename || currentRecord.fileName}
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-stack-xs">
             <a
               href={currentRecord.fileName ? buildFileDownloadUrl(currentRecord.fileName) : undefined}
               onClick={(e) => {
@@ -71,14 +71,14 @@ export function DailyFormFields({
                   });
                 }
               }}
-              className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm text-center"
+              className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-body-sm text-center"
             >
               下載附件
             </a>
             {!isTeacher && (
               <button
                 onClick={() => onRemoveAttachment && onRemoveAttachment()}
-                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-body-sm"
               >
                 刪除附件
               </button>

@@ -11,7 +11,7 @@ const ThinkingIndicator = () => {
   }, []);
 
   return (
-    <div className="flex items-center gap-2 text-[#6c757d]">
+    <div className="flex items-center gap-stack-xs text-[#6c757d]">
       <div className="flex gap-1">
         <div className={`w-2 h-2 rounded-full ${dots >= 1 ? 'opacity-100' : 'opacity-30'} transition-opacity`} style={{ backgroundColor: '#5BA491' }} />
         <div className={`w-2 h-2 rounded-full ${dots >= 2 ? 'opacity-100' : 'opacity-30'} transition-opacity`} style={{ backgroundColor: '#5BA491' }} />
@@ -48,11 +48,11 @@ const ThinkingBlock = ({ content }) => {
           color: '#8b7355'
         }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-base">💭</span>
-          <span className="font-medium text-sm">AI 思考過程</span>
+        <div className="flex items-center gap-stack-xs">
+          <span className="text-body">💭</span>
+          <span className="font-medium text-body-sm">AI 思考過程</span>
         </div>
-        <span className="text-xs transition-transform" style={{
+        <span className="text-caption transition-transform" style={{
           transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
         }}>
           ▼
@@ -61,7 +61,7 @@ const ThinkingBlock = ({ content }) => {
 
       {isExpanded && (
         <div
-          className="px-4 py-3 text-sm leading-relaxed prose prose-sm max-w-none"
+          className="px-4 py-3 text-body-sm leading-relaxed prose prose-sm max-w-none"
           style={{
             borderTop: '2px dashed #e8d4b8',
             color: '#5a5a5a',
@@ -108,7 +108,7 @@ const MessageBubble = ({ message }) => {
               <ReactMarkdown>{message.content}</ReactMarkdown>
             </div>
           )}
-          <div className="text-xs opacity-60 mt-1">
+          <div className="text-caption opacity-60 mt-1">
             {new Date(message.timestamp).toLocaleTimeString('zh-TW', {
               hour: '2-digit',
               minute: '2-digit'
@@ -132,7 +132,7 @@ const ChatContent = ({
   return (
     <div
       ref={chatContainerRef}
-      className={`chat-content flex-1 overflow-y-auto p-5 ${embedded ? 'min-h-0 bg-transparent' : 'bg-[#fdfdfd]'}`}
+      className={`chat-content flex-1 overflow-y-auto p-component-md ${embedded ? 'min-h-0 bg-transparent' : 'bg-[#fdfdfd]'}`}
     >
       {/* 空狀態 */}
       {messages.length === 0 && (
@@ -143,7 +143,7 @@ const ChatContent = ({
             <div className="text-[13px] mb-4">
               詢問我關於專案的任何問題，例如：
             </div>
-            <div className="mt-4 space-y-2 text-left max-w-md mx-auto">
+            <div className="mt-4 space-y-stack-xs text-left max-w-md mx-auto">
               <button
                 onClick={() => onQuickQuestion('我的專案進度如何？')}
                 className="w-full px-4 py-2 bg-white rounded-lg border border-[#e9ecef] text-[13px] text-left transition-all cursor-pointer hover:bg-[#f8f9fa] hover:border-[#5BA491]"

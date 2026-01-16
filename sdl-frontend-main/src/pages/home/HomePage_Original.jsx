@@ -517,7 +517,7 @@ const handleDeleteProject = (projectId) => {
       <div className='relative group'>
         {children}
         <div className='absolute top-full mb-2 hidden group-hover:block'>
-          <div className='bg-gray-700 text-white text-xs rounded-lg py-1 px-2  whitespace-normal overflow-wrap: break-word'>
+          <div className='bg-gray-700 text-white text-caption rounded-lg py-1 px-2  whitespace-normal overflow-wrap: break-word'>
             {content}
           </div>
         </div>
@@ -529,7 +529,7 @@ const handleDeleteProject = (projectId) => {
       <div className='relative group'>
         {children}
         <div className='absolute bottom-full mb-2 hidden group-hover:block'>
-          <div className='bg-gray-700 text-white text-xs rounded-lg py-1 px-2 whitespace-nowrap'>
+          <div className='bg-gray-700 text-white text-caption rounded-lg py-1 px-2 whitespace-nowrap'>
             {content}
           </div>
         </div>
@@ -561,29 +561,29 @@ const handleDeleteProject = (projectId) => {
               activeIndex={activeIndex}
               setActiveIndex={setActiveIndex}
             >
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-4 place-items-center'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-stack-sm place-items-center'>
                 {viewableProjects.length > 0 ? viewableProjects.map((projectItem, index) => (
-                  <div key={index} className='bg-blue-50 w-full rounded-lg shadow-lg hover:shadow-lg p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out border-l-4 border-blue-400'>
+                  <div key={index} className='bg-blue-50 w-full rounded-lg shadow-lg hover:shadow-lg p-component-base flex flex-col space-y-stack-sm hover:scale-105 transition-transform duration-200 ease-out border-l-4 border-blue-400'>
                     <div className='flex items-center'>
                       <FaEye className='text-blue-600 mr-2' />
-                      <h3 className='text-xl font-bold text-blue-600'>{projectItem.name}</h3>
+                      <h3 className='text-h3 font-bold text-blue-600'>{projectItem.name}</h3>
                     </div>
                     <Tooltip children={"專案描述"} content={`${projectItem.describe}`}>
                       <p className='text-gray-600 font-semibold truncate overflow-hidden h-6'>{projectItem.describe}</p>
                     </Tooltip>
-                    <div className='text-sm text-gray-500 font-bold'>
+                    <div className='text-body-sm text-gray-500 font-bold'>
                       目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
                     </div>
-                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
-                    <div className='text-sm text-gray-500'>成員：
+                    <div className='text-body-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-body-sm text-gray-500'>成員：
                       {projectItem.members?.map(member => member.username).join("、") || "無成員資訊"}
                     </div>
-                    <div className='text-sm text-gray-500'>所屬班級：
+                    <div className='text-body-sm text-gray-500'>所屬班級：
                       {Array.from(new Set((projectItem.members || [])
                         .map(m => m.class)
                         .filter(Boolean))).join('、') || '無班級資訊'}
                     </div>
-                    <div className='flex justify-between text-sm text-gray-500'>
+                    <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center text-gray-500'>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M3 12a9 9 0 110 18 9 9 0 010-18zm9 9a9 9 0 100-18 9 9 0 000 18z" />
@@ -608,8 +608,8 @@ const handleDeleteProject = (projectId) => {
                   <div className="col-span-full">
                     <div className="text-center py-12">
                       <FaEye className="mx-auto h-12 w-12 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">目前沒有可觀摩的專案</h3>
-                      <p className="mt-1 text-sm text-gray-500">請等待老師開放專案供觀摩</p>
+                      <h3 className="mt-2 text-body-sm font-medium text-gray-900">目前沒有可觀摩的專案</h3>
+                      <p className="mt-1 text-body-sm text-gray-500">請等待老師開放專案供觀摩</p>
                     </div>
                   </div>
                 )}
@@ -622,7 +622,7 @@ const handleDeleteProject = (projectId) => {
               setActiveIndex={setActiveIndex}
             >
               <div className='flex justify-start mb-4 mt-2 pl-4' data-tour="ongoing-projects">
-                {/* <h2 className="text-lg font-bold mr-8 pt-5">進行中</h2> */}
+                {/* <h2 className="text-body-lg font-bold mr-8 pt-5">進行中</h2> */}
                 <button
                   onClick={() => setCreateProjectModalOpen(true)}
                   className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition duration-200 ease-in-out transform hover:scale-105 mr-4"
@@ -636,25 +636,25 @@ const handleDeleteProject = (projectId) => {
                   <MdAddchart className="mr-2" /> 加入活動
                 </button>
               </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  2xl:grid-cols-3 gap-4 place-items-center'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  2xl:grid-cols-3 gap-stack-sm place-items-center'>
                 {ongoingProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map((projectItem, index) => (
-                  <div key={index} className='bg-white w-full rounded-lg shadow-lg hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
-                    <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
+                  <div key={index} className='bg-white w-full rounded-lg shadow-lg hover:shadow-lg  p-component-base flex flex-col space-y-stack-sm hover:scale-105 transition-transform duration-200 ease-out'>
+                    <h3 className='text-h3 font-bold text-[#5BA491]'>{projectItem.name}</h3>
                     <Tooltip children={"活動描述"} content={`${projectItem.describe}`}>
                       <p className='text-gray-600 font-semibold truncate overflow-hidden h-6 '>{projectItem.describe}</p>
                     </Tooltip>
-                    <div className='text-sm text-gray-500 font-bold'>
+                    <div className='text-body-sm text-gray-500 font-bold'>
                       目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
                     </div>
-                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
-                    <div className='text-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
-                    <div className='text-sm text-gray-500'>成員：
+                    <div className='text-body-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-body-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
+                    <div className='text-body-sm text-gray-500'>成員：
                     {member
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
                     </div>
-                    <div className='text-sm text-gray-500'>所屬班級：
+                    <div className='text-body-sm text-gray-500'>所屬班級：
                     {Array.from(new Set(
                       member
                         .filter(m => m.projectId === projectItem.id)
@@ -662,7 +662,7 @@ const handleDeleteProject = (projectId) => {
                         .filter(Boolean)
                     )).join('、') || '無班級資訊'}
                     </div>
-                    <div className='flex justify-between text-sm text-gray-500'>
+                    <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center text-gray-500'>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M3 12a9 9 0 110 18 9 9 0 010-18zm9 9a9 9 0 100-18 9 9 0 000 18z" />
@@ -681,7 +681,7 @@ const handleDeleteProject = (projectId) => {
                         <div className='bg-[#5BA491] h-2.5 rounded-full transition-all duration-300 ease-in-out' style={{ width: `${calculateProgress(projectItem.currentStage, projectItem.currentSubStage)}%` }}></div>
                       </div>
                     </ProgressTooltip>
-                    <div className='flex justify-between gap-2 mt-2'>
+                    <div className='flex justify-between gap-stack-xs mt-2'>
                       <button 
                         onClick={() => handleEditProject(projectItem)} 
                         className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold">
@@ -698,12 +698,12 @@ const handleDeleteProject = (projectId) => {
                       <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">還沒有進行中的活動</h3>
-                      <p className="mt-1 text-sm text-gray-500">開始您的學習旅程，點擊下方按鈕加入活動吧！</p>
+                      <h3 className="mt-2 text-body-sm font-medium text-gray-900">還沒有進行中的活動</h3>
+                      <p className="mt-1 text-body-sm text-gray-500">開始您的學習旅程，點擊下方按鈕加入活動吧！</p>
                       <div className="mt-6">
                         <button
                           onClick={() => setInviteProjectModalOpen(true)}
-                          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#5BA491] hover:bg-[#5BA491]/80"
+                          className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-body-sm font-medium rounded-md text-white bg-[#5BA491] hover:bg-[#5BA491]/80"
                         >
                           <svg className="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -728,7 +728,7 @@ const handleDeleteProject = (projectId) => {
                   <select
                     value={classFilter}
                     onChange={(e) => setClassFilter(e.target.value)}
-                    className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                    className="px-3 py-2 rounded-lg bg-white border text-body-sm focus:border-[#5BA491] focus:outline-none"
                     title="班級篩選"
                   >
                     <option value="all">所有班級</option>
@@ -742,10 +742,10 @@ const handleDeleteProject = (projectId) => {
                   value={completedSearch}
                   onChange={(e) => setCompletedSearch(e.target.value)}
                   placeholder="搜尋名稱或描述..."
-                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                  className="px-3 py-2 rounded-lg bg-white border text-body-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
                 />
               </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-sm place-items-center'>
                 {completedProjects
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .filter(p => {
@@ -765,9 +765,9 @@ const handleDeleteProject = (projectId) => {
                     );
                   })
                   .map((projectItem, index) => (
-                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
+                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-component-base flex flex-col space-y-stack-sm hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center'>
-                      <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
+                      <h3 className='text-h3 font-bold text-[#5BA491]'>{projectItem.name}</h3>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 ml-2 text-[#5BA491]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
@@ -775,18 +775,18 @@ const handleDeleteProject = (projectId) => {
                     <Tooltip children={"活動描述"} content={`${projectItem.describe}`}>
                       <p className='text-gray-600 font-semibold truncate overflow-hidden h-6 '>{projectItem.describe}</p>
                     </Tooltip>
-                    <div className='text-sm text-gray-500 font-bold'>
+                    <div className='text-body-sm text-gray-500 font-bold'>
                       目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
                     </div>
-                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
-                    <div className='text-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
-                    <div className='text-sm text-gray-500'>成員：
+                    <div className='text-body-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-body-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
+                    <div className='text-body-sm text-gray-500'>成員：
                     {member
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
                     </div>
-                    <div className='text-sm text-gray-500'>所屬班級：
+                    <div className='text-body-sm text-gray-500'>所屬班級：
                     {Array.from(new Set(
                       member
                         .filter(m => m.projectId === projectItem.id)
@@ -794,7 +794,7 @@ const handleDeleteProject = (projectId) => {
                         .filter(Boolean)
                     )).join('、') || '無班級資訊'}
                     </div>
-                    <div className='flex justify-between text-sm text-gray-500'>
+                    <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center'>
                         創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
                       </span>
@@ -823,7 +823,7 @@ const handleDeleteProject = (projectId) => {
                   <select
                     value={classFilter}
                     onChange={(e) => setClassFilter(e.target.value)}
-                    className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                    className="px-3 py-2 rounded-lg bg-white border text-body-sm focus:border-[#5BA491] focus:outline-none"
                     title="班級篩選"
                   >
                     <option value="all">所有班級</option>
@@ -837,10 +837,10 @@ const handleDeleteProject = (projectId) => {
                   value={doneSearch}
                   onChange={(e) => setDoneSearch(e.target.value)}
                   placeholder="搜尋名稱或描述..."
-                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                  className="px-3 py-2 rounded-lg bg-white border text-body-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
                 />
               </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-sm place-items-center'>
                 {doneProjects
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .filter(p => {
@@ -859,11 +859,11 @@ const handleDeleteProject = (projectId) => {
                     );
                   })
                   .map((projectItem, index) => (
-                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
+                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-component-base flex flex-col space-y-stack-sm hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center'>
-                        <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
-                        <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
+                        <h3 className='text-h3 font-bold text-[#5BA491]'>{projectItem.name}</h3>
+                        <span className='ml-2 text-caption px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
                       </div>
                       <button className='ml-2 bg-[#5BA491] text-white px-3 font-bold py-1 rounded hover:bg-[#5BA491]/80 transition duration-150 ease-in-out'>
                         匯出
@@ -872,18 +872,18 @@ const handleDeleteProject = (projectId) => {
                     <Tooltip children={"活動描述"} content={`${projectItem.describe}`}>
                       <p className='text-gray-600 font-semibold truncate overflow-hidden h-6 '>{projectItem.describe}</p>
                     </Tooltip>
-                    <div className='text-sm text-gray-500 font-bold'>
+                    <div className='text-body-sm text-gray-500 font-bold'>
                       目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
                     </div>
-                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
-                    <div className='text-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
-                    <div className='text-sm text-gray-500'>成員：
+                    <div className='text-body-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-body-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
+                    <div className='text-body-sm text-gray-500'>成員：
                     {member
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
                     </div>
-                    <div className='text-sm text-gray-500'>所屬班級：
+                    <div className='text-body-sm text-gray-500'>所屬班級：
                     {Array.from(new Set(
                       member
                         .filter(m => m.projectId === projectItem.id)
@@ -891,7 +891,7 @@ const handleDeleteProject = (projectId) => {
                         .filter(Boolean)
                     )).join('、') || '無班級資訊'}
                     </div>
-                    <div className='flex justify-between text-sm text-gray-500'>
+                    <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center'>
                         創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
                       </span>
@@ -928,12 +928,12 @@ const handleDeleteProject = (projectId) => {
               <GrFormClose className='w-6 h-6' />
             </button>
 
-            <div className='flex flex-col p-3'>
-              <h3 className='font-bold text-base mb-3'>
+            <div className='flex flex-col p-component-sm'>
+              <h3 className='font-bold text-body mb-3'>
                 {editProjectModalOpen ? "更新活動" : "建立活動"}
               </h3>
 
-              <p className='font-bold text-base mb-3'>活動名稱</p>
+              <p className='font-bold text-body mb-3'>活動名稱</p>
               <input className="rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
                 type="text"
                 placeholder="活動名稱..."
@@ -943,7 +943,7 @@ const handleDeleteProject = (projectId) => {
                 required
               />
 
-              <p className='font-bold text-base mb-3'>活動描述</p>
+              <p className='font-bold text-body mb-3'>活動描述</p>
               <textarea className="rounded outline-none ring-2 ring-customgreen w-full p-1"
                 rows={3}
                 placeholder="活動描述..."
@@ -953,14 +953,14 @@ const handleDeleteProject = (projectId) => {
               />
 
               <div className="mt-4">
-                <label className="block text-gray-700 text-base">
+                <label className="block text-gray-700 text-body">
                   指導老師
                   {editProjectModalOpen && createprojectData.projectMentor &&
-                    <span className="text-sm text-gray-500 ml-2">(目前: {createprojectData.projectMentor})</span>
+                    <span className="text-body-sm text-gray-500 ml-2">(目前: {createprojectData.projectMentor})</span>
                   }
                 </label>
                 <select name="projectMentor" onChange={handleChange} value={createprojectData.projectMentor}
-                        className="text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none" required>
+                        className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none" required>
                   {editProjectModalOpen ? (
                     <>
                       <option value={createprojectData.projectMentor}>
@@ -987,7 +987,7 @@ const handleDeleteProject = (projectId) => {
                   setCreateProjectModalOpen(false);
                   setEditProjectModalOpen(false);
                 }}
-                className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2">
+                className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2">
                 取消
               </button>
 
@@ -999,7 +999,7 @@ const handleDeleteProject = (projectId) => {
                   }
                 }}
                 type="submit"
-                className="mx-auto w-full h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-sm text-white">
+                className="mx-auto w-full h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white">
                 {editProjectModalOpen ? "更新" : "儲存"}
               </button>
             </div>
@@ -1008,8 +1008,8 @@ const handleDeleteProject = (projectId) => {
           <button onClick={() => setInviteProjectModalOpen(false)} className=' absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
             <GrFormClose className=' w-6 h-6' />
           </button>
-          <div className='flex flex-col p-3'>
-            <h3 className=' font-bold text-base mb-3'>活動邀請碼</h3>
+          <div className='flex flex-col p-component-sm'>
+            <h3 className=' font-bold text-body mb-3'>活動邀請碼</h3>
             <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3 "
               type="text"
               minLength="6"
@@ -1024,7 +1024,7 @@ const handleDeleteProject = (projectId) => {
               handleSubmitReferral_Code();
               setInviteProjectModalOpen(false);
             }}
-              className="mx-auto w-1/4 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-sm text-white"
+              className="mx-auto w-1/4 h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white"
               type="submit"
             >
               加入
@@ -1057,7 +1057,7 @@ const handleDeleteProject = (projectId) => {
               setActiveIndex={setActiveIndex}
             >
               <div className='flex justify-start items-center gap-3 mb-4 mt-2 pl-4' data-tour="teacher-ongoing-projects">
-                {/* <h2 className="text-lg font-bold mr-8 pt-5">進行中</h2> */}
+                {/* <h2 className="text-body-lg font-bold mr-8 pt-5">進行中</h2> */}
                 <button
                   onClick={() => setCreateProjectModalOpen(true)}
                   className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition duration-200 ease-in-out transform hover:scale-105 mr-4"
@@ -1074,7 +1074,7 @@ const handleDeleteProject = (projectId) => {
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="ml-2 px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                  className="ml-2 px-3 py-2 rounded-lg bg-white border text-body-sm focus:border-[#5BA491] focus:outline-none"
                   title="班級篩選"
                 >
                   <option value="all">所有班級</option>
@@ -1083,7 +1083,7 @@ const handleDeleteProject = (projectId) => {
                   ))}
                 </select>
               </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 place-items-center'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-stack-sm place-items-center'>
                 {ongoingProjects
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .filter(p => {
@@ -1094,23 +1094,23 @@ const handleDeleteProject = (projectId) => {
                     return classes.includes(classFilter);
                   })
                   .map((projectItem, index) => (
-                  <div key={index} className='bg-white w-full rounded-lg shadow-lg hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
-                    <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
+                  <div key={index} className='bg-white w-full rounded-lg shadow-lg hover:shadow-lg  p-component-base flex flex-col space-y-stack-sm hover:scale-105 transition-transform duration-200 ease-out'>
+                    <h3 className='text-h3 font-bold text-[#5BA491]'>{projectItem.name}</h3>
                     <Tooltip children={"活動描述"} content={`${projectItem.describe}`}>
                       <p className='text-gray-600 font-semibold truncate overflow-hidden h-6 '>{projectItem.describe}</p>
                     </Tooltip>
-                    <div className='text-sm text-gray-500 font-bold'>
+                    <div className='text-body-sm text-gray-500 font-bold'>
                       目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
                     </div>
-                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
-                    <div className='text-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
-                    <div className='text-sm text-gray-500'>成員：
+                    <div className='text-body-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-body-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
+                    <div className='text-body-sm text-gray-500'>成員：
                     {member
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
                     </div>
-                    <div className='text-sm text-gray-500'>所屬班級：
+                    <div className='text-body-sm text-gray-500'>所屬班級：
                     {Array.from(new Set(
                       member
                         .filter(m => m.projectId === projectItem.id)
@@ -1118,7 +1118,7 @@ const handleDeleteProject = (projectId) => {
                         .filter(Boolean)
                     )).join('、') || '無班級資訊'}
                     </div>
-                    <div className='flex justify-between text-sm text-gray-500'>
+                    <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center text-gray-500'>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M3 12a9 9 0 110 18 9 9 0 010-18zm9 9a9 9 0 100-18 9 9 0 000 18z" />
@@ -1137,7 +1137,7 @@ const handleDeleteProject = (projectId) => {
                         <div className='bg-[#5BA491] h-2.5 rounded-full transition-all duration-300 ease-in-out' style={{ width: `${calculateProgress(projectItem.currentStage, projectItem.currentSubStage)}%` }}></div>
                       </div>
                     </ProgressTooltip>
-                    <div className='flex justify-between gap-2 mt-2'>
+                    <div className='flex justify-between gap-stack-xs mt-2'>
                       <button 
                         onClick={() => handleEditProject(projectItem)} 
                         className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold">
@@ -1168,7 +1168,7 @@ const handleDeleteProject = (projectId) => {
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                  className="px-3 py-2 rounded-lg bg-white border text-body-sm focus:border-[#5BA491] focus:outline-none"
                   title="班級篩選"
                 >
                   <option value="all">所有班級</option>
@@ -1181,10 +1181,10 @@ const handleDeleteProject = (projectId) => {
                   value={completedSearch}
                   onChange={(e) => setCompletedSearch(e.target.value)}
                   placeholder="搜尋名稱或描述..."
-                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                  className="px-3 py-2 rounded-lg bg-white border text-body-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
                 />
               </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-sm place-items-center'>
                 {completedProjects
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .filter(p => {
@@ -1203,9 +1203,9 @@ const handleDeleteProject = (projectId) => {
                     );
                   })
                   .map((projectItem, index) => (
-                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
+                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-component-base flex flex-col space-y-stack-sm hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center'>
-                      <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
+                      <h3 className='text-h3 font-bold text-[#5BA491]'>{projectItem.name}</h3>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 ml-2 text-[#5BA491]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
@@ -1213,18 +1213,18 @@ const handleDeleteProject = (projectId) => {
                     <Tooltip children={"活動描述"} content={`${projectItem.describe}`}>
                       <p className='text-gray-600 font-semibold truncate overflow-hidden h-6 '>{projectItem.describe}</p>
                     </Tooltip>
-                    <div className='text-sm text-gray-500 font-bold'>
+                    <div className='text-body-sm text-gray-500 font-bold'>
                       目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
                     </div>
-                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
-                    <div className='text-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
-                    <div className='text-sm text-gray-500'>成員：
+                    <div className='text-body-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-body-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
+                    <div className='text-body-sm text-gray-500'>成員：
                     {member
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
                     </div>
-                    <div className='text-sm text-gray-500'>所屬班級：
+                    <div className='text-body-sm text-gray-500'>所屬班級：
                     {Array.from(new Set(
                       member
                         .filter(m => m.projectId === projectItem.id)
@@ -1232,7 +1232,7 @@ const handleDeleteProject = (projectId) => {
                         .filter(Boolean)
                     )).join('、') || '無班級資訊'}
                     </div>
-                    <div className='flex justify-between text-sm text-gray-500'>
+                    <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center'>
                         創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
                       </span>
@@ -1260,7 +1260,7 @@ const handleDeleteProject = (projectId) => {
                 <select
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+                  className="px-3 py-2 rounded-lg bg-white border text-body-sm focus:border-[#5BA491] focus:outline-none"
                   title="班級篩選"
                 >
                   <option value="all">所有班級</option>
@@ -1273,10 +1273,10 @@ const handleDeleteProject = (projectId) => {
                   value={doneSearch}
                   onChange={(e) => setDoneSearch(e.target.value)}
                   placeholder="搜尋名稱或描述..."
-                  className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+                  className="px-3 py-2 rounded-lg bg-white border text-body-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
                 />
               </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 place-items-center'>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-sm place-items-center'>
                 {doneProjects
                   .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                   .filter(p => {
@@ -1295,11 +1295,11 @@ const handleDeleteProject = (projectId) => {
                     );
                   })
                   .map((projectItem, index) => (
-                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-4 flex flex-col space-y-4 hover:scale-105 transition-transform duration-200 ease-out'>
+                  <div key={index} className='bg-white w-full rounded-lg shadow hover:shadow-lg  p-component-base flex flex-col space-y-stack-sm hover:scale-105 transition-transform duration-200 ease-out'>
                     <div className='flex items-center justify-between'>
                       <div className='flex items-center'>
-                        <h3 className='text-xl font-bold text-[#5BA491]'>{projectItem.name}</h3>
-                        <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
+                        <h3 className='text-h3 font-bold text-[#5BA491]'>{projectItem.name}</h3>
+                        <span className='ml-2 text-caption px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
                       </div>
                       <button className='ml-2 bg-[#5BA491] text-white px-3 font-bold py-1 rounded hover:bg-[#5BA491]/80 transition duration-150 ease-in-out'>
                         匯出
@@ -1308,18 +1308,18 @@ const handleDeleteProject = (projectId) => {
                     <Tooltip children={"活動描述"} content={`${projectItem.describe}`}>
                       <p className='text-gray-600 font-semibold truncate overflow-hidden h-6 '>{projectItem.describe}</p>
                     </Tooltip>
-                    <div className='text-sm text-gray-500 font-bold'>
+                    <div className='text-body-sm text-gray-500 font-bold'>
                       目前階段：{projectItem.currentStage}-{projectItem.currentSubStage}
                     </div>
-                    <div className='text-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
-                    <div className='text-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
-                    <div className='text-sm text-gray-500'>成員：
+                    <div className='text-body-sm text-gray-500'>指導老師：{projectItem.mentor}</div>
+                    <div className='text-body-sm text-gray-500'>邀請碼：{projectItem.referral_code}</div>
+                    <div className='text-body-sm text-gray-500'>成員：
                     {member
                       .filter(member => member.projectId === projectItem.id)
                       .map(member => member.username)
                       .join("、") || "無成員"}
                     </div>
-                    <div className='text-sm text-gray-500'>所屬班級：
+                    <div className='text-body-sm text-gray-500'>所屬班級：
                     {Array.from(new Set(
                       member
                         .filter(m => m.projectId === projectItem.id)
@@ -1327,7 +1327,7 @@ const handleDeleteProject = (projectId) => {
                         .filter(Boolean)
                     )).join('、') || '無班級資訊'}
                     </div>
-                    <div className='flex justify-between text-sm text-gray-500'>
+                    <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center'>
                         創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
                       </span>
@@ -1364,12 +1364,12 @@ const handleDeleteProject = (projectId) => {
               <GrFormClose className='w-6 h-6' />
             </button>
 
-            <div className='flex flex-col p-3'>
-              <h3 className='font-bold text-base mb-3'>
+            <div className='flex flex-col p-component-sm'>
+              <h3 className='font-bold text-body mb-3'>
                 {editProjectModalOpen ? "更新活動" : "建立活動"}
               </h3>
 
-              <p className='font-bold text-base mb-3'>活動名稱</p>
+              <p className='font-bold text-body mb-3'>活動名稱</p>
               <input className="rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
                 type="text"
                 placeholder="活動名稱..."
@@ -1379,7 +1379,7 @@ const handleDeleteProject = (projectId) => {
                 required
               />
 
-              <p className='font-bold text-base mb-3'>活動描述</p>
+              <p className='font-bold text-body mb-3'>活動描述</p>
               <textarea className="rounded outline-none ring-2 ring-customgreen w-full p-1"
                 rows={3}
                 placeholder="活動描述..."
@@ -1389,14 +1389,14 @@ const handleDeleteProject = (projectId) => {
               />
 
               <div className="mt-4">
-                <label className="block text-gray-700 text-base">
+                <label className="block text-gray-700 text-body">
                   指導老師
                   {editProjectModalOpen && createprojectData.projectMentor &&
-                    <span className="text-sm text-gray-500 ml-2">(目前: {createprojectData.projectMentor})</span>
+                    <span className="text-body-sm text-gray-500 ml-2">(目前: {createprojectData.projectMentor})</span>
                   }
                 </label>
                 <select name="projectMentor" onChange={handleChange} value={createprojectData.projectMentor}
-                        className="text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none" required>
+                        className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none" required>
                   {editProjectModalOpen ? (
                     <>
                       <option value={createprojectData.projectMentor}>
@@ -1423,7 +1423,7 @@ const handleDeleteProject = (projectId) => {
                   setCreateProjectModalOpen(false);
                   setEditProjectModalOpen(false);
                 }}
-                className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2">
+                className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2">
                 取消
               </button>
 
@@ -1435,7 +1435,7 @@ const handleDeleteProject = (projectId) => {
                   }
                 }}
                 type="submit"
-                className="mx-auto w-full h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-sm text-white">
+                className="mx-auto w-full h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white">
                 {editProjectModalOpen ? "更新" : "儲存"}
               </button>
             </div>
@@ -1444,8 +1444,8 @@ const handleDeleteProject = (projectId) => {
           <button onClick={() => setInviteProjectModalOpen(false)} className=' absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
             <GrFormClose className=' w-6 h-6' />
           </button>
-          <div className='flex flex-col p-3'>
-            <h3 className=' font-bold text-base mb-3'>活動邀請碼</h3>
+          <div className='flex flex-col p-component-sm'>
+            <h3 className=' font-bold text-body mb-3'>活動邀請碼</h3>
             <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3 "
               type="text"
               minLength="6"
@@ -1460,7 +1460,7 @@ const handleDeleteProject = (projectId) => {
               handleSubmitReferral_Code();
               setInviteProjectModalOpen(false);
             }}
-              className="mx-auto w-1/4 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-sm text-white"
+              className="mx-auto w-1/4 h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white"
               type="submit"
             >
               加入

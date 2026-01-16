@@ -75,13 +75,13 @@ const ProjectSection = ({
     <div className="col-span-full">
       <div className="text-center py-12">
         {finalEmptyStateConfig.icon}
-        <h3 className="mt-2 text-sm font-medium text-gray-900">{finalEmptyStateConfig.title}</h3>
-        <p className="mt-1 text-sm text-gray-500">{finalEmptyStateConfig.description}</p>
+        <h3 className="mt-2 text-body-sm font-medium text-gray-900">{finalEmptyStateConfig.title}</h3>
+        <p className="mt-1 text-body-sm text-gray-500">{finalEmptyStateConfig.description}</p>
         {finalEmptyStateConfig.showButton && (
           <div className="mt-6">
             <button
               onClick={finalEmptyStateConfig.onButtonClick}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#5BA491] hover:bg-[#5BA491]/80"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-body-sm font-medium rounded-md text-white bg-[#5BA491] hover:bg-[#5BA491]/80"
             >
               <svg className="-ml-1 mr-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
@@ -103,7 +103,7 @@ const ProjectSection = ({
         {showCreateButton && (
           <button
             onClick={onCreateProject}
-            className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition duration-200 ease-in-out transform hover:scale-105"
+            className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition-shadow duration-fast ease-in-out hover:shadow-lg"
             data-tour={role === "teacher" ? "create-project" : undefined}
           >
             <BarChart3 className="mr-2 h-5 w-5" /> 建立活動
@@ -112,7 +112,7 @@ const ProjectSection = ({
         {showJoinButton && (
           <button
             onClick={onJoinProject}
-            className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition duration-200 ease-in-out transform hover:scale-105"
+            className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition-shadow duration-fast ease-in-out hover:shadow-lg"
           >
             <BarChart3 className="mr-2 h-5 w-5" /> 加入活動
           </button>
@@ -125,9 +125,9 @@ const ProjectSection = ({
   // 根據類型決定網格佈局
   const getGridClasses = () => {
     if (role === "teacher" && type === 'normal') {
-      return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 place-items-center';
+      return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-stack-sm place-items-center';
     }
-    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-4 place-items-center';
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-stack-sm place-items-center';
   };
 
   return (

@@ -16,7 +16,7 @@ const SearchAndFilter = ({
         <select
           value={classFilter}
           onChange={(e) => setClassFilter(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-white border text-sm focus:border-[#5BA491] focus:outline-none"
+          className="px-3 py-2 rounded-lg bg-white border text-body-sm focus:border-[#5BA491] focus:outline-none"
           title="班級篩選"
         >
           <option value="all">所有班級</option>
@@ -32,7 +32,7 @@ const SearchAndFilter = ({
         value={searchValue}
         onChange={(e) => setSearchValue(e.target.value)}
         placeholder={searchPlaceholder}
-        className="px-3 py-2 rounded-lg bg-white border text-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
+        className="px-3 py-2 rounded-lg bg-white border text-body-sm flex-1 min-w-[220px] focus:border-[#5BA491] focus:outline-none"
       />
     </div>
   );

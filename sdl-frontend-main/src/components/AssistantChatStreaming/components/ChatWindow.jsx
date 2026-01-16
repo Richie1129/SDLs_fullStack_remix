@@ -74,10 +74,10 @@ const ChatWindow = ({
             screenWidth < 768 ? 'px-4 py-3' : 'px-5 py-4'
           } border-b border-[#e9ecef] bg-[#f8f9fa] relative min-h-[60px]`}>
             {/* 左側區域 */}
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-stack-xs shrink-0">
               <button
                 onClick={() => setShowSidebar(!showSidebar)}
-                className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[18px] font-medium transition-all bg-transparent text-[#5BA491] hover:bg-[#f1f3f4] hover:scale-110"
+                className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[18px] font-medium transition-colors duration-fast bg-transparent text-[#5BA491] hover:bg-[#f1f3f4]"
                 title={showSidebar ? "隱藏側邊欄" : "顯示側邊欄"}
               >
                 {showSidebar ? "◂" : "▸"}
@@ -85,11 +85,11 @@ const ChatWindow = ({
             </div>
 
             {/* 中央區域 - 標題 */}
-            <div className="header-center flex items-center justify-center flex-1 gap-2 absolute left-1/2 -translate-x-1/2 max-w-[360px]">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🤖</span>
+            <div className="header-center flex items-center justify-center flex-1 gap-stack-xs absolute left-1/2 -translate-x-1/2 max-w-[360px]">
+              <div className="flex items-center gap-stack-xs">
+                <span className="text-body-lg">🤖</span>
                 <span className="font-semibold text-[#343a40]">專案助理</span>
-                <span className="text-xs text-[#6c757d]">
+                <span className="text-caption text-[#6c757d]">
                   {provider === 'gemini' ? 'Gemini' : 'GPT-4'}
                 </span>
               </div>
@@ -101,7 +101,7 @@ const ChatWindow = ({
               {messages.length > 0 && (
                 <button
                   onClick={clearMessages}
-                  className="flex items-center justify-center px-3 py-1 rounded cursor-pointer text-[12px] font-medium transition-all bg-transparent text-[#dc3545] hover:bg-[#f8d7da] hover:scale-105"
+                  className="flex items-center justify-center px-3 py-1 rounded cursor-pointer text-[12px] font-medium transition-colors duration-fast bg-transparent text-[#dc3545] hover:bg-[#f8d7da]"
                   title="清空當前對話"
                 >
                   清空

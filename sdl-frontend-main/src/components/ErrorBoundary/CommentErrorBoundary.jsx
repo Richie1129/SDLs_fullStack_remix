@@ -74,28 +74,28 @@ class CommentErrorBoundary extends React.Component {
     if (this.state.hasError) {
       // 友善的評論錯誤界面
       return (
-        <div className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+        <div className="flex flex-col items-center justify-center p-component-md-lg bg-gray-50 rounded-lg border border-gray-200">
           <div className="text-center">
-            <div className="text-4xl mb-4">💬</div>
-            <h3 className="text-lg font-medium text-gray-800 mb-2">
+            <div className="text-display mb-4">💬</div>
+            <h3 className="text-body-lg font-medium text-gray-800 mb-2">
               評論載入失敗
             </h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-body-sm text-gray-600 mb-4">
               抱歉，評論功能暫時無法使用
             </p>
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <div className="flex flex-col sm:flex-row gap-stack-xs justify-center">
               <button
                 onClick={this.handleRetry}
-                className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors text-sm"
+                className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors text-body-sm"
               >
                 重試
               </button>
               {this.props.showDetails && (
                 <details className="mt-4 text-left">
-                  <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700">
+                  <summary className="cursor-pointer text-body-sm text-gray-500 hover:text-gray-700">
                     技術詳情 (錯誤ID: {this.state.errorId})
                   </summary>
-                  <pre className="mt-2 p-3 bg-gray-100 rounded text-xs text-gray-700 overflow-auto max-h-32">
+                  <pre className="mt-2 p-component-sm bg-gray-100 rounded text-caption text-gray-700 overflow-auto max-h-32">
                     {this.state.error?.toString()}
                     {this.state.errorInfo?.componentStack}
                   </pre>

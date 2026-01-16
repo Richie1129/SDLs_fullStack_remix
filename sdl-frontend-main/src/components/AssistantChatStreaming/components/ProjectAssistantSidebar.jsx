@@ -24,12 +24,12 @@ const ProjectAssistantSidebar = ({
         isFullscreen
           ? (screenWidth >= 768 ? 'w-[280px] h-full' : 'w-full h-auto min-h-[180px] border-b border-[#e9ecef]')
           : 'w-[200px] h-full border-r border-[#e9ecef]'
-      } ${isFullscreen ? 'rounded-none' : 'rounded-l-2xl'} bg-[#f8f9fa] p-4 flex flex-col`}
+      } ${isFullscreen ? 'rounded-none' : 'rounded-l-2xl'} bg-[#f8f9fa] p-component-base flex flex-col`}
     >
       {/* 新對話按鈕 */}
       <button
         onClick={onNewConversation}
-        className="bg-[#5BA491] text-white border-0 rounded-lg py-3 px-4 mb-4 cursor-pointer text-sm font-semibold transition-all shadow-[0_2px_4px_rgba(91,164,145,0.2)] hover:bg-[#4a9076] hover:-translate-y-px"
+        className="bg-[#5BA491] text-white border-0 rounded-lg py-3 px-4 mb-4 cursor-pointer text-body-sm font-semibold transition-all duration-fast shadow-[0_2px_4px_rgba(91,164,145,0.2)] hover:bg-[#4a9076] hover:shadow-lg"
       >
         ✨ 新對話
       </button>
@@ -37,14 +37,14 @@ const ProjectAssistantSidebar = ({
       {/* 對話列表 */}
       <div className="flex-1 overflow-y-auto">
         {isLoadingSessions ? (
-          <div className="flex items-center justify-center h-full text-[#6c757d] text-sm">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center h-full text-[#6c757d] text-body-sm">
+            <div className="flex items-center gap-stack-xs">
               <div className="w-4 h-4 border-2 border-[#5BA491] border-t-transparent rounded-full animate-spin"></div>
               載入中...
             </div>
           </div>
         ) : chatSessions.length === 0 ? (
-          <div className="p-5 text-center text-[#6c757d] text-[13px] italic">
+          <div className="p-component-md text-center text-[#6c757d] text-[13px] italic">
             🌟 開始你的第一次對話吧！
           </div>
         ) : (

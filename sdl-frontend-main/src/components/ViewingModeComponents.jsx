@@ -12,34 +12,34 @@ const ViewingModeIndicator = ({ projectName, onExit }) => {
                 <div className="flex items-center justify-between py-3">
                     {/* 左側資訊 */}
                     <div className="flex items-center space-x-3">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-stack-xs">
                             <div className="w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                                <FaEye className="text-white text-sm" />
+                                <FaEye className="text-white text-body-sm" />
                             </div>
                             <div className="hidden sm:block">
-                                <h3 className="text-sm font-semibold">觀摩模式</h3>
-                                <p className="text-xs opacity-90">正在觀摩：{projectName}</p>
+                                <h3 className="text-body-sm font-semibold">觀摩模式</h3>
+                                <p className="text-caption opacity-90">正在觀摩：{projectName}</p>
                             </div>
                             <div className="sm:hidden">
-                                <h3 className="text-sm font-semibold">觀摩模式</h3>
+                                <h3 className="text-body-sm font-semibold">觀摩模式</h3>
                             </div>
                         </div>
                     </div>
 
                     {/* 中間提示 */}
-                    <div className="hidden md:flex items-center space-x-2 bg-white bg-opacity-10 rounded-full px-4 py-2">
-                        <FaInfoCircle className="text-sm" />
-                        <span className="text-sm">您正以只讀模式瀏覽此專案內容</span>
+                    <div className="hidden md:flex items-center space-x-stack-xs bg-white bg-opacity-10 rounded-full px-4 py-2">
+                        <FaInfoCircle className="text-body-sm" />
+                        <span className="text-body-sm">您正以只讀模式瀏覽此專案內容</span>
                     </div>
 
                     {/* 右側操作 */}
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-stack-xs">
                         <button
                             onClick={onExit}
-                            className="flex items-center space-x-2 bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg px-3 py-2 transition-colors duration-200"
+                            className="flex items-center space-x-stack-xs bg-white bg-opacity-10 hover:bg-opacity-20 rounded-lg px-3 py-2 transition-colors duration-fast"
                         >
-                            <FaTimes className="text-sm" />
-                            <span className="text-sm font-medium hidden sm:inline">退出觀摩</span>
+                            <FaTimes className="text-body-sm" />
+                            <span className="text-body-sm font-medium hidden sm:inline">退出觀摩</span>
                         </button>
                     </div>
                 </div>
@@ -47,9 +47,9 @@ const ViewingModeIndicator = ({ projectName, onExit }) => {
 
             {/* 手機版額外提示 */}
             <div className="md:hidden bg-black bg-opacity-10 px-4 py-2 border-t border-white border-opacity-20">
-                <div className="flex items-center space-x-2 justify-center">
-                    <FaInfoCircle className="text-xs" />
-                    <span className="text-xs">只讀模式 - 無法編輯內容</span>
+                <div className="flex items-center space-x-stack-xs justify-center">
+                    <FaInfoCircle className="text-caption" />
+                    <span className="text-caption">只讀模式 - 無法編輯內容</span>
                 </div>
             </div>
         </div>
@@ -64,13 +64,13 @@ const ViewingModeRestriction = ({ isVisible, onClose, actionType = '編輯' }) =
     if (!isVisible) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-component-base">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-                <div className="p-6 text-center">
+                <div className="p-component-md-lg text-center">
                     <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FaEye className="text-yellow-600 text-2xl" />
+                        <FaEye className="text-yellow-600 text-h2" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                    <h3 className="text-body-lg font-semibold text-gray-800 mb-2">
                         觀摩模式限制
                     </h3>
                     <p className="text-gray-600 mb-6">
@@ -79,7 +79,7 @@ const ViewingModeRestriction = ({ isVisible, onClose, actionType = '編輯' }) =
                     </p>
                     <button
                         onClick={onClose}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-200"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-fast"
                     >
                         我了解了
                     </button>
@@ -103,7 +103,7 @@ const ViewingModeContentWrapper = ({ children, readOnly = false, title = '內容
             {/* 觀摩模式遮罩 */}
             <div className="absolute top-0 right-0 z-10">
                 <div className="bg-green-500 text-white px-3 py-1 rounded-bl-lg shadow-lg">
-                    <div className="flex items-center space-x-1 text-xs">
+                    <div className="flex items-center space-x-1 text-caption">
                         <FaEye />
                         <span>觀摩模式</span>
                     </div>

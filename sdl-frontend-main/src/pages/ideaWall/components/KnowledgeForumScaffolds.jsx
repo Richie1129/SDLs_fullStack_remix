@@ -19,14 +19,14 @@ export default function KnowledgeForumScaffolds({ currentContent, onInsert }) {
 
     return (
         <div className="mb-3">
-            <label className="font-bold text-sm mb-2 block">思考鷹架（點擊插入到內容）</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="font-bold text-body-sm mb-2 block">思考鷹架（點擊插入到內容）</label>
+            <div className="flex flex-wrap gap-stack-xs">
                 {scaffolds.map((scaffold) => (
                     <button
                         key={scaffold.text}
                         type="button"
                         onClick={() => onInsert(currentContent + scaffold.text)}
-                        className={`px-3 py-1 ${scaffold.color} rounded text-sm transition-colors`}
+                        className={`px-3 py-1 ${scaffold.color} rounded text-body-sm transition-colors`}
                     >
                         {scaffold.label}
                     </button>

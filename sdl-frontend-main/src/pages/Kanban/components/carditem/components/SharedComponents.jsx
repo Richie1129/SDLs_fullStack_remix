@@ -25,7 +25,7 @@ export const CardImage = ({ image, onClick, additionalCount }) => (
       onClick={onClick}
     />
     {additionalCount > 0 && (
-      <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-xs">
+      <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 rounded-full text-caption">
         +{additionalCount}
       </div>
     )}
@@ -40,7 +40,7 @@ export const Tooltip = ({ children, content }) => {
     <div className='relative group'>
       {children}
       <div className='absolute hidden group-hover:block'>
-        <div className='bg-gray-700 text-white text-xs rounded-lg py-1 px-2 whitespace-nowrap'>
+        <div className='bg-gray-700 text-white text-caption rounded-lg py-1 px-2 whitespace-nowrap'>
           {content}
         </div>
       </div>
@@ -57,41 +57,41 @@ export const MemberAssignment = ({
   owner,
   isObservationMode = false
 }) => (
-  <div className='bg-white rounded-xl border border-gray-100 p-4 mb-4'>
+  <div className='bg-white rounded-xl border border-gray-100 p-component-base mb-4'>
     <div className='flex items-center justify-between mb-3'>
-      <h4 className='text-base font-medium text-gray-700'>成員</h4>
+      <h4 className='text-body font-medium text-gray-700'>成員</h4>
       {!isObservationMode && (
         <button
           onClick={() => setAssignMemberModalOpen(true)}
-          className='flex items-center space-x-2 px-3 py-1.5 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200'
+          className='flex items-center space-x-stack-xs px-3 py-1.5 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-fast'
         >
           <BsFillPersonFill size={16} />
-          <span className='text-sm font-medium'>指派成員</span>
+          <span className='text-body-sm font-medium'>指派成員</span>
         </button>
       )}
     </div>
 
     {owner && (
-      <div className='flex items-center space-x-2 mb-3 p-2 bg-gray-50 rounded-lg'>
-        <span className='text-sm font-medium text-gray-600'>建立者:</span>
-        <span className='text-sm text-gray-500'>{owner}</span>
+      <div className='flex items-center space-x-stack-xs mb-3 p-component-xs bg-gray-50 rounded-lg'>
+        <span className='text-body-sm font-medium text-gray-600'>建立者:</span>
+        <span className='text-body-sm text-gray-500'>{owner}</span>
       </div>
     )}
 
     {cardData.assignees?.length > 0 ? (
-      <div className='flex flex-wrap gap-2'>
+      <div className='flex flex-wrap gap-stack-xs'>
         {cardData.assignees.map((assignee, index) => {
           const imgIndex = parseInt(assignee.id) % personImg.length;
           const userImg = personImg[imgIndex];
           return (
             <Tooltip key={index} content={assignee.username}>
-              <div className='flex items-center space-x-2 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200'>
+              <div className='flex items-center space-x-stack-xs p-component-xs bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-fast'>
                 <img
                   src={userImg}
                   alt={assignee.username}
                   className='w-6 h-6 rounded-full shadow-sm object-cover'
                 />
-                <span className='text-sm text-gray-600'>{assignee.username}</span>
+                <span className='text-body-sm text-gray-600'>{assignee.username}</span>
               </div>
             </Tooltip>
           );
@@ -99,7 +99,7 @@ export const MemberAssignment = ({
       </div>
     ) : (
       <div className='flex items-center justify-center h-20 bg-gray-50 rounded-lg'>
-        <p className='text-sm text-gray-400'>尚未指派成員</p>
+        <p className='text-body-sm text-gray-400'>尚未指派成員</p>
       </div>
     )}
   </div>

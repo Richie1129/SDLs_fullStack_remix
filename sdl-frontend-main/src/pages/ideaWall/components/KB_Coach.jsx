@@ -132,15 +132,15 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
     };
 
     return (
-        <div className="p-6 bg-white rounded-lg shadow-lg max-w-3xl max-h-[80vh] overflow-y-auto flex flex-col h-full">
+        <div className="p-component-md-lg bg-white rounded-lg shadow-lg max-w-3xl max-h-[80vh] overflow-y-auto flex flex-col h-full">
             {/* 標題 */}
             <div className="mb-4 pb-4 border-b flex justify-between items-center">
                 <div>
-                    <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                    <h3 className="text-h3 font-bold text-gray-800 flex items-center">
                         <span className="mr-2">🤖</span>
                         AI 協作夥伴
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-body-sm text-gray-500 mt-1">
                         選擇一位夥伴來協助你深化想法
                     </p>
                 </div>
@@ -150,59 +150,59 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
             </div>
 
             {/* 原始想法摘要 */}
-            <div className="mb-6 p-3 bg-gray-50 rounded border border-gray-100 text-sm text-gray-600 truncate">
+            <div className="mb-6 p-component-sm bg-gray-50 rounded border border-gray-100 text-body-sm text-gray-600 truncate">
                 <span className="font-bold mr-2">當前想法:</span> {nodeInfo.title}
             </div>
 
             {/* Agent 選擇區 */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-stack-sm mb-6">
                 <button
                     onClick={() => triggerAgent('IMPROVER')}
                     disabled={isLoading}
-                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                    className={`p-component-base rounded-xl border-2 transition-all flex flex-col items-center text-center ${
                         activeAgent === 'IMPROVER' 
                             ? 'border-blue-500 bg-blue-50 text-blue-700' 
                             : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-600'
                     }`}
                 >
-                    <div className="text-3xl mb-2">🛠️</div>
+                    <div className="text-h1 mb-2">🛠️</div>
                     <div className="font-bold mb-1">想法改進者</div>
-                    <div className="text-xs opacity-80">深化單一觀點</div>
+                    <div className="text-caption opacity-80">深化單一觀點</div>
                 </button>
 
                 <button
                     onClick={() => triggerAgent('SYNTHESIZER')}
                     disabled={isLoading}
-                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                    className={`p-component-base rounded-xl border-2 transition-all flex flex-col items-center text-center ${
                         activeAgent === 'SYNTHESIZER' 
                             ? 'border-purple-500 bg-purple-50 text-purple-700' 
                             : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50 text-gray-600'
                     }`}
                 >
-                    <div className="text-3xl mb-2">🔗</div>
+                    <div className="text-h1 mb-2">🔗</div>
                     <div className="font-bold mb-1">綜合者</div>
-                    <div className="text-xs opacity-80">連結多個想法</div>
+                    <div className="text-caption opacity-80">連結多個想法</div>
                 </button>
 
                 <button
                     onClick={() => triggerAgent('DEVIL')}
                     disabled={isLoading}
-                    className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center text-center ${
+                    className={`p-component-base rounded-xl border-2 transition-all flex flex-col items-center text-center ${
                         activeAgent === 'DEVIL' 
                             ? 'border-red-500 bg-red-50 text-red-700' 
                             : 'border-gray-200 hover:border-red-300 hover:bg-gray-50 text-gray-600'
                     }`}
                 >
-                    <div className="text-3xl mb-2">😈</div>
+                    <div className="text-h1 mb-2">😈</div>
                     <div className="font-bold mb-1">魔鬼代言人</div>
-                    <div className="text-xs opacity-80">挑戰既有觀點</div>
+                    <div className="text-caption opacity-80">挑戰既有觀點</div>
                 </button>
             </div>
 
             {/* Loading State */}
             {isLoading && (
                 <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-500 animate-pulse">
-                    <div className="text-4xl mb-4">🤔</div>
+                    <div className="text-display mb-4">🤔</div>
                     <p>AI 正在閱讀上下文並思考中...</p>
                 </div>
             )}
@@ -215,12 +215,12 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                         <div className="mb-4">
                             <button 
                                 onClick={() => setShowThinking(!showThinking)}
-                                className="text-xs text-gray-400 hover:text-gray-600 flex items-center mb-2"
+                                className="text-caption text-gray-400 hover:text-gray-600 flex items-center mb-2"
                             >
                                 {showThinking ? '▼ 隱藏思考過程' : '▶ 顯示 AI 思考過程 (CoT)'}
                             </button>
                             {showThinking && (
-                                <div className="p-3 bg-gray-100 rounded text-xs text-gray-600 font-mono whitespace-pre-wrap border border-gray-200">
+                                <div className="p-component-sm bg-gray-100 rounded text-caption text-gray-600 font-mono whitespace-pre-wrap border border-gray-200">
                                     {coaching.thinkingProcess}
                                 </div>
                             )}
@@ -228,7 +228,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                     )}
 
                     {/* Main Content */}
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6">
+                    <div className="bg-white p-component-md rounded-xl border border-gray-200 shadow-sm mb-6">
                         <div className="prose prose-sm max-w-none text-gray-800">
                             <ReactMarkdown>{coaching.content}</ReactMarkdown>
                         </div>
@@ -237,7 +237,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                     {/* Suggested Actions */}
                     {coaching.suggestedActions && coaching.suggestedActions.length > 0 && (
                         <div>
-                            <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
+                            <h4 className="text-body-sm font-bold text-gray-500 uppercase tracking-wider mb-3">
                                 建議行動
                             </h4>
                             <div className="flex flex-wrap gap-3">
@@ -245,7 +245,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                                     <button
                                         key={idx}
                                         onClick={() => executeAction(action)}
-                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm flex items-center text-sm font-medium"
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm flex items-center text-body-sm font-medium"
                                     >
                                         <span className="mr-2">✨</span>
                                         {action.label}
@@ -258,24 +258,24 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                     {/* Phase 3: Feedback Section */}
                     <div className="mt-6 pt-4 border-t border-gray-200">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-500">這個建議對你有幫助嗎？</span>
+                            <span className="text-body-sm text-gray-500">這個建議對你有幫助嗎？</span>
                             {!feedbackGiven ? (
-                                <div className="flex gap-2">
+                                <div className="flex gap-stack-xs">
                                     <button
                                         onClick={() => handleFeedback('helpful')}
-                                        className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition flex items-center text-sm"
+                                        className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition flex items-center text-body-sm"
                                     >
                                         <span className="mr-1">👍</span> 有幫助
                                     </button>
                                     <button
                                         onClick={() => handleFeedback('not_helpful')}
-                                        className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition flex items-center text-sm"
+                                        className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition flex items-center text-body-sm"
                                     >
                                         <span className="mr-1">👎</span> 需改進
                                     </button>
                                 </div>
                             ) : (
-                                <span className="text-sm text-green-600 flex items-center">
+                                <span className="text-body-sm text-green-600 flex items-center">
                                     <span className="mr-1">✓</span> 感謝回饋！
                                 </span>
                             )}

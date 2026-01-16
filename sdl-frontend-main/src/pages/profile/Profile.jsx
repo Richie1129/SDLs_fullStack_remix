@@ -180,9 +180,9 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#F8FAFB] flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg">
+        <div className="bg-white p-component-lg rounded-xl shadow-lg">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5BA491] mx-auto mb-4"></div>
-          <div className="text-lg text-gray-600">載入中...</div>
+          <div className="text-body-lg text-gray-600">載入中...</div>
         </div>
       </div>
     );
@@ -193,19 +193,19 @@ export default function Profile() {
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-stack-sm">
             <button
               onClick={() => navigate('/homepage')}
-              className="p-2 text-gray-600 hover:text-[#5BA491] hover:bg-[#5BA491]/10 rounded-lg transition-colors"
+              className="p-component-xs text-gray-600 hover:text-[#5BA491] hover:bg-[#5BA491]/10 rounded-lg transition-colors"
               title="返回首頁"
             >
-              <FaArrowLeft className="text-lg" />
+              <FaArrowLeft className="text-body-lg" />
             </button>
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-[#5BA491]/10 rounded-lg">
-                <FaUser className="text-[#5BA491] text-xl" />
+              <div className="p-component-xs bg-[#5BA491]/10 rounded-lg">
+                <FaUser className="text-[#5BA491] text-h3" />
               </div>
-              <h1 className="text-2xl font-bold text-gray-800">個人資料</h1>
+              <h1 className="text-h2 font-bold text-gray-800">個人資料</h1>
             </div>
           </div>
         </div>
@@ -216,13 +216,13 @@ export default function Profile() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           {/* Profile Header */}
           <div className="bg-gradient-to-r from-[#5BA491] to-[#4A9480] px-6 py-8">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-stack-sm">
               <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-                <FaUser className="text-[#5BA491] text-2xl" />
+                <FaUser className="text-[#5BA491] text-h2" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white">{user.username || '使用者'}</h2>
-                <p className="text-white/80 text-lg">
+                <h2 className="text-h2 font-bold text-white">{user.username || '使用者'}</h2>
+                <p className="text-white/80 text-body-lg">
                   {role === 'teacher' ? '教師' : '學生'} • {user.account}
                 </p>
               </div>
@@ -230,17 +230,17 @@ export default function Profile() {
           </div>
 
           {/* Form Content */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-component-md-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-md">
               {/* 基本資料表單 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center space-x-2">
+              <div className="space-y-stack-sm">
+                <h3 className="text-body-lg font-semibold text-gray-800 flex items-center space-x-stack-xs">
                   <FaUser className="text-[#5BA491]" />
                   <span>基本資料</span>
                 </h3>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-body-sm font-medium text-gray-700 mb-2">
                     姓名
                   </label>
                   <input
@@ -256,7 +256,7 @@ export default function Profile() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-body-sm font-medium text-gray-700 mb-2">
                     帳號
                   </label>
                   <input
@@ -265,11 +265,11 @@ export default function Profile() {
                     disabled
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
                   />
-                  <p className="text-xs text-gray-500 mt-1">帳號無法修改</p>
+                  <p className="text-caption text-gray-500 mt-1">帳號無法修改</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-body-sm font-medium text-gray-700 mb-2">
                     電子郵件
                   </label>
                   <input
@@ -284,14 +284,14 @@ export default function Profile() {
                     placeholder="請輸入您的電子郵件"
                   />
                   {user.email && user.email.endsWith('@example.com') && (
-                    <p className="text-xs text-orange-600 mt-1">
+                    <p className="text-caption text-orange-600 mt-1">
                       ⚠️ 請更新您的真實電子郵件地址
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-body-sm font-medium text-gray-700 mb-2">
                     班級
                   </label>
                   <input
@@ -307,7 +307,7 @@ export default function Profile() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-body-sm font-medium text-gray-700 mb-2">
                     座號
                   </label>
                   <input
@@ -324,10 +324,10 @@ export default function Profile() {
 
                 {/* 操作按鈕 */}
                 <div className="pt-4 flex flex-col space-y-3">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <div className="flex items-center space-x-2">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-component-sm">
+                    <div className="flex items-center space-x-stack-xs">
                       <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                      <p className="text-sm text-blue-800 font-medium">
+                      <p className="text-body-sm text-blue-800 font-medium">
                         目前僅開放電子郵件編輯功能
                       </p>
                     </div>
@@ -336,7 +336,7 @@ export default function Profile() {
                     {!isEditing ? (
                       <button
                         onClick={() => setIsEditing(true)}
-                        className="flex items-center space-x-2 px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
+                        className="flex items-center space-x-stack-xs px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
                       >
                         <FaEdit />
                         <span>編輯資料</span>
@@ -345,14 +345,14 @@ export default function Profile() {
                     <>
                         <button
                           onClick={handleSave}
-                          className="flex items-center space-x-2 px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
+                          className="flex items-center space-x-stack-xs px-6 py-3 bg-[#5BA491] text-white rounded-lg hover:bg-[#4A9480] transition-colors font-medium"
                         >
                           <FaSave />
                           <span>保存</span>
                         </button>
                         <button
                           onClick={handleCancel}
-                          className="flex items-center space-x-2 px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                          className="flex items-center space-x-stack-xs px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
                         >
                           <FaTimes />
                           <span>取消</span>
@@ -364,17 +364,17 @@ export default function Profile() {
               </div>
 
               {/* 密碼修改區域 */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800 flex items-center space-x-2">
+              <div className="space-y-stack-sm">
+                <h3 className="text-body-lg font-semibold text-gray-800 flex items-center space-x-stack-xs">
                   <FaLock className="text-[#5BA491]" />
                   <span>密碼管理</span>
                 </h3>
 
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                    <div className="flex items-center space-x-2">
+                <div className="bg-gray-50 rounded-lg p-component-base">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-component-sm mb-4">
+                    <div className="flex items-center space-x-stack-xs">
                       <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                      <p className="text-sm text-yellow-800 font-medium">
+                      <p className="text-body-sm text-yellow-800 font-medium">
                         密碼修改功能暫時關閉
                       </p>
                     </div>
@@ -382,16 +382,16 @@ export default function Profile() {
                   <button
                     onClick={() => setShowPasswordForm(!showPasswordForm)}
                     disabled={true}
-                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200"
+                    className="w-full flex items-center justify-center space-x-stack-xs px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200"
                   >
                     <FaLock />
                     <span>{showPasswordForm ? '隱藏密碼表單' : '修改密碼'}</span>
                   </button>
 
                   {showPasswordForm && canEdit && (
-                    <div className="mt-4 space-y-4">
+                    <div className="mt-4 space-y-stack-sm">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-body-sm font-medium text-gray-700 mb-2">
                           目前密碼
                         </label>
                         <div className="relative">
@@ -413,7 +413,7 @@ export default function Profile() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-body-sm font-medium text-gray-700 mb-2">
                           新密碼
                         </label>
                         <div className="relative">
@@ -435,7 +435,7 @@ export default function Profile() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-body-sm font-medium text-gray-700 mb-2">
                           確認新密碼
                         </label>
                         <div className="relative">

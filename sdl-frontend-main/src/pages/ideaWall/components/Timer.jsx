@@ -96,7 +96,7 @@ const Timer = () => {
       <div className="relative z-10"> {/* SVG will be on top */}
         {isActive && (
           <>
-          <div className="text-lg font-semibold text-gray-700">
+          <div className="text-body-lg font-semibold text-gray-700">
            {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
         </div>
           <svg width="80" height="80" className=" mt-10 absolute transform -translate-x-1/4  -translate-y-1/2">
@@ -124,7 +124,7 @@ const Timer = () => {
           </>
         )}
       </div>
-      <button onClick={handleSetTime} className="relative z-0 transition duration-300 scale-100 hover:scale-110">
+      <button onClick={handleSetTime} className="relative z-0 transition-opacity duration-normal hover:opacity-80">
         <Lottie
           className="w-20"
           animationData={TimerIcon}

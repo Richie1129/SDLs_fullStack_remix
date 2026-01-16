@@ -69,7 +69,7 @@ const ChatWindow = ({
         isFullscreen
           ? 'w-screen rounded-none shadow-none z-[9999]'
           : `${showSidebar ? 'w-[580px]' : 'w-[380px]'} rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.2)] z-[1002] max-w-[95vw] max-h-[90vh]`
-      } ${isMinimized ? 'h-[60px] overflow-hidden' : (isFullscreen ? 'h-screen' : 'h-[520px]')} bg-white transition-all duration-300 ease-in-out flex ${
+      } ${isMinimized ? 'h-[60px] overflow-hidden' : (isFullscreen ? 'h-screen' : 'h-[520px]')} bg-white transition-all duration-normal ease-in-out flex ${
         isFullscreen && screenWidth < 768 ? 'flex-col' : 'flex-row'
       }`.trim()}
       style={isFullscreen ? { left: 0, top: 0 } : computeChatPosition(position, showSidebar, isFullscreen)}
@@ -99,10 +99,10 @@ const ChatWindow = ({
           } border-b border-[#e9ecef] bg-[#f8f9fa] relative min-h-[60px]`}
         >
           {/* 左側區域 */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-stack-xs shrink-0">
             <button
               onClick={() => setShowSidebar(!showSidebar)}
-              className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[18px] font-medium transition-all bg-transparent text-[#5BA491] hover:bg-[#f1f3f4] hover:scale-110"
+              className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[18px] font-medium transition-colors duration-fast bg-transparent text-[#5BA491] hover:bg-[#f1f3f4]"
               title={showSidebar ? "隱藏側邊欄" : "顯示側邊欄"}
             >
               {showSidebar ? "◂" : "▸"}
@@ -110,25 +110,25 @@ const ChatWindow = ({
           </div>
 
           {/* 中央區域 - 切換分頁 */}
-          <div className="header-center flex items-center justify-center flex-1 gap-2 absolute left-1/2 -translate-x-1/2 max-w-[360px]">
+          <div className="header-center flex items-center justify-center flex-1 gap-stack-xs absolute left-1/2 -translate-x-1/2 max-w-[360px]">
             <button
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-3 py-1 rounded-full text-body-sm ${
                 activeTab === 'science' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'
               }`}
               onClick={() => setActiveTab('science')}
             >
               🧑‍🔬 科學助手
             </button>
-            <button
-              className={`px-3 py-1 rounded-full text-sm ${
+            {/* <button
+              className={`px-3 py-1 rounded-full text-body-sm ${
                 activeTab === 'project-assistant' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'
               }`}
               onClick={() => setActiveTab('project-assistant')}
             >
               🤖 專案助理
-            </button>
+            </button> */}
             {/* <button
-              className={`px-3 py-1 rounded-full text-sm ${
+              className={`px-3 py-1 rounded-full text-body-sm ${
                 activeTab === 'mentor' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'
               }`}
               onClick={() => setActiveTab('mentor')}
@@ -142,7 +142,7 @@ const ChatWindow = ({
             {/* 最大化/還原按鈕 */}
             <button
               onClick={toggleFullscreen}
-              className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[14px] font-medium transition-all bg-transparent text-[#28a745] hover:bg-[#d1e7dd] hover:scale-110"
+              className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[14px] font-medium transition-colors duration-fast bg-transparent text-[#28a745] hover:bg-[#d1e7dd]"
               title={isFullscreen ? "還原視窗" : "最大化"}
             >
               {isFullscreen ? "🗗" : "🗖"}
@@ -151,7 +151,7 @@ const ChatWindow = ({
             {/* 關閉按鈕 */}
             <button
               onClick={closeChat}
-              className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[16px] font-medium transition-all bg-transparent text-[#dc3545] hover:bg-[#f8d7da] hover:scale-110"
+              className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[16px] font-medium transition-colors duration-fast bg-transparent text-[#dc3545] hover:bg-[#f8d7da]"
               title="關閉聊天室"
             >
               ✕

@@ -28,7 +28,7 @@ const LogSection = ({
     }
 
     if (isError && error) {
-      return <p className="text-base font-bold">{error.message}</p>;
+      return <p className="text-body font-bold">{error.message}</p>;
     }
 
     if (items.length === 0) {
@@ -60,10 +60,10 @@ const LogSection = ({
     <div className={className}>
       {/* Header with title and buttons - only show if title or buttons exist */}
       {(title || buttons.length > 0) && (
-        <div className="flex justify-start gap-4 sm:gap-6 items-center mb-4 flex-wrap">
-          {title && <h3 className="text-lg sm:text-xl font-bold">{title}</h3>}
+        <div className="flex justify-start gap-stack-sm sm:gap-stack-md items-center mb-4 flex-wrap">
+          {title && <h3 className="text-body-lg sm:text-h3 font-bold">{title}</h3>}
           {buttons.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-stack-xs flex-wrap">
               {buttons.map((button, index) => (
                 <AddButton
                   key={index}

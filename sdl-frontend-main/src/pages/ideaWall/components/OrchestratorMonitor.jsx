@@ -48,15 +48,15 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
     if (!ideaWallId) return null;
 
     return (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-4">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-component-base mt-4">
             <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-gray-700 flex items-center">
+                <h3 className="text-body-sm font-bold text-gray-700 flex items-center">
                     <span className="mr-2">🧠</span>
                     Phase 2 Orchestrator 監控
                 </h3>
                 <button
                     onClick={checkStatus}
-                    className="text-xs text-blue-600 hover:underline"
+                    className="text-caption text-blue-600 hover:underline"
                 >
                     重新整理
                 </button>
@@ -64,7 +64,7 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
 
             {/* 冷卻狀態 */}
             {status && (
-                <div className="mb-3 p-3 bg-white rounded border border-gray-100 text-xs">
+                <div className="mb-3 p-component-sm bg-white rounded border border-gray-100 text-caption">
                     <div className="flex items-center justify-between mb-2">
                         <span className="font-medium text-gray-600">冷卻狀態：</span>
                         <span className={`px-2 py-1 rounded ${
@@ -95,17 +95,17 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
             <button
                 onClick={triggerAnalysis}
                 disabled={isAnalyzing}
-                className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium transition"
+                className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-body-sm font-medium transition"
             >
                 {isAnalyzing ? '🔍 分析中...' : '🔍 查看自動分析結果'}
             </button>
 
             {/* 分析結果 */}
             {decision && (
-                <div className="mt-3 p-3 bg-white rounded border border-gray-100 text-xs">
+                <div className="mt-3 p-component-sm bg-white rounded border border-gray-100 text-caption">
                     <div className="font-bold text-gray-700 mb-2 flex items-center justify-between">
                         <span>Orchestrator 決策：</span>
-                        <span className={`px-2 py-1 rounded text-xs ${
+                        <span className={`px-2 py-1 rounded text-caption ${
                             decision.action === 'TRIGGER' 
                                 ? 'bg-red-100 text-red-700' 
                                 : decision.action === 'WAIT'
@@ -117,7 +117,7 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
                     </div>
 
                     {decision.role && (
-                        <div className="mb-2 p-2 bg-blue-50 rounded">
+                        <div className="mb-2 p-component-xs bg-blue-50 rounded">
                             <span className="font-medium">建議 Agent：</span>
                             <span className="ml-2 text-blue-700">
                                 {decision.role === 'IMPROVER' && '🛠️ Idea Improver'}
@@ -133,17 +133,17 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
                     </div>
 
                     {decision.analysis && (
-                        <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-gray-200">
+                        <div className="grid grid-cols-3 gap-stack-xs mt-2 pt-2 border-t border-gray-200">
                             <div className="text-center">
-                                <div className="text-gray-500 text-xs">深度</div>
+                                <div className="text-gray-500 text-caption">深度</div>
                                 <div className="font-bold text-blue-600">{decision.analysis.depth}</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-gray-500 text-xs">多樣性</div>
+                                <div className="text-gray-500 text-caption">多樣性</div>
                                 <div className="font-bold text-green-600">{decision.analysis.diversity}</div>
                             </div>
                             <div className="text-center">
-                                <div className="text-gray-500 text-xs">收斂度</div>
+                                <div className="text-gray-500 text-caption">收斂度</div>
                                 <div className="font-bold text-purple-600">{decision.analysis.convergence}</div>
                             </div>
                         </div>
@@ -158,7 +158,7 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
             )}
 
             {/* 說明 */}
-            <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+            <div className="mt-3 p-component-xs bg-blue-50 rounded text-caption text-blue-700">
                 <span className="font-bold">💡 Phase 2 說明：</span>
                 每次發文時，Orchestrator 會在背景自動分析討論品質。Phase 3 會將建議自動顯示在討論區。
             </div>

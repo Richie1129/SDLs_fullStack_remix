@@ -13,17 +13,17 @@ const IndividualView = ({
   
   if (!student) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-md text-center">
+      <div className="bg-white p-component-md-lg rounded-lg shadow-md text-center">
         <p className="text-gray-500">無學生資料可顯示</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="bg-white p-3 sm:p-6 rounded-lg shadow-md">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 space-y-2 sm:space-y-0">
-          <h2 className="text-lg sm:text-2xl font-semibold text-gray-700">
+    <div className="space-y-stack-sm sm:space-y-stack-md">
+      <div className="bg-white p-component-sm sm:p-component-md-lg rounded-lg shadow-md">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 space-y-stack-xs sm:space-y-0">
+          <h2 className="text-body-lg sm:text-h2 font-semibold text-gray-700">
             {student.username || student.name} - 詳細學習歷程
           </h2>
           {userRole === 'teacher' && enhancedStudents.length > 1 && (
@@ -35,7 +35,7 @@ const IndividualView = ({
                   const newStudent = enhancedStudents.find(s => s.id === selectedId);
                   setSelectedStudent(newStudent);
                 }}
-                className="w-full sm:w-auto border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full sm:w-auto border border-gray-300 rounded px-3 py-2 text-body-sm"
               >
                 {enhancedStudents.map(s => (
                   <option key={s.id} value={s.id}>{s.username || s.name}</option>
@@ -45,13 +45,13 @@ const IndividualView = ({
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-sm sm:gap-stack-md">
           <div className="lg:col-span-2">
-            <h3 className="text-base sm:text-lg font-semibold mb-3">學習進度分析</h3>
-            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
+            <h3 className="text-body sm:text-body-lg font-semibold mb-3">學習進度分析</h3>
+            <div className="bg-gray-50 p-component-sm sm:p-component-base rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">專案進度</span>
-                <span className="text-sm text-gray-600">{student.progressPercentage}%</span>
+                <span className="text-body-sm font-medium">專案進度</span>
+                <span className="text-body-sm text-gray-600">{student.progressPercentage}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div 
@@ -59,43 +59,43 @@ const IndividualView = ({
                   style={{ width: `${student.progressPercentage}%` }}
                 ></div>
               </div>
-              <div className="mt-3 text-xs sm:text-sm text-gray-600 space-y-1">
+              <div className="mt-3 text-caption sm:text-body-sm text-gray-600 space-y-1">
                 <p>當前階段: 第 {student.currentStage} 階段 - 子階段 {student.currentSubStage}</p>
                 <p>專案名稱: {student.projectName}</p>
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <h4 className="text-xs sm:text-sm font-medium text-blue-700">學習活躍度</h4>
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-stack-sm">
+              <div className="bg-blue-50 p-component-sm rounded-lg">
+                <h4 className="text-caption sm:text-body-sm font-medium text-blue-700">學習活躍度</h4>
                 <div className="mt-2 space-y-1">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between text-caption">
                     <span>聊天訊息</span>
                     <span>{student.chatMessages}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between text-caption">
                     <span>Q&A 提問</span>
                     <span>{student.qaQuestions}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between text-caption">
                     <span>AI 互動</span>
                     <span>{student.aiInteractions}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-green-50 p-3 rounded-lg">
-                <h4 className="text-xs sm:text-sm font-medium text-green-700">創作表現</h4>
+              <div className="bg-green-50 p-component-sm rounded-lg">
+                <h4 className="text-caption sm:text-body-sm font-medium text-green-700">創作表現</h4>
                 <div className="mt-2 space-y-1">
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between text-caption">
                     <span>想法節點</span>
                     <span>{student.ideaNodes}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between text-caption">
                     <span>反思記錄</span>
                     <span>{student.weeklyReflections}</span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between text-caption">
                     <span>檔案上傳</span>
                     <span>{Math.floor(Math.random() * 10) + 5}</span>
                   </div>
@@ -105,19 +105,19 @@ const IndividualView = ({
           </div>
 
           <div>
-            <h3 className="text-base sm:text-lg font-semibold mb-3">狀態與建議</h3>
+            <h3 className="text-body sm:text-body-lg font-semibold mb-3">狀態與建議</h3>
             <div className="space-y-3">
-              <div className={`p-3 rounded-lg ${getStatusColor(student.status)}`}>
-                <span className="text-xs sm:text-sm font-medium">
+              <div className={`p-component-sm rounded-lg ${getStatusColor(student.status)}`}>
+                <span className="text-caption sm:text-body-sm font-medium">
                   {student.status === 'excellent' ? '學習表現優秀' : 
                    student.status === 'active' ? '學習狀態良好' :
                    student.status === 'attention' ? '需要關注' : '學習不活躍'}
                 </span>
               </div>
 
-              <div className="bg-yellow-50 p-3 rounded-lg">
-                <h4 className="text-xs sm:text-sm font-medium text-yellow-700 mb-2">學習建議</h4>
-                <ul className="text-xs text-yellow-600 space-y-1">
+              <div className="bg-yellow-50 p-component-sm rounded-lg">
+                <h4 className="text-caption sm:text-body-sm font-medium text-yellow-700 mb-2">學習建議</h4>
+                <ul className="text-caption text-yellow-600 space-y-1">
                   {student.status === 'attention' || student.status === 'inactive' ? (
                     <>
                       <li>• 建議增加反思記錄頻率</li>
@@ -134,10 +134,10 @@ const IndividualView = ({
                 </ul>
               </div>
 
-              <div className="bg-purple-50 p-3 rounded-lg">
-                <h4 className="text-xs sm:text-sm font-medium text-purple-700 mb-2">團隊角色</h4>
-                <p className="text-xs text-purple-600">{student.teamRole}</p>
-                <p className="text-xs text-purple-500 mt-1">
+              <div className="bg-purple-50 p-component-sm rounded-lg">
+                <h4 className="text-caption sm:text-body-sm font-medium text-purple-700 mb-2">團隊角色</h4>
+                <p className="text-caption text-purple-600">{student.teamRole}</p>
+                <p className="text-caption text-purple-500 mt-1">
                   最後活動: {student.lastActivity ? formatRelativeTime(student.lastActivity) : '無資料'}
                 </p>
               </div>
@@ -147,9 +147,9 @@ const IndividualView = ({
       </div>
 
       {/* 近期學習軌跡 */}
-      <div className="bg-white p-3 sm:p-6 rounded-lg shadow-md">
-        <h3 className="text-base sm:text-lg font-semibold mb-4 text-gray-700">近期學習軌跡</h3>
-        <div className="space-y-3 sm:space-y-4 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-50" 
+      <div className="bg-white p-component-sm sm:p-component-md-lg rounded-lg shadow-md">
+        <h3 className="text-body sm:text-body-lg font-semibold mb-4 text-gray-700">近期學習軌跡</h3>
+        <div className="space-y-3 sm:space-y-stack-sm max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-50" 
              style={{ scrollBehavior: 'smooth' }}>
           {(() => {
             const studentId = student.id;
@@ -223,16 +223,16 @@ const IndividualView = ({
             }
 
             return sortedActivities.map((activity, index) => (
-              <div key={index} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <span className="text-lg flex-shrink-0">{activity.icon}</span>
+              <div key={index} className="flex items-start space-x-3 p-component-sm bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <span className="text-body-lg flex-shrink-0">{activity.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-body-sm font-medium text-gray-900">
                     {activity.content}
                   </p>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <p className="text-caption text-gray-600 mt-1">
                     {activity.details}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-caption text-gray-500 mt-1">
                     {formatRelativeTime(activity.time)}
                   </p>
                 </div>

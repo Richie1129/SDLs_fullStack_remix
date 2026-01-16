@@ -49,9 +49,9 @@ const KanbanColumn = ({
         >
           <div
             {...(!isObservationMode ? provided.dragHandleProps : {})}
-            className={`store-container p-3 rounded-lg ${!isObservationMode ? 'cursor-move' : 'cursor-default'} flex justify-between items-center`}
+            className={`store-container p-component-sm rounded-lg ${!isObservationMode ? 'cursor-move' : 'cursor-default'} flex justify-between items-center`}
           >
-            <h3 style={{ color: "#5BA491" }} className="text-lg font-semibold">
+            <h3 style={{ color: "#5BA491" }} className="text-body-lg font-semibold">
               {column.name}
             </h3>
             {!isObservationMode && (
@@ -97,7 +97,7 @@ const KanbanColumn = ({
           {showForm && !isObservationMode ? (
             <form onSubmit={handleSubmit} className='flex flex-col store-container rounded-lg px-4 pt-1 pb-2'>
               <input
-                className='text-sm border border-gray-300 p-2 w-52 rounded-md mb-2'
+                className='text-body-sm border border-gray-300 p-component-xs w-52 rounded-md mb-2'
                 placeholder="輸入卡片標題..."
                 onChange={(e) => setNewCardTitle(e.target.value)}
                 value={newCardTitle}
@@ -107,13 +107,13 @@ const KanbanColumn = ({
                 <button
                   type="submit"
                   style={{ backgroundColor: "#5BA491" }}
-                  className='p-2 text-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300'
+                  className='p-component-xs text-body-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-normal'
                 >
                   新增
                 </button>
                 <button
                   type="button"
-                  className="flex-center p-2 py-1"
+                  className="flex-center p-component-xs py-1"
                   onClick={() => { setShowForm(false); setNewCardTitle(""); }}
                 >
                   <RxCross2 />
@@ -125,7 +125,7 @@ const KanbanColumn = ({
               <div className="flex justify-start px-4 pt-1 pb-2">
                 <button
                   onClick={() => setShowForm(true)}
-                  className="bg-[#5BA491] hover:bg-[#5BA491]/80 text-sm p-2 mb-2 text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
+                  className="bg-[#5BA491] hover:bg-[#5BA491]/80 text-body-sm p-component-xs mb-2 text-white font-bold py-1 px-4 rounded transition ease-in-out duration-normal"
                 >
                   新增卡片
                 </button>

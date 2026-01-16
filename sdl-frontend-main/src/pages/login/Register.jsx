@@ -192,7 +192,7 @@ export default function Register() {
                         wrapper="span"
                         cursor={true}
                         repeat={Infinity}
-                        className="mx-auto font-press-start font-semibold text-2xl md:text-3xl lg:text-4xl mb-10 md:mb-20 text-center px-4"
+                        className="mx-auto font-press-start font-semibold text-h2 md:text-h1 lg:text-display mb-10 md:mb-20 text-center px-4"
                     />
                     {/* <img src='images/login.png' width={'600px'} alt='I am B' /> */}
                     <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
@@ -200,64 +200,64 @@ export default function Register() {
                 </div>
             </div>
             <div className="bg-white w-full md:max-w-md lg:max-w-full md:mx-auto md:w-1/2 xl:w-1/2 h-screen px-6 lg:px-16 xl:px-40 flex items-center justify-center">
-                <div className="bg-white w-full h-100 rounded-lg p-8 shadow-2xl">
-                    <h1 className="text-4xl font-bold mb-6 flex items-center justify-center">註冊</h1>
+                <div className="bg-white w-full h-100 rounded-lg p-component-lg shadow-2xl">
+                    <h1 className="text-display font-bold mb-6 flex items-center justify-center">註冊</h1>
                     <form className="mt-6">
                         <div>
-                            <label className="block text-gray-700 text-base">名稱</label>
-                            <input type="text" name="username" placeholder="請輸入名稱" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+                            <label className="block text-gray-700 text-body">名稱</label>
+                            <input type="text" name="username" placeholder="請輸入名稱" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
                         </div>
                         <div>
-                            <label className="block text-gray-700 text-base">帳號</label>
-                            <input type="text" name="account" placeholder="請輸入帳號 (學號)" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+                            <label className="block text-gray-700 text-body">帳號</label>
+                            <input type="text" name="account" placeholder="請輸入帳號 (學號)" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
                         </div>
                         <div>
-                            <label className="block text-gray-700 text-base">電子郵件</label>
-                            <input type="email" name="email" placeholder="請輸入電子郵件" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
+                            <label className="block text-gray-700 text-body">電子郵件</label>
+                            <input type="email" name="email" placeholder="請輸入電子郵件" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
                         </div>
                         <div>
-                            <label className="block text-gray-700 text-base">密碼</label>
-                            <input type="password" name="password" placeholder="請輸入密碼 ( P + 身分證後4碼+生日後4碼 )" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+                            <label className="block text-gray-700 text-body">密碼</label>
+                            <input type="password" name="password" placeholder="請輸入密碼 ( P + 身分證後4碼+生日後4碼 )" minLength="6" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
                         </div>
                         <div>
-                            <label className="block text-gray-700 text-base">確認密碼</label>
-                            <input type="password" name="confirmPassword" placeholder="請輸入確認密碼" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
-                            {error && <span className=' text-xs text-red-600'>{error}</span>}
+                            <label className="block text-gray-700 text-body">確認密碼</label>
+                            <input type="password" name="confirmPassword" placeholder="請輸入確認密碼" minLength="6" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+                            {error && <span className=' text-caption text-red-600'>{error}</span>}
                         </div>
                         {userData.role === 'student' && (
                             <>
                                 <div>
-                                    <label className="block text-gray-700 text-base">班級</label>
+                                    <label className="block text-gray-700 text-body">班級</label>
                                     <input
                                         type="text"
                                         name="class"
                                         placeholder="請輸入班級（教師請跳到職位）"
                                         value={userData.class}
                                         onChange={handleChange}
-                                        className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
+                                        className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-gray-700 text-base">座號</label>
+                                    <label className="block text-gray-700 text-body">座號</label>
                                     <input
                                         type="text"
                                         name="seatNumber"
                                         placeholder="請輸入座號（教師請跳到職位）"
                                         value={userData.seatNumber}
                                         onChange={handleChange}
-                                        className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
+                                        className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
                                     />
                                 </div>
                             </>
                         )}
                         <div className="mt-4">
-                            <label className="block text-gray-700 text-base">職位</label>
-                            <select name="role" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-blue-500 focus:bg-white focus:outline-none" required>
+                            <label className="block text-gray-700 text-body">職位</label>
+                            <select name="role" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-blue-500 focus:bg-white focus:outline-none" required>
                                 <option value="student">學生</option>
                                 <option value="teacher">教師</option>
                             </select>
                         </div>
-                        <button type="submit" onClick={handleSubmit} style={{ backgroundColor: "#5BA491" }} className="w-full block hover:bg-violet-400 focus:bg-violet-400 text-white font-semibold rounded-lg px-4 py-3 mt-6 text-base">註冊</button>
+                        <button type="submit" onClick={handleSubmit} style={{ backgroundColor: "#5BA491" }} className="w-full block hover:bg-violet-400 focus:bg-violet-400 text-white font-semibold rounded-lg px-4 py-3 mt-6 text-body">註冊</button>
                     </form>
                     <p className="mt-8">
                         已經有帳號了?

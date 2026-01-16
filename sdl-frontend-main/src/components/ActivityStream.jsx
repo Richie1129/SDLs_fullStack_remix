@@ -680,15 +680,15 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
             exit={{ x: 300, opacity: 0 }}
             className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-8rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-50 overflow-hidden"
         >
-            <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center">
-                    <FiActivity className="mr-2 text-sm sm:text-base" />
+            <div className="flex items-center justify-between p-component-sm sm:p-component-base border-b border-gray-200">
+                <h3 className="text-body sm:text-body-lg font-semibold text-gray-800 flex items-center">
+                    <FiActivity className="mr-2 text-body-sm sm:text-body" />
                     <span className="hidden sm:inline">專案活動</span>
                     <span className="sm:hidden">活動</span>
                 </h3>
                 <button
                     onClick={onClose}
-                    className="text-gray-400 hover:text-gray-600 transition-colors text-lg sm:text-xl"
+                    className="text-gray-400 hover:text-gray-600 transition-colors text-body-lg sm:text-h3"
                 >
                     ✕
                 </button>
@@ -698,12 +698,12 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                 {activities.length === 0 ? (
                     <div className="flex items-center justify-center h-40 text-gray-500">
                         <div className="text-center">
-                            <FiActivity className="mx-auto mb-2 text-xl sm:text-2xl" />
-                            <p className="text-sm sm:text-base">尚無活動記錄</p>
+                            <FiActivity className="mx-auto mb-2 text-h3 sm:text-h2" />
+                            <p className="text-body-sm sm:text-body">尚無活動記錄</p>
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 pb-16 sm:pb-20 lg:pb-24">
+                    <div className="space-y-stack-xs sm:space-y-3 p-component-sm sm:p-component-base pb-16 sm:pb-20 lg:pb-24">
                         <AnimatePresence>
                             {activities.map((activity, index) => {
                                 // 判斷是否為新活動 - 支援任務和列表活動
@@ -736,25 +736,25 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                             scale: { duration: 0.6 }
                                         }}
                                         className={`
-                                            p-2 sm:p-3 rounded-lg border-l-4 transition-all duration-300
+                                            p-component-xs sm:p-component-sm rounded-lg border-l-4 transition-all duration-slow
                                             ${getActivityColor(activity.changeType || activity.type, activity.source)}
                                             ${isNew ? 'ring-2 ring-blue-300 shadow-lg' : 'hover:shadow-md'}
                                         `}
                                     >
-                                        <div className="flex items-start space-x-2 sm:space-x-3">
+                                        <div className="flex items-start space-x-stack-xs sm:space-x-3">
                                             <div className="flex-shrink-0 mt-0.5">
                                                 {getActivityIcon(activity.changeType || activity.type, activity.source)}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-1">
-                                                    <p className="text-xs sm:text-sm text-gray-800 font-medium break-words">
+                                                    <p className="text-caption sm:text-body-sm text-gray-800 font-medium break-words">
                                                         {activity.changedBy}
                                                     </p>
-                                                    <span className="text-xs text-gray-400">
+                                                    <span className="text-caption text-gray-400">
                                                         {formatTime(activity.createdAt, 'relative')}
                                                     </span>
                                                 </div>
-                                                <p className="text-xs sm:text-sm text-gray-600 break-words leading-relaxed">
+                                                <p className="text-caption sm:text-body-sm text-gray-600 break-words leading-relaxed">
                                                     {/* 對於移動操作，總是使用動態生成的詳細描述 */}
                                                     {(activity.changeType === 'move' || activity.type === 'move') 
                                                         ? getActivityDescription(activity)
@@ -766,7 +766,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                 {(activity.changeType === 'update' || activity.type === 'update') && activity.changes && activity.changes.length > 0 && (
                                                     <div className="mt-2 space-y-1">
                                                         {activity.changes.map((change, idx) => (
-                                                            <div key={`activity-${activity.id || index}-${activity.createdAt || index}-change-${idx}-${change.fieldName}`} className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                            <div key={`activity-${activity.id || index}-${activity.createdAt || index}-change-${idx}-${change.fieldName}`} className="text-caption text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                                                 <span className="font-medium text-gray-600">
                                                                     {change.fieldName === 'title' && '標題'}
                                                                     {change.fieldName === 'content' && '內容'}
@@ -856,33 +856,33 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                 )}
                                                 
                                                 <div className="flex items-center justify-between mt-2">
-                                                    <span className="text-xs text-gray-500">
+                                                    <span className="text-caption text-gray-500">
                                                         {/* 節點活動標籤 */}
                                                         {activity.source === 'node' && (
                                                             <>
                                                                 {(activity.changeType === 'create' || activity.type === 'create') && (
-                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-caption">
                                                                         節點
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'update' || activity.type === 'update') && (
-                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-caption">
                                                                         節點
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'delete' || activity.type === 'delete') && (
-                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-caption">
                                                                         節點
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'move' || activity.type === 'move') && (
-                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-caption">
                                                                         節點移動
                                                                     </span>
                                                                 )}
                                                                 {((activity.changeType === 'connect' || activity.type === 'connect') || 
                                                                   (activity.changeType === 'disconnect' || activity.type === 'disconnect')) && (
-                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-caption">
                                                                         節點連接
                                                                     </span>
                                                                 )}
@@ -893,17 +893,17 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                         {activity.source === 'column' && (
                                                             <>
                                                                 {(activity.changeType === 'create' || activity.type === 'create') && (
-                                                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-caption">
                                                                         列表
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'delete' || activity.type === 'delete') && (
-                                                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-caption">
                                                                         列表
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'reorder' || activity.type === 'reorder') && (
-                                                                    <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-caption">
                                                                         列表順序
                                                                     </span>
                                                                 )}
@@ -914,17 +914,17 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                         {(activity.source === 'comment' || activity.source === 'project_comment') && (
                                                             <>
                                                                 {(activity.changeType === 'comment_create' || activity.changeType === 'project_comment_create') && (
-                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-caption">
                                                                         {activity.source === 'project_comment' ? '專案評論' : '任務評論'}
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'comment_update' || activity.changeType === 'project_comment_update') && (
-                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-caption">
                                                                         {activity.source === 'project_comment' ? '專案評論' : '任務評論'}
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'comment_delete' || activity.changeType === 'project_comment_delete') && (
-                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-caption">
                                                                         {activity.source === 'project_comment' ? '專案評論' : '任務評論'}
                                                                     </span>
                                                                 )}
@@ -935,22 +935,22 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                         {(activity.source === 'task' || (activity.source !== 'column' && activity.source !== 'comment' && activity.source !== 'project_comment' && activity.source !== 'node')) && (
                                                             <>
                                                                 {(activity.changeType === 'create' || activity.type === 'create') && activity.columnName && (
-                                                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-caption">
                                                                         {activity.columnName}
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'update' || activity.type === 'update') && activity.columnName && (
-                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-caption">
                                                                         {activity.columnName}
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'move' || activity.type === 'move') && activity.from && activity.to && (
-                                                                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-caption">
                                                                         {activity.from} → {activity.to}
                                                                     </span>
                                                                 )}
                                                                 {(activity.changeType === 'delete' || activity.type === 'delete') && activity.columnName && (
-                                                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                                                                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-caption">
                                                                         來自 {activity.columnName}
                                                                     </span>
                                                                 )}
@@ -960,22 +960,22 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                                     
                                                     {/* 右側ID標籤 - 按優先級顯示，避免重複 */}
                                                     {activity.source === 'node' && activity.node && (
-                                                        <span className="text-xs text-indigo-600 bg-indigo-50 px-1 sm:px-2 py-1 rounded border border-indigo-200">
+                                                        <span className="text-caption text-indigo-600 bg-indigo-50 px-1 sm:px-2 py-1 rounded border border-indigo-200">
                                                             #{activity.node.id}
                                                         </span>
                                                     )}
                                                     {activity.source === 'column' && activity.column && (
-                                                        <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
+                                                        <span className="text-caption text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
                                                             #{activity.column.id}
                                                         </span>
                                                     )}
                                                     {(activity.source === 'comment' || activity.source === 'project_comment') && activity.comment && (
-                                                        <span className="text-xs text-blue-600 bg-blue-50 px-1 sm:px-2 py-1 rounded border border-blue-200">
+                                                        <span className="text-caption text-blue-600 bg-blue-50 px-1 sm:px-2 py-1 rounded border border-blue-200">
                                                             #{activity.comment.id}
                                                         </span>
                                                     )}
                                                     {activity.source === 'task' && activity.task && (
-                                                        <span className="text-xs text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
+                                                        <span className="text-caption text-gray-500 bg-white px-1 sm:px-2 py-1 rounded border">
                                                             #{activity.task.id}
                                                         </span>
                                                     )}
@@ -993,7 +993,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                                 <button
                                     onClick={loadMoreActivities}
                                     disabled={isLoadingMore}
-                                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="flex items-center space-x-stack-xs px-4 py-2 text-body-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isLoadingMore ? (
                                         <>

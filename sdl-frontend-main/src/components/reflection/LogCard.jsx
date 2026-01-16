@@ -66,18 +66,18 @@ const LogCard = ({
       );
       
       return (
-        <div className="space-y-2">
+        <div className="space-y-stack-xs">
           <div className="flex items-center justify-between">
-            <p className="text-gray-600 text-sm mb-2">
+            <p className="text-gray-600 text-body-sm mb-2">
               5Rs 結構化反思內容
             </p>
             {hasAIFeedback ? (
-              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full flex items-center">
+              <span className="px-2 py-1 bg-green-100 text-green-800 text-caption font-medium rounded-full flex items-center">
                 <AiOutlineRobot className="w-3 h-3 mr-1" />
                 已分析
               </span>
             ) : (
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-caption font-medium rounded-full">
                 未分析
               </span>
             )}
@@ -87,7 +87,7 @@ const LogCard = ({
           </div>
           <button
             onClick={() => onView5Rs(item)}
-            className="text-teal-600 hover:text-teal-800 text-sm font-medium"
+            className="text-teal-600 hover:text-teal-800 text-body-sm font-medium"
           >
             查看完整 5Rs 反思 →
           </button>
@@ -132,15 +132,15 @@ const LogCard = ({
       transition={SPRING_OPTIONS}
       className="aspect-video w-full shrink-0 rounded-xl object-cover"
     >
-      <div className="bg-white rounded-lg shadow-lg p-3 sm:p-4 lg:p-6 m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]">
+      <div className="bg-white rounded-lg shadow-lg p-component-sm sm:p-component-md lg:p-component-lg m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]">
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
-          <h5 className="text-lg sm:text-xl font-bold text-customgreen py-2">
+          <h5 className="text-body-lg sm:text-h3 font-bold text-customgreen py-2">
             {item.title}
           </h5>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-stack-xs">
             {is5Rs && (
-              <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs font-medium rounded-full">
+              <span className="px-2 py-1 bg-teal-100 text-teal-800 text-caption font-medium rounded-full">
                 5Rs 反思
               </span>
             )}
@@ -150,7 +150,7 @@ const LogCard = ({
                 onClick={() => onDelete(item)}
                 title="刪除這筆日誌"
                 aria-label="刪除日誌"
-                className="p-1 rounded text-gray-400 hover:text-red-600 transition-colors"
+                className="p-1 rounded text-gray-400 hover:text-red-600 transition-colors duration-fast"
               >
                 <FiTrash2 className="w-4 h-4" />
               </button>
@@ -168,11 +168,11 @@ const LogCard = ({
           {/* File attachment */}
           {(item.fileName || item.fileData) && (
             <div className="flex justify-between items-center mb-2">
-              <span className="text-base text-gray-500">
+              <span className="text-body text-gray-500">
                 附加檔案: {item.originalName || item.filename || item.fileName}
               </span>
               <button
-                className="flex items-center justify-center px-3 py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-300 ease-in-out"
+                className="flex items-center justify-center px-3 py-1 bg-customgreen text-white rounded-md hover:bg-customgreen/80 transition-colors duration-fast ease-in-out"
                 onClick={handleDownload}
               >
                 <AiOutlineCloudDownload size={32} className="mr-2" />
@@ -182,21 +182,21 @@ const LogCard = ({
           )}
 
         {/* Dates */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-stack-xs mb-3">
           <p
-            className="text-sm sm:text-base text-customgreen font-bold"
+            className="text-body-sm sm:text-body text-customgreen font-bold"
             title={formatTime(item.createdAt, "full")}
           >
             建立日期: {formatTime(item.createdAt, "date")}
           </p>
           {showCreator && (
-            <p className="text-xs sm:text-sm text-gray-500">
+            <p className="text-caption sm:text-body-sm text-gray-500">
               建立者: {item.user?.username || item.creator || '未知'}
             </p>
           )}
           {item.updatedAt && item.updatedAt !== item.createdAt && (
             <p
-              className="text-xs sm:text-sm text-gray-500"
+              className="text-caption sm:text-body-sm text-gray-500"
               title={formatTime(item.updatedAt, "full")}
             >
               更新: {formatTime(item.updatedAt, "relative")}
@@ -217,7 +217,7 @@ const LogCard = ({
                 <div className="mb-2">
                   <button
                     onClick={() => onRequestAIAnalysis(item)}
-                    className="w-full bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition-colors duration-300 text-sm sm:text-base mb-2 flex items-center justify-center"
+                    className="w-full bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition-colors duration-fast text-body-sm sm:text-body mb-2 flex items-center justify-center"
                   >
                     <AiOutlineRobot className="w-4 h-4 mr-2" />
                     請求 AI 分析
@@ -231,14 +231,14 @@ const LogCard = ({
           {/* Edit/View Button */}
           {canEdit ? (
             <button
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-300 text-sm sm:text-base"
+              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-fast text-body-sm sm:text-body"
               onClick={() => onEdit(item)}
             >
               編輯 {is5Rs ? "5Rs 反思" : "傳統日誌"}
             </button>
           ) : (
             <button
-              className="w-full bg-[#5BA491] text-white py-2 px-4 rounded hover:bg-[#5BA491]/80 transition-colors duration-300 text-sm sm:text-base"
+              className="w-full bg-[#5BA491] text-white py-2 px-4 rounded hover:bg-[#5BA491]/80 transition-colors duration-fast text-body-sm sm:text-body"
               onClick={() => onEdit(item)}
             >
               查看 {is5Rs ? "5Rs 反思" : "日誌"}

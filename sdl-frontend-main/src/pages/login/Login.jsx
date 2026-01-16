@@ -109,15 +109,15 @@ export default function Login() {
                   wrapper="span"
                   cursor={true}
                   repeat={Infinity}
-                  className="mx-auto font-press-start font-semibold text-2xl md:text-3xl lg:text-4xl mb-10 md:mb-20 text-center px-4"
+                  className="mx-auto font-press-start font-semibold text-h2 md:text-h1 lg:text-display mb-10 md:mb-20 text-center px-4"
                 />
           <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
         </div>
       </div>
       <div className="bg-white w-full md:max-w-md lg:max-w-full md:mx-auto md:w-1/2 xl:w-1/2 h-screen lg:px-36 xl:px-40 flex items-center justify-center">
-        <div className="bg-white w-full h-100 rounded-lg p-8 shadow-2xl">
-          <h1 className="text-lg font-bold mb-6 flex items-center justify-center">歡迎來到 <span style= { {color:"#5BA491" } } className="ml-2"> SDLS</span></h1>
-          <h1 className="text-4xl font-bold mb-6 flex items-center justify-center">登入</h1>
+        <div className="bg-white w-full h-100 rounded-lg p-component-lg shadow-2xl">
+          <h1 className="text-body-lg font-bold mb-6 flex items-center justify-center">歡迎來到 <span style= { {color:"#5BA491" } } className="ml-2"> SDLS</span></h1>
+          <h1 className="text-display font-bold mb-6 flex items-center justify-center">登入</h1>
             {/* <button type="button" className="w-full block bg-white hover:bg-gray-100 focus:bg-gray-100 text-gray-900 font-semibold rounded-lg px-4 py-3 border-2 border-customgreen">
               <div className="flex items-center justify-center">
                   <span className="ml-4 ">Login with Wulab</span>
@@ -126,17 +126,17 @@ export default function Login() {
           <hr className="my-6 border-gray-300 w-full" /> */}
           <form className="mt-6">
             <div>
-              <label className="block text-gray-700 text-base">帳號</label>
-              <input type="text" name="account" placeholder="請輸入帳號" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+              <label className="block text-gray-700 text-body">帳號</label>
+              <input type="text" name="account" placeholder="請輸入帳號" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
             </div>
             <div className="mt-4">
-              <label className="block text-gray-700 text-base">密碼</label>
-              <input type="password" name="password" placeholder="請輸入密碼" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
+              <label className="block text-gray-700 text-body">密碼</label>
+              <input type="password" name="password" placeholder="請輸入密碼" minLength="6" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
             </div>
             {/* <p className='text-gray-400 bg-white flex items-center justify-center'><hr className="my-6 border-gray-300 w-1/2" />or<hr className="my-6 border-gray-300 w-1/2" /></p>
             <button className=''><button className=''><button className=''>Google</button>FB</button>Apple</button> */}
 
-            <button type="submit" onClick={handleSubmit} style= { {backgroundColor:"#5BA491" } } className="w-full block  text-white font-semibold rounded-lg px-4 py-3 mt-6 text-base">登入</button>
+            <button type="submit" onClick={handleSubmit} style= { {backgroundColor:"#5BA491" } } className="w-full block  text-white font-semibold rounded-lg px-4 py-3 mt-6 text-body">登入</button>
           </form>
           <div className="mt-8 flex flex-row justify-between items-center">
             <p className="text-gray-400">

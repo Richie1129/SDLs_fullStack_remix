@@ -43,21 +43,21 @@ const StatsCards = ({ classStats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6 mb-6">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-stack-sm sm:gap-stack-md mb-6">
       {cards.map((card, index) => (
-        <div key={index} className={`${cardStyles[index % cardStyles.length]} p-3 sm:p-6 rounded-xl transition-all duration-300 hover:scale-105 border border-white/20`}>
+        <div key={index} className={`${cardStyles[index % cardStyles.length]} p-component-sm sm:p-component-md rounded-xl transition-shadow duration-fast hover:shadow-2xl border border-white/20`}>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs sm:text-sm font-medium text-white/90 mb-1 sm:mb-2">
+            <h3 className="text-caption sm:text-body-sm font-medium text-white/90 mb-1 sm:mb-2">
               {card.title}
             </h3>
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white text-sm">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white text-body-sm">
               {index === 0 ? '👥' : index === 1 ? '📊' : index === 2 ? '📝' : index === 3 ? '💡' : '⏱️'}
             </div>
           </div>
-          <p className="text-lg sm:text-3xl font-bold text-white mb-1">
+          <p className="text-body-lg sm:text-h1 font-bold text-white mb-1">
             {card.value}
           </p>
-          <p className="text-xs text-white/80">{card.subtitle}</p>
+          <p className="text-caption text-white/80">{card.subtitle}</p>
         </div>
       ))}
     </div>

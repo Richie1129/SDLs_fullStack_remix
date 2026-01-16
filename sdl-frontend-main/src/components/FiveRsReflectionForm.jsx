@@ -271,10 +271,10 @@ const FiveRsReflectionForm = ({
         `}
       </style>
       <div className="max-w-4xl mx-auto bg-white rounded-lg h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-component-md-lg">
       {/* 標題輸入 */}
       <div className="mb-6">
-        <label className="block text-lg font-semibold text-gray-700 mb-2">
+        <label className="block text-body-lg font-semibold text-gray-700 mb-2">
           反思日誌標題
         </label>
         <input
@@ -289,10 +289,10 @@ const FiveRsReflectionForm = ({
       {/* 進度條 */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-body-sm font-medium text-gray-700">
             進度: {getCompletedSteps()}/{steps.length}
           </span>
-          <span className="text-sm text-gray-500">
+          <span className="text-body-sm text-gray-500">
             {Math.round(progressPercentage)}% 完成
           </span>
         </div>
@@ -308,26 +308,26 @@ const FiveRsReflectionForm = ({
 
       {/* 檔案上傳區域 */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-body-sm font-medium text-gray-700 mb-2">
           附件檔案 (可選)
         </label>
         <input
           type="file"
           multiple
           onChange={onFileChange}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+          className="block w-full text-body-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-body-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
         />
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-caption text-gray-500">
           💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
         </p>
         {/* 現有附件（編輯時） */}
         {isEditing && existingRecord && (existingRecord.fileName || existingRecord.fileData) && (
-          <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="text-sm text-gray-700 break-all">
+          <div className="mt-3 p-component-sm bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-stack-xs">
+            <div className="text-body-sm text-gray-700 break-all">
               附件：{existingRecord.originalName || existingRecord.filename || existingRecord.fileName}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-stack-xs">
               <a
                 href={existingRecord.fileName ? buildFileDownloadUrl(existingRecord.fileName) : undefined}
                 onClick={(e) => {
@@ -340,14 +340,14 @@ const FiveRsReflectionForm = ({
                     });
                   }
                 }}
-                className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm text-center"
+                className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-body-sm text-center"
               >
                 下載附件
               </a>
               {typeof onRemoveAttachment === 'function' && (
                 <button
                   onClick={onRemoveAttachment}
-                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-body-sm"
                 >
                   刪除附件
                 </button>
@@ -357,8 +357,8 @@ const FiveRsReflectionForm = ({
         )}
         {attachFile && attachFile.length > 0 && (
           <div className="mt-2">
-            <p className="text-sm text-gray-600">已選擇 {attachFile.length} 個檔案：</p>
-            <ul className="text-sm text-gray-500 ml-4">
+            <p className="text-body-sm text-gray-600">已選擇 {attachFile.length} 個檔案：</p>
+            <ul className="text-body-sm text-gray-500 ml-4">
               {Array.from(attachFile).map((file, index) => (
                 <li key={index} className="list-disc">
                   {file.name} ({(file.size / 1024).toFixed(1)} KB)
@@ -370,7 +370,7 @@ const FiveRsReflectionForm = ({
       </div>
 
       {/* 5Rs 步驟 */}
-      <div className="space-y-4">
+      <div className="space-y-stack-sm">
         {steps.map((step, index) => {
           const framework = FIVE_R_FRAMEWORK[step];
           const isExpanded = expandedSections[index];
@@ -380,7 +380,7 @@ const FiveRsReflectionForm = ({
           return (
             <motion.div
               key={step}
-              className={`border rounded-lg transition-all duration-200 ${
+              className={`border rounded-lg transition-all duration-fast ${
                 isCurrent ? 'border-teal-500 shadow-md' : 'border-gray-200'
               }`}
               initial={{ opacity: 0, y: 20 }}
@@ -389,7 +389,7 @@ const FiveRsReflectionForm = ({
             >
               {/* 步驟標題 */}
               <div
-                className={`flex items-center justify-between p-4 cursor-pointer ${
+                className={`flex items-center justify-between p-component-base cursor-pointer ${
                   isCurrent ? 'bg-teal-50' : 'bg-gray-50'
                 }`}
                 onClick={() => handleStepClick(index)}
@@ -405,12 +405,12 @@ const FiveRsReflectionForm = ({
                     <h3 className="font-semibold text-gray-800">
                       {framework.title}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-body-sm text-gray-600">
                       {framework.description}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-stack-xs">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -433,8 +433,8 @@ const FiveRsReflectionForm = ({
                   exit={{ opacity: 0, height: 0 }}
                   className="px-4 py-2 bg-blue-50 border-t border-blue-100"
                 >
-                  <h4 className="text-sm font-medium text-blue-800 mb-2">引導問題：</h4>
-                  <ul className="text-sm text-blue-700 space-y-1">
+                  <h4 className="text-body-sm font-medium text-blue-800 mb-2">引導問題：</h4>
+                  <ul className="text-body-sm text-blue-700 space-y-1">
                     {framework.guidingQuestions.map((question, qIndex) => (
                       <li key={qIndex} className="flex items-start">
                         <span className="mr-2">•</span>
@@ -451,7 +451,7 @@ const FiveRsReflectionForm = ({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="p-4 border-t border-gray-100"
+                  className="p-component-base border-t border-gray-100"
                 >
                   <textarea
                     value={data[step]}
@@ -460,7 +460,7 @@ const FiveRsReflectionForm = ({
                     rows={6}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
                   />
-                  <div className="mt-2 text-xs text-gray-500">
+                  <div className="mt-2 text-caption text-gray-500">
                     {data[step].length} 字
                   </div>
                 </motion.div>
@@ -475,18 +475,18 @@ const FiveRsReflectionForm = ({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
+          className="mt-6 p-component-base bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
         >
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-stack-xs">
               <AiOutlineRobot className="w-5 h-5 text-purple-600" />
               <span className="font-medium text-purple-800">AI 智能分析</span>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-stack-xs">
               <select
                 value={aiProvider}
                 onChange={(e) => setAiProvider(e.target.value)}
-                className="text-xs border border-purple-300 rounded px-2 py-1"
+                className="text-caption border border-purple-300 rounded px-2 py-1"
               >
                 <option value="auto">自動選擇</option>
                 <option value="gpt">gpt-4o-mini</option>
@@ -496,7 +496,7 @@ const FiveRsReflectionForm = ({
               <button
                 onClick={handleAIAnalysis}
                 disabled={isAnalyzing}
-                className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-sm"
+                className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-body-sm"
               >
                 {isAnalyzing ? (
                   <>
@@ -512,7 +512,7 @@ const FiveRsReflectionForm = ({
               </button>
             </div>
           </div>
-          <p className="text-sm text-purple-700 mt-2">
+          <p className="text-body-sm text-purple-700 mt-2">
             AI 將根據 5Rs 框架分析您的反思內容，並提供個人化的學習建議。
           </p>
         </motion.div>
@@ -520,7 +520,7 @@ const FiveRsReflectionForm = ({
       </div>
 
       {/* 操作按鈕 - 固定在底部 */}
-      <div className="flex justify-end space-x-3 p-4 border-t border-gray-200 bg-white">
+      <div className="flex justify-end space-x-3 p-component-base border-t border-gray-200 bg-white">
         <button
           onClick={onCancel}
           className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"

@@ -7,19 +7,19 @@ import React from 'react';
  */
 const QuickStats = ({ personalData }) => {
   return (
-    <div className="bg-white p-3 sm:p-6 rounded-xl shadow-sm">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">學習統計</h2>
-      <div className="space-y-3 sm:space-y-4">
+    <div className="bg-white p-component-sm sm:p-component-md rounded-xl shadow-sm">
+      <h2 className="text-body-lg sm:text-h3 font-semibold text-gray-800 mb-4">學習統計</h2>
+      <div className="space-y-stack-sm sm:space-y-stack-sm">
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-xs sm:text-sm">聊天訊息</span>
+          <span className="text-gray-600 text-caption sm:text-body-sm">聊天訊息</span>
           <span className="font-bold text-blue-600">{personalData?.chatMessages || 0}</span>
         </div>
         <div className="flex justify-between items-center">
-          <span className="text-gray-600 text-xs sm:text-sm">Q&A 提問</span>
+          <span className="text-gray-600 text-caption sm:text-body-sm">Q&A 提問</span>
           <span className="font-bold text-green-600">{personalData?.qaQuestions || 0}</span>
         </div>
-        <div className="flex justify-between items-center bg-gradient-to-r from-purple-50 to-purple-100/50 p-2 rounded-lg border border-purple-200 hover:border-purple-300 transition-colors duration-300">
-          <span className="text-teal-700 text-xs sm:text-sm flex items-center">
+        <div className="flex justify-between items-center bg-gradient-to-r from-purple-50 to-purple-100/50 p-component-xs rounded-lg border border-purple-200 hover:border-purple-300 transition-colors duration-fast">
+          <span className="text-teal-700 text-caption sm:text-body-sm flex items-center">
             <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
             AI 諮詢
           </span>

@@ -219,22 +219,22 @@ export default function IdeaWall() {
             const agentName = agentNames[data.role] || 'AI 助教';
             
             toast((t) => (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-stack-xs">
                     <div className="font-medium">{agentName} 有建議給你！</div>
-                    <div className="text-sm text-gray-600">{data.reason}</div>
-                    <div className="flex gap-2 mt-2">
+                    <div className="text-body-sm text-gray-600">{data.reason}</div>
+                    <div className="flex gap-stack-xs mt-2">
                         <button
                             onClick={() => {
                                 toast.dismiss(t.id);
                                 setKbCoachModalOpen(true);
                             }}
-                            className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                            className="px-3 py-1 bg-purple-600 text-white text-body-sm rounded hover:bg-purple-700"
                         >
                             查看建議
                         </button>
                         <button
                             onClick={() => toast.dismiss(t.id)}
-                            className="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
+                            className="px-3 py-1 bg-gray-200 text-gray-700 text-body-sm rounded hover:bg-gray-300"
                         >
                             稍後
                         </button>
@@ -580,10 +580,10 @@ export default function IdeaWall() {
                             setContent("")
                             setCreateOptionModalOpen(false)
                             setCreateNodeModalOpen(true)
-                        }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                        }} className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'>
                             建立想法
                         </button>
-                        <button onClick={() => setCreateOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                        <button onClick={() => setCreateOptionModalOpen(false)} className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'>
                             取消
                         </button>
                     </div>
@@ -599,10 +599,10 @@ export default function IdeaWall() {
                             setContent("")
                             setBuildOnOptionModalOpen(false)
                             setCreateNodeModalOpen(true)
-                        }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                        }} className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'>
                             延伸想法
                         </button>
-                        <button onClick={() => setBuildOnOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
+                        <button onClick={() => setBuildOnOptionModalOpen(false)} className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'>
                             取消
                         </button>
                     </div>
@@ -611,9 +611,9 @@ export default function IdeaWall() {
             {/* create modal */}
             {!isObservationMode && (
                 <Modal open={createNodeModalOpen} onClose={() => setCreateNodeModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                    <div className='flex flex-col p-3'>
-                        <h3 className=' font-bold text-base mb-3'>建立想法</h3>
-                    <p className=' font-bold text-base mb-3'>標題</p>
+                    <div className='flex flex-col p-component-sm'>
+                        <h3 className=' font-bold text-body mb-3'>建立想法</h3>
+                    <p className=' font-bold text-body mb-3'>標題</p>
                     <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
                         type="text"
                         placeholder="標題"
@@ -628,7 +628,7 @@ export default function IdeaWall() {
                         onInsert={setContent}
                     />
 
-                    <p className=' font-bold text-base mb-3'>內容</p>
+                    <p className=' font-bold text-body mb-3'>內容</p>
                     <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
                         rows={5}
                         placeholder="內容"
@@ -638,10 +638,10 @@ export default function IdeaWall() {
                     />
                 </div>
                 <div className='flex justify-end m-2'>
-                    <button onClick={() => setCreateNodeModalOpen(false)} className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2" >
+                    <button onClick={() => setCreateNodeModalOpen(false)} className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2" >
                         取消
                     </button>
-                    <button onClick={handleCreateSubmit} style={{ backgroundColor: "#5BA491" }} className="mx-auto w-full h-7 mb-2  rounded font-bold text-xs sm:text-sm text-white">
+                    <button onClick={handleCreateSubmit} style={{ backgroundColor: "#5BA491" }} className="mx-auto w-full h-7 mb-2  rounded font-bold text-caption sm:text-body-sm text-white">
                         新增
                     </button>
 
@@ -657,7 +657,7 @@ export default function IdeaWall() {
                         <div className='flex border-b border-gray-200 mb-4'>
                             <button
                                 onClick={() => setShowNodeChangeHistory(false)}
-                                className={`px-4 py-2 font-medium text-sm ${
+                                className={`px-4 py-2 font-medium text-body-sm ${
                                     !showNodeChangeHistory 
                                         ? 'text-customgreen border-b-2 border-customgreen' 
                                         : 'text-gray-500 hover:text-gray-700'
@@ -671,7 +671,7 @@ export default function IdeaWall() {
                                     // 取得變更記錄
                                     getNodeChangeLogs(selectNodeInfo.id).then(setNodeChangeLogs).catch(console.error);
                                 }}
-                                className={`px-4 py-2 font-medium text-sm ${
+                                className={`px-4 py-2 font-medium text-body-sm ${
                                     showNodeChangeHistory 
                                         ? 'text-customgreen border-b-2 border-customgreen' 
                                         : 'text-gray-500 hover:text-gray-700'
@@ -683,9 +683,9 @@ export default function IdeaWall() {
 
                         {/* 編輯節點內容 */}
                         {!showNodeChangeHistory && (
-                            <div className='flex flex-col p-3'>
-                                <h3 className=' font-bold text-base mb-3'>檢視便利貼</h3>
-                                <p className=' font-bold text-base mb-3'>標題</p>
+                            <div className='flex flex-col p-component-sm'>
+                                <h3 className=' font-bold text-body mb-3'>檢視便利貼</h3>
+                                <p className=' font-bold text-body mb-3'>標題</p>
                                 <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
                                     type="text"
                                     placeholder="標題"
@@ -706,7 +706,7 @@ export default function IdeaWall() {
                                     />
                                 )}
 
-                                <p className=' font-bold text-base mb-3'>內容</p>
+                                <p className=' font-bold text-body mb-3'>內容</p>
                                 <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
                                     rows={5}
                                     placeholder="內容"
@@ -716,9 +716,9 @@ export default function IdeaWall() {
                                     disabled={isObservationMode || currentUsername !== selectNodeInfo.owner}
                                 />
                                 <div className='flex justify-between items-center mt-3'>
-                                    <p className=' font-bold text-base'>建立者: {getDisplayNodeOwnerName(selectNodeInfo.owner)}</p>
+                                    <p className=' font-bold text-body'>建立者: {getDisplayNodeOwnerName(selectNodeInfo.owner)}</p>
                                     {selectNodeInfo.createdAt && (
-                                        <p className='text-sm text-gray-500' title={formatTime(selectNodeInfo.createdAt, 'full')}>
+                                        <p className='text-body-sm text-gray-500' title={formatTime(selectNodeInfo.createdAt, 'full')}>
                                             建立時間: {formatTime(selectNodeInfo.createdAt, 'relative')}
                                         </p>
                                     )}
@@ -728,9 +728,9 @@ export default function IdeaWall() {
 
                         {/* 變更歷史 */}
                         {showNodeChangeHistory && (
-                            <div className='max-h-96 overflow-y-auto p-3'>
+                            <div className='max-h-96 overflow-y-auto p-component-sm'>
                                 <div className='flex items-center mb-4'>
-                                    <h4 className='text-lg font-medium text-gray-700'>變更歷史</h4>
+                                    <h4 className='text-body-lg font-medium text-gray-700'>變更歷史</h4>
                                 </div>
                                 
                                 {nodeChangeLogs.length === 0 ? (
@@ -742,25 +742,25 @@ export default function IdeaWall() {
                                         {nodeChangeLogs.map((log, index) => (
                                             <div 
                                                 key={log.id || index} 
-                                                className='bg-gray-50 rounded-lg p-3 border-l-4 border-purple-400'
+                                                className='bg-gray-50 rounded-lg p-component-sm border-l-4 border-purple-400'
                                             >
                                                 <div className='flex items-center justify-between mb-2'>
                                                     <div className='flex items-center'>
-                                                        <span className='text-sm font-medium text-gray-700'>
+                                                        <span className='text-body-sm font-medium text-gray-700'>
                                                             {log.changedBy}
                                                         </span>
                                                     </div>
-                                                    <span className='text-xs text-gray-500'>
+                                                    <span className='text-caption text-gray-500'>
                                                         {formatTime(log.createdAt, 'full')}
                                                     </span>
                                                 </div>
                                                 
-                                                <p className='text-sm text-gray-600 mb-2'>
+                                                <p className='text-body-sm text-gray-600 mb-2'>
                                                     {log.description}
                                                 </p>
                                                 
                                                 {log.fieldName && (
-                                                    <div className='text-xs text-gray-500'>
+                                                    <div className='text-caption text-gray-500'>
                                                         <span className='font-medium'>欄位：</span>
                                                         {log.fieldName}
                                                         {log.oldValue && log.newValue && (
@@ -775,7 +775,7 @@ export default function IdeaWall() {
                                                 
                                                 <div className='flex items-center mt-2'>
                                                     <span className={`
-                                                        px-2 py-1 rounded-full text-xs font-medium
+                                                        px-2 py-1 rounded-full text-caption font-medium
                                                         ${log.changeType === 'create' ? 'bg-green-100 text-green-700' : ''}
                                                         ${log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : ''}
                                                         ${log.changeType === 'delete' ? 'bg-red-100 text-red-700' : ''}
@@ -798,21 +798,21 @@ export default function IdeaWall() {
                             <div className='flex flex-row justify-between m-2'>
                                 {/* 刪除按鈕 - 觀摩模式隱藏 */}
                                 {!isObservationMode && (
-                                    <button onClick={handleDelete} className="w-16 h-7 bg-red-500 rounded font-bold text-sm sm:text-bas text-white mr-2">
+                                    <button onClick={handleDelete} className="w-16 h-7 bg-red-500 rounded font-bold text-body-sm sm:text-bas text-white mr-2">
                                         刪除
                                     </button>
                                 )}
-                                <div className='flex flex-col gap-2 mb-3'>
+                                <div className='flex flex-col gap-stack-xs mb-3'>
                                     {/* KB Coach按鈕（新版，推薦） */}
                                     {!isObservationMode && (
                                         <button
                                             onClick={handleKbCoach}
-                                            className="w-full h-9 bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg font-bold text-sm text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                                            className="w-full h-9 bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg font-bold text-body-sm text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-stack-xs"
                                             title="基於Knowledge Building 12原則的深度引導"
                                         >
-                                            <span className="text-lg">🎓</span>
+                                            <span className="text-body-lg">🎓</span>
                                             <span>KB Coach</span>
-                                            <span className="text-xs bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold">推薦</span>
+                                            <span className="text-caption bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold">推薦</span>
                                         </button>
                                     )}
                                     
@@ -827,19 +827,19 @@ export default function IdeaWall() {
                                                 setUpdateNodeModalOpen(false);
                                                 setCreateNodeModalOpen(true);
                                             }}
-                                            className="w-full h-7 bg-green-500 rounded font-bold text-sm text-white hover:bg-green-600 transition-colors"
+                                            className="w-full h-7 bg-green-500 rounded font-bold text-body-sm text-white hover:bg-green-600 transition-colors"
                                         >
                                             延伸想法
                                         </button>
                                     )}
                                 </div>
-                                <div className='flex justify-end gap-2'>
-                                    <button onClick={() => setUpdateNodeModalOpen(false)} className="w-16 h-7 bg-customgray rounded font-bold text-sm sm:text-bas text-black/60 mr-2">
+                                <div className='flex justify-end gap-stack-xs'>
+                                    <button onClick={() => setUpdateNodeModalOpen(false)} className="w-16 h-7 bg-customgray rounded font-bold text-body-sm sm:text-bas text-black/60 mr-2">
                                         取消
                                     </button>
                                     {/* 儲存按鈕 - 觀摩模式隱藏 */}
                                     {!isObservationMode && (
-                                        <button onClick={handleUpdateSubmit} className="w-16 h-7 bg-customgreen rounded font-bold text-sm sm:text-bas text-white">
+                                        <button onClick={handleUpdateSubmit} className="w-16 h-7 bg-customgreen rounded font-bold text-body-sm sm:text-bas text-white">
                                             儲存
                                         </button>
                                     )}
@@ -847,7 +847,7 @@ export default function IdeaWall() {
                             </div>
                         ) : (
                             <div className='flex justify-end m-2'>
-                                <button onClick={() => setUpdateNodeModalOpen(false)} className="mx-auto w-1/3 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-base text-white mr-2" >
+                                <button onClick={() => setUpdateNodeModalOpen(false)} className="mx-auto w-1/3 h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body text-white mr-2" >
                                     關閉
                                 </button>
                                 {/* 延伸想法按鈕 - 觀摩模式隱藏 */}
@@ -862,7 +862,7 @@ export default function IdeaWall() {
                                                 setUpdateNodeModalOpen(false);
                                                 setCreateNodeModalOpen(true);
                                             }}
-                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
+                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-body-sm sm:text-body text-white"
                                         >
                                             延伸想法
                                         </button>
@@ -923,7 +923,7 @@ export default function IdeaWall() {
                         setCreateNodeModalOpen(true);
                     }}
                     aria-label="新增節點"
-                    className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-2xl transition duration-300 z-50 ${hovering ?"scale-110" : "scale-100" } `}
+                    className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-h2 transition-opacity duration-normal z-50 ${hovering ? "opacity-80" : "opacity-100" } `}
                 >
                     <Lottie
                         className="w-28"
@@ -953,7 +953,7 @@ export default function IdeaWall() {
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                             </svg>
-                            <div className="flex flex-col items-center text-xs font-medium leading-tight space-y-1">
+                            <div className="flex flex-col items-center text-caption font-medium leading-tight space-y-1">
                                 <span>討</span>
                                 <span>論</span>
                                 <span>室</span>

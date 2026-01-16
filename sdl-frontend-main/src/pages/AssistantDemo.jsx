@@ -18,11 +18,11 @@ export default function AssistantDemo() {
   // const projectId = parseInt(localStorage.getItem('currentProjectId')) || null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-component-lg">
       <div className="max-w-6xl mx-auto">
         {/* 頁面標題 */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-h1 font-bold text-gray-900 mb-2">
             🤖 專案助理 AI
           </h1>
           <p className="text-gray-600">
@@ -32,20 +32,20 @@ export default function AssistantDemo() {
 
         {/* 如果沒有 projectId，顯示提示 */}
         {!projectId ? (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-yellow-900 mb-2">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-component-md-lg">
+            <h2 className="text-body-lg font-semibold text-yellow-900 mb-2">
               ⚠️ 缺少專案 ID
             </h2>
             <p className="text-yellow-800 mb-4">
               請在 URL 中提供專案 ID，例如：
             </p>
-            <code className="block bg-yellow-100 px-4 py-2 rounded text-sm">
+            <code className="block bg-yellow-100 px-4 py-2 rounded text-body-sm">
               /assistant-demo?projectId=123
             </code>
 
             {/* 快速測試連結（示範用） */}
             <div className="mt-4">
-              <p className="text-sm text-yellow-700 mb-2">快速測試：</p>
+              <p className="text-body-sm text-yellow-700 mb-2">快速測試：</p>
               <a
                 href="/assistant-demo?projectId=1"
                 className="inline-block px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
@@ -66,11 +66,11 @@ export default function AssistantDemo() {
         )}
 
         {/* 使用說明 */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-blue-900 mb-3">
+        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-component-md-lg">
+          <h2 className="text-body-lg font-semibold text-blue-900 mb-3">
             💡 使用提示
           </h2>
-          <div className="space-y-2 text-blue-800 text-sm">
+          <div className="space-y-stack-xs text-blue-800 text-body-sm">
             <div>• 詢問專案進度：「我的專案目前進度如何？」</div>
             <div>• 查看任務狀態：「看板上有哪些任務待處理？」</div>
             <div>• 檢視想法牆：「想法牆裡有什麼重要的想法？」</div>
@@ -80,11 +80,11 @@ export default function AssistantDemo() {
         </div>
 
         {/* 技術說明 */}
-        <div className="mt-8 bg-gray-100 rounded-lg p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+        <div className="mt-8 bg-gray-100 rounded-lg p-component-md-lg">
+          <h2 className="text-body-lg font-semibold text-gray-900 mb-3">
             🔧 技術特點
           </h2>
-          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+          <div className="grid md:grid-cols-2 gap-stack-sm text-body-sm text-gray-700">
             <div>
               <strong>✅ Streaming 回應</strong>
               <p className="text-gray-600">AI 會逐字回答，不用等待</p>

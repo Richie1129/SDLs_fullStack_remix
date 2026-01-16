@@ -55,18 +55,18 @@ export function TeamDailyModal({
         <GrFormClose className="w-6 h-6" />
       </button>
       <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
-        <h3 className="font-bold text-base sm:text-lg mb-3 text-center">
+        <h3 className="font-bold text-body sm:text-body-lg mb-3 text-center">
           {isTeacher ? "查看小組反思日誌" : "小組反思日誌"}
         </h3>
         <div className="flex items-center mb-3">
-          <p className="font-bold text-sm sm:text-base">日誌內容</p>
+          <p className="font-bold text-body-sm sm:text-body">日誌內容</p>
           <button onClick={toggleTooltip} className="ml-2 p-1 ">
             <GrCircleQuestion className="w-4 h-4 text-[#5BA491] hover:text-[#5BA491]/60" />
           </button>
         </div>
         {isTooltipVisible && (
           <motion.div
-            className="absolute z-10 bg-white p-6 rounded shadow-lg text-sm"
+            className="absolute z-10 bg-white p-component-md-lg rounded shadow-lg text-body-sm"
             initial="hidden"
             animate="visible"
             exit="hidden"
@@ -76,12 +76,12 @@ export function TeamDailyModal({
             <button onClick={closeTooltip} className="absolute top-1 right-1">
               <GrFormClose className="w-4 h-4" />
             </button>
-            <p className=" font-bold text-base ">日誌內容可以撰寫以下項目:</p>
+            <p className=" font-bold text-body ">日誌內容可以撰寫以下項目:</p>
             <ul>
-              <li className="  text-sm pt-2">1.最近完成的進度內容。</li>
-              <li className="  text-sm ">2.完成的心得反思。</li>
-              <li className="  text-sm ">3.下次的預計完成的進度內容。</li>
-              <li className="  text-sm ">4.是否遇到新的問題。</li>
+              <li className="  text-body-sm pt-2">1.最近完成的進度內容。</li>
+              <li className="  text-body-sm ">2.完成的心得反思。</li>
+              <li className="  text-body-sm ">3.下次的預計完成的進度內容。</li>
+              <li className="  text-body-sm ">4.是否遇到新的問題。</li>
             </ul>
           </motion.div>
         )}
@@ -90,13 +90,13 @@ export function TeamDailyModal({
         <div className="flex border-b border-gray-200 mb-3">
           <button
             onClick={() => setActiveTab('edit')}
-            className={`px-4 py-2 font-medium text-sm ${activeTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             {isTeacher ? "查看日誌" : "編輯日誌"}
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 font-medium text-sm ${activeTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+            className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             變更歷史
           </button>
@@ -119,7 +119,7 @@ export function TeamDailyModal({
             <div className="flex justify-end m-2">
               <button
                 onClick={onClose}
-                className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2"
+                className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2"
               >
                 {isTeacher ? "關閉" : "取消"}
               </button>
@@ -127,7 +127,7 @@ export function TeamDailyModal({
                 <button
                   onClick={onSubmit}
                   type="submit"
-                  className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-xs sm:text-sm text-white"
+                  className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-caption sm:text-body-sm text-white"
                 >
                   {editingId ? "更新" : "儲存"}
                 </button>

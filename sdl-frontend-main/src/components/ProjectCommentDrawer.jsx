@@ -248,9 +248,9 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
     const files = c.attachments.filter(a => !isImage(a.mimeType));
 
     return (
-      <div className="mt-2 space-y-2">
+      <div className="mt-2 space-y-stack-xs">
         {imgs.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-stack-xs">
             {imgs.map(a => (
               <div key={a.id} className="relative group">
                 <img
@@ -277,7 +277,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
         {files.length > 0 && (
           <div className="space-y-1">
             {files.map(a => (
-              <div key={a.id} className="flex items-center px-3 py-2 border rounded-md text-sm hover:shadow-sm hover:border-gray-300">
+              <div key={a.id} className="flex items-center px-3 py-2 border rounded-md text-body-sm hover:shadow-sm hover:border-gray-300">
                 <span className="mr-2">
                   {pickFileIcon(a.mimeType)}
                 </span>
@@ -291,7 +291,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
                   {a.originalName}
                 </a>
                 {a.size && (
-                  <span className="ml-2 text-xs text-gray-500">({Math.round(a.size/1024)} KB)</span>
+                  <span className="ml-2 text-caption text-gray-500">({Math.round(a.size/1024)} KB)</span>
                 )}
                 {editingId === c.id ? (
                   <button
@@ -322,7 +322,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
 
   const renderComment = (c) => {
     return (
-      <div key={c.id} className="p-3 rounded-lg border bg-white hover:shadow-sm transition-shadow">
+      <div key={c.id} className="p-component-sm rounded-lg border bg-white hover:shadow-sm transition-shadow">
         <div className="flex items-start">
           <img
             src={avatarFor(c.userId)}
@@ -330,25 +330,25 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
             className="w-9 h-9 rounded-full object-cover mr-3"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-800 truncate">{formatUserDisplay(c.user)}</p>
+            <p className="text-body-sm font-medium text-gray-800 truncate">{formatUserDisplay(c.user)}</p>
 
             {editingId === c.id ? (
               <div className="mt-2">
                 <textarea
-                  className="w-full h-20 resize-none rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent p-2 text-sm"
+                  className="w-full h-20 resize-none rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent p-component-xs text-body-sm"
                   value={editingContent}
                   onChange={(e) => setEditingContent(e.target.value)}
                 />
-                <div className="mt-2 flex items-center space-x-2">
+                <div className="mt-2 flex items-center space-x-stack-xs">
                   <button
-                    className="px-3 py-1 bg-customgreen text-white rounded-md text-xs"
+                    className="px-3 py-1 bg-customgreen text-white rounded-md text-caption"
                     onClick={() => saveEdit(c)}
                     disabled={updateMut.isLoading || !editingContent.trim()}
                   >
                     儲存
                   </button>
                   <button
-                    className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md text-xs"
+                    className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md text-caption"
                     onClick={cancelEdit}
                   >
                     取消
@@ -362,14 +362,14 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               <div className="mt-2">
                 {/* 引言區塊：當同時存在 reply_to_username 與 reply_to_content 時顯示 */}
                 {c.reply_to_username && c.reply_to_content && (
-                  <div className="mb-2 p-2 border-l-4 border-[#5BA491] bg-[#5BA491]/25 rounded-r-md">
-                    <p className="text-xs font-semibold text-gray-600">{c.reply_to_username}</p>
-                    <p className="text-sm text-gray-800 whitespace-pre-line line-clamp-2">{c.reply_to_content}</p>
+                  <div className="mb-2 p-component-xs border-l-4 border-[#5BA491] bg-[#5BA491]/25 rounded-r-md">
+                    <p className="text-caption font-semibold text-gray-600">{c.reply_to_username}</p>
+                    <p className="text-body-sm text-gray-800 whitespace-pre-line line-clamp-2">{c.reply_to_content}</p>
                   </div>
                 )}
 
                 {/* 主要內容：若沒有引言區塊，保留原本的 @提及；有引言則移除以避免重複 */}
-                <p className="text-sm text-gray-700 whitespace-pre-line">
+                <p className="text-body-sm text-gray-700 whitespace-pre-line">
                   {!c.reply_to_username && c.replyToUser?.username && (
                     <span className="font-semibold text-blue-500 mr-1">@{c.replyToUser.username}</span>
                   )}
@@ -380,7 +380,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
 
             {renderAttachments(c)}
 
-            <div className="mt-3 flex items-center flex-wrap gap-x-2 text-xs text-gray-600">
+            <div className="mt-3 flex items-center flex-wrap gap-x-2 text-caption text-gray-600">
               <button
                 type="button"
                 className={`hover:underline ${c.likedByCurrentUser ? 'text-teal-700' : ''}`}
@@ -424,11 +424,11 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
       className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-[120] overflow-hidden flex flex-col"
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-800">專案評論</h3>
+      <div className="flex items-center justify-between p-component-sm sm:p-component-base border-b border-gray-200">
+        <h3 className="text-body sm:text-body-lg font-semibold text-gray-800">專案評論</h3>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 transition-colors text-lg sm:text-xl"
+          className="text-gray-400 hover:text-gray-600 transition-colors text-body-lg sm:text-h3"
           aria-label="關閉"
         >
           <FiX />
@@ -438,28 +438,28 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
       {/* Body */}
       <div className="flex-1 min-h-0 flex flex-col">
         {/* Comment list (flat, scrolls independently) */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 scrollbar-thin">
+        <div className="flex-1 min-h-0 overflow-y-auto p-component-sm sm:p-component-base space-y-3 scrollbar-thin">
           {isLoading ? (
-            <div className="text-center text-gray-500 text-sm">載入中…</div>
+            <div className="text-center text-gray-500 text-body-sm">載入中…</div>
           ) : comments.length === 0 ? (
-            <div className="text-center text-gray-400 text-sm">尚無評論</div>
+            <div className="text-center text-gray-400 text-body-sm">尚無評論</div>
           ) : (
             comments.map((c) => renderComment(c))
           )}
         </div>
         {/* Input area (fixed at drawer bottom) */}
-        <div className="p-3 sm:p-6 border-t bg-gray-50">
+        <div className="p-component-sm sm:p-component-md-lg border-t bg-gray-50">
           {replyTarget && (
-            <div className="mb-2 flex items-center justify-between text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-200">
+            <div className="mb-2 flex items-center justify-between text-caption px-2 py-1 rounded bg-blue-50 text-blue-600 border border-blue-200">
               <span>正在回覆 {replyTarget.username}…</span>
               <button className="ml-2 text-blue-600 hover:underline" onClick={() => setReplyTarget(null)}>取消</button>
             </div>
           )}
           <label className="sr-only" htmlFor="project-comment-textarea">新增評論</label>
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-stack-xs">
             <textarea
               id="project-comment-textarea"
-              className="flex-1 h-20 resize-none rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent p-2 text-sm"
+              className="flex-1 h-20 resize-none rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent p-component-xs text-body-sm"
               placeholder="輸入你的評論…"
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -468,7 +468,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
             />
             <button
               type="button"
-              className="px-3 py-2 bg-[#5BA491] text-white rounded-md text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+              className="px-3 py-2 bg-[#5BA491] text-white rounded-md text-body-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
               title="送出評論"
               onClick={handleSubmit}
               disabled={createMut.isLoading || !content.trim()}
@@ -477,8 +477,8 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               送出
             </button>
           </div>
-          <div className="mt-2 flex flex-col gap-2">
-            <div className="flex items-center gap-2">
+          <div className="mt-2 flex flex-col gap-stack-xs">
+            <div className="flex items-center gap-stack-xs">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -489,7 +489,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               />
               <button
                 type="button"
-                className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                className="p-component-xs rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                 title="選擇圖片或檔案"
                 onClick={onPickFilesForNew}
               >
@@ -497,17 +497,17 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               </button>
               <button
                 type="button"
-                className="p-2 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                className="p-component-xs rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100"
                 title="選擇檔案"
                 onClick={onPickFilesForNew}
               >
                 <FiPaperclip size={18} />
               </button>
               {pendingFiles.length > 0 && (
-                <span className="text-xs text-gray-500">已選 {pendingFiles.length} 個檔案</span>
+                <span className="text-caption text-gray-500">已選 {pendingFiles.length} 個檔案</span>
               )}
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-caption text-gray-500">
               💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
             </p>
           </div>
@@ -522,8 +522,8 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               <img src={commentImageList[selectedCommentImageIndex]} alt="Comment Attachment" className="w-full h-auto" />
               {commentImageList.length > 1 && (
                 <>
-                  <button onClick={prevCommentImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">‹</button>
-                  <button onClick={nextCommentImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full">›</button>
+                  <button onClick={prevCommentImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-component-xs rounded-full">‹</button>
+                  <button onClick={nextCommentImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-component-xs rounded-full">›</button>
                 </>
               )}
             </div>
@@ -551,10 +551,10 @@ function CommentAttachmentPicker({ onPick, label = '附件' }) {
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
         onChange={onChange}
       />
-      <button type="button" className="text-xs text-gray-600 hover:underline" title="上傳附件" onClick={() => ref.current?.click()}>
+      <button type="button" className="text-caption text-gray-600 hover:underline" title="上傳附件" onClick={() => ref.current?.click()}>
         {label}
       </button>
-      <p className="text-xs text-gray-400">
+      <p className="text-caption text-gray-400">
         💡 單檔最大 100MB | 最多 10 個檔案
       </p>
     </div>

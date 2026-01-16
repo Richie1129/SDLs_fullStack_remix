@@ -31,8 +31,8 @@ const ChatInput = ({
         className={`py-3 px-5 text-[14px] min-w-[80px] rounded-full border-0 font-semibold ${
           isLoading
             ? 'bg-[#dee2e6] cursor-not-allowed shadow-none'
-            : 'bg-[#5BA491] cursor-pointer shadow-[0_2px_8px_rgba(91,164,145,0.3)] hover:bg-[#4a9076] hover:-translate-y-px'
-        } text-white transition-all`}
+            : 'bg-[#5BA491] cursor-pointer shadow-[0_2px_8px_rgba(91,164,145,0.3)] hover:bg-[#4a9076] hover:shadow-lg'
+        } text-white transition-all duration-fast`}
         disabled={isLoading || !projectId}
       >
         {isLoading ? "送出中..." : "送出"}

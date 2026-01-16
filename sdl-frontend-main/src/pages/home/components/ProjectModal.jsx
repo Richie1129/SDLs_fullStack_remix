@@ -39,13 +39,13 @@ const ProjectModal = ({
         <X className='w-6 h-6' />
       </button>
 
-      <form onSubmit={handleSubmit} className='flex flex-col p-3'>
-        <h3 className='font-bold text-base mb-3'>
+      <form onSubmit={handleSubmit} className='flex flex-col p-component-sm'>
+        <h3 className='font-bold text-body mb-3'>
           {isEditMode ? "更新活動" : "建立活動"}
         </h3>
 
         {/* 活動名稱 */}
-        <label className='font-bold text-base mb-3'>活動名稱</label>
+        <label className='font-bold text-body mb-3'>活動名稱</label>
         <input
           className="rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
           type="text"
@@ -57,7 +57,7 @@ const ProjectModal = ({
         />
 
         {/* 活動描述 */}
-        <label className='font-bold text-base mb-3'>活動描述</label>
+        <label className='font-bold text-body mb-3'>活動描述</label>
         <textarea
           className="rounded outline-none ring-2 ring-customgreen w-full p-1"
           rows={3}
@@ -69,16 +69,16 @@ const ProjectModal = ({
 
         {/* 指導老師選擇 */}
         <div className="mt-4">
-          <label className="block text-gray-700 text-base">
+          <label className="block text-gray-700 text-body">
             指導老師
             {isEditMode && selectedMentor && (
-              <span className="text-sm text-gray-500 ml-2">(目前: {selectedMentor})</span>
+              <span className="text-body-sm text-gray-500 ml-2">(目前: {selectedMentor})</span>
             )}
           </label>
           <select
             value={selectedMentor}
             onChange={(e) => setSelectedMentor(e.target.value)}
-            className="text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none"
+            className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-customgreen focus:bg-white focus:outline-none"
             required
             disabled={isLoading}
           >
@@ -110,18 +110,18 @@ const ProjectModal = ({
         </div>
 
         {/* 按鈕區域 */}
-        <div className='flex justify-end gap-2 mt-4'>
+        <div className='flex justify-end gap-stack-xs mt-4'>
           <button
             type="button"
             onClick={handleClose}
-            className="flex-1 h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60"
+            className="flex-1 h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60"
             disabled={isLoading}
           >
             取消
           </button>
           <button
             type="submit"
-            className="flex-1 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-sm text-white disabled:opacity-50"
+            className="flex-1 h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white disabled:opacity-50"
             disabled={isLoading}
           >
             {isLoading ? "處理中..." : (isEditMode ? "更新" : "儲存")}

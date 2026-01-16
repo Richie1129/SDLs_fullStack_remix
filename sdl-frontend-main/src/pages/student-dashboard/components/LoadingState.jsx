@@ -62,16 +62,16 @@ const LoadingState = ({
       ${className}
     `}>
       {title && (
-        <h4 className={`text-sm font-medium mb-2 ${content.textColor}`}>
+        <h4 className={`text-body-sm font-medium mb-2 ${content.textColor}`}>
           {title}
         </h4>
       )}
 
       <div className="flex items-center space-x-3">
-        <div className="text-lg">
+        <div className="text-body-lg">
           {content.icon}
         </div>
-        <span className={`text-sm ${content.textColor}`}>
+        <span className={`text-body-sm ${content.textColor}`}>
           {content.defaultMessage}
         </span>
       </div>

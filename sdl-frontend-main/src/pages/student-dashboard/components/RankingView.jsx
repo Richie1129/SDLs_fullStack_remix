@@ -74,17 +74,17 @@ const RankingView = ({ rankingData }) => {
               return (
                 <div
                   key={safeKey}
-                  className={`relative flex items-center justify-between p-2 ${bgColor || 'bg-gray-50'} rounded transition-colors hover:opacity-90`}
+                  className={`relative flex items-center justify-between p-component-xs ${bgColor || 'bg-gray-50'} rounded transition-colors hover:opacity-90`}
                 >
                   {index < 3 && (
-                    <div className="absolute -top-1 -left-1 text-lg">
+                    <div className="absolute -top-1 -left-1 text-body-lg">
                       {getMedalIcon(index)}
                     </div>
                   )}
-                  <span className={`text-sm font-medium text-gray-800 ${index < 3 ? 'ml-4' : ''} truncate`}>
+                  <span className={`text-body-sm font-medium text-gray-800 ${index < 3 ? 'ml-4' : ''} truncate`}>
                     {displayName}
                   </span>
-                  <span className="text-sm text-gray-600 flex-shrink-0 ml-2">
+                  <span className="text-body-sm text-gray-600 flex-shrink-0 ml-2">
                     {displayValue} {valueLabel}
                   </span>
                 </div>
@@ -109,7 +109,7 @@ const RankingView = ({ rankingData }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-stack-sm">
       <SafeRankingSection
         title="學生活動排行"
         data={safeStudents}

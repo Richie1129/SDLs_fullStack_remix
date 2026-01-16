@@ -167,12 +167,12 @@ class DashboardErrorBoundary extends React.Component {
 
     return (
       <div className="w-full h-full min-h-[400px] bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+        <div className="h-full flex flex-col items-center justify-center p-component-md-lg text-center">
           {/* 錯誤圖示 */}
-          <div className="text-4xl mb-4">{config.icon}</div>
+          <div className="text-display mb-4">{config.icon}</div>
 
           {/* 錯誤標題 */}
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">
+          <h2 className="text-body-lg font-semibold text-gray-900 mb-2">
             {config.title}
           </h2>
 
@@ -187,7 +187,7 @@ class DashboardErrorBoundary extends React.Component {
               <button
                 key={index}
                 onClick={action.handler}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-md text-body-sm font-medium transition-colors ${
                   action.primary
                     ? 'bg-customgreen text-white hover:bg-teal-600'
                     : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
@@ -200,8 +200,8 @@ class DashboardErrorBoundary extends React.Component {
 
           {/* 上次工作數據恢復選項 */}
           {this.state.lastWorkingData && (
-            <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-blue-700 text-sm">
+            <div className="mt-6 p-component-sm bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-blue-700 text-body-sm">
                 檢測到之前的工作數據，是否嘗試恢復？
               </p>
               <button
@@ -210,7 +210,7 @@ class DashboardErrorBoundary extends React.Component {
                   console.log('恢復數據:', this.state.lastWorkingData);
                   this.handleRetry();
                 }}
-                className="mt-2 text-blue-600 text-sm underline hover:text-blue-800"
+                className="mt-2 text-blue-600 text-body-sm underline hover:text-blue-800"
               >
                 恢復上次數據
               </button>
@@ -220,23 +220,23 @@ class DashboardErrorBoundary extends React.Component {
           {/* 錯誤ID */}
           {this.state.errorId && (
             <div className="mt-6 pt-4 border-t border-gray-200 w-full max-w-md">
-              <p className="text-xs text-gray-500">
-                錯誤ID: <code className="bg-gray-100 px-1 rounded text-xs">{this.state.errorId}</code>
+              <p className="text-caption text-gray-500">
+                錯誤ID: <code className="bg-gray-100 px-1 rounded text-caption">{this.state.errorId}</code>
               </p>
             </div>
           )}
 
           {/* 開發模式錯誤詳情 */}
           {process.env.NODE_ENV === 'development' && this.state.error && (
-            <details className="mt-4 p-3 bg-red-50 rounded border border-red-200 text-left w-full max-w-md">
-              <summary className="text-red-700 font-medium cursor-pointer text-sm">
+            <details className="mt-4 p-component-sm bg-red-50 rounded border border-red-200 text-left w-full max-w-md">
+              <summary className="text-red-700 font-medium cursor-pointer text-body-sm">
                 🔧 開發模式 - 錯誤詳情
               </summary>
-              <div className="mt-2 text-xs text-red-600 font-mono">
+              <div className="mt-2 text-caption text-red-600 font-mono">
                 <p><strong>類型:</strong> {this.state.errorType}</p>
                 <p><strong>錯誤:</strong> {this.state.error.toString()}</p>
                 {this.state.errorInfo && (
-                  <pre className="mt-2 whitespace-pre-wrap text-xs overflow-auto max-h-32">
+                  <pre className="mt-2 whitespace-pre-wrap text-caption overflow-auto max-h-32">
                     {this.state.errorInfo.componentStack}
                   </pre>
                 )}

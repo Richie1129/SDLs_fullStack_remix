@@ -152,22 +152,22 @@ export default function SubmitTask() {
 
     return (
         isProjectEnded ?
-            <div className='flex flex-col h-full w-full justify-center items-center p-4 sm:p-6 lg:p-8'>
-                <div className='text-customgreen text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-6'>
+            <div className='flex flex-col h-full w-full justify-center items-center p-component-base sm:p-component-md-lg lg:p-component-lg'>
+                <div className='text-customgreen text-h3 sm:text-h2 lg:text-h1 font-bold text-center mb-6'>
                     恭喜 ! 已經完成所有階段囉 ~
                 </div>
-                <div className='flex flex-col lg:flex-row items-center justify-center gap-4 sm:gap-8 lg:gap-20 max-w-full'>
+                <div className='flex flex-col lg:flex-row items-center justify-center gap-stack-sm sm:gap-stack-md-lg lg:gap-20 max-w-full'>
                     <Lottie className="w-32 sm:w-48 lg:w-60 flex-shrink-0" animationData={Congratulations_icon} />
                     <Lottie className="w-48 sm:w-72 lg:w-96 flex-shrink-0" animationData={CongratulationsMain_icon} />
                     <Lottie className="w-32 sm:w-48 lg:w-60 flex-shrink-0" animationData={Congratulations_icon} />
                 </div>
             </div>
             :
-            <div className='flex flex-col h-full w-full justify-center items-center p-4 sm:p-6 lg:p-8'>
+            <div className='flex flex-col h-full w-full justify-center items-center p-component-base sm:p-component-md-lg lg:p-component-lg'>
                 {
                     getSubStageQuery.isLoading ? <Loader /> :
-                        <div className='flex flex-col w-full max-w-md sm:max-w-lg lg:max-w-xl p-4 sm:p-6 bg-white border-2 border-gray-200 rounded-lg shadow-lg'>
-                            <h3 className='font-bold text-lg sm:text-xl text-center mb-4 text-gray-800'>
+                        <div className='flex flex-col w-full max-w-md sm:max-w-lg lg:max-w-xl p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg'>
+                            <h3 className='font-bold text-body-lg sm:text-h3 text-center mb-4 text-gray-800'>
                                 {stageInfo.name}
                             </h3>
                             {Object.entries(stageInfo.userSubmit).map((element, index) => {
@@ -188,7 +188,7 @@ export default function SubmitTask() {
                             })}
                             <div className='flex justify-center mt-4'>
                                 <button onClick={e => { handleSubmit(e) }}
-                                    className="w-full py-2 sm:py-3 bg-customgreen hover:bg-customgreen/90 rounded-lg font-bold text-sm sm:text-base text-white transition-colors duration-200">
+                                    className="w-full py-2 sm:py-3 bg-customgreen hover:bg-customgreen/90 rounded-lg font-bold text-body-sm sm:text-body text-white transition-colors duration-fast">
                                     上傳
                                 </button>
                             </div>

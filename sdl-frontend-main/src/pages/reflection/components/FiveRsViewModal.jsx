@@ -23,8 +23,8 @@ export function FiveRsViewModal({
       custom="w-[60vw] max-w-none"
     >
       <div className="max-w-6xl max-h-[90vh]">
-        <div className="flex justify-between items-center mb-4 p-4 border-b">
-          <h2 className="text-2xl font-bold text-gray-800">
+        <div className="flex justify-between items-center mb-4 p-component-base border-b">
+          <h2 className="text-h2 font-bold text-gray-800">
             {selectedReflection?.title || "5Rs 反思檢視"}
           </h2>
           <button

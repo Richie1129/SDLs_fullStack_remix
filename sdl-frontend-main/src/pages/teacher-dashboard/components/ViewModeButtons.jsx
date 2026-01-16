@@ -18,18 +18,18 @@ const ViewModeButtons = ({ viewMode, setViewMode }) => {
   };
 
   return (
-    <div className="flex flex-wrap gap-1 sm:gap-2 p-1 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl shadow-inner">
+    <div className="flex flex-wrap gap-1 sm:gap-stack-xs p-1 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl shadow-inner">
       {modes.map(({ key, label }) => (
         <button
           key={key}
           onClick={() => setViewMode(key)}
-          className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 flex items-center space-x-1 sm:space-x-2 ${
+          className={`px-2 sm:px-4 py-1 sm:py-2 rounded-lg text-caption sm:text-body-sm font-semibold transition-all duration-normal hover:shadow-md flex items-center space-x-1 sm:space-x-stack-xs ${
             viewMode === key
               ? 'bg-gradient-to-r from-customgreen to-teal-600 text-white shadow-md'
               : 'bg-white text-teal-700 border border-teal-200 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800'
           }`}
         >
-          <span className="text-sm">{buttonIcons[key]}</span>
+          <span className="text-body-sm">{buttonIcons[key]}</span>
           <span>{label}</span>
         </button>
       ))}

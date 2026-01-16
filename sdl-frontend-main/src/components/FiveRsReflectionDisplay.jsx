@@ -12,7 +12,7 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
   
   if (!reflectionData) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-component-base text-center text-gray-500">
         無法解析 5Rs 反思內容
       </div>
     );
@@ -51,37 +51,37 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-lg">
       {/* 完成度概覽 */}
-      <div className="mb-6 p-4 bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg">
+      <div className="mb-6 p-component-base bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-lg font-semibold text-gray-800">5Rs 反思概覽</h3>
-          <span className="text-sm text-gray-600">
+          <h3 className="text-body-lg font-semibold text-gray-800">5Rs 反思概覽</h3>
+          <span className="text-body-sm text-gray-600">
             完成度: {completeness.completed}/{completeness.total} ({completeness.percentage}%)
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
-            className="bg-teal-500 h-2 rounded-full transition-all duration-500"
+            className="bg-teal-500 h-2 rounded-full transition-all duration-slow"
             style={{ width: `${completeness.percentage}%` }}
           />
         </div>
       </div>
 
       {/* 5Rs 內容展示 */}
-      <div className="space-y-4">
+      <div className="space-y-stack-sm">
         {/* 附件區塊（如果有附件） */}
         {record && (record.fileName || record.fileData) && (
           <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between p-4 bg-gray-50">
+            <div className="flex items-center justify-between p-component-base bg-gray-50">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center text-sm font-semibold">檔</div>
+                <div className="w-8 h-8 rounded-full bg-teal-500 text-white flex items-center justify-center text-body-sm font-semibold">檔</div>
                 <div>
                   <h4 className="font-semibold text-gray-800">附件</h4>
-                  <p className="text-sm text-gray-600 break-all">{record.originalName || record.filename || record.fileName}</p>
+                  <p className="text-body-sm text-gray-600 break-all">{record.originalName || record.filename || record.fileName}</p>
                 </div>
               </div>
               <button
                 onClick={handleDownload}
-                className="inline-flex items-center px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-sm"
+                className="inline-flex items-center px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-body-sm"
               >
                 下載附件
               </button>
@@ -99,13 +99,13 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
           >
             {/* 區段標題 */}
             <div
-              className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${
+              className={`flex items-center justify-between p-component-base cursor-pointer transition-colors ${
                 section.hasContent ? 'bg-gray-50 hover:bg-gray-100' : 'bg-red-50 hover:bg-red-100'
               }`}
               onClick={() => toggleSection(key)}
             >
               <div className="flex items-center space-x-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-semibold ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-body-sm font-semibold ${
                   section.hasContent ? 'bg-green-500' : 'bg-red-400'
                 }`}>
                   {section.hasContent ? '✓' : '!'}
@@ -113,13 +113,13 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                 <div>
                   <h4 className="font-semibold text-gray-800">{section.title}</h4>
                   {!section.hasContent && (
-                    <p className="text-sm text-red-600">此部分尚未完成</p>
+                    <p className="text-body-sm text-red-600">此部分尚未完成</p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-stack-xs">
                 {typeof section.score === 'number' && (
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full" title="反思深度分數">
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-caption rounded-full" title="反思深度分數">
                     分數 {section.score}/5
                   </span>
                 )}
@@ -140,8 +140,8 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
               >
                 {/* 學生內容 */}
                 {section.hasContent ? (
-                  <div className="p-4 bg-white">
-                    <h5 className="text-sm font-medium text-gray-700 mb-2">學生反思：</h5>
+                  <div className="p-component-base bg-white">
+                    <h5 className="text-body-sm font-medium text-gray-700 mb-2">學生反思：</h5>
                     <div className="prose prose-sm max-w-none">
                       <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
                         {section.content}
@@ -149,17 +149,17 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-gray-50">
+                  <div className="p-component-base bg-gray-50">
                     <p className="text-gray-500 italic">此部分尚未填寫內容</p>
                   </div>
                 )}
 
                 {/* AI 回饋內容 */}
                 {showFeedback && section.hasFeedback && (
-                  <div className="p-4 bg-blue-50 border-t border-blue-100">
-                    <div className="flex items-center space-x-2 mb-2">
+                  <div className="p-component-base bg-blue-50 border-t border-blue-100">
+                    <div className="flex items-center space-x-stack-xs mb-2">
                       <AiOutlineRobot className="w-4 h-4 text-blue-600" />
-                      <h5 className="text-sm font-medium text-blue-800">AI 分析回饋：</h5>
+                      <h5 className="text-body-sm font-medium text-blue-800">AI 分析回饋：</h5>
                     </div>
                     <div className="prose prose-sm max-w-none">
                       <p className="text-blue-800 whitespace-pre-wrap leading-relaxed">
@@ -169,8 +169,8 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                     {/* 引導問題 */}
                     {Array.isArray(section.questions) && section.questions.length > 0 && (
                       <div className="mt-3">
-                        <h6 className="text-xs font-medium text-blue-800 mb-1">引導問題：</h6>
-                        <ul className="list-disc list-inside text-blue-800 text-sm space-y-1">
+                        <h6 className="text-caption font-medium text-blue-800 mb-1">引導問題：</h6>
+                        <ul className="list-disc list-inside text-blue-800 text-body-sm space-y-1">
                           {section.questions.map((q, idx) => (
                             <li key={idx}>{q}</li>
                           ))}
@@ -179,9 +179,9 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                     )}
                     {/* 建議模板 */}
                     {section.template && (
-                      <div className="mt-3 p-2 bg-white border border-blue-100 rounded">
-                        <h6 className="text-xs font-medium text-blue-800 mb-1">建議填寫模板：</h6>
-                        <p className="text-blue-800 text-sm whitespace-pre-wrap">{section.template}</p>
+                      <div className="mt-3 p-component-xs bg-white border border-blue-100 rounded">
+                        <h6 className="text-caption font-medium text-blue-800 mb-1">建議填寫模板：</h6>
+                        <p className="text-blue-800 text-body-sm whitespace-pre-wrap">{section.template}</p>
                       </div>
                     )}
                   </div>
@@ -197,13 +197,13 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
+          className="mt-6 p-component-base bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
         >
-          <div className="flex items-center space-x-2 mb-3">
+          <div className="flex items-center space-x-stack-xs mb-3">
             <AiOutlineRobot className="w-5 h-5 text-purple-600" />
-            <h4 className="text-lg font-semibold text-purple-800">AI 整體分析回饋</h4>
+            <h4 className="text-body-lg font-semibold text-purple-800">AI 整體分析回饋</h4>
             {provider && (
-              <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
+              <span className="px-2 py-1 bg-purple-100 text-purple-700 text-caption rounded-full">
                 {provider}
               </span>
             )}
@@ -211,15 +211,15 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
 
           {/* 精煉總結 */}
           {overallAssessment && (
-            <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded">
+            <div className="mb-4 p-component-sm bg-purple-50 border border-purple-100 rounded">
               <h5 className="font-medium text-purple-800 mb-1">精煉總結：</h5>
-              <p className="text-purple-700 text-sm whitespace-pre-wrap">{overallAssessment}</p>
+              <p className="text-purple-700 text-body-sm whitespace-pre-wrap">{overallAssessment}</p>
             </div>
           )}
 
           {/* AI 分析資訊 */}
           {(provider || analysisDate) && (
-            <div className="flex items-center space-x-4 mb-3 text-sm text-purple-700">
+            <div className="flex items-center space-x-stack-sm mb-3 text-body-sm text-purple-700">
               {provider && (
                 <div className="flex items-center space-x-1">
                   <AiOutlineRobot className="w-4 h-4" />
@@ -253,9 +253,9 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
               <h5 className="font-medium text-purple-800 mb-2">發現的強項：</h5>
               <ul className="space-y-1">
                 {strengths.map((s, i) => (
-                  <li key={i} className="flex items-start space-x-2 text-purple-700">
+                  <li key={i} className="flex items-start space-x-stack-xs text-purple-700">
                     <span className="mt-1.5 w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0" />
-                    <span className="text-sm leading-relaxed">{s}</span>
+                    <span className="text-body-sm leading-relaxed">{s}</span>
                   </li>
                 ))}
               </ul>
@@ -268,9 +268,9 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
               <h5 className="font-medium text-purple-800 mb-2">改進方向：</h5>
               <ul className="space-y-1">
                 {improvements.map((im, i) => (
-                  <li key={i} className="flex items-start space-x-2 text-purple-700">
+                  <li key={i} className="flex items-start space-x-stack-xs text-purple-700">
                     <span className="mt-1.5 w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0" />
-                    <span className="text-sm leading-relaxed">{im}</span>
+                    <span className="text-body-sm leading-relaxed">{im}</span>
                   </li>
                 ))}
               </ul>
@@ -283,9 +283,9 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
               <h5 className="font-medium text-purple-800 mb-2">改進建議：</h5>
               <ul className="space-y-1">
                 {suggestions.map((suggestion, index) => (
-                  <li key={index} className="flex items-start space-x-2 text-purple-700">
+                  <li key={index} className="flex items-start space-x-stack-xs text-purple-700">
                     <span className="mt-1.5 w-1.5 h-1.5 bg-purple-400 rounded-full flex-shrink-0" />
-                    <span className="text-sm leading-relaxed">{suggestion}</span>
+                    <span className="text-body-sm leading-relaxed">{suggestion}</span>
                   </li>
                 ))}
               </ul>
@@ -299,10 +299,10 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200"
+          className="mt-6 p-component-base bg-yellow-50 rounded-lg border border-yellow-200"
         >
-          <h4 className="text-lg font-semibold text-yellow-800 mb-2">教師回饋區域</h4>
-          <p className="text-sm text-yellow-700 mb-3">
+          <h4 className="text-body-lg font-semibold text-yellow-800 mb-2">教師回饋區域</h4>
+          <p className="text-body-sm text-yellow-700 mb-3">
             您可以為這份 5Rs 反思提供專業的教學回饋，幫助學生進行更深層次的思考。
           </p>
           <button className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors">

@@ -192,12 +192,12 @@ export function CardDetailModal({
             <GrFormClose className="w-6 h-6" />
           </button>
           {/* 左側：卡片編輯區 */}
-          <div className='w-full lg:w-2/3 p-4 sm:p-6 lg:p-8 lg:max-h-[80vh] lg:overflow-y-auto'>
+          <div className='w-full lg:w-2/3 p-component-base sm:p-component-md-lg lg:p-component-lg lg:max-h-[80vh] lg:overflow-y-auto'>
             {/* 標籤頁導航 */}
             <div className='flex border-b border-gray-200 mb-4'>
               <button
                 onClick={() => setShowChangeHistory(false)}
-                className={`px-4 py-2 font-medium text-sm ${
+                className={`px-4 py-2 font-medium text-body-sm ${
                   !showChangeHistory
                     ? 'text-customgreen border-b-2 border-customgreen'
                     : 'text-gray-500 hover:text-gray-700'
@@ -210,7 +210,7 @@ export function CardDetailModal({
                   setShowChangeHistory(true);
                   queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
                 }}
-                className={`px-4 py-2 font-medium text-sm ${
+                className={`px-4 py-2 font-medium text-body-sm ${
                   showChangeHistory
                     ? 'text-customgreen border-b-2 border-customgreen'
                     : 'text-gray-500 hover:text-gray-700'
@@ -225,7 +225,7 @@ export function CardDetailModal({
               <>
                 <div className='flex justify-between mb-4'>
                   <input
-                    className={`rounded outline-none ring-2 p-2 ring-customgreen w-full ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    className={`rounded outline-none ring-2 p-component-xs ring-customgreen w-full ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     type="text"
                     placeholder="標題"
                     value={cardData.title}
@@ -234,7 +234,7 @@ export function CardDetailModal({
                   />
                 </div>
                 <textarea
-                  className={`rounded outline-none ring-2 ring-customgreen w-full p-2 mb-4 ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  className={`rounded outline-none ring-2 ring-customgreen w-full p-component-xs mb-4 ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   rows={3}
                   placeholder="內容"
                   value={cardData.content}
@@ -244,9 +244,9 @@ export function CardDetailModal({
 
                 {/* 時間資訊 */}
                 {(cardData.createdAt || cardData.updatedAt) && (
-                  <div className='bg-gray-50 rounded-lg p-3 mb-4'>
-                    <h4 className='text-sm font-medium text-gray-700 mb-2'>時間資訊</h4>
-                    <div className='space-y-1 text-sm text-gray-600'>
+                  <div className='bg-gray-50 rounded-lg p-component-sm mb-4'>
+                    <h4 className='text-body-sm font-medium text-gray-700 mb-2'>時間資訊</h4>
+                    <div className='space-y-1 text-body-sm text-gray-600'>
                       {cardData.createdAt && (
                         <div className='flex justify-between'>
                           <span>建立時間：</span>
@@ -286,7 +286,7 @@ export function CardDetailModal({
                   isObservationMode={!permissions.canEdit}
                 />
 
-                <div className='flex justify-end mt-4 space-x-2 sticky bottom-0 bg-white/95 backdrop-blur-sm p-4 -mx-4 sm:-mx-6 lg:-mx-8 -mb-4 sm:-mb-6 lg:-mb-8 border-t border-gray-100 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]'>
+                <div className='flex justify-end mt-4 space-x-stack-xs sticky bottom-0 bg-white/95 backdrop-blur-sm p-component-base -mx-4 sm:-mx-6 lg:-mx-8 -mb-4 sm:-mb-6 lg:-mb-8 border-t border-gray-100 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]'>
                   {permissions.canDelete && (
                     <button
                       onClick={cardHandleDelete}
@@ -330,7 +330,7 @@ export function CardDetailModal({
           </div>
 
           {/* 右側：評論區 */}
-          <div className='w-full lg:w-1/3 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 sm:p-6 lg:max-h-[80vh] lg:overflow-y-auto'>
+          <div className='w-full lg:w-1/3 border-t lg:border-t-0 lg:border-l border-gray-200 p-component-base sm:p-component-md-lg lg:max-h-[80vh] lg:overflow-y-auto'>
             <CommentSection
               taskId={cardData.id}
               isObservationMode={!permissions.canEdit}
@@ -367,17 +367,17 @@ export function CardDetailModal({
               <>
                 <button
                   onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-component-xs rounded-full"
                 >
                   <CircleArrowLeft size={24}/>
                 </button>
                 <button
                   onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-component-xs rounded-full"
                 >
                   <CircleArrowRight size={24}/>
                 </button>
-                <div className="flex justify-center gap-2 mt-4">
+                <div className="flex justify-center gap-stack-xs mt-4">
                   {cardData.images.map((image, index) => (
                     <div
                       key={index}
@@ -420,13 +420,13 @@ export function CardDetailModal({
               <>
                 <button
                   onClick={prevCommentImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-component-xs rounded-full"
                 >
                   <CircleArrowLeft size={24}/>
                 </button>
                 <button
                   onClick={nextCommentImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-component-xs rounded-full"
                 >
                   <CircleArrowRight size={24}/>
                 </button>
