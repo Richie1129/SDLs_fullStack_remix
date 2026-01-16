@@ -9,6 +9,11 @@ import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
 import TopBar from "../../components/TopBar";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { 
+  calculateProgress, 
+  formatRelativeTime, 
+  getStatusColor 
+} from './utils/overviewUtils';
 
 const TeacherOverview = () => {
   const navigate = useNavigate();
@@ -136,21 +141,6 @@ const TeacherOverview = () => {
     }
   }, [allProjects]);
 
-  // 計算進度百分比的函數
-  const calculateProgress = (stage, subStage) => {
-    if (!stage || !subStage) return 0;
-    const totalSubStages = [3, 4, 5, 3]; // 各階段的子階段數量
-    let completedSubStages = 0;
-    
-    for (let i = 1; i < stage; i++) {
-      completedSubStages += totalSubStages[i - 1] || 0;
-    }
-    completedSubStages += Math.max(0, subStage - 1);
-    
-    const totalStages = totalSubStages.reduce((sum, stages) => sum + stages, 0);
-    return Math.min(Math.round((completedSubStages / totalStages) * 100), 100);
-  };
-
   // 計算教學統計
   const teachingStats = React.useMemo(() => {
     const totalProjects = allProjects.length;
@@ -196,23 +186,6 @@ const TeacherOverview = () => {
     };
   }, [allProjects, allStudents, allReflections, allSubmissions]);
 
-  // 格式化相對時間
-  const formatRelativeTime = (dateString) => {
-    if (!dateString) return '未知時間';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return '剛剛';
-    if (diffInMinutes < 60) return `${diffInMinutes}分鐘前`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours}小時前`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays}天前`;
-  };
-
   // 最近教學活動
   const recentActivities = React.useMemo(() => {
     const activities = [];
@@ -254,13 +227,6 @@ const TeacherOverview = () => {
       .sort((a, b) => new Date(b.createdAt || b.updatedAt) - new Date(a.createdAt || a.updatedAt))
       .slice(0, 10);
   }, [allReflections, allSubmissions, allActivities, formatRelativeTime]);
-
-  // 獲取狀態顏色
-  const getStatusColor = (progress) => {
-    if (progress >= 80) return "bg-green-100 text-green-800";
-    if (progress >= 50) return "bg-yellow-100 text-yellow-800";
-    return "bg-red-100 text-red-800";
-  };
 
   // 獲取專案狀態顏色
   const getProjectStatusColor = (status) => {
