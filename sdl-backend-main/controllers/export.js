@@ -30,6 +30,9 @@ const {
   truncateText
 } = require('../utils/dataFormatter');
 
+// [Option B 隱藏] 四階段過濾服務
+const { filterStage5Data } = require('../services/fourStageFilterService');
+
 /**
  * 獲取專案完整資料（用於匯出）
  * GET /api/projects/:projectId/export-data
@@ -97,7 +100,7 @@ exports.getExportData = async (req, res) => {
           through: { attributes: [] }, // 不需要中間表的欄位
           attributes: ['id', 'username', 'account', 'class', 'seatNumber', 'role']
         },
-        // 五階段提交
+        // [Option B 隱藏] 四階段提交（原為五階段，Stage 5 在應用層過濾）
         {
           model: Submit,
           as: 'submits',
@@ -250,22 +253,27 @@ function formatExportData(project, userId, stageNames = {}) {
     role: user.role
   }));
 
-  // 格式化五階段提交
+  // [Option B 隱藏] 格式化四階段提交（過濾 Stage 5）
   const submitsRaw = project.submits || [];
+  // 先轉換為 JSON 以進行過濾
+  const submitsJson = submitsRaw.map(s => s.toJSON ? s.toJSON() : s);
+  const filteredSubmitsRaw = filterStage5Data(submitsJson);
+
   const subStageMap = stageNames._subStageMap || {};
   const subStageNames = stageNames._subStageNames || {};
 
-  console.log(`📊 Submits Raw Data - Count: ${submitsRaw.length}`);
-  if (submitsRaw.length > 0) {
+  // [Option B 隱藏] 使用過濾後的資料
+  console.log(`📊 Submits Raw Data - Count: ${submitsRaw.length} (原始), ${filteredSubmitsRaw.length} (過濾後，不含 Stage 5)`);
+  if (filteredSubmitsRaw.length > 0) {
     console.log(`📊 First submit example:`, {
-      id: submitsRaw[0].id,
-      stage: submitsRaw[0].stage,
-      content: submitsRaw[0].content,
-      createdAt: submitsRaw[0].createdAt
+      id: filteredSubmitsRaw[0].id,
+      stage: filteredSubmitsRaw[0].stage,
+      content: filteredSubmitsRaw[0].content,
+      createdAt: filteredSubmitsRaw[0].createdAt
     });
   }
 
-  const submitsFormatted = submitsRaw.map(submit => {
+  const submitsFormatted = filteredSubmitsRaw.map(submit => {
     // 解析 stage 格式 "1-1", "2-3" 等
     const stageParts = submit.stage ? submit.stage.split('-') : [null, null];
     const stageNumber = stageParts[0] ? parseInt(stageParts[0]) : null;
@@ -416,9 +424,9 @@ function formatExportData(project, userId, stageNames = {}) {
     };
   }
 
-  // 計算統計資料
+  // [Option B 隱藏] 計算統計資料（使用過濾後的四階段資料）
   const statistics = calculateStatistics({
-    submits: submitsRaw,
+    submits: filteredSubmitsRaw,  // 使用過濾後的資料
     daily_personals: project.daily_personals || [],
     daily_teams: project.daily_teams || [],
     idea_walls: project.idea_walls || [],

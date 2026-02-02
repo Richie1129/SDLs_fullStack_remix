@@ -22,13 +22,20 @@ export const useProjectData = () => {
   const userClass = userStorage.get('class');
   const queryClient = useQueryClient();
 
-  // 計算進度百分比
+  // [Option B 隱藏] 計算進度百分比 - 四階段模式（共 12 個子階段）
   const calculateProgress = (currentStage, currentSubStage) => {
-    if (currentStage === 5) {
-      return (12 + currentSubStage) / 17 * 100;
-    } else {
-      return ((currentStage - 1) * 3 + currentSubStage) / 17 * 100;
+    // 向後兼容：Stage 5 視為 100% 完成
+    if (currentStage > 4) {
+      return 100;
     }
+    // Stage 4-3 視為 100% 完成
+    if (currentStage === 4 && currentSubStage >= 3) {
+      return 100;
+    }
+    // 四階段計算：每階段 25%，每子階段約 8.33%
+    const stageProgress = (currentStage - 1) * 25;
+    const subStageProgress = ((currentSubStage - 1) / 3) * 25;
+    return Math.min(100, stageProgress + subStageProgress);
   };
 
   const calculateProgressPercentage = (currentStage, currentSubStage) => {
@@ -66,7 +73,7 @@ export const useProjectData = () => {
     }
   );
 
-  // 分類專案 - 使用 useMemo 避免重複計算
+  // [Option B 隱藏] 分類專案 - 使用 useMemo 避免重複計算
   const categorizedProjects = useMemo(() => {
     if (!projectData || !Array.isArray(projectData)) {
       return {
@@ -76,17 +83,32 @@ export const useProjectData = () => {
       };
     }
 
+    // 判斷專案是否已結束（Stage 4-3 完成或 ProjectEnd）
+    const isProjectEnded = (project) => {
+      return project.ProjectEnd === true ||
+             (project.currentStage === 4 && project.currentSubStage >= 3) ||
+             project.currentStage > 4;  // 向後兼容舊的 Stage 5 資料
+    };
+
+    // 判斷專案是否已完成歷程（已生成 AI Portfolio）
+    const isPortfolioCompleted = (project) => {
+      return project.portfolioGenerated === true;
+    };
+
+    // 進行中活動：未達 75% 且未結束
     const ongoing = projectData.filter(project =>
+      !isProjectEnded(project) &&
       calculateProgress(project.currentStage, project.currentSubStage) < 75
     );
 
+    // 已結束活動：已結束（Stage 4-3 或 ProjectEnd）但尚未生成 Portfolio
     const completed = projectData.filter(project =>
-      calculateProgress(project.currentStage, project.currentSubStage) > 75 &&
-      project.ProjectEnd === false
+      isProjectEnded(project) && !isPortfolioCompleted(project)
     );
 
+    // 已完成歷程：已生成 AI Portfolio
     const done = projectData.filter(project =>
-      project.ProjectEnd === true
+      isPortfolioCompleted(project)
     );
 
     return { ongoing, completed, done };

@@ -1,9 +1,10 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 // 配置管理，避免硬編碼
+// Option B: 四階段 SRL 循環（定標→擇策→監評→調節）
 const STAGE_CONFIG = {
-  STAGE: { MIN: 1, MAX: 5, DEFAULT: 1 },
-  SUB_STAGE: { MIN: 1, MAX: 10, DEFAULT: 1 },
+  STAGE: { MIN: 1, MAX: 4, DEFAULT: 1 },        // [Option B 隱藏] 原值 MAX: 5，改為 4
+  SUB_STAGE: { MIN: 1, MAX: 3, DEFAULT: 1 },    // [Option B 隱藏] 原值 MAX: 10，改為 3（標準子階段數）
   STORAGE_KEYS: {
     STAGE: 'currentStage',
     SUB_STAGE: 'currentSubStage'

@@ -67,10 +67,13 @@ export const getAchievementIcon = (type) => {
 
 /**
  * 計算專案進度（以階段與子階段換算成百分比）
+ * Option B: 四階段 SRL 循環模式（「歷程」階段已隱藏）
  * 規則：
  * - 若 `currentStage` 或 `currentSubStage` 缺失，回傳 0
- * - 若階段為 5，視為 100%
- * - 否則每個主階段 20%，子階段三等分（每 0.5 子階段 ≈ 10%）
+ * - [Option B 隱藏] 原五階段模式：每階段 20%，stage 5-5 = 100%
+ * - 四階段模式：每階段 25%，每子階段約 8.33%
+ * - stage 4-3 視為 100%（專案完成）
+ * - 向後兼容：stage > 4 視為 100%（處理舊數據）
  */
 export const calculateProgress = (currentStage, currentSubStage) => {
   if (!currentStage || !currentSubStage) return 0;
@@ -78,9 +81,14 @@ export const calculateProgress = (currentStage, currentSubStage) => {
   const sub = Number(currentSubStage);
   if (Number.isNaN(stage) || Number.isNaN(sub)) return 0;
 
-  if (stage === 5) return 100;
-  const stageProgress = (stage - 1) * 20;
-  const subStageProgress = ((sub - 1) / 2) * 20;
+  // 向後兼容：若為舊的 stage 5 數據，視為完成
+  if (stage > 4) return 100;
+  // 四階段完成條件：stage 4, substage 3
+  if (stage === 4 && sub >= 3) return 100;
+
+  // 四階段計算：每階段 25%，每子階段 25/3 ≈ 8.33%
+  const stageProgress = (stage - 1) * 25;
+  const subStageProgress = ((sub - 1) / 3) * 25;
   return Math.max(0, Math.min(100, Math.round(stageProgress + subStageProgress)));
 };
 

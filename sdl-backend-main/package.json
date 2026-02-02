@@ -27,7 +27,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
     "dev": "nodemon index.js",
     "start": "node index.js",
     "test-minio": "node test-minio.js",
@@ -42,6 +43,7 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "jest": "^30.2.0",
     "nodemon": "^2.0.22",
     "pino-pretty": "^10.3.1",
     "sequelize-cli": "^6.6.1"

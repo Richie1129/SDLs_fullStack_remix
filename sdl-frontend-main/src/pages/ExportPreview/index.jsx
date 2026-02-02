@@ -20,10 +20,11 @@ export default function ExportPreview() {
   const contentRef = useRef(null);
 
   // 區塊順序管理
+  // Option B: 四階段 SRL 循環（「歷程」階段已隱藏）
   const defaultSectionOrder = [
     { id: 'kanban', label: '看板任務', icon: '📋' },
     { id: 'ideaWalls', label: '想法牆', icon: '💡' },
-    { id: 'submits', label: '五階段學習歷程', icon: '📝' },
+    { id: 'submits', label: '四階段學習歷程', icon: '📝' }, // [Option B 隱藏] 原為「五階段學習歷程」
     { id: 'personalReflections', label: '個人反思記錄', icon: '🤔' },
     { id: 'teamReflections', label: '團隊反思記錄', icon: '👥' }
   ];
@@ -200,8 +201,9 @@ export default function ExportPreview() {
       case 'submits':
         return submits && submits.all && submits.all.length > 0 && (
           <div key="submits" className="export-page">
-            <h2 className="export-section-title">五階段學習歷程</h2>
-            {['1', '2', '3', '4', '5'].map(stage => {
+            {/* Option B: 四階段 SRL 循環（「歷程」階段已隱藏） */}
+            <h2 className="export-section-title">四階段學習歷程</h2>
+            {['1', '2', '3', '4'].map(stage => { // [Option B 隱藏] 原為 ['1', '2', '3', '4', '5']
               const stageSubmits = submits.byStage[stage] || [];
               if (stageSubmits.length === 0) return null;
               const mainStageName = stageSubmits[0]?.mainStageName || `階段 ${stage}`;

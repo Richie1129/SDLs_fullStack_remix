@@ -47,8 +47,16 @@ export default function Protfolio() {
         data: portfolioData
     } = useQuery("protfolioDatas", () => getAllSubmit({ params: { projectId: projectId } }), {
         onSuccess: (data) => {
-            setStagePortfolio(data);
-            setShowEmptyMessage(data.length === 0);
+            // Option B: 過濾掉 Stage 5 資料（只保留 Stage 1-4）
+            const filteredData = Array.isArray(data)
+                ? data.filter(item => {
+                    if (!item || !item.stage) return false;
+                    const stageNum = parseInt(item.stage.split('-')[0], 10);
+                    return !isNaN(stageNum) && stageNum >= 1 && stageNum <= 4;
+                })
+                : [];
+            setStagePortfolio(filteredData);
+            setShowEmptyMessage(filteredData.length === 0);
         }
     });
 
@@ -118,6 +126,7 @@ export default function Protfolio() {
         }
     };
     
+    // Option B: 四階段 SRL 循環（「歷程」階段描述已隱藏）
     const stageDescriptions = {
         "1-1": "提出研究主題",
         "1-2": "提出研究目的",
@@ -130,14 +139,16 @@ export default function Protfolio() {
         "3-3": "撰寫研究結果",
         "4-1": "檢視研究進度",
         "4-2": "進行研究討論",
-        "4-3": "撰寫研究結論",
-        "5-1": "封面製作",
-        "5-2": "摘要撰寫",
-        "5-3": "目錄編制",
-        "5-4": "內容撰寫",
-        "5-5": "反思撰寫"
+        "4-3": "撰寫研究結論"
+        // [Option B 隱藏] 「歷程」階段 (5-1 ~ 5-5) - 改為獨立的 Portfolio 自動生成功能
+        // "5-1": "封面製作",
+        // "5-2": "摘要撰寫",
+        // "5-3": "目錄編制",
+        // "5-4": "內容撰寫",
+        // "5-5": "反思撰寫"
     };
-    const insertTitles = ["定標", "擇策", "監評", "調節", "歷程"];
+    // Option B: 四階段 SRL 循環（「歷程」標題已隱藏）
+    const insertTitles = ["定標", "擇策", "監評", "調節"]; // [Option B 隱藏] "歷程"
 
     useEffect(() => {
         if (stagePortfolio.length > 0) {

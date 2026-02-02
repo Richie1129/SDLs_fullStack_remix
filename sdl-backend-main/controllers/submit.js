@@ -8,6 +8,9 @@ const sequelize = require('../util/database');
 const { createErrorResponse, getHttpStatusByErrorCode } = require('../constants/dailyErrorCodes');
 const { invalidateProjectCache } = require('./assistant');
 
+// [Option B 隱藏] 四階段過濾服務
+const { filterStage5Data, FOUR_STAGE_CONFIG } = require('../services/fourStageFilterService');
+
 exports.createSubmit = async(req, res) => {
     const { currentStage, currentSubStage, content, projectId, projectid } = req.body;
     const currentStageInt = parseInt(currentStage);
@@ -66,7 +69,13 @@ exports.createSubmit = async(req, res) => {
             transaction: t
         });
 
-        if (currentSubStageInt + 1 <= stage[0].sub_stage.length) {
+        // [Option B 隱藏] 使用四階段配置判斷完成狀態
+        const maxStage = FOUR_STAGE_CONFIG.STAGE_MAX;  // 4
+        const maxSubStage = FOUR_STAGE_CONFIG.SUB_STAGE_MAX;  // 3
+
+        // 檢查是否到達最後一個子階段
+        if (currentSubStageInt + 1 <= maxSubStage) {
+            // 還有下一個子階段
             await Project.update({
                 currentSubStage: currentSubStageInt + 1
             }, {
@@ -84,16 +93,18 @@ exports.createSubmit = async(req, res) => {
                 type: "project"
             }, { transaction: t });
         } else {
-            if (currentStageInt + 1 <= process[0].stage.length) {
-            await Project.update({
-                currentStage: currentStageInt + 1,
-                currentSubStage: 1
-            }, {
-                where: { id: projectId },
-                individualHooks: true,
-                req,
-                transaction: t
-            });
+            // 當前階段的子階段已完成，檢查是否有下一個主階段
+            if (currentStageInt + 1 <= maxStage) {
+                // 還有下一個主階段
+                await Project.update({
+                    currentStage: currentStageInt + 1,
+                    currentSubStage: 1
+                }, {
+                    where: { id: projectId },
+                    individualHooks: true,
+                    req,
+                    transaction: t
+                });
 
                 const nextStage = await Stage.findAll({
                     attributes: ['sub_stage'],
@@ -101,15 +112,15 @@ exports.createSubmit = async(req, res) => {
                     transaction: t
                 });
 
-            await Idea_wall.create({
+                await Idea_wall.create({
                     userId: req.userId,
-                projectId: projectId,
+                    projectId: projectId,
                     stage: `${currentStageInt + 1}-1`,
                     title: `${nextStage[0].sub_stage[0]}`,
                     type: "project"
-            }, { transaction: t });
+                }, { transaction: t });
             } else {
-                // 所有階段已完成，標記專案為完成狀態
+                // [Option B 隱藏] 四階段全部完成（Stage 4-3），標記專案為完成狀態
                 await Project.update({
                     ProjectEnd: true
                 }, {
@@ -128,9 +139,10 @@ exports.createSubmit = async(req, res) => {
                 }, { transaction: t });
 
                 await t.commit();
+                // [Option B 隱藏] 返回 "done" 讓前端顯示完成提示
                 return res.status(200).json({
                     success: true,
-                    message: 'Project completed | 專案已完成'
+                    message: 'done'
                 });
             }
         }
@@ -194,7 +206,10 @@ exports.getAllSubmit = async(req, res) => {
 
         // 由於不再使用 BLOB，直接返回資料
         const submitsWithFileInfo = allSubmit.map(submit => submit.toJSON());
-        res.status(200).json(submitsWithFileInfo);
+
+        // [Option B 隱藏] 過濾 Stage 5 資料，只返回 Stage 1-4
+        const filteredSubmits = filterStage5Data(submitsWithFileInfo);
+        res.status(200).json(filteredSubmits);
 
     } catch (error) {
         console.error("❌ Failed to get all submits | 取得所有提交失敗:", error);

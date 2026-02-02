@@ -232,20 +232,24 @@ export default function SideBar() {
       });
   }
 
+  // Option B: 四階段 SRL 循環（「歷程」階段已隱藏）
   const stages = [
     { name: "定標", index: 1 },
     { name: "擇策", index: 2 },
     { name: "監評", index: 3 },
     { name: "調節", index: 4 },
-    { name: "歷程", index: 5 },
+    // [Option B 隱藏] 「歷程」階段 - 改為獨立的 Portfolio 功能模組
+    // { name: "歷程", index: 5 },
   ];
 
+  // Option B: 四階段子階段配置（「歷程」子階段已隱藏）
   const subStages = {
     1: ["提出研究主題", "提出研究目的", "提出研究問題"],
     2: ["訂定研究構想表", "設計研究記錄表格", "規劃研究排程"],
     3: ["進行嘗試性研究", "分析資料與繪圖", "撰寫研究成果"],
     4: ["檢視研究進度", "進行研究討論", "撰寫研究結論"],
-    5: ["封面製作", "摘要撰寫", "目錄編制", "內容撰寫", "反思撰寫"],
+    // [Option B 隱藏] Stage 5 子階段
+    // 5: ["封面製作", "摘要撰寫", "目錄編制", "內容撰寫", "反思撰寫"],
   };
 
   const [selected, setSelected] = useState(0);
