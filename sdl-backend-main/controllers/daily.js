@@ -78,6 +78,7 @@ exports.createPersonalDaily = async (req, res) => {
                         projectId: projectId,
                         title: title,
                         content: content,
+                        stage: req.body.stage || null,  // 階段選擇
                     // 改為儲存 MinIO 相關資訊，而非 BLOB
                     fileName: file.fileName,        // MinIO 檔案名
                     originalName: file.originalName, // 原始檔案名
@@ -123,6 +124,7 @@ exports.createPersonalDaily = async (req, res) => {
             projectId: projectId,
             title: title,
             content: content,
+            stage: req.body.stage || null,  // 階段選擇
             }, { req });
             // 檢查是否為 5Rs 反思，若是則在 after 中附上 5Rs 初始值（僅建立時）
             let fiveRsAfterNoFile = null;
@@ -209,6 +211,7 @@ exports.createTeamDaily = async (req, res) => {
                         title: title,
                         content: content,
                         creator: creator,
+                        stage: req.body.stage || null,  // 階段選擇
                     // 改為儲存 MinIO 相關資訊
                     fileName: file.fileName,        // MinIO 檔案名
                     originalName: file.originalName, // 原始檔案名
@@ -247,6 +250,7 @@ exports.createTeamDaily = async (req, res) => {
             title: title,
             content: content,
             creator: creator,
+            stage: req.body.stage || null,  // 階段選擇
             });
             try {
                 await logAudit(req, {
@@ -304,6 +308,7 @@ exports.updatePersonalDaily = async (req, res) => {
             const updateData = {
                 title,
                 content,
+                stage: req.body.stage || null,  // 階段選擇
                 fileName: firstFile.fileName,
                 originalName: firstFile.originalName,
                 fileUrl: firstFile.url,
@@ -388,7 +393,7 @@ exports.updatePersonalDaily = async (req, res) => {
         } else {
             // 沒有檔案上傳，只更新文字內容
             console.log('📝 無檔案上傳，僅更新文字內容');
-            let updateData = { title, content };
+            let updateData = { title, content, stage: req.body.stage || null };
 
             await daily.update(updateData, { req });
 
@@ -467,7 +472,7 @@ exports.updateTeamDaily = async (req, res) => {
           ? req.uploadedFiles
           : (req.uploadedFile ? [req.uploadedFile] : []);
 
-        let updateData = { title, content };
+        let updateData = { title, content, stage: req.body.stage || null };
 
         // 如果有新檔案上傳，更新檔案資訊
         if (incomingFiles.length > 0) {

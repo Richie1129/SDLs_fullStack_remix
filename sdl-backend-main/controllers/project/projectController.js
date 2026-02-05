@@ -224,6 +224,9 @@ exports.createProject = async (req, res) => {
         name: "設計研究記錄表格",
         description: "這個階段的目標是為了為收集資料和記錄研究過程提供標準化工具。在這個階段你可以根據研究問題和方法，設計資料收集表格和記錄表，包括但不限於問卷、訪談記錄和實驗資料表。",
         userSubmit: {
+            "資料收集方式": "textarea",
+            "記錄表設計說明": "textarea",
+            "預計樣本規模": "input",
             "研究紀錄表格": "file"
         },
         stageId: stage2.id
@@ -232,6 +235,9 @@ exports.createProject = async (req, res) => {
         name: "規劃研究排程",
         description: "這個階段的目標是為了合理安排研究活動的時間表，確保研究工作有秩序地進行。在這個階段你可以制定詳細的研究計畫和時間線，包括各階段的開始和結束日期，以及關鍵活動和里程碑。",
         userSubmit: {
+            "時程規劃說明": "textarea",
+            "團隊分工": "textarea",
+            "重要里程碑": "textarea",
             "研究時程規劃表": "file",
         },
         stageId: stage2.id
@@ -245,6 +251,9 @@ exports.createProject = async (req, res) => {
         name: "進行嘗試性研究",
         description: "這個階段的目標是為了透過初步的研究活動，驗證研究方法的可行性和有效性。在這個階段你可以在小範圍內實施研究設計，收集和分析數據，評估研究方法和工具的適用性。",
         userSubmit: {
+            "嘗試性研究過程": "textarea",
+            "初步結果": "textarea",
+            "調整計畫": "textarea",
             "實驗記錄": "file",
         },
         stageId: stage3.id
@@ -253,6 +262,9 @@ exports.createProject = async (req, res) => {
         name: "分析資料與繪圖",
         description: "這個階段的目標是為了對收集到的資料進行系統性分析，透過圖表形式展示研究結果。在這個階段你可以使用統計軟體或手動方法對資料進行分析，包括描述性統計、相關性分析等，並製作圖表來直觀展示分析結果。",
         userSubmit: {
+            "資料描述": "textarea",
+            "分析方法": "textarea",
+            "圖表說明": "textarea",
             "資料分析檔案": "file",
         },
         stageId: stage3.id
@@ -286,7 +298,10 @@ exports.createProject = async (req, res) => {
         name: "進行研究討論",
         description: "這個階段的目標是為了與導師、同儕或研究小組討論研究發現和問題，以獲得回饋和建議哦。在這個階段你可以組織研究討論會，呈現研究結果，收集與整合回饋意見，對研究進行深入分析與完善。",
         userSubmit: {
-            "研究討論": "file",
+            "討論內容": "textarea",
+            "不同觀點": "textarea",
+            "改進想法": "textarea",
+            "研究討論檔案": "file",
         },
         stageId: stage4.id
     }, { transaction: t });
@@ -294,7 +309,11 @@ exports.createProject = async (req, res) => {
         name: "撰寫研究結論",
         description: "這個階段的目標是為了總結研究的主要發現，討論研究的意義、限制和未來研究的方向。在這個階段你可以基於研究結果和討論，撰寫結論部分，明確指出研究的貢獻和後續研究的建議。",
         userSubmit: {
-            "研究結論": "file",
+            "研究結論": "textarea",
+            "研究貢獻": "textarea",
+            "研究限制": "textarea",
+            "未來建議": "textarea",
+            "研究結論檔案": "file",
         },
         stageId: stage4.id
     }, { transaction: t });

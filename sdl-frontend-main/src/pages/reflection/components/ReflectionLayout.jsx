@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import LogSection from "../../../components/reflection/LogSection";
 import personalDailyIcon from "../../../assets/AnimationPersonalDaily.json";
 import teamDailyIcon from "../../../assets/AnimationTeamDaily.json";
+import { ReflectionTypeSelector } from "./ReflectionTypeSelector";
+import { SmartReflectionBanner } from "./SmartReflectionBanner";
+import { getStageInfo } from '../../../utils/authUtils';
 
 /**
  * Two-column layout for personal and team daily logs
@@ -35,11 +38,36 @@ export function ReflectionLayout({
   onOpenTeamModal,
 }) {
   const isTeacher = userRole === "teacher";
+  const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const { currentStage, currentSubStage } = getStageInfo();
+  const currentStageFormatted = currentStage && currentSubStage 
+    ? `${currentStage}-${currentSubStage}` 
+    : null;
+
+  // 處理橫幅行動
+  const handleBannerAction = (bannerType) => {
+    if (bannerType === 'suggest_5rs' || bannerType === 'stage_milestone') {
+      onOpen5RsModal();
+    } else if (bannerType === 'encourage_logging') {
+      setShowTypeSelector(true);
+    }
+  };
 
   return (
-    <div className="h-full w-full bg-gray-50">
+    <div className="h-full w-full bg-gray-50 flex flex-col">
+      {/* 智能橫幅 - 僅學生可見 */}
+      {!isTeacher && (
+        <div className="flex-shrink-0">
+          <SmartReflectionBanner
+            recentLogs={personalDaily}
+            currentStage={currentStageFormatted}
+            onAction={handleBannerAction}
+          />
+        </div>
+      )}
+
       {/* Two-column layout container */}
-      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 h-full">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 min-h-0">
         {/* Left column - Personal Daily */}
         <div className="flex flex-col lg:border-r border-gray-200 bg-white">
           {/* Title section */}
@@ -50,53 +78,56 @@ export function ReflectionLayout({
               </h2>
 
               {/* Action Buttons - only students can add */}
-              {!isTeacher && (
-                <div className="flex flex-col sm:flex-row gap-stack-xs sm:gap-3">
-                  <button
-                    onClick={onOpenPersonalModal}
-                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-fast shadow-sm text-body-sm sm:text-body"
+              {!isTeacher && !showTypeSelector && (
+                <button
+                  onClick={() => setShowTypeSelector(true)}
+                  className="flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-[#5BA491] to-[#4A9680] hover:from-[#5BA491]/90 hover:to-[#4A9680]/90 text-white font-medium rounded-lg transition-all duration-fast shadow-sm hover:shadow-md text-body-sm sm:text-body"
+                >
+                  <svg
+                    className="w-5 h-5 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    傳統日誌
-                  </button>
-
-                  <button
-                    onClick={onOpen5RsModal}
-                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491] text-white font-medium rounded-lg transition-colors duration-fast shadow-sm text-body-sm sm:text-body"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    +5Rs 反思
-                  </button>
-                </div>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v16m8-8H4"
+                    />
+                  </svg>
+                  撰寫反思
+                </button>
               )}
             </div>
-            <p className="text-body-sm text-gray-600 mt-2">
-              記錄個人的學習心得和反思，可以選擇傳統日誌或 5Rs 反思格式
-            </p>
+
+            {/* 雙卡片選擇器 - 僅學生可見 */}
+            {!isTeacher && showTypeSelector && (
+              <div className="mb-stack-md">
+                <ReflectionTypeSelector
+                  onSelectTraditional={() => {
+                    setShowTypeSelector(false);
+                    onOpenPersonalModal();
+                  }}
+                  onSelect5Rs={() => {
+                    setShowTypeSelector(false);
+                    onOpen5RsModal();
+                  }}
+                />
+                <button
+                  onClick={() => setShowTypeSelector(false)}
+                  className="mt-stack-sm text-body-sm text-gray-500 hover:text-gray-700 transition-colors duration-fast"
+                >
+                  ← 返回列表
+                </button>
+              </div>
+            )}
+
+            {!showTypeSelector && (
+              <p className="text-body-sm text-gray-600 mt-2">
+                記錄個人的學習心得和反思，可以選擇傳統日誌或 5Rs 反思格式
+              </p>
+            )}
           </div>
 
           {/* Content section */}

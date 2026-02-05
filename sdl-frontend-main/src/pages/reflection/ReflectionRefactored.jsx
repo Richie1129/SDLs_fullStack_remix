@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { socket } from "../../utils/socket";
 import { getCurrentUsername } from '../../utils/userUtils';
-import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
+import { getCurrentUserId, getCurrentUserRole, getStageInfo } from '../../utils/authUtils';
 import { is5RsFormat } from "@/utils/5RsUtils.js";
 import { DAILY_ERROR_CODES } from '@/constants/dailyErrorCodes.js';
 
@@ -35,6 +35,13 @@ export default function ReflectionRefactored() {
   const [attachFile, setAttachFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [dailyData, setDailyData] = useState({});
+  const [stage, setStage] = useState("");  // 選擇的階段
+  
+  // 智能推薦：從專案進度獲取當前階段
+  const { currentStage, currentSubStage } = getStageInfo();
+  const recommendedStage = currentStage && currentSubStage 
+    ? `${currentStage}-${currentSubStage}` 
+    : null;
 
   // Modal states
   const [personalDailyModalOpen, setPersonalDailyModalOpen] = useState(false);
@@ -77,8 +84,9 @@ export default function ReflectionRefactored() {
 
     if (title.trim() !== "" && content.trim() !== "") {
       const formData = new FormData();
-      formData.append("projectId", projectId);
-      if (attachFile) {
+      formData.append("projectId", projectId);      if (stage) {
+        formData.append("stage", stage);
+      }      if (attachFile) {
         for (let i = 0; i < attachFile.length; i++) {
           formData.append("attachFile", attachFile[i]);
         }
@@ -104,6 +112,9 @@ export default function ReflectionRefactored() {
     formData.append("id", Number(editingId));
     formData.append("title", title);
     formData.append("content", content);
+    if (stage) {
+      formData.append("stage", stage);
+    }
 
     if (attachFile && attachFile.length > 0) {
       for (let i = 0; i < attachFile.length; i++) {
@@ -132,6 +143,7 @@ export default function ReflectionRefactored() {
     setContent(item.content);
     setAttachFile(null);
     setEditingId(item.id);
+    setStage(item.stage || "");
     setPersonalDailyModalOpen(true);
   };
 
@@ -316,7 +328,14 @@ export default function ReflectionRefactored() {
       {/* Personal Daily Modal */}
       <PersonalDailyModal
         open={personalDailyModalOpen}
-        onClose={() => setPersonalDailyModalOpen(false)}
+        onClose={() => {
+          setPersonalDailyModalOpen(false);
+          setTitle("");
+          setContent("");
+          setEditingId(null);
+          setAttachFile(null);
+          setStage("");
+        }}
         title={title}
         content={content}
         onChange={handleChange}
@@ -328,6 +347,9 @@ export default function ReflectionRefactored() {
         currentRecord={currentEditingPersonal}
         onRemoveAttachment={() => personalDaily.handleRemoveAttachment(editingId)}
         userRole={userRole}
+        stage={stage}
+        onStageChange={setStage}
+        recommendedStage={recommendedStage}
       />
 
       {/* Team Daily Modal */}
@@ -361,6 +383,9 @@ export default function ReflectionRefactored() {
         onFileChange={handleAddFileChange}
         currentRecord={currentEditingPersonal}
         onRemoveAttachment={() => personalDaily.handleRemoveAttachment(editingId)}
+        stage={stage}
+        onStageChange={setStage}
+        recommendedStage={recommendedStage}
       />
 
       {/* 5Rs View Modal */}

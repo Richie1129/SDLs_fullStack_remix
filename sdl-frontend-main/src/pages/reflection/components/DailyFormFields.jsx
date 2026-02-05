@@ -1,5 +1,7 @@
 import React from "react";
 import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import StageSelector from '@/components/reflection/StageSelector';
+import StageReflectionGuide from '@/components/reflection/StageReflectionGuide';
 
 /**
  * Shared form fields component for daily logs
@@ -15,6 +17,9 @@ export function DailyFormFields({
   editingId = null,
   onRemoveAttachment,
   userRole,
+  stage = '',
+  onStageChange,
+  recommendedStage = null,
 }) {
   const isTeacher = userRole === "teacher";
 
@@ -30,6 +35,20 @@ export function DailyFormFields({
         required
         disabled={disabled || isTeacher}
       />
+      
+      {/* 階段選擇器 */}
+      {onStageChange && (
+        <StageSelector
+          value={stage}
+          onChange={onStageChange}
+          disabled={disabled || isTeacher}
+          recommendedStage={recommendedStage}
+        />
+      )}
+      
+      {/* 階段反思引導 */}
+      <StageReflectionGuide stage={stage} />
+      
       <textarea
         className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto"
         rows={10}

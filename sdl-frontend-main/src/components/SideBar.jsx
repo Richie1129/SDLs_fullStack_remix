@@ -33,11 +33,56 @@ const NavItem = ({ children, selected, id, setSelected }) => {
 // Floating Tooltip Component for Stage Definitions
 const FloatingTooltip = ({ isVisible, position, content, onClose }) => {
   if (!isVisible) return null;
+  
+  const tooltipRef = React.useRef(null);
+  const [tooltipHeight, setTooltipHeight] = React.useState(0);
+  
+  React.useEffect(() => {
+    if (tooltipRef.current) {
+      setTooltipHeight(tooltipRef.current.offsetHeight);
+    }
+  }, [content]);
+  
+  // 計算 tooltip 的 top 位置，使其垂直居中對齊觸發按鈕
+  // 但限制不超出視窗
+  const calculateTop = () => {
+    if (!tooltipHeight) return position.triggerCenter - 50; // 初始估計值
+    
+    let calculatedTop = position.triggerCenter - tooltipHeight / 2;
+    
+    // 確保不超出視窗頂部
+    if (calculatedTop < 10) calculatedTop = 10;
+    // 確保不超出視窗底部
+    if (calculatedTop + tooltipHeight > window.innerHeight - 10) {
+      calculatedTop = window.innerHeight - tooltipHeight - 10;
+    }
+    
+    return calculatedTop;
+  };
+  
+  const tooltipTop = calculateTop();
+  // 箭頭位置：觸發按鈕中心 - tooltip 的 top
+  const arrowTop = position.triggerCenter - tooltipTop;
+  
   return (
     <div
+      ref={tooltipRef}
       className="fixed z-50 bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-component-base max-w-xs transition-opacity"
-      style={{ left: position.x + 10, top: position.y - 10 }}
+      style={{ left: position.x + 10, top: tooltipTop }}
     >
+      {/* 左側箭頭 - 對準觸發按鈕中心 */}
+      <div 
+        className="absolute right-full -mr-[2px]"
+        style={{ top: `${arrowTop}px`, transform: 'translateY(-50%)' }}
+      >
+        {/* 外層箭頭（邊框色） */}
+        <div className="relative">
+          <div className="w-0 h-0 border-t-[8px] border-t-transparent border-b-[8px] border-b-transparent border-r-[10px] border-r-[#5BA491]"></div>
+          {/* 內層箭頭（背景色） */}
+          <div className="absolute top-1/2 -translate-y-1/2 left-[2px] w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[8px] border-r-white"></div>
+        </div>
+      </div>
+      
       <button
         onClick={onClose}
         className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors duration-fast"
@@ -275,6 +320,7 @@ export default function SideBar() {
         position: {
           x: rect.right,
           y: rect.top,
+          triggerCenter: rect.top + rect.height / 2, // 觸發按鈕的垂直中心
         },
         content: {
           title: stage.name,

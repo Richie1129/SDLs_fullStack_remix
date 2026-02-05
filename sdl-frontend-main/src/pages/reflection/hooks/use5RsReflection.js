@@ -49,6 +49,11 @@ export function use5RsReflection(projectId, updateMutation) {
       formData.append("id", Number(editingId));
       formData.append("title", data.title);
       formData.append("content", data.content);
+      
+      // Add stage if provided
+      if (data.stage) {
+        formData.append("stage", data.stage);
+      }
 
       // Add attachments if any
       if (data.attachFile && data.attachFile.length > 0) {
@@ -77,6 +82,11 @@ export function use5RsReflection(projectId, updateMutation) {
       formData.append("title", data.title);
       formData.append("content", data.content);
       formData.append("userId", getCurrentUserId());
+      
+      // Add stage if provided
+      if (data.stage) {
+        formData.append("stage", data.stage);
+      }
 
       // Add attachments if any
       if (data.attachFile && data.attachFile.length > 0) {

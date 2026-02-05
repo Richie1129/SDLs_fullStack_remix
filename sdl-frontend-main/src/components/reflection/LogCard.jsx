@@ -121,6 +121,28 @@ const LogCard = ({
 
   const renderDiff = (ev) => extractAuditDiffLines(ev);
 
+  // 根據反思類型決定視覺樣式（方案 5：列表視覺區隔）
+  const getCardStyles = () => {
+    if (is5Rs) {
+      return {
+        borderClass: 'border-l-4 border-purple-400',
+        bgClass: 'bg-gradient-to-br from-purple-50/50 to-pink-50/50',
+        titleClass: 'bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent',
+        badgeClass: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
+        buttonClass: 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white',
+      };
+    }
+    return {
+      borderClass: 'border-l-4 border-[#5BA491]',
+      bgClass: 'bg-white',
+      titleClass: 'text-[#5BA491]',
+      badgeClass: 'bg-[#5BA491]/10 text-[#5BA491]',
+      buttonClass: 'bg-[#5BA491] hover:bg-[#5BA491]/90 text-white',
+    };
+  };
+
+  const cardStyles = getCardStyles();
+
   return (
     <motion.div
       key={index}
@@ -132,16 +154,25 @@ const LogCard = ({
       transition={SPRING_OPTIONS}
       className="aspect-video w-full shrink-0 rounded-xl object-cover"
     >
-      <div className="bg-white rounded-lg shadow-lg p-component-sm sm:p-component-md lg:p-component-lg m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]">
+      <div className={`${cardStyles.bgClass} ${cardStyles.borderClass} rounded-lg shadow-lg p-component-sm sm:p-component-md lg:p-component-lg m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
-          <h5 className="text-body-lg sm:text-h3 font-bold text-customgreen py-2">
+          <h5 className={`text-body-lg sm:text-h3 font-bold ${cardStyles.titleClass} py-2`}>
             {item.title}
           </h5>
           <div className="flex items-center gap-stack-xs">
             {is5Rs && (
-              <span className="px-2 py-1 bg-teal-100 text-teal-800 text-caption font-medium rounded-full">
+              <span className={`px-2.5 py-1 ${cardStyles.badgeClass} text-caption font-bold rounded-full flex items-center shadow-sm`}>
+                <svg className="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13 7H7v6h6V7z" />
+                  <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
+                </svg>
                 5Rs 反思
+              </span>
+            )}
+            {!is5Rs && (
+              <span className={`px-2.5 py-1 ${cardStyles.badgeClass} text-caption font-medium rounded-full`}>
+                傳統日誌
               </span>
             )}
             {typeof onDelete === 'function' && canEdit && (
@@ -217,7 +248,7 @@ const LogCard = ({
                 <div className="mb-2">
                   <button
                     onClick={() => onRequestAIAnalysis(item)}
-                    className="w-full bg-teal-500 text-white py-2 px-4 rounded hover:bg-teal-600 transition-colors duration-fast text-body-sm sm:text-body mb-2 flex items-center justify-center"
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-2 px-4 rounded transition-all duration-fast text-body-sm sm:text-body mb-2 flex items-center justify-center shadow-sm hover:shadow-md"
                   >
                     <AiOutlineRobot className="w-4 h-4 mr-2" />
                     請求 AI 分析
@@ -231,14 +262,14 @@ const LogCard = ({
           {/* Edit/View Button */}
           {canEdit ? (
             <button
-              className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors duration-fast text-body-sm sm:text-body"
+              className={`w-full ${cardStyles.buttonClass} py-2 px-4 rounded transition-all duration-fast text-body-sm sm:text-body shadow-sm hover:shadow-md`}
               onClick={() => onEdit(item)}
             >
               編輯 {is5Rs ? "5Rs 反思" : "傳統日誌"}
             </button>
           ) : (
             <button
-              className="w-full bg-[#5BA491] text-white py-2 px-4 rounded hover:bg-[#5BA491]/80 transition-colors duration-fast text-body-sm sm:text-body"
+              className={`w-full ${cardStyles.buttonClass} py-2 px-4 rounded transition-all duration-fast text-body-sm sm:text-body shadow-sm hover:shadow-md`}
               onClick={() => onEdit(item)}
             >
               查看 {is5Rs ? "5Rs 反思" : "日誌"}

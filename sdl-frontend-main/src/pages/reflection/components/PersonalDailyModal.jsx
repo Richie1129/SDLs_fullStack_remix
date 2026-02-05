@@ -6,6 +6,7 @@ import { is5RsFormat } from "@/utils/5RsUtils.js";
 import { DailyFormFields } from "./DailyFormFields";
 import AuditHistoryPanel from "@/components/reflection/AuditHistoryPanel.jsx";
 import AIAnalysisHistoryPanel from "@/components/reflection/AIAnalysisHistoryPanel.jsx";
+import { getReflectionGuide } from "@/utils/reflectionGuideUtils.js";
 
 // Animation configuration
 const fadeInOut = {
@@ -29,12 +30,18 @@ export function PersonalDailyModal({
   currentRecord,
   onRemoveAttachment,
   userRole,
+  stage,
+  onStageChange,
+  recommendedStage,
 }) {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('edit');
 
   const isTeacher = userRole === "teacher";
   const isCurrent5Rs = currentRecord ? is5RsFormat(currentRecord.content) : false;
+  
+  // 根據選擇的階段取得引導提示
+  const reflectionGuide = getReflectionGuide(stage);
 
   // Reset tab when opening modal
   useEffect(() => {
@@ -80,13 +87,34 @@ export function PersonalDailyModal({
             <button onClick={closeTooltip} className="absolute top-1 right-1">
               <GrFormClose className="w-4 h-4" />
             </button>
-            <p className=" font-bold text-body ">日誌內容可以撰寫以下項目:</p>
-            <ul>
-              <li className="  text-body-sm pt-2">1.最近完成的進度內容。</li>
-              <li className="  text-body-sm ">2.完成的心得反思。</li>
-              <li className="  text-body-sm ">3.下次的預計完成的進度內容。</li>
-              <li className="  text-body-sm ">4.是否遇到新的問題。</li>
-            </ul>
+            {reflectionGuide.hasStageGuide ? (
+              <>
+                <p className="font-bold text-body mb-2">
+                  📝 {reflectionGuide.stageName} 階段反思引導
+                </p>
+                <p className="text-body-sm text-gray-600 mb-3">
+                  以下問題可以幫助你更深入地反思這個階段的學習：
+                </p>
+                <ul className="space-y-2">
+                  {reflectionGuide.prompts.map((prompt, index) => (
+                    <li key={index} className="text-body-sm">
+                      <span className="font-semibold text-customgreen">{index + 1}.</span> {prompt}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-body">日誌內容可以撰寫以下項目:</p>
+                <ul>
+                  {reflectionGuide.prompts.map((prompt, index) => (
+                    <li key={index} className="text-body-sm pt-2">
+                      {index + 1}.{prompt}{index === reflectionGuide.prompts.length - 1 ? '' : '。'}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </motion.div>
         )}
 
@@ -127,6 +155,9 @@ export function PersonalDailyModal({
               editingId={editingId}
               onRemoveAttachment={onRemoveAttachment}
               userRole={userRole}
+              stage={stage}
+              onStageChange={onStageChange}
+              recommendedStage={recommendedStage}
             />
             <div className="flex justify-end m-2">
               <button

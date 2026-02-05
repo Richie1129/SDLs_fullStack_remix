@@ -20,6 +20,9 @@ export function FiveRsModal({
   onFileChange,
   currentRecord,
   onRemoveAttachment,
+  stage,
+  onStageChange,
+  recommendedStage,
 }) {
   const [activeTab, setActiveTab] = useState('edit');
 
@@ -71,6 +74,9 @@ export function FiveRsModal({
               onFileChange={onFileChange}
               existingRecord={currentRecord}
               onRemoveAttachment={onRemoveAttachment}
+              stage={stage}
+              onStageChange={onStageChange}
+              recommendedStage={recommendedStage}
             />
           )}
           {activeTab === 'history' && isEditing && currentRecord && (
