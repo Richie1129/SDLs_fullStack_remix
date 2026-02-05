@@ -6,8 +6,9 @@ import { RxCross2 } from "react-icons/rx";
 import { DragDropContext } from 'react-beautiful-dnd';
 import { StrictModeDroppable as Droppable } from '../../utils/StrictModeDroppable';
 import Swal from 'sweetalert2';
-import { useQueryClient } from 'react-query';
+import { useQueryClient, useQuery } from 'react-query';
 import { getProject } from '../../api/project';
+import { getProjectUser } from '../../api/users';
 import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage";
 import useObservationMode from '../../hooks/useObservationMode';
@@ -39,7 +40,7 @@ export default function Kanban() {
   } = useKanbanData(projectId);
 
   const [viewConfig, setViewConfig] = useState({
-    filter: { keyword: '', assignee: '', label: '' },
+    filter: { keyword: '', assignee: [], label: '' }, // assignee 改為陣列支援多選
     groupBy: 'status', // 'status' | 'assignee'
     sortBy: null
   });
@@ -52,6 +53,7 @@ export default function Kanban() {
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
   const [selectedTemplatePhase, setSelectedTemplatePhase] = useState(null);
   const [selectedTemplateColumns, setSelectedTemplateColumns] = useState([]);
+  const [showMemberFilter, setShowMemberFilter] = useState(false); // 控制成員篩選下拉選單
   
   // --- Stage Management ---
   const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
@@ -62,8 +64,30 @@ export default function Kanban() {
   const { isObservationMode } = useObservationMode();
   const kanbanContainerRef = useRef(null);
 
+  // --- Fetch Project Members ---
+  const { data: projectMembers = [], isLoading: membersLoading } = useQuery(
+    ['projectMembers', projectId],
+    () => getProjectUser(projectId),
+    {
+      enabled: !!projectId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      onSuccess: (data) => {
+        console.log('🔍 專案成員列表:', data);
+      },
+      onError: (error) => {
+        console.error('❌ 獲取專案成員失敗:', error);
+      }
+    }
+  );
+
   // --- Derived State ---
   const allAssignees = React.useMemo(() => {
+    // 優先使用專案成員列表
+    if (projectMembers && projectMembers.length > 0) {
+      return projectMembers;
+    }
+    
+    // 回退：從任務 assignees 中提取（向下兼容）
     if (!kanbanData) return [];
     const assignees = new Map();
     kanbanData.forEach(col => {
@@ -76,7 +100,7 @@ export default function Kanban() {
       });
     });
     return Array.from(assignees.values());
-  }, [kanbanData]);
+  }, [projectMembers, kanbanData]);
 
   // --- Effects (Stage Sync) ---
   useEffect(() => {
@@ -154,6 +178,30 @@ export default function Kanban() {
         return [...prev, index];
       }
     });
+  };
+
+  const toggleMemberSelection = (username) => {
+    setViewConfig(prev => {
+      const currentAssignees = prev.filter?.assignee || [];
+      const isSelected = currentAssignees.includes(username);
+      
+      return {
+        ...prev,
+        filter: {
+          ...prev.filter,
+          assignee: isSelected
+            ? currentAssignees.filter(u => u !== username)
+            : [...currentAssignees, username]
+        }
+      };
+    });
+  };
+
+  const clearMemberFilter = () => {
+    setViewConfig(prev => ({
+      ...prev,
+      filter: { ...prev.filter, assignee: [] }
+    }));
   };
 
   const onDragEnd = useCallback((result) => {
@@ -366,21 +414,78 @@ export default function Kanban() {
             </select>
           </div>
 
-          <div className="flex items-center gap-stack-xs">
+          <div className="flex items-center gap-stack-xs relative">
             <span className="text-body-sm font-medium text-gray-600">成員:</span>
-            <select
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-body-sm focus:outline-none focus:ring-2 focus:ring-[#5BA491]"
-              value={viewConfig.filter?.assignee || ''}
-              onChange={(e) => setViewConfig(prev => ({
-                ...prev,
-                filter: { ...prev.filter, assignee: e.target.value || null }
-              }))}
-            >
-              <option value="">所有成員</option>
-              {allAssignees.map(a => (
-                <option key={a.id} value={a.username}>{a.username}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                className="px-3 py-1.5 border border-gray-300 rounded-md text-body-sm focus:outline-none focus:ring-2 focus:ring-[#5BA491] bg-white hover:bg-gray-50 flex items-center gap-2 min-w-[120px] justify-between"
+                onClick={() => setShowMemberFilter(!showMemberFilter)}
+              >
+                <span>
+                  {viewConfig.filter?.assignee?.length > 0
+                    ? `${viewConfig.filter.assignee.length} 位成員`
+                    : '所有成員'}
+                </span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {showMemberFilter && (
+                <>
+                  {/* 點擊外部關閉 */}
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowMemberFilter(false)}
+                  />
+                  
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-md shadow-lg z-20 border border-gray-200 py-2 max-h-80 overflow-y-auto">
+                    <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center">
+                      <span className="text-body-sm font-semibold text-gray-700">
+                        選擇成員 ({viewConfig.filter?.assignee?.length || 0}/{allAssignees.length})
+                      </span>
+                      {viewConfig.filter?.assignee?.length > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearMemberFilter();
+                          }}
+                          className="text-caption text-[#5BA491] hover:text-[#5BA491]/80"
+                        >
+                          清除
+                        </button>
+                      )}
+                    </div>
+                    
+                    {allAssignees.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-body-sm text-gray-500">
+                        暫無成員資料
+                      </div>
+                    ) : (
+                      <div className="py-1">
+                        {allAssignees.map(member => (
+                          <label
+                            key={member.id}
+                            className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 text-[#5BA491] focus:ring-[#5BA491] border-gray-300 rounded"
+                              checked={viewConfig.filter?.assignee?.includes(member.username) || false}
+                              onChange={() => toggleMemberSelection(member.username)}
+                            />
+                            <span className="ml-3 text-body-sm text-gray-700">
+                              {member.username}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 

@@ -29,9 +29,23 @@ export const useKanbanView = (kanbanData, viewConfig) => {
             return false;
           }
 
-          // Assignee filter
-          if (assignee && (!task.assignees || !task.assignees.some(a => a.username === assignee))) {
-            return false;
+          // Assignee filter (支援單選和多選)
+          if (assignee) {
+            // 如果 assignee 是陣列且有值，檢查任務的 assignees 是否包含任一選中的成員
+            if (Array.isArray(assignee) && assignee.length > 0) {
+              const hasMatchingAssignee = task.assignees?.some(a => 
+                assignee.includes(a.username)
+              );
+              if (!hasMatchingAssignee) {
+                return false;
+              }
+            }
+            // 向下兼容：如果 assignee 是字串（舊版單選）
+            else if (typeof assignee === 'string' && assignee) {
+              if (!task.assignees || !task.assignees.some(a => a.username === assignee)) {
+                return false;
+              }
+            }
           }
 
           // Label filter
