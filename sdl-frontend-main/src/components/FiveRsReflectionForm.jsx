@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiChevronDown, FiChevronUp, FiHelpCircle, FiCheck, FiX, FiRefreshCw, FiInfo } from 'react-icons/fi';
+import { FiChevronDown, FiHelpCircle, FiCheck, FiRefreshCw, FiCpu, FiZap, FiSliders, FiShield } from 'react-icons/fi';
 import { AiOutlineRobot } from 'react-icons/ai';
 import { FIVE_R_FRAMEWORK, build5RsContent, validate5RsData } from '@/utils/5RsUtils.js';
 import { analyze5RsReflection } from '@/api/llm5Rs.js';
@@ -40,6 +40,22 @@ const FiveRsReflectionForm = ({
   const [aiProvider, setAiProvider] = useState('auto');
 
   const steps = Object.keys(FIVE_R_FRAMEWORK);
+
+  // 獲取 AI 模型對應的圖示
+  const getProviderIcon = (provider) => {
+    switch (provider) {
+      case 'auto':
+        return <FiCpu className="w-4 h-4" />;
+      case 'gemma-3':
+        return <FiZap className="w-4 h-4" />;
+      case 'gpt-oss-20b':
+        return <FiSliders className="w-4 h-4" />;
+      case 'gemini':
+        return <FiShield className="w-4 h-4" />;
+      default:
+        return <FiCpu className="w-4 h-4" />;
+    }
+  };
 
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
@@ -276,48 +292,59 @@ const FiveRsReflectionForm = ({
           }
         `}
       </style>
-      <div className="max-w-4xl mx-auto bg-white rounded-lg h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto p-component-md-lg">
+      <div className="h-full flex flex-col">
+      <div className="flex-1 overflow-y-auto px-6 py-5">
       
-      {/* 標題輸入 */}
-      <div className="mb-6">
-        <label className="block text-body-lg font-semibold text-gray-700 mb-2">
-          反思日誌標題
-        </label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="請輸入日誌標題..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-        />
+      {/* 基本資訊區塊 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+        {/* 標題輸入 */}
+        <div>
+          <label className="block text-body font-semibold text-gray-800 mb-2">
+            反思日誌標題
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => onTitleChange(e.target.value)}
+            placeholder="請輸入日誌標題..."
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-fast bg-gray-50 focus:bg-white"
+          />
+        </div>
+        
+        {/* 階段選擇器 */}
+        {onStageChange && (
+          <StageSelector
+            value={stage}
+            onChange={onStageChange}
+            recommendedStage={recommendedStage}
+          />
+        )}
       </div>
-      
-      {/* 階段選擇器 */}
-      {onStageChange && (
-        <StageSelector
-          value={stage}
-          onChange={onStageChange}
-          recommendedStage={recommendedStage}
-        />
-      )}
       
       {/* 階段反思引導 */}
       <StageReflectionGuide stage={stage} />
 
-      {/* 進度條 */}
-      <div className="mb-6">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-body-sm font-medium text-gray-700">
-            進度: {getCompletedSteps()}/{steps.length}
-          </span>
-          <span className="text-body-sm text-gray-500">
-            {Math.round(progressPercentage)}% 完成
-          </span>
+      {/* 進度條 - 更精緻的設計 */}
+      <div className="mb-6 p-4 bg-gradient-to-r from-gray-50 to-slate-50 rounded-xl border border-gray-100">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" />
+            <span className="text-body-sm font-semibold text-gray-700">
+              填寫進度
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-body-sm text-gray-500">
+              {getCompletedSteps()}/{steps.length} 區塊
+            </span>
+            <span className="text-body-sm font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">
+              {Math.round(progressPercentage)}%
+            </span>
+          </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
           <motion.div
-            className="bg-teal-500 h-2 rounded-full"
+            className="bg-gradient-to-r from-teal-400 to-teal-600 h-2.5 rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progressPercentage}%` }}
             transition={{ duration: 0.5 }}
@@ -325,71 +352,98 @@ const FiveRsReflectionForm = ({
         </div>
       </div>
 
-      {/* 檔案上傳區域 */}
-      <div className="mb-6">
-        <label className="block text-body-sm font-medium text-gray-700 mb-2">
-          附件檔案 (可選)
-        </label>
-        <input
-          type="file"
-          multiple
-          onChange={onFileChange}
-          className="block w-full text-body-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-body-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
-        />
-        <p className="mt-2 text-caption text-gray-500">
-          <FiInfo className="w-3.5 h-3.5 inline mr-1" /> 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
-        </p>
-        {/* 現有附件（編輯時） */}
-        {isEditing && existingRecord && (existingRecord.fileName || existingRecord.fileData) && (
-          <div className="mt-3 p-component-sm bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-stack-xs">
-            <div className="text-body-sm text-gray-700 break-all">
-              附件：{existingRecord.originalName || existingRecord.filename || existingRecord.fileName}
-            </div>
-            <div className="flex gap-stack-xs">
-              <a
-                href={existingRecord.fileName ? buildFileDownloadUrl(existingRecord.fileName) : undefined}
-                onClick={(e) => {
-                  if (!existingRecord.fileName && existingRecord.fileData) {
-                    e.preventDefault();
-                    const buffer = new Uint8Array(existingRecord.fileData.data);
-                    const blob = new Blob([buffer], { type: "application/octet-stream" });
-                    import('js-file-download').then(({ default: FileDownload }) => {
-                      FileDownload(blob, existingRecord.filename || existingRecord.originalName || 'downloaded-file');
-                    });
-                  }
-                }}
-                className="px-3 py-1 bg-teal-600 text-white rounded hover:bg-teal-700 text-body-sm text-center"
-              >
-                下載附件
-              </a>
-              {typeof onRemoveAttachment === 'function' && (
-                <button
-                  onClick={onRemoveAttachment}
-                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-body-sm"
+      {/* 檔案上傳區域 - 可收合 */}
+      <details className="mb-6 group">
+        <summary className="flex items-center gap-2 cursor-pointer text-body-sm font-medium text-gray-600 hover:text-gray-800 transition-colors">
+          <svg className="w-4 h-4 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          附件檔案
+          <span className="text-caption text-gray-400 font-normal">（選填）</span>
+          {attachFile && attachFile.length > 0 && (
+            <span className="px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full text-caption font-medium">
+              {attachFile.length} 個檔案
+            </span>
+          )}
+        </summary>
+        
+        <div className="mt-3 pl-6">
+          <input
+            type="file"
+            multiple
+            onChange={onFileChange}
+            className="block w-full text-body-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-body-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 file:cursor-pointer file:transition-colors"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
+          />
+          <p className="mt-1.5 text-caption text-gray-400">
+            支援文件、圖片、影片、音訊 | 單檔最大 100MB | 最多 10 個
+          </p>
+          
+          {/* 現有附件（編輯時） */}
+          {isEditing && existingRecord && (existingRecord.fileName || existingRecord.fileData) && (
+            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="text-body-sm text-gray-700 break-all truncate">
+                {existingRecord.originalName || existingRecord.filename || existingRecord.fileName}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <a
+                  href={existingRecord.fileName ? buildFileDownloadUrl(existingRecord.fileName) : undefined}
+                  onClick={(e) => {
+                    if (!existingRecord.fileName && existingRecord.fileData) {
+                      e.preventDefault();
+                      const buffer = new Uint8Array(existingRecord.fileData.data);
+                      const blob = new Blob([buffer], { type: "application/octet-stream" });
+                      import('js-file-download').then(({ default: FileDownload }) => {
+                        FileDownload(blob, existingRecord.filename || existingRecord.originalName || 'downloaded-file');
+                      });
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 text-caption font-medium transition-colors"
                 >
-                  刪除附件
-                </button>
-              )}
+                  下載
+                </a>
+                {typeof onRemoveAttachment === 'function' && (
+                  <button
+                    onClick={onRemoveAttachment}
+                    className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 text-caption font-medium transition-colors"
+                  >
+                    刪除
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        {attachFile && attachFile.length > 0 && (
-          <div className="mt-2">
-            <p className="text-body-sm text-gray-600">已選擇 {attachFile.length} 個檔案：</p>
-            <ul className="text-body-sm text-gray-500 ml-4">
+          )}
+          
+          {/* 已選擇的檔案列表 */}
+          {attachFile && attachFile.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
               {Array.from(attachFile).map((file, index) => (
-                <li key={index} className="list-disc">
-                  {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                </li>
+                <span key={index} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 rounded-full text-caption text-gray-600">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  {file.name}
+                  <span className="text-gray-400">({(file.size / 1024).toFixed(0)} KB)</span>
+                </span>
               ))}
-            </ul>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
+      </details>
+
+      {/* 5Rs 步驟區塊標題 */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center justify-center w-8 h-8 bg-teal-100 rounded-lg">
+          <span className="text-body font-bold text-teal-600">5R</span>
+        </div>
+        <div>
+          <h3 className="text-body font-semibold text-gray-800">反思架構</h3>
+          <p className="text-caption text-gray-500">依序完成各部分，建構完整的反思歷程</p>
+        </div>
       </div>
 
       {/* 5Rs 步驟 */}
-      <div className="space-y-stack-sm">
+      <div className="space-y-3">
         {steps.map((step, index) => {
           const framework = FIVE_R_FRAMEWORK[step];
           const isExpanded = expandedSections[index];
@@ -399,48 +453,54 @@ const FiveRsReflectionForm = ({
           return (
             <motion.div
               key={step}
-              className={`border rounded-lg transition-all duration-fast ${
-                isCurrent ? 'border-teal-500 shadow-md' : 'border-gray-200'
+              className={`border rounded-xl transition-all duration-fast overflow-hidden ${
+                isCurrent ? 'border-teal-400 shadow-sm ring-1 ring-teal-100' : 
+                isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-200'
               }`}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
               {/* 步驟標題 */}
               <div
-                className={`flex items-center justify-between p-component-base cursor-pointer ${
-                  isCurrent ? 'bg-teal-50' : 'bg-gray-50'
+                className={`flex items-center justify-between p-4 cursor-pointer transition-colors duration-fast ${
+                  isCurrent ? 'bg-teal-50/80' : 
+                  isCompleted ? 'bg-green-50/50' : 'bg-gray-50/80 hover:bg-gray-100/80'
                 }`}
                 onClick={() => handleStepClick(index)}
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-body-sm font-semibold transition-colors ${
                     isCompleted ? 'bg-green-500 text-white' : 
-                    isCurrent ? 'bg-teal-500 text-white' : 'bg-gray-300 text-gray-600'
+                    isCurrent ? 'bg-teal-500 text-white' : 'bg-gray-200 text-gray-500'
                   }`}>
-                    {isCompleted ? <FiCheck /> : index + 1}
+                    {isCompleted ? <FiCheck className="w-4 h-4" /> : index + 1}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-800">
+                    <h3 className={`font-semibold text-body-sm ${isCompleted ? 'text-green-700' : 'text-gray-800'}`}>
                       {framework.title}
                     </h3>
-                    <p className="text-body-sm text-gray-600">
+                    <p className="text-caption text-gray-500 line-clamp-1">
                       {framework.description}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-stack-xs">
+                <div className="flex items-center gap-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleGuidingQuestions(step);
                     }}
-                    className="p-1 hover:bg-gray-200 rounded"
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      showGuidingQuestions[step] ? 'bg-blue-100 text-blue-600' : 'hover:bg-gray-200 text-gray-400'
+                    }`}
                     title="顯示引導問題"
                   >
-                    <FiHelpCircle className="w-4 h-4 text-gray-500" />
+                    <FiHelpCircle className="w-4 h-4" />
                   </button>
-                  {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
+                  <div className={`p-1 transition-transform duration-fast ${isExpanded ? 'rotate-180' : ''}`}>
+                    <FiChevronDown className="w-4 h-4 text-gray-400" />
+                  </div>
                 </div>
               </div>
 
@@ -450,13 +510,16 @@ const FiveRsReflectionForm = ({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="px-4 py-2 bg-blue-50 border-t border-blue-100"
+                  className="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-blue-100"
                 >
-                  <h4 className="text-body-sm font-medium text-blue-800 mb-2">引導問題：</h4>
-                  <ul className="text-body-sm text-blue-700 space-y-1">
+                  <h4 className="text-caption font-semibold text-blue-700 mb-2 flex items-center gap-1.5">
+                    <FiHelpCircle className="w-3.5 h-3.5" />
+                    引導問題
+                  </h4>
+                  <ul className="text-caption text-blue-600 space-y-1.5">
                     {framework.guidingQuestions.map((question, qIndex) => (
-                      <li key={qIndex} className="flex items-start">
-                        <span className="mr-2">•</span>
+                      <li key={qIndex} className="flex items-start gap-2">
+                        <span className="text-blue-400 mt-0.5">→</span>
                         <span>{question}</span>
                       </li>
                     ))}
@@ -470,17 +533,24 @@ const FiveRsReflectionForm = ({
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="p-component-base border-t border-gray-100"
+                  className="p-4 bg-white"
                 >
                   <textarea
                     value={data[step]}
                     onChange={(e) => handleInputChange(step, e.target.value)}
                     placeholder={framework.placeholder}
-                    rows={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+                    rows={5}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none bg-gray-50 focus:bg-white transition-colors text-body-sm placeholder:text-gray-400"
                   />
-                  <div className="mt-2 text-caption text-gray-500">
-                    {data[step].length} 字
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-caption text-gray-400">
+                      {data[step].length > 0 ? `已輸入 ${data[step].length} 字` : '尚未填寫'}
+                    </span>
+                    {data[step].length >= 50 && (
+                      <span className="text-caption text-green-500 flex items-center gap-1">
+                        <FiCheck className="w-3 h-3" /> 內容充足
+                      </span>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -492,30 +562,39 @@ const FiveRsReflectionForm = ({
       {/* AI 分析區域 */}
       {getCompletedSteps() >= 3 && (
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 p-component-base bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200"
+          className="mt-6 p-4 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 rounded-xl border border-purple-200/60"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-stack-xs">
-              <AiOutlineRobot className="w-5 h-5 text-purple-600" />
-              <span className="font-medium text-purple-800">AI 智能分析</span>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                <AiOutlineRobot className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <span className="font-semibold text-body-sm text-purple-800">AI 智能分析</span>
+                <p className="text-caption text-purple-600">獲取個人化學習建議</p>
+              </div>
             </div>
-            <div className="flex items-center space-x-stack-xs">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 rounded text-purple-700">
+                {getProviderIcon(aiProvider)}
+              </div>
               <select
                 value={aiProvider}
                 onChange={(e) => setAiProvider(e.target.value)}
-                className="text-caption border border-purple-300 rounded px-2 py-1"
+                className="text-caption border border-purple-200 rounded-lg px-3 py-1.5 bg-white/80 text-purple-700 focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                title="選擇 AI 分析模型"
               >
                 <option value="auto">自動選擇</option>
-                <option value="gpt">gpt-4o-mini</option>
-                <option value="gemini">gemini-2.5-flash</option>
-                {/* <option value="gpt-nano">gpt-4.1-nano</option> */}
+                <option value="gemma-3">Gemma-3 (推薦)</option>
+                <option value="gpt-oss-20b">GPT-OSS-20b (均衡)</option>
+                <option value="gemini">Gemini-2.5-flash</option>
               </select>
               <button
                 onClick={handleAIAnalysis}
                 disabled={isAnalyzing}
-                className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50 text-body-sm"
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-body-sm font-medium transition-all duration-fast hover:shadow-md disabled:hover:shadow-none"
               >
                 {isAnalyzing ? (
                   <>
@@ -525,34 +604,40 @@ const FiveRsReflectionForm = ({
                 ) : (
                   <>
                     <AiOutlineRobot className="w-4 h-4" />
-                    <span>請求 AI 分析</span>
+                    <span>開始分析</span>
                   </>
                 )}
               </button>
             </div>
           </div>
-          <p className="text-body-sm text-purple-700 mt-2">
-            AI 將根據 5Rs 框架分析您的反思內容，並提供個人化的學習建議。
-          </p>
         </motion.div>
       )}
       </div>
 
       {/* 操作按鈕 - 固定在底部 */}
-      <div className="flex justify-end space-x-3 p-component-base border-t border-gray-200 bg-white">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-        >
-          取消
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={getCompletedSteps() === 0}
-          className="px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isEditing ? '更新' : '儲存'}反思日誌
-        </button>
+      <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/80">
+        <div className="text-caption text-gray-500">
+          {getCompletedSteps() === 0 ? (
+            <span className="text-amber-600">⚠️ 請至少完成一個反思區塊</span>
+          ) : (
+            <span className="text-green-600">✓ 已完成 {getCompletedSteps()}/{steps.length} 個區塊</span>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-body-sm transition-colors"
+          >
+            取消
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={getCompletedSteps() === 0}
+            className="px-5 py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-body-sm transition-all hover:shadow-md disabled:hover:shadow-none"
+          >
+            {isEditing ? '更新' : '儲存'}反思日誌
+          </button>
+        </div>
       </div>
     </div>
     </>

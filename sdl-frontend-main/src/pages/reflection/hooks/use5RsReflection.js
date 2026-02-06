@@ -119,9 +119,10 @@ export function use5RsReflection(projectId, updateMutation) {
   };
 
   // Request AI analysis for 5Rs reflection
-  const handleRequestAIAnalysis = async (item) => {
-    console.log("=== 前端 AI 分析請求開始 ===");
+  const handleRequestAIAnalysis = async (item, provider = 'auto') => {
+    console.log("=== 前端 AI 分析請求開始 ===")
     console.log("選中的日誌項目:", item);
+    console.log("使用的 AI 模型:", provider);
 
     const parsedContent = parse5RsContent(item.content);
     console.log("解析後的內容:", parsedContent);
@@ -144,10 +145,10 @@ export function use5RsReflection(projectId, updateMutation) {
     console.log("準備發送的反思資料:", parsedContent.data);
 
     try {
-      toast.loading("正在請求 AI 分析...", { id: "ai-analysis" });
+      toast.loading(`正在使用 ${provider === 'auto' ? '自動選擇' : provider} 分析...`, { id: "ai-analysis" });
 
-      console.log("呼叫 AI 分析 API...");
-      const result = await analyze5RsReflection(parsedContent.data, "auto");
+      console.log("呼叫 AI 分析 API，使用提供者:", provider);
+      const result = await analyze5RsReflection(parsedContent.data, provider);
       console.log("AI 分析 API 回應:", result);
 
       if (result.success) {

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AiOutlineCloudDownload, AiOutlineRobot } from 'react-icons/ai';
-import { FiTrash2, FiFlag, FiFileText } from 'react-icons/fi';
+import { FiTrash2, FiFlag, FiFileText, FiCpu, FiZap, FiSliders, FiShield } from 'react-icons/fi';
 import { formatTime } from '../../utils/timeUtils';
 import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.js';
 import FileDownload from 'js-file-download';
@@ -28,6 +28,7 @@ const LogCard = ({
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
+  const [selectedProvider, setSelectedProvider] = useState('auto');
 
   // 權限檢查：判斷當前用戶是否可以編輯此日誌
   const currentUserId = getCurrentUserId();
@@ -144,6 +145,22 @@ const LogCard = ({
 
   const cardStyles = getCardStyles();
 
+  // 獲取 AI 模型對應的圖示
+  const getProviderIcon = (provider) => {
+    switch (provider) {
+      case 'auto':
+        return <FiCpu className="w-3.5 h-3.5" />;
+      case 'gemma-3':
+        return <FiZap className="w-3.5 h-3.5" />;
+      case 'gpt-oss-20b':
+        return <FiSliders className="w-3.5 h-3.5" />;
+      case 'gemini':
+        return <FiShield className="w-3.5 h-3.5" />;
+      default:
+        return <FiCpu className="w-3.5 h-3.5" />;
+    }
+  };
+
   // 格式化階段名稱 - 使用專案統一的階段名稱（包含階段編號）
   const formatStageName = (stage) => {
     if (!stage) return null;
@@ -259,7 +276,7 @@ const LogCard = ({
           )}
         </div>
 
-          {/* AI Analysis Button for 5Rs */}
+          {/* AI Analysis Section for 5Rs */}
           {showAIAnalysis && is5Rs && (() => {
             const parsed = parse5RsContent(item.content);
             const hasAIFeedback = parsed?.feedback && (
@@ -267,20 +284,41 @@ const LogCard = ({
               parsed.feedback.suggestions?.length > 0
             );
             
-            if (!hasAIFeedback) {
-              return (
-                <div className="mb-2">
-                  <button
-                    onClick={() => onRequestAIAnalysis(item)}
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-2 px-4 rounded transition-all duration-fast text-body-sm sm:text-body mb-2 flex items-center justify-center shadow-sm hover:shadow-md"
-                  >
-                    <AiOutlineRobot className="w-4 h-4 mr-2" />
-                    請求 AI 分析
-                  </button>
+            return (
+              <div className="mb-3 p-component-sm bg-gradient-to-br from-purple-50/80 to-pink-50/80 border border-purple-200/50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <AiOutlineRobot className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                  <span className="text-caption font-semibold text-purple-900">AI 智能分析</span>
+                  {hasAIFeedback && (
+                    <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
+                      已分析
+                    </span>
+                  )}
+                  <div className="flex-1 flex items-center gap-2">
+                    <div className="flex items-center gap-1 text-purple-700">
+                      {getProviderIcon(selectedProvider)}
+                    </div>
+                    <select
+                      value={selectedProvider}
+                      onChange={(e) => setSelectedProvider(e.target.value)}
+                      className="flex-1 text-caption border border-purple-300/50 rounded px-2 py-0.5 bg-white/80 focus:outline-none focus:ring-1 focus:ring-purple-400 focus:bg-white transition-colors"
+                    >
+                      <option value="auto">自動選擇</option>
+                      <option value="gemma-3">Gemma-3 (推薦)</option>
+                      <option value="gpt-oss-20b">GPT-OSS-20b (均衡)</option>
+                      <option value="gemini">Gemini-2.5-flash</option>
+                    </select>
+                  </div>
                 </div>
-              );
-            }
-            return null;
+                <button
+                  onClick={() => onRequestAIAnalysis(item, selectedProvider)}
+                  className="w-full bg-white hover:bg-purple-50 text-purple-700 border-2 border-purple-300 hover:border-purple-400 py-1.5 px-3 rounded-md transition-all duration-fast text-caption font-medium flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <AiOutlineRobot className="w-3.5 h-3.5" />
+                  <span>{hasAIFeedback ? '重新分析' : '開始分析'}</span>
+                </button>
+              </div>
+            );
           })()}
 
           {/* Edit/View Button */}

@@ -37,7 +37,7 @@ export function FiveRsModal({
       onClose={onCancel}
       opacity={true}
       position={"justify-center items-center"}
-      custom="w-11/12 md:w-3/4 lg:w-[60vw] max-w-none"
+      custom="w-11/12 md:w-3/4 lg:w-[52vw] max-w-4xl"
     >
       <div className="w-full h-[80vh] flex flex-col relative">
         <button

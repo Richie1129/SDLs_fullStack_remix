@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { FiFileText, FiStar, FiInfo, FiCheckCircle } from 'react-icons/fi';
+import { FiInfo, FiCheckCircle } from 'react-icons/fi';
 import { STAGE_NAMES } from '@/pages/submit/config/guidedQuestionsConfig';
 
 /**
@@ -34,11 +34,11 @@ export default function StageSelector({
   });
 
   return (
-    <div className="mb-4">
-      <label className="block font-medium text-body-sm mb-2 text-gray-700">
+    <div>
+      <label className="block font-semibold text-body text-gray-800 mb-2">
         關聯階段 
-        <span className="text-gray-400 text-caption ml-1">
-          （選填，可幫助回顧特定階段的反思）
+        <span className="text-gray-400 text-caption font-normal ml-1">
+          （選填）
         </span>
       </label>
       
@@ -48,17 +48,15 @@ export default function StageSelector({
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
           className={`
-            w-full px-3 py-2 text-body-sm
-            border rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-customgreen focus:border-transparent
+            w-full px-4 py-2.5 text-body-sm
+            border rounded-lg appearance-none
+            focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent
             transition-all duration-fast
-            ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-white'}
+            ${disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-gray-50 focus:bg-white'}
             ${value ? 'text-gray-900' : 'text-gray-500'}
           `}
         >
-          <option value="">
-            {recommendedStage ? '無特定階段（通用反思）' : '無特定階段（通用反思）'}
-          </option>
+          <option value="">無特定階段</option>
           
           {Object.entries(stageGroups).map(([stageNum, group]) => (
             <optgroup key={stageNum} label={group.name}>
@@ -71,28 +69,34 @@ export default function StageSelector({
           ))}
         </select>
         
-        {/* 智能推薦提示 */}
+        {/* Dropdown arrow */}
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+        
+        {/* 智能推薦提示 - 更簡潔 */}
         {recommendedStage && !value && (
-          <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-caption text-blue-700">
-              <FiInfo className="w-3.5 h-3.5 inline mr-1" /><strong>智能推薦：</strong>根據目前進度，建議記錄 
-              <button
-                type="button"
-                onClick={() => onChange(recommendedStage)}
-                className="ml-1 text-blue-600 font-medium hover:underline"
-              >
-                {recommendedStage} {STAGE_NAMES[recommendedStage]}
-              </button>
-              的反思
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={() => onChange(recommendedStage)}
+            className="mt-2 w-full px-3 py-2 text-caption text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-fast group"
+          >
+            <span className="text-blue-700">
+              <FiInfo className="w-3.5 h-3.5 inline mr-1.5" />
+              <span className="font-medium">推薦：</span>
+              <span className="group-hover:underline">{recommendedStage} {STAGE_NAMES[recommendedStage]}</span>
+            </span>
+          </button>
         )}
         
-        {/* 已選擇階段的說明 */}
+        {/* 已選擇階段 - 更簡潔 */}
         {value && (
-          <div className="mt-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-caption text-green-700">
-              <FiCheckCircle className="w-3.5 h-3.5 inline mr-1 text-green-600" />此反思將關聯到「{value} {STAGE_NAMES[value]}」階段
+          <div className="mt-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg">
+            <p className="text-caption text-teal-700">
+              <FiCheckCircle className="w-3.5 h-3.5 inline mr-1" />
+              已關聯：{value} {STAGE_NAMES[value]}
             </p>
           </div>
         )}
