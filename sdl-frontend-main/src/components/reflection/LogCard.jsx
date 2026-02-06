@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AiOutlineCloudDownload, AiOutlineRobot } from 'react-icons/ai';
-import { FiTrash2 } from 'react-icons/fi';
+import { FiTrash2, FiFlag, FiFileText } from 'react-icons/fi';
 import { formatTime } from '../../utils/timeUtils';
 import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.js';
 import FileDownload from 'js-file-download';
@@ -9,6 +9,7 @@ import { getAuditEvents } from '@/api/audit.js';
 import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
 import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 import { getCurrentUserId, getCurrentUserRole, isTeacher as checkIsTeacher } from '../../utils/authUtils';
+import { STAGE_NAMES } from '@/pages/submit/config/guidedQuestionsConfig';
 
 const LogCard = ({
   item,
@@ -143,6 +144,13 @@ const LogCard = ({
 
   const cardStyles = getCardStyles();
 
+  // 格式化階段名稱 - 使用專案統一的階段名稱（包含階段編號）
+  const formatStageName = (stage) => {
+    if (!stage) return null;
+    const stageName = STAGE_NAMES[stage] || '未知階段';
+    return `${stage} ${stageName}`;
+  };
+
   return (
     <motion.div
       key={index}
@@ -160,7 +168,21 @@ const LogCard = ({
           <h5 className={`text-body-lg sm:text-h3 font-bold ${cardStyles.titleClass} py-2`}>
             {item.title}
           </h5>
-          <div className="flex items-center gap-stack-xs">
+          <div className="flex items-center gap-stack-xs flex-wrap">
+            {/* 階段標籤 */}
+            {item.stage ? (
+              <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-caption font-medium rounded-full flex items-center">
+                <FiFlag className="w-3.5 h-3.5 mr-1" />
+                {formatStageName(item.stage)}
+              </span>
+            ) : (
+              <span className="px-2.5 py-1 bg-gray-100 text-gray-600 text-caption font-medium rounded-full flex items-center">
+                <FiFileText className="w-3.5 h-3.5 mr-1" />
+                通用反思
+              </span>
+            )}
+            
+            {/* 日誌類型標籤 */}
             {is5Rs && (
               <span className={`px-2.5 py-1 ${cardStyles.badgeClass} text-caption font-bold rounded-full flex items-center shadow-sm`}>
                 <svg className="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -175,6 +197,8 @@ const LogCard = ({
                 傳統日誌
               </span>
             )}
+            
+            {/* 刪除按鈕 */}
             {typeof onDelete === 'function' && canEdit && (
               <button
                 type="button"

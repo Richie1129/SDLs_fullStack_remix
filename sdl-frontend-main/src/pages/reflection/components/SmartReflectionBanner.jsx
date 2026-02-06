@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiTarget, FiInfo } from 'react-icons/fi';
 import { FaGraduationCap } from 'react-icons/fa';
+import { STAGE_NAMES } from '@/pages/submit/config/guidedQuestionsConfig';
 
 /**
  * 智能反思橫幅 - 根據使用者行為動態顯示提示
@@ -256,18 +257,10 @@ function BannerCard({
 }
 
 /**
- * 格式化階段名稱
+ * 格式化階段名稱 - 使用專案統一的階段名稱（包含階段編號）
  */
 function formatStage(stage) {
-  const stageMap = {
-    '1-1': '階段一之一：問題定義',
-    '1-2': '階段一之二：研究規劃',
-    '2-1': '階段二之一：資料蒐集',
-    '2-2': '階段二之二：資料分析',
-    '3-1': '階段三：知識建構',
-    '4-1': '階段四之一：成果展示',
-    '4-2': '階段四之二：成果分享',
-    '4-3': '階段四之三：專案總結',
-  };
-  return stageMap[stage] || `階段 ${stage}`;
+  if (!stage) return '未知階段';
+  const stageName = STAGE_NAMES[stage] || '未知階段';
+  return `${stage} ${stageName}`;
 }
