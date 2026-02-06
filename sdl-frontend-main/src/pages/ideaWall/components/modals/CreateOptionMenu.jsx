@@ -22,18 +22,19 @@ export default function CreateOptionMenu({
                 onClose={onCloseCreateOption} 
                 opacity={false} 
                 modalCoordinate={canvasPosition} 
-                custom={"w-25 h-12"}
+                custom={"w-28"}
+                enableScroll={false}
             >
-                <div>
+                <div className="flex flex-col">
                     <button 
                         onClick={onCreateIdea} 
-                        className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'
+                        className='w-full p-component-sm rounded-t-md bg-white hover:bg-gray-100 text-ui font-medium transition-colors duration-fast border-b border-gray-200'
                     >
                         建立想法
                     </button>
                     <button 
                         onClick={onCloseCreateOption} 
-                        className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'
+                        className='w-full p-component-sm rounded-b-md bg-white hover:bg-gray-100 text-ui text-gray-600 transition-colors duration-fast'
                     >
                         取消
                     </button>
@@ -46,18 +47,19 @@ export default function CreateOptionMenu({
                 onClose={onCloseBuildOnOption} 
                 opacity={false} 
                 modalCoordinate={canvasPosition} 
-                custom={"w-30 h-15"}
+                custom={"w-32"}
+                enableScroll={false}
             >
-                <div>
+                <div className="flex flex-col">
                     <button 
                         onClick={onExtendIdea} 
-                        className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'
+                        className='w-full p-component-sm rounded-t-md bg-white hover:bg-gray-100 text-ui font-medium transition-colors duration-fast border-b border-gray-200'
                     >
                         延伸想法
                     </button>
                     <button 
                         onClick={onCloseBuildOnOption} 
-                        className='w-full h-full p-component-xs rounded-md bg-white hover:bg-slate-100 text-body-sm'
+                        className='w-full p-component-sm rounded-b-md bg-white hover:bg-gray-100 text-ui text-gray-600 transition-colors duration-fast'
                     >
                         取消
                     </button>
