@@ -91,8 +91,16 @@ class ColumnHandler {
                 req: data._reqContext
             });
 
-            // 廣播創建成功事件
-            this.broadcastToProject(projectId, "ColumnCreatedSuccess", kanbanRow);
+            // 廣播創建成功事件（包含新列表資訊）
+            this.broadcastToProject(projectId, "ColumnCreatedSuccess", {
+                kanbanRow,
+                newColumn: {
+                    id: newColumn.id,
+                    name: newColumn.name,
+                    task: newColumn.task,
+                    order: kanbanRow.column.length - 1
+                }
+            });
 
             // 廣播活動更新
             this.broadcastToProject(projectId, "activityUpdate", {

@@ -40,7 +40,7 @@ export default function Kanban() {
   } = useKanbanData(projectId);
 
   const [viewConfig, setViewConfig] = useState({
-    filter: { keyword: '', assignee: [], label: '' }, // assignee 改為陣列支援多選
+    filter: { keyword: '', assignee: [], label: '', assigneeLogic: 'OR' }, // assigneeLogic: 'OR' | 'AND'
     groupBy: 'status', // 'status' | 'assignee'
     sortBy: null
   });
@@ -474,21 +474,64 @@ export default function Kanban() {
                     onClick={() => setShowMemberFilter(false)}
                   />
                   
-                  <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-20 border border-gray-200 overflow-hidden">
-                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-                      <span className="text-ui font-semibold text-gray-800">
-                        篩選成員
-                      </span>
-                      {viewConfig.filter?.assignee?.length > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            clearMemberFilter();
-                          }}
-                          className="text-caption text-customgreen hover:text-customgreen/80 font-medium"
-                        >
-                          清除全部
-                        </button>
+                  <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-lg shadow-xl z-20 border border-gray-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-ui font-semibold text-gray-800">
+                          篩選成員
+                        </span>
+                        {viewConfig.filter?.assignee?.length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearMemberFilter();
+                            }}
+                            className="text-caption text-customgreen hover:text-customgreen/80 font-medium"
+                          >
+                            清除全部
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* AND/OR 切換 - 只在選擇多個成員時顯示 */}
+                      {viewConfig.filter?.assignee?.length > 1 && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-caption text-gray-600">篩選邏輯:</span>
+                          <div className="flex bg-white border border-gray-200 rounded p-0.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewConfig(prev => ({
+                                  ...prev,
+                                  filter: { ...prev.filter, assigneeLogic: 'OR' }
+                                }));
+                              }}
+                              className={`px-2 py-1 rounded text-caption font-medium transition-colors duration-fast ${
+                                viewConfig.filter?.assigneeLogic === 'OR'
+                                  ? 'bg-customgreen text-white'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                              }`}
+                            >
+                              OR（任一）
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewConfig(prev => ({
+                                  ...prev,
+                                  filter: { ...prev.filter, assigneeLogic: 'AND' }
+                                }));
+                              }}
+                              className={`px-2 py-1 rounded text-caption font-medium transition-colors duration-fast ${
+                                viewConfig.filter?.assigneeLogic === 'AND'
+                                  ? 'bg-customgreen text-white'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                              }`}
+                            >
+                              AND（所有）
+                            </button>
+                          </div>
+                        </div>
                       )}
                     </div>
                     
@@ -527,7 +570,7 @@ export default function Kanban() {
               <button
                 onClick={() => setViewConfig(prev => ({
                   ...prev,
-                  filter: { keyword: '', assignee: [], label: '' }
+                  filter: { keyword: '', assignee: [], label: '', assigneeLogic: 'OR' }
                 }))}
                 className="px-3 py-2 text-ui text-gray-600 hover:text-gray-800 font-medium transition-colors duration-fast flex items-center gap-1"
                 title="清除所有篩選"

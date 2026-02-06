@@ -67,6 +67,18 @@ class TaskHandler {
 
         try {
             const columnId = kanbanData[selectedcolumn]?.id;
+            
+            if (!columnId) {
+                console.error(`❌ 任務創建失敗: 找不到列表 (selectedcolumn: ${selectedcolumn})`);
+                console.error('kanbanData:', kanbanData?.map(col => ({ id: col.id, name: col.name })));
+                this.emitError('taskItemCreated', {
+                    message: '找不到目標列表',
+                    code: 'COLUMN_NOT_FOUND'
+                });
+                return;
+            }
+
+            console.log(`📝 Creating task "${item.title}" in column ${columnId} (index: ${selectedcolumn})`);
 
             // 創建任務
             const createdTask = await Task.create({

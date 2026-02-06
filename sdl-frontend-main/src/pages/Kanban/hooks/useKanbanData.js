@@ -251,74 +251,119 @@ export const useKanbanData = (projectId) => {
     });
   }, [kanbanData, projectId, queryClient]);
 
-  const addPhaseTemplate = useCallback((columnsToAdd) => {
-    console.log(`🚀 Optimistically creating multiple columns from template`, columnsToAdd);
+  const addPhaseTemplate = useCallback(async (columnsToAdd) => {
+    console.log(`🚀 Creating ${columnsToAdd.length} columns from template`);
     
     const username = getCurrentUsername();
     const userId = getCurrentUserId();
     
+    // 1. 樂觀更新本地狀態（顯示載入中的列表）
     let currentKanbanData = [...kanbanData];
-    const newColumns = [];
+    const optimisticColumns = columnsToAdd.map((colTemplate, idx) => ({
+      id: `temp-col-${Date.now()}-${idx}`,
+      name: colTemplate.title,
+      task: [],
+      order: currentKanbanData.length + idx,
+      isLoading: true // 標記為載入中
+    }));
 
-    // 1. Update Local State Optimistically
-    columnsToAdd.forEach((colTemplate, idx) => {
-      const optimisticColumn = {
-        id: `temp-col-${Date.now()}-${idx}`,
-        name: colTemplate.title,
-        task: colTemplate.defaultCards ? colTemplate.defaultCards.map((card, cIdx) => ({
-          id: `temp-card-${Date.now()}-${idx}-${cIdx}`,
-          title: card.title,
-          content: card.content || '',
-          labels: [],
-          assignees: [],
-          createdAt: new Date().toISOString(),
-          createdBy: username
-        })) : [],
-        order: currentKanbanData.length + idx
-      };
-      newColumns.push(optimisticColumn);
-    });
-
-    const updatedKanbanData = [...currentKanbanData, ...newColumns];
+    const updatedKanbanData = [...currentKanbanData, ...optimisticColumns];
     setKanbanData(updatedKanbanData);
     queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
 
-    // 2. Emit Socket Events Sequentially
-    // Note: We rely on the server processing these in order.
-    // Since we don't have a bulk create API, we fire individual events.
-    newColumns.forEach((col, idx) => {
-      // A. Create Column
-      socket.emit("ColumnCreated", {
-        eventType: 'columnCreate',
-        projectId,
-        newGroupName: col.name,
-        user: { username, id: userId }
-      });
-
-      // B. Create Tasks (if any)
-      // We assume the column index is (original_length + idx)
-      // This is fragile if other users are adding columns simultaneously, 
-      // but acceptable for this "Good Taste" refactor step.
-      const targetColumnIndex = kanbanData.length + idx;
+    // 2. 依序創建列表並等待真實 ID
+    const createdColumns = [];
+    
+    for (let idx = 0; idx < columnsToAdd.length; idx++) {
+      const colTemplate = columnsToAdd[idx];
+      const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      if (col.task && col.task.length > 0) {
-        col.task.forEach(task => {
-          socket.emit("taskItemCreated", {
-            eventType: 'taskItemCreated',
-            selectedcolumn: targetColumnIndex,
-            item: {
-              title: task.title,
-              content: task.content || "",
-              labels: [],
-              assignees: []
-            },
-            kanbanData: updatedKanbanData, // Pass the *updated* data context if needed by server logic
+      try {
+        // A. 創建列表並等待回傳
+        const realColumnId = await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            socket.off('ColumnCreatedSuccess', successHandler);
+            reject(new Error('Column creation timeout'));
+          }, 10000);
+          
+          // 監聽列表創建成功事件
+          const successHandler = (data) => {
+            // 檢查是否為本次請求的回應（比對列表名稱）
+            if (data?.newColumn?.name === colTemplate.title) {
+              clearTimeout(timeout);
+              socket.off('ColumnCreatedSuccess', successHandler);
+              resolve(data.newColumn.id);
+            }
+          };
+          
+          socket.on('ColumnCreatedSuccess', successHandler);
+          
+          // 發送創建列表事件
+          socket.emit("ColumnCreated", {
+            eventType: 'columnCreate',
             projectId,
+            newGroupName: colTemplate.title,
+            requestId,
             user: { username, id: userId }
           });
         });
+
+        console.log(`✅ Column created: ${colTemplate.title} (ID: ${realColumnId})`);
+        createdColumns.push({ id: realColumnId, template: colTemplate });
+
+        // B. 如果有預設卡片，創建任務
+        if (colTemplate.defaultCards && colTemplate.defaultCards.length > 0) {
+          console.log(`📝 Creating ${colTemplate.defaultCards.length} default cards for "${colTemplate.title}"`);
+          
+          // 等待一小段時間確保後端資料同步
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // 重新查詢最新的 kanbanData
+          await queryClient.invalidateQueries(['kanbanDatas', projectId]);
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          const latestKanbanData = queryClient.getQueryData(['kanbanDatas', projectId]) || kanbanData;
+          const columnIndex = latestKanbanData.findIndex(col => col.id === realColumnId);
+          
+          console.log(`🔍 Found column at index ${columnIndex} for ID ${realColumnId}`);
+          
+          if (columnIndex !== -1) {
+            for (let cardIdx = 0; cardIdx < colTemplate.defaultCards.length; cardIdx++) {
+              const card = colTemplate.defaultCards[cardIdx];
+              
+              console.log(`📤 Emitting taskItemCreated for: ${card.title}`);
+              
+              socket.emit("taskItemCreated", {
+                eventType: 'taskItemCreated',
+                selectedcolumn: columnIndex,
+                item: {
+                  title: card.title,
+                  content: card.content || "",
+                  labels: [],
+                  assignees: []
+                },
+                kanbanData: latestKanbanData,
+                projectId,
+                user: { username, id: userId }
+              });
+              
+              // 延遲避免任務創建順序錯亂
+              await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            console.log(`✅ Created ${colTemplate.defaultCards.length} cards for "${colTemplate.title}"`);
+          } else {
+            console.error(`❌ Cannot find column index for ID ${realColumnId}`);
+            console.log('Current kanbanData:', latestKanbanData.map(col => ({ id: col.id, name: col.name })));
+          }
+        }
+
+      } catch (error) {
+        console.error(`❌ Failed to create column: ${colTemplate.title}`, error);
+        // 即使單個列表失敗，繼續創建其他列表
       }
-    });
+    }
+
+    console.log(`✅ Template creation completed. ${createdColumns.length}/${columnsToAdd.length} columns created.`);
 
   }, [kanbanData, projectId, queryClient]);
 

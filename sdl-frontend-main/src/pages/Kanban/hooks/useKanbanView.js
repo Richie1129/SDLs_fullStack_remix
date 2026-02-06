@@ -29,15 +29,29 @@ export const useKanbanView = (kanbanData, viewConfig) => {
             return false;
           }
 
-          // Assignee filter (支援單選和多選)
+          // Assignee filter (支援單選和多選，支援 AND/OR 邏輯)
           if (assignee) {
-            // 如果 assignee 是陣列且有值，檢查任務的 assignees 是否包含任一選中的成員
+            // 如果 assignee 是陣列且有值
             if (Array.isArray(assignee) && assignee.length > 0) {
-              const hasMatchingAssignee = task.assignees?.some(a => 
-                assignee.includes(a.username)
-              );
-              if (!hasMatchingAssignee) {
-                return false;
+              const assigneeLogic = viewConfig.filter.assigneeLogic || 'OR';
+              const taskAssigneeUsernames = task.assignees?.map(a => a.username) || [];
+              
+              if (assigneeLogic === 'AND') {
+                // AND 邏輯：任務必須包含所有選中的成員
+                const hasAllAssignees = assignee.every(username => 
+                  taskAssigneeUsernames.includes(username)
+                );
+                if (!hasAllAssignees) {
+                  return false;
+                }
+              } else {
+                // OR 邏輯（預設）：任務包含任一選中的成員
+                const hasAnyAssignee = assignee.some(username => 
+                  taskAssigneeUsernames.includes(username)
+                );
+                if (!hasAnyAssignee) {
+                  return false;
+                }
               }
             }
             // 向下兼容：如果 assignee 是字串（舊版單選）
