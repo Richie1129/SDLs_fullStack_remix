@@ -183,16 +183,16 @@ export function CardDetailModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} opacity={true} position={"justify-center items-center"} custom={"w-11/12 sm:w-5/6 lg:w-3/4 xl:w-2/3 p-0"}>
-        <div className='flex flex-col lg:flex-row w-full lg:max-h-[80vh] relative'>
+      <Modal open={open} onClose={onClose} opacity={true} position={"justify-center items-center"} custom={"w-11/12 sm:w-5/6 md:w-4/5 lg:w-3/4 xl:w-2/3 2xl:w-3/5 max-w-6xl p-0"}>
+        <div className='flex flex-col lg:flex-row w-full lg:max-h-[85vh] relative'>
           <button 
             onClick={onClose} 
-            className="absolute top-2 right-2 z-50 p-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm"
+            className="absolute top-2 right-2 z-50 p-1 rounded-lg bg-gray-100 hover:bg-gray-200 shadow-sm transition-colors duration-fast"
           >
             <GrFormClose className="w-6 h-6" />
           </button>
           {/* 左側：卡片編輯區 */}
-          <div className='w-full lg:w-2/3 p-component-base sm:p-component-md-lg lg:p-component-lg lg:max-h-[80vh] lg:overflow-y-auto'>
+          <div className='w-full lg:w-2/3 p-component-base sm:p-component-md-lg lg:p-component-lg lg:max-h-[85vh] lg:overflow-y-auto'>
             {/* 標籤頁導航 */}
             <div className='flex border-b border-gray-200 mb-4'>
               <button
@@ -286,25 +286,26 @@ export function CardDetailModal({
                   isObservationMode={!permissions.canEdit}
                 />
 
-                <div className='flex justify-end mt-4 space-x-stack-xs sticky bottom-0 bg-white/95 backdrop-blur-sm p-component-base -mx-4 sm:-mx-6 lg:-mx-8 -mb-4 sm:-mb-6 lg:-mb-8 border-t border-gray-100 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]'>
+                {/* 底部按鈕區域 */}
+                <div className='flex justify-end gap-stack-xs pt-stack-md mt-stack-md border-t border-gray-200'>
                   {permissions.canDelete && (
                     <button
                       onClick={cardHandleDelete}
-                      className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+                      className="px-btn-x py-btn-y bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-fast font-medium"
                     >
                       刪除
                     </button>
                   )}
                   <button
                     onClick={onClose}
-                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
+                    className="px-btn-x py-btn-y bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-fast font-medium"
                   >
                     {permissions.canEdit ? '取消' : '關閉'}
                   </button>
                   {permissions.canEdit && (
                     <button
                       onClick={cardHandleSubmit}
-                      className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-200"
+                      className="px-btn-x py-btn-y bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-fast font-medium"
                     >
                       儲存
                     </button>

@@ -383,66 +383,101 @@ export default function Kanban() {
       
       <div className="flex-1 min-h-0 p-component-base sm:p-component-md-lg lg:p-component-lg overflow-visible md:overflow-hidden flex flex-col">
         
-        {/* View Controls Toolbar */}
-        <div className="flex flex-wrap items-center gap-stack-sm mb-4 p-component-sm bg-gray-50 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-stack-xs">
-            <span className="text-body-sm font-medium text-gray-600">搜尋:</span>
-            <input
-              type="text"
-              placeholder="輸入標題關鍵字..."
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-body-sm focus:outline-none focus:ring-2 focus:ring-[#5BA491]"
-              value={viewConfig.filter?.keyword || ''}
-              onChange={(e) => setViewConfig(prev => ({
-                ...prev,
-                filter: { ...prev.filter, keyword: e.target.value }
-              }))}
-            />
-          </div>
-
-          <div className="flex items-center gap-stack-xs">
-            <span className="text-body-sm font-medium text-gray-600">分組:</span>
-            <select
-              className="px-3 py-1.5 border border-gray-300 rounded-md text-body-sm focus:outline-none focus:ring-2 focus:ring-[#5BA491]"
-              value={viewConfig.groupBy}
-              onChange={(e) => setViewConfig(prev => ({
-                ...prev,
-                groupBy: e.target.value
-              }))}
+        {/* View Controls Toolbar - 改良版 */}
+        <div className="flex items-center justify-between mb-stack-sm">
+          {/* 左側: 分組 Tab */}
+          <div className="flex items-center gap-stack-xs bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+            <button
+              onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'status' }))}
+              className={`px-btn-x py-2 rounded-md text-ui font-medium transition-colors duration-fast ${
+                viewConfig.groupBy === 'status'
+                  ? 'bg-customgreen text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
             >
-              <option value="status">狀態 (預設)</option>
-              <option value="assignee">負責人</option>
-            </select>
+              依狀態
+            </button>
+            <button
+              onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'assignee' }))}
+              className={`px-btn-x py-2 rounded-md text-ui font-medium transition-colors duration-fast ${
+                viewConfig.groupBy === 'assignee'
+                  ? 'bg-customgreen text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              依負責人
+            </button>
           </div>
 
-          <div className="flex items-center gap-stack-xs relative">
-            <span className="text-body-sm font-medium text-gray-600">成員:</span>
+          {/* 右側: 搜尋與篩選工具 */}
+          <div className="flex items-center gap-stack-xs">
+            {/* 搜尋框 */}
+            <div className="relative">
+              <svg 
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="搜尋任務..."
+                className="pl-9 pr-3 py-2 w-48 border border-gray-300 rounded-lg text-ui bg-white focus:outline-none focus:ring-2 focus:ring-customgreen focus:border-transparent transition-shadow duration-fast placeholder:text-gray-400"
+                value={viewConfig.filter?.keyword || ''}
+                onChange={(e) => setViewConfig(prev => ({
+                  ...prev,
+                  filter: { ...prev.filter, keyword: e.target.value }
+                }))}
+              />
+              {viewConfig.filter?.keyword && (
+                <button
+                  onClick={() => setViewConfig(prev => ({
+                    ...prev,
+                    filter: { ...prev.filter, keyword: '' }
+                  }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* 成員篩選按鈕 */}
             <div className="relative">
               <button
-                className="px-3 py-1.5 border border-gray-300 rounded-md text-body-sm focus:outline-none focus:ring-2 focus:ring-[#5BA491] bg-white hover:bg-gray-50 flex items-center gap-2 min-w-[120px] justify-between"
                 onClick={() => setShowMemberFilter(!showMemberFilter)}
+                className={`relative px-3 py-2 border rounded-lg text-ui font-medium transition-all duration-fast flex items-center gap-2 ${
+                  viewConfig.filter?.assignee?.length > 0
+                    ? 'border-customgreen bg-customgreen/10 text-customgreen'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
               >
-                <span>
-                  {viewConfig.filter?.assignee?.length > 0
-                    ? `${viewConfig.filter.assignee.length} 位成員`
-                    : '所有成員'}
-                </span>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
+                成員
+                {viewConfig.filter?.assignee?.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-customgreen text-white text-caption rounded-full font-semibold min-w-[20px] text-center">
+                    {viewConfig.filter.assignee.length}
+                  </span>
+                )}
               </button>
               
               {showMemberFilter && (
                 <>
-                  {/* 點擊外部關閉 */}
                   <div 
                     className="fixed inset-0 z-10" 
                     onClick={() => setShowMemberFilter(false)}
                   />
                   
-                  <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-md shadow-lg z-20 border border-gray-200 py-2 max-h-80 overflow-y-auto">
-                    <div className="px-3 py-2 border-b border-gray-200 flex justify-between items-center">
-                      <span className="text-body-sm font-semibold text-gray-700">
-                        選擇成員 ({viewConfig.filter?.assignee?.length || 0}/{allAssignees.length})
+                  <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-20 border border-gray-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                      <span className="text-ui font-semibold text-gray-800">
+                        篩選成員
                       </span>
                       {viewConfig.filter?.assignee?.length > 0 && (
                         <button
@@ -450,32 +485,32 @@ export default function Kanban() {
                             e.stopPropagation();
                             clearMemberFilter();
                           }}
-                          className="text-caption text-[#5BA491] hover:text-[#5BA491]/80"
+                          className="text-caption text-customgreen hover:text-customgreen/80 font-medium"
                         >
-                          清除
+                          清除全部
                         </button>
                       )}
                     </div>
                     
                     {allAssignees.length === 0 ? (
-                      <div className="px-3 py-4 text-center text-body-sm text-gray-500">
+                      <div className="px-4 py-8 text-center text-ui text-gray-500">
                         暫無成員資料
                       </div>
                     ) : (
-                      <div className="py-1">
+                      <div className="py-2 max-h-80 overflow-y-auto">
                         {allAssignees.map(member => (
                           <label
                             key={member.id}
-                            className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                            className="flex items-center px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors duration-fast"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <input
                               type="checkbox"
-                              className="h-4 w-4 text-[#5BA491] focus:ring-[#5BA491] border-gray-300 rounded"
+                              className="h-4 w-4 text-customgreen focus:ring-customgreen border-gray-300 rounded cursor-pointer"
                               checked={viewConfig.filter?.assignee?.includes(member.username) || false}
                               onChange={() => toggleMemberSelection(member.username)}
                             />
-                            <span className="ml-3 text-body-sm text-gray-700">
+                            <span className="ml-3 text-ui text-gray-700">
                               {member.username}
                             </span>
                           </label>
@@ -486,6 +521,23 @@ export default function Kanban() {
                 </>
               )}
             </div>
+
+            {/* 清除所有篩選按鈕 - 只在有篩選時顯示 */}
+            {(viewConfig.filter?.keyword || viewConfig.filter?.assignee?.length > 0) && (
+              <button
+                onClick={() => setViewConfig(prev => ({
+                  ...prev,
+                  filter: { keyword: '', assignee: [], label: '' }
+                }))}
+                className="px-3 py-2 text-ui text-gray-600 hover:text-gray-800 font-medium transition-colors duration-fast flex items-center gap-1"
+                title="清除所有篩選"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                清除篩選
+              </button>
+            )}
           </div>
         </div>
 

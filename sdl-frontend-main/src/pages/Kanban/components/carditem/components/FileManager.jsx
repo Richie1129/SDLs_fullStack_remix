@@ -35,7 +35,7 @@ export function FileManager({
   isObservationMode = false
 }) {
   return (
-    <div className='flex flex-col w-full mt-6'>
+    <div className='flex flex-col w-full mt-6 mb-stack-md'>
       <div className='flex items-center justify-between mb-2'>
         <div className='flex items-center space-x-stack-xs'>
           <h3 className='text-body-lg font-semibold text-gray-800'>檔案管理</h3>
@@ -64,17 +64,17 @@ export function FileManager({
         <FiInfo className="w-3.5 h-3.5 inline mr-1" /> 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
       </p>
 
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-stack-md'>
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-stack-sm'>
         {/* Images Section */}
-        <div className='bg-white rounded-xl border border-gray-100 p-component-base'>
+        <div className='bg-gray-50 rounded-lg border border-gray-200 p-component-sm'>
           <div className='flex items-center justify-between mb-3'>
-            <h4 className='text-body font-medium text-gray-700'>圖片</h4>
+            <h4 className='text-ui font-semibold text-gray-800'>圖片</h4>
             {cardData.images?.length > 0 && (
-              <span className='text-body-sm text-gray-500'>{cardData.images.length} 張</span>
+              <span className='text-caption text-gray-500'>{cardData.images.length} 張</span>
             )}
           </div>
           {cardData.images && cardData.images.length > 0 ? (
-            <div className='grid grid-cols-2 sm:grid-cols-3 gap-3'>
+            <div className='grid grid-cols-2 gap-stack-xs'>
               {cardData.images.map((image, index) => (
                 <div key={index} className='relative aspect-square group'>
                   <img
@@ -119,15 +119,15 @@ export function FileManager({
         </div>
 
         {/* Files Section */}
-        <div className='bg-white rounded-xl border border-gray-100 p-component-base'>
+        <div className='bg-gray-50 rounded-lg border border-gray-200 p-component-sm'>
           <div className='flex items-center justify-between mb-3'>
-            <h4 className='text-body font-medium text-gray-700'>檔案</h4>
+            <h4 className='text-ui font-semibold text-gray-800'>檔案</h4>
             {cardData.files?.length > 0 && (
-              <span className='text-body-sm text-gray-500'>{cardData.files.length} 個</span>
+              <span className='text-caption text-gray-500'>{cardData.files.length} 個</span>
             )}
           </div>
           {cardData.files && cardData.files.length > 0 ? (
-            <div className='space-y-stack-xs max-h-[300px] overflow-y-auto'>
+            <div className='space-y-stack-xs max-h-[280px] overflow-y-auto scrollbar-thin'>
               {cardData.files.map((file, index) => (
                 <div
                   key={index}
