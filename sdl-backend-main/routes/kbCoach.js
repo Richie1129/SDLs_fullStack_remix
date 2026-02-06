@@ -31,6 +31,16 @@ router.post('/feedback', kbCoachController.saveFeedback);
 router.get('/feedback/stats', kbCoachController.getFeedbackStats);
 
 // ============================================================================
+// 歷史記錄端點
+// ============================================================================
+
+// 查詢歷史記錄列表
+router.get('/history', kbCoachController.getHistory);
+
+// 查詢單筆歷史記錄詳情
+router.get('/history/:id', kbCoachController.getHistoryDetail);
+
+// ============================================================================
 // Phase 2 新增端點：查詢 Orchestrator 狀態
 // ============================================================================
 

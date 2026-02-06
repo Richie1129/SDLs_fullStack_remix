@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { FiCpu, FiTool, FiLink, FiPlusCircle, FiThumbsUp, FiThumbsDown, FiLoader } from 'react-icons/fi';
+import { FiCpu, FiTool, FiLink, FiPlusCircle, FiThumbsUp, FiThumbsDown, FiLoader, FiClock, FiX, FiCheck } from 'react-icons/fi';
 import { FaGavel } from 'react-icons/fa';
 import apiClient from '../../../api/client';
 import ReactMarkdown from 'react-markdown';
@@ -20,6 +20,9 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
     const [showThinking, setShowThinking] = useState(false);
     const [feedbackGiven, setFeedbackGiven] = useState(false); // Phase 3: 追蹤是否已給過回饋
     const [responseId, setResponseId] = useState(null); // 用於追蹤特定回應
+    const [showHistory, setShowHistory] = useState(false); // 顯示歷史記錄面板
+    const [history, setHistory] = useState([]); // 歷史記錄列表
+    const [historyLoading, setHistoryLoading] = useState(false); // 歷史記錄載入狀態
 
     // 當節點變更時，清空舊狀態
     useEffect(() => {
@@ -28,6 +31,8 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
         setShowThinking(false);
         setFeedbackGiven(false);
         setResponseId(null);
+        setShowHistory(false);
+        setHistory([]);
     }, [nodeInfo.id]);
 
     // Phase 3: 如果有建議的 Agent 類型，自動觸發
@@ -40,6 +45,42 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
             return () => clearTimeout(timer);
         }
     }, [suggestedAgent]);
+
+    /**
+     * 載入歷史記錄
+     */
+    const loadHistory = async () => {
+        try {
+            setHistoryLoading(true);
+            const response = await apiClient.get('/kb-coach/history', {
+                params: {
+                    nodeId: nodeInfo.id,
+                    limit: 10
+                }
+            });
+            setHistory(response.data.histories || []);
+            setShowHistory(true);
+        } catch (error) {
+            console.error('Error loading history:', error);
+            toast.error('載入歷史記錄失敗');
+        } finally {
+            setHistoryLoading(false);
+        }
+    };
+
+    /**
+     * 檢視特定歷史記錄
+     */
+    const viewHistoryItem = (item) => {
+        setCoaching({
+            thinkingProcess: item.thinkingProcess,
+            content: item.responseContent,
+            suggestedActions: item.suggestedActions || []
+        });
+        setActiveAgent(item.agentType);
+        setShowHistory(false);
+        toast.success(`已載入 ${item.agentType} 的歷史建議`);
+    };
 
     /**
      * 取得相關節點上下文 (Client-side fallback)
@@ -137,7 +178,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
         <div className="p-component-md-lg bg-white rounded-lg shadow-lg max-w-3xl max-h-[80vh] overflow-y-auto flex flex-col h-full">
             {/* 標題 */}
             <div className="mb-4 pb-4 border-b flex justify-between items-center">
-                <div>
+                <div className="flex-1">
                     <h3 className="text-h3 font-bold text-gray-800 flex items-center">
                         <FiCpu className="w-6 h-6 mr-2 text-[#5BA491]" />
                         AI 協作夥伴
@@ -146,9 +187,24 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                         選擇一位夥伴來協助你深化想法
                     </p>
                 </div>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                    ✕
-                </button>
+                <div className="flex items-center gap-stack-xs">
+                    <button 
+                        onClick={loadHistory}
+                        disabled={historyLoading}
+                        className="px-3 py-1.5 text-body-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition flex items-center"
+                        title="查看歷史記錄"
+                    >
+                        {historyLoading ? (
+                            <FiLoader className="w-4 h-4 animate-spin mr-1" />
+                        ) : (
+                            <FiClock className="w-4 h-4 mr-1" />
+                        )}
+                        歷史
+                    </button>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-h2">
+                        <FiX className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
 
             {/* 原始想法摘要 */}
@@ -200,6 +256,65 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                     <div className="text-caption opacity-80">挑戰既有觀點</div>
                 </button>
             </div>
+
+            {/* 歷史記錄面板 */}
+            {showHistory && (
+                <div className="mb-6 p-component-md bg-gray-50 rounded-xl border border-gray-200">
+                    <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-body font-bold text-gray-700 flex items-center">
+                            <FiClock className="w-5 h-5 mr-2" />
+                            歷史記錄
+                        </h4>
+                        <button 
+                            onClick={() => setShowHistory(false)}
+                            className="text-caption text-gray-400 hover:text-gray-600"
+                        >
+                            收起
+                        </button>
+                    </div>
+                    
+                    {history.length === 0 ? (
+                        <p className="text-body-sm text-gray-500 text-center py-4">
+                            目前沒有歷史記錄
+                        </p>
+                    ) : (
+                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                            {history.map((item, idx) => (
+                                <div 
+                                    key={item.id}
+                                    onClick={() => viewHistoryItem(item)}
+                                    className="p-component-sm bg-white rounded-lg border border-gray-200 hover:border-[#5BA491] hover:shadow-sm transition cursor-pointer"
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-2 py-0.5 rounded text-caption font-medium ${
+                                                item.agentType === 'IMPROVER' ? 'bg-blue-100 text-blue-700' :
+                                                item.agentType === 'SYNTHESIZER' ? 'bg-purple-100 text-purple-700' :
+                                                'bg-red-100 text-red-700'
+                                            }`}>
+                                                {item.agentType === 'IMPROVER' ? '改進者' : 
+                                                 item.agentType === 'SYNTHESIZER' ? '綜合者' : '魔鬼代言人'}
+                                            </span>
+                                            <span className="text-caption text-gray-400">{item.model}</span>
+                                        </div>
+                                        <span className="text-caption text-gray-400">
+                                            {new Date(item.timestamp).toLocaleDateString('zh-TW', { 
+                                                month: 'short', 
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            })}
+                                        </span>
+                                    </div>
+                                    <p className="text-body-sm text-gray-600 line-clamp-2">
+                                        {item.responseContent.substring(0, 100)}...
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Loading State */}
             {isLoading && (
@@ -278,7 +393,8 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                                 </div>
                             ) : (
                                 <span className="text-body-sm text-green-600 flex items-center">
-                                    <span className="mr-1">✓</span> 感謝回饋！
+                                    <FiCheck className="w-4 h-4 mr-1" />
+                                    感謝回饋！
                                 </span>
                             )}
                         </div>

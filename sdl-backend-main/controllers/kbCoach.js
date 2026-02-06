@@ -7,19 +7,36 @@
  * 設計哲學：
  * - "好品味"：統一的 AgentFactory 與 Schema，避免重複代碼
  * - 實用主義：Phase 1 僅實作手動觸發，為自動化鋪路
+ * - 智能 Fallback：GPT-OSS-20b → Gemma-3 → Gemini 2.5 Flash
  */
 
 const { GoogleGenAI } = require('@google/genai');
+const axios = require('axios');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
 const Node = require('../models/node');
 const IdeaWall = require('../models/idea_wall');
 const AiFeedback = require('../models/ai_feedback');
+const KbCoachHistory = require('../models/kb_coach_history');
 const { Op } = require('sequelize');
 
 // 初始化Gemini客戶端
 const genai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
+
+// vLLM 配置
+const VLLM_CONFIGS = {
+  'gpt-oss': {
+    baseURL: process.env.HSUEH_VLLM_BASE_URL || 'https://vllm-210.hsueh.tw/v1',
+    modelName: process.env.HSUEH_VLLM_MODEL_NAME || 'openai/gpt-oss-20b',
+    displayName: 'GPT-OSS-20B'
+  },
+  'gemma': {
+    baseURL: process.env.VLLM_BASE_URL || 'https://earth-vllmapi.agenticgrader.com/v1',
+    modelName: process.env.VLLM_MODEL_NAME || 'ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g',
+    displayName: 'Gemma-3-27B'
+  }
+};
 
 /**
  * Agent Personas & System Prompts
@@ -102,6 +119,58 @@ const AGENT_OUTPUT_SCHEMA = {
 };
 
 /**
+ * 使用括號平衡算法提取第一個完整的 JSON 物件
+ * @param {string} text - 包含 JSON 的文字
+ * @returns {object|null} - 提取並解析後的 JSON 物件，失敗返回 null
+ */
+function extractFirstJsonObject(text) {
+  const startIndex = text.indexOf('{');
+  if (startIndex === -1) return null;
+  
+  let bracketCount = 0;
+  let inString = false;
+  let escapeNext = false;
+  
+  for (let i = startIndex; i < text.length; i++) {
+    const char = text[i];
+    
+    // 處理字串內的特殊字符
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+    
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+    
+    // 只在字串外才計算括號
+    if (!inString) {
+      if (char === '{') bracketCount++;
+      if (char === '}') bracketCount--;
+      
+      // 找到完整的 JSON 物件
+      if (bracketCount === 0) {
+        const jsonString = text.substring(startIndex, i + 1);
+        try {
+          return JSON.parse(jsonString);
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
  * 建構系統提示詞
  */
 function buildSystemPrompt(agentType) {
@@ -116,15 +185,164 @@ ${persona.prompt}
 通用規則：
 1. **引用**：如果參考了上下文中的特定想法，請明確引用（例如：「正如 @Alice 在 [標題] 中提到的...」）。
 2. **簡潔**：回應要精簡有力，不要長篇大論。
-3. **繁體中文**：始終使用繁體中文回應。`;
+3. **繁體中文**：始終使用繁體中文回應。
+
+**重要：你必須嚴格按照以下 JSON Schema 格式輸出，不要包含任何額外的說明文字：**
+\`\`\`json
+{
+  "thinkingProcess": "你的思考過程 (Chain of Thought)。解釋你觀察到了什麼，以及為什麼決定這樣回應。",
+  "content": "你要發布給學生的具體回應內容。請使用 Markdown 格式。",
+  "suggestedActions": [
+    {
+      "label": "按鈕文字",
+      "actionType": "REPLY 或 CREATE_NEW 或 READ_MORE",
+      "payload": "行動的參數或預填內容（可選）"
+    }
+  ]
+}
+\`\`\`
+
+所有欄位都是必填的，請確保輸出是有效的 JSON 格式。`;
+}
+
+/**
+ * 呼叫 vLLM 模型（通用函數）
+ */
+async function callVLLM(modelKey, systemPrompt, userPrompt, timeout = 30000) {
+  const config = VLLM_CONFIGS[modelKey];
+  if (!config) {
+    throw new Error(`Unknown model key: ${modelKey}`);
+  }
+
+  try {
+    const response = await axios.post(
+      `${config.baseURL}/chat/completions`,
+      {
+        model: config.modelName,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+        // 明確要求 JSON 格式輸出
+        response_format: { type: 'json_object' }
+      },
+      {
+        timeout,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    const content = response.data?.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error(`${config.displayName} 返回空內容`);
+    }
+
+    // 智能 JSON 提取：處理多種返回格式
+    let jsonData = null;
+    
+    try {
+      // 1. 嘗試直接解析（純 JSON）
+      jsonData = JSON.parse(content);
+    } catch {
+      // 2. 移除 markdown code block（```json ... ```）
+      let cleaned = content.replace(/```(?:json)?\s*/gi, '').trim();
+      
+      try {
+        jsonData = JSON.parse(cleaned);
+      } catch {
+        // 3. 使用括號平衡提取第一個完整的 JSON 物件
+        jsonData = extractFirstJsonObject(content);
+        if (!jsonData) {
+          console.warn(`⚠️ ${config.displayName} JSON 提取失敗`);
+          console.warn('原始內容:', content.substring(0, 300));
+          throw new Error(`${config.displayName} 返回的內容無法解析為 JSON`);
+        }
+      }
+    }
+    
+    return { data: jsonData, model: config.displayName };
+  } catch (error) {
+    console.warn(`⚠️ ${config.displayName} 失敗:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * 呼叫 Gemini 模型
+ */
+async function callGemini(systemPrompt, userPrompt) {
+  try {
+    const result = await genai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        { role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }
+      ],
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: AGENT_OUTPUT_SCHEMA,
+        temperature: 0.7,
+      }
+    });
+
+    const responseText = result?.text || '';
+    if (!responseText) {
+      throw new Error('Gemini 返回空回應');
+    }
+
+    return { data: JSON.parse(responseText), model: 'Gemini-2.5-Flash' };
+  } catch (error) {
+    console.error('❌ Gemini 失敗:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * 智能 AI 調用 with Fallback
+ * 優先順序: GPT-OSS-20b → Gemma-3-27b → Gemini-2.5-Flash
+ */
+async function callAIWithFallback(agentType, userPrompt) {
+  const systemPrompt = buildSystemPrompt(agentType);
+  const errors = [];
+
+  // 第一層：GPT-OSS-20b
+  try {
+    console.log('🤖 嘗試使用 GPT-OSS-20B...');
+    return await callVLLM('gpt-oss', systemPrompt, userPrompt);
+  } catch (error) {
+    errors.push({ model: 'GPT-OSS-20B', error: error.message });
+    console.warn('⚠️ GPT-OSS-20B 失敗，fallback 到 Gemma-3');
+  }
+
+  // 第二層：Gemma-3-27b
+  try {
+    console.log('🤖 嘗試使用 Gemma-3-27B...');
+    return await callVLLM('gemma', systemPrompt, userPrompt);
+  } catch (error) {
+    errors.push({ model: 'Gemma-3-27B', error: error.message });
+    console.warn('⚠️ Gemma-3-27B 失敗，fallback 到 Gemini');
+  }
+
+  // 第三層：Gemini (最終 fallback)
+  try {
+    console.log('🤖 使用最終 fallback: Gemini-2.5-Flash');
+    return await callGemini(systemPrompt, userPrompt);
+  } catch (error) {
+    errors.push({ model: 'Gemini-2.5-Flash', error: error.message });
+    console.error('❌ 所有模型都失敗了:', errors);
+    throw new Error(`所有 AI 模型都無法回應。錯誤摘要: ${errors.map(e => `${e.model}: ${e.error}`).join('; ')}`);
+  }
 }
 
 /**
  * 主要API端點：提供KB Coach建議
  */
 exports.provideGuidance = async (req, res) => {
+  const startTime = Date.now();
   try {
     const { title, content, nodeId, relatedNodes = [], projectId, agentType = 'IMPROVER' } = req.body;
+    const userId = req.user?.id || req.body.userId || null;
 
     // 驗證 agentType
     if (!['IMPROVER', 'SYNTHESIZER', 'DEVIL'].includes(agentType)) {
@@ -183,25 +401,10 @@ exports.provideGuidance = async (req, res) => {
       userPrompt += `\n\n最近的討論上下文 (Sliding Window N=10)：\n${relatedContext}`;
     }
 
-    // 呼叫Gemini Function Calling
-    const result = await genai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        { role: 'user', parts: [{ text: buildSystemPrompt(agentType) + '\n\n' + userPrompt }] }
-      ],
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: AGENT_OUTPUT_SCHEMA,
-        temperature: 0.7,
-      }
-    });
-
-    const responseText = result?.text || '';
-    if (!responseText) {
-      throw new Error('Gemini API返回空回應');
-    }
-
-    const coaching = JSON.parse(responseText);
+    // 呼叫 AI with Fallback (GPT-OSS → Gemma-3 → Gemini)
+    const { data: coaching, model: usedModel } = await callAIWithFallback(agentType, userPrompt);
+    const responseTimeMs = Date.now() - startTime;
+    const sessionId = `${Date.now()}-${nodeId || 'no-node'}`;
 
     const responseData = {
       agentType,
@@ -211,9 +414,32 @@ exports.provideGuidance = async (req, res) => {
       metadata: {
         nodeId,
         timestamp: new Date().toISOString(),
-        model: 'gemini-2.5-flash'
+        model: usedModel,
+        sessionId
       }
     };
+
+    // 儲存到歷史記錄（非阻塞）
+    try {
+      await KbCoachHistory.create({
+        projectId: projectId || null,
+        ideaWallId: null, // 可從 nodeId 關聯獲取
+        nodeId: nodeId || null,
+        userId: userId,
+        agentType: agentType,
+        modelUsed: usedModel,
+        nodeTitle: title || null,
+        nodeContent: content || null,
+        thinkingProcess: coaching.thinkingProcess,
+        responseContent: coaching.content,
+        suggestedActions: coaching.suggestedActions || [],
+        contextCount: contextNodes.length,
+        responseTimeMs: responseTimeMs,
+        sessionId: sessionId
+      });
+    } catch (historyError) {
+      console.error('Failed to save KB Coach history (non-blocking):', historyError);
+    }
 
     // 審計日誌（非阻塞）
     try {
@@ -232,7 +458,7 @@ exports.provideGuidance = async (req, res) => {
             thinkingProcessLength: coaching.thinkingProcess?.length,
             contentLength: coaching.content?.length
           },
-          provider: 'gemini-2.5-flash'
+          provider: usedModel // 記錄實際使用的模型
         })
       });
     } catch (auditError) {
@@ -360,3 +586,105 @@ exports.getFeedbackStats = async (req, res) => {
         res.status(500).json({ error: '取得統計時發生錯誤' });
     }
 };
+
+/**
+ * 查詢 KB Coach 歷史記錄
+ * GET /api/kb-coach/history
+ * 
+ * Query Params:
+ * - projectId: 專案 ID
+ * - nodeId: 節點 ID
+ * - userId: 使用者 ID
+ * - agentType: Agent 類型 (IMPROVER, SYNTHESIZER, DEVIL)
+ * - limit: 返回筆數（預設 20）
+ */
+exports.getHistory = async (req, res) => {
+    try {
+        const { projectId, nodeId, userId, agentType, limit = 20 } = req.query;
+
+        // 建構查詢條件
+        const whereClause = {};
+        if (projectId) whereClause.projectId = parseInt(projectId);
+        if (nodeId) whereClause.nodeId = parseInt(nodeId);
+        if (userId) whereClause.userId = parseInt(userId);
+        if (agentType) whereClause.agentType = agentType;
+
+        const histories = await KbCoachHistory.findAll({
+            where: whereClause,
+            order: [['createdAt', 'DESC']],
+            limit: parseInt(limit),
+            attributes: [
+                'id',
+                'agentType',
+                'modelUsed',
+                'nodeTitle',
+                'nodeContent',
+                'thinkingProcess',
+                'responseContent',
+                'suggestedActions',
+                'contextCount',
+                'responseTimeMs',
+                'sessionId',
+                'createdAt'
+            ]
+        });
+
+        res.status(200).json({
+            total: histories.length,
+            histories: histories.map(h => ({
+                id: h.id,
+                agentType: h.agentType,
+                model: h.modelUsed,
+                nodeTitle: h.nodeTitle,
+                nodeContent: h.nodeContent ? h.nodeContent.substring(0, 200) : null, // 摘要
+                thinkingProcess: h.thinkingProcess,
+                responseContent: h.responseContent,
+                suggestedActions: h.suggestedActions,
+                contextCount: h.contextCount,
+                responseTimeMs: h.responseTimeMs,
+                sessionId: h.sessionId,
+                timestamp: h.createdAt
+            }))
+        });
+
+    } catch (error) {
+        console.error('Error getting KB Coach history:', error);
+        res.status(500).json({ error: '取得歷史記錄時發生錯誤' });
+    }
+};
+
+/**
+ * 查詢單筆歷史記錄詳情
+ * GET /api/kb-coach/history/:id
+ */
+exports.getHistoryDetail = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const history = await KbCoachHistory.findByPk(id);
+
+        if (!history) {
+            return res.status(404).json({ error: '找不到此歷史記錄' });
+        }
+
+        res.status(200).json({
+            id: history.id,
+            agentType: history.agentType,
+            model: history.modelUsed,
+            nodeTitle: history.nodeTitle,
+            nodeContent: history.nodeContent,
+            thinkingProcess: history.thinkingProcess,
+            responseContent: history.responseContent,
+            suggestedActions: history.suggestedActions,
+            contextCount: history.contextCount,
+            responseTimeMs: history.responseTimeMs,
+            sessionId: history.sessionId,
+            timestamp: history.createdAt
+        });
+
+    } catch (error) {
+        console.error('Error getting history detail:', error);
+        res.status(500).json({ error: '取得詳情時發生錯誤' });
+    }
+};
+
