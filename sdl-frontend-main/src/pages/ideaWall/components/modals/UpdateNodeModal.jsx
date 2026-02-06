@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaGraduationCap } from 'react-icons/fa';
 import Modal from '../../../../components/Modal';
 import KnowledgeForumScaffolds from '../KnowledgeForumScaffolds';
 import { formatTime } from '../../../../utils/timeUtils';
@@ -188,7 +189,7 @@ export default function UpdateNodeModal({
                                     className="w-full h-9 bg-gradient-to-r from-blue-600 to-blue-500 rounded-lg font-bold text-body-sm text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-stack-xs"
                                     title="基於Knowledge Building 12原則的深度引導"
                                 >
-                                    <span className="text-body-lg">🎓</span>
+                                    <FaGraduationCap className="w-5 h-5" />
                                     <span>KB Coach</span>
                                     <span className="text-caption bg-yellow-400 text-blue-900 px-2 py-0.5 rounded-full font-semibold">推薦</span>
                                 </button>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiMessageSquare } from 'react-icons/fi';
 import errorReportingService from '../../services/errorReportingService';
 import { getCurrentUserId } from '../../utils/authUtils';
 
@@ -77,7 +78,7 @@ class CommentErrorBoundary extends React.Component {
       return (
         <div className="flex flex-col items-center justify-center p-component-md-lg bg-gray-50 rounded-lg border border-gray-200">
           <div className="text-center">
-            <div className="text-display mb-4">💬</div>
+            <div className="mb-4"><FiMessageSquare className="w-8 h-8 text-customgreen mx-auto" /></div>
             <h3 className="text-body-lg font-medium text-gray-800 mb-2">
               評論載入失敗
             </h3>

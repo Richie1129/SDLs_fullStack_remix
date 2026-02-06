@@ -7,6 +7,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { FiCpu, FiTool, FiLink, FiPlusCircle, FiThumbsUp, FiThumbsDown, FiLoader } from 'react-icons/fi';
+import { FaGavel } from 'react-icons/fa';
 import apiClient from '../../../api/client';
 import ReactMarkdown from 'react-markdown';
 import { socket } from '../../../utils/socket';
@@ -125,7 +127,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
             });
 
             setFeedbackGiven(true);
-            toast.success(feedbackType === 'helpful' ? '感謝您的回饋！👍' : '感謝您的回饋，我們會持續改進！');
+            toast.success(feedbackType === 'helpful' ? '感謝您的回饋！' : '感謝您的回饋，我們會持續改進！');
         } catch (error) {
             console.error('Error sending feedback:', error);
         }
@@ -137,7 +139,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
             <div className="mb-4 pb-4 border-b flex justify-between items-center">
                 <div>
                     <h3 className="text-h3 font-bold text-gray-800 flex items-center">
-                        <span className="mr-2">🤖</span>
+                        <FiCpu className="w-6 h-6 mr-2 text-[#5BA491]" />
                         AI 協作夥伴
                     </h3>
                     <p className="text-body-sm text-gray-500 mt-1">
@@ -165,7 +167,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                             : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-600'
                     }`}
                 >
-                    <div className="text-h1 mb-2">🛠️</div>
+                    <div className="mb-2"><FiTool className="w-8 h-8" /></div>
                     <div className="font-bold mb-1">想法改進者</div>
                     <div className="text-caption opacity-80">深化單一觀點</div>
                 </button>
@@ -179,7 +181,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                             : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50 text-gray-600'
                     }`}
                 >
-                    <div className="text-h1 mb-2">🔗</div>
+                    <div className="mb-2"><FiLink className="w-8 h-8" /></div>
                     <div className="font-bold mb-1">綜合者</div>
                     <div className="text-caption opacity-80">連結多個想法</div>
                 </button>
@@ -193,7 +195,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                             : 'border-gray-200 hover:border-red-300 hover:bg-gray-50 text-gray-600'
                     }`}
                 >
-                    <div className="text-h1 mb-2">😈</div>
+                    <div className="mb-2"><FaGavel className="w-8 h-8" /></div>
                     <div className="font-bold mb-1">魔鬼代言人</div>
                     <div className="text-caption opacity-80">挑戰既有觀點</div>
                 </button>
@@ -202,7 +204,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
             {/* Loading State */}
             {isLoading && (
                 <div className="flex-1 flex flex-col items-center justify-center py-12 text-gray-500 animate-pulse">
-                    <div className="text-display mb-4">🤔</div>
+                    <div className="mb-4"><FiLoader className="w-10 h-10 animate-spin" /></div>
                     <p>AI 正在閱讀上下文並思考中...</p>
                 </div>
             )}
@@ -247,7 +249,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                                         onClick={() => executeAction(action)}
                                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm flex items-center text-body-sm font-medium"
                                     >
-                                        <span className="mr-2">✨</span>
+                                        <FiPlusCircle className="w-4 h-4 mr-2" />
                                         {action.label}
                                     </button>
                                 ))}
@@ -265,13 +267,13 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                                         onClick={() => handleFeedback('helpful')}
                                         className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition flex items-center text-body-sm"
                                     >
-                                        <span className="mr-1">👍</span> 有幫助
+                                        <FiThumbsUp className="w-4 h-4 mr-1" /> 有幫助
                                     </button>
                                     <button
                                         onClick={() => handleFeedback('not_helpful')}
                                         className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition flex items-center text-body-sm"
                                     >
-                                        <span className="mr-1">👎</span> 需改進
+                                        <FiThumbsDown className="w-4 h-4 mr-1" /> 需改進
                                     </button>
                                 </div>
                             ) : (

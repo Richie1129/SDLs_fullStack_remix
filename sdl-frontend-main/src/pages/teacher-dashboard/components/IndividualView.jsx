@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiFileText, FiClipboard, FiInfo, FiMessageSquare } from 'react-icons/fi';
 import { formatRelativeTime, getStatusColor } from '../utils';
 
 const IndividualView = ({ 
@@ -166,11 +167,11 @@ const IndividualView = ({
                   type: 'reflection',
                   content: '新增反思記錄',
                   time: r.createdAt || r.created_at,
-                  icon: '📝',
+                  icon: <FiFileText className="w-4 h-4" />,
                   details: r.content?.substring(0, 50) + '...' || '無內容'
                 })),
               ...realData.tasks
-                .filter(t => 
+                .filter(t =>
                   t.user_id === studentId || t.userId === studentId ||
                   t.owner === username || t.created_by === username ||
                   (t.assignees && t.assignees.some(a => a.id === studentId || a.username === username))
@@ -179,11 +180,11 @@ const IndividualView = ({
                   type: 'task',
                   content: `任務: ${t.title || '無標題'}`,
                   time: t.createdAt || t.created_at,
-                  icon: '📋',
+                  icon: <FiClipboard className="w-4 h-4" />,
                   details: t.content?.substring(0, 50) + '...' || '無內容'
                 })),
               ...realData.nodes
-                .filter(n => 
+                .filter(n =>
                   n.user_id === studentId || n.userId === studentId ||
                   n.owner === username || n.username === username || n.user_name === username
                 )
@@ -191,11 +192,11 @@ const IndividualView = ({
                   type: 'idea',
                   content: `想法: ${n.title || '無標題'}`,
                   time: n.createdAt || n.created_at,
-                  icon: '💡',
+                  icon: <FiInfo className="w-4 h-4" />,
                   details: n.content?.substring(0, 50) + '...' || '無內容'
                 })),
               ...realData.chatHistory
-                .filter(msg => 
+                .filter(msg =>
                   msg.user_id === studentId || msg.userId === studentId ||
                   msg.username === username || msg.user_name === username
                 )
@@ -203,7 +204,7 @@ const IndividualView = ({
                   type: 'chat',
                   content: '參與聊天討論',
                   time: msg.createdAt || msg.created_at,
-                  icon: '💬',
+                  icon: <FiMessageSquare className="w-4 h-4" />,
                   details: msg.content?.substring(0, 50) + '...' || '無內容'
                 }))
             ];

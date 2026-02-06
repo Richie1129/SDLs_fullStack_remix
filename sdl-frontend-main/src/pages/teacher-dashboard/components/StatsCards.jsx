@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiUsers, FiBarChart2, FiFileText, FiInfo, FiClock } from 'react-icons/fi';
 
 const StatsCards = ({ classStats }) => {
   const cards = [
@@ -50,8 +51,8 @@ const StatsCards = ({ classStats }) => {
             <h3 className="text-caption sm:text-body-sm font-medium text-white/90 mb-1 sm:mb-2">
               {card.title}
             </h3>
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white text-body-sm">
-              {index === 0 ? '👥' : index === 1 ? '📊' : index === 2 ? '📝' : index === 3 ? '💡' : '⏱️'}
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white">
+              {[<FiUsers key="u" className="w-4 h-4" />, <FiBarChart2 key="b" className="w-4 h-4" />, <FiFileText key="f" className="w-4 h-4" />, <FiInfo key="i" className="w-4 h-4" />, <FiClock key="c" className="w-4 h-4" />][index]}
             </div>
           </div>
           <p className="text-body-lg sm:text-h1 font-bold text-white mb-1">

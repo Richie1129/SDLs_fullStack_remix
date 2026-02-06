@@ -1,4 +1,6 @@
 import React from 'react';
+import { FiInbox, FiAlertTriangle, FiInfo } from 'react-icons/fi';
+import { FaTrophy } from 'react-icons/fa';
 
 const LoadingState = ({
   type = 'loading',
@@ -20,7 +22,7 @@ const LoadingState = ({
 
       case 'empty':
         return {
-          icon: '📭',
+          icon: <FiInbox className="w-5 h-5 text-gray-400" />,
           defaultMessage: message || '暫無資料',
           bgColor: 'bg-gray-50',
           textColor: 'text-gray-500'
@@ -28,7 +30,7 @@ const LoadingState = ({
 
       case 'error':
         return {
-          icon: '⚠️',
+          icon: <FiAlertTriangle className="w-5 h-5 text-red-500" />,
           defaultMessage: message || '載入失敗，請稍後再試',
           bgColor: 'bg-red-50',
           textColor: 'text-red-600'
@@ -36,7 +38,7 @@ const LoadingState = ({
 
       case 'no-ranking':
         return {
-          icon: '🏆',
+          icon: <FaTrophy className="w-5 h-5 text-yellow-500" />,
           defaultMessage: message || '此類別暫無排行資料',
           bgColor: 'bg-yellow-50',
           textColor: 'text-yellow-600'
@@ -44,7 +46,7 @@ const LoadingState = ({
 
       default:
         return {
-          icon: 'ℹ️',
+          icon: <FiInfo className="w-5 h-5 text-gray-400" />,
           defaultMessage: message || '暫無內容',
           bgColor: 'bg-gray-50',
           textColor: 'text-gray-500'

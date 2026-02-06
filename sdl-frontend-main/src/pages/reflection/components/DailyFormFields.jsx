@@ -1,4 +1,5 @@
 import React from "react";
+import { FiInfo } from 'react-icons/fi';
 import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
 import StageSelector from '@/components/reflection/StageSelector';
 import StageReflectionGuide from '@/components/reflection/StageReflectionGuide';
@@ -67,8 +68,8 @@ export function DailyFormFields({
         disabled={disabled || isTeacher}
         accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
       />
-      <p className="text-caption text-gray-500 mb-3">
-        💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+      <p className="text-caption text-gray-500 mb-3 flex items-start gap-1">
+        <FiInfo className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" /> 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
       </p>
 
       {/* Existing attachment (when editing) */}

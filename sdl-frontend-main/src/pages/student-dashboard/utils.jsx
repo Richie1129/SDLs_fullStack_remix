@@ -1,3 +1,7 @@
+import React from 'react';
+import { FiLoader, FiRefreshCw, FiCheckCircle, FiEye, FiPause, FiClipboard, FiInfo, FiFileText, FiUsers, FiCpu } from 'react-icons/fi';
+import { FaTrophy } from 'react-icons/fa';
+
 // 輔助函式工具
 
 /**
@@ -57,11 +61,11 @@ export const getPriorityColor = (priority) => {
  */
 export const getAchievementIcon = (type) => {
   switch (type) {
-    case 'creativity': return '💡';
-    case 'reflection': return '📝';
-    case 'collaboration': return '🤝';
-    case 'ai': return '🤖';
-    default: return '🏆';
+    case 'creativity': return <FiInfo className="w-4 h-4" />;
+    case 'reflection': return <FiFileText className="w-4 h-4" />;
+    case 'collaboration': return <FiUsers className="w-4 h-4" />;
+    case 'ai': return <FiCpu className="w-4 h-4" />;
+    default: return <FaTrophy className="w-4 h-4" />;
   }
 };
 
@@ -99,33 +103,33 @@ export const calculateProgress = (currentStage, currentSubStage) => {
  */
 export const getColumnStyle = (columnName) => {
   const name = columnName.toLowerCase();
-  
-  if (name.includes('待處理') || name.includes('待辦') || name.includes('to do') || 
+
+  if (name.includes('待處理') || name.includes('待辦') || name.includes('to do') ||
       name.includes('todo') || name.includes('backlog')) {
-    return { color: 'text-orange-600', icon: '⏳' };
+    return { color: 'text-orange-600', icon: <FiLoader className="w-4 h-4" /> };
   }
-  
+
   if (name.includes('進行中') || name.includes('in progress') || name.includes('doing') ||
       name.includes('進展') || name.includes('工作中') || name.includes('處理中')) {
-    return { color: 'text-blue-600', icon: '🔄' };
+    return { color: 'text-blue-600', icon: <FiRefreshCw className="w-4 h-4" /> };
   }
-  
+
   if (name.includes('完成') || name.includes('done') || name.includes('finished') ||
       name.includes('completed') || name.includes('完畢')) {
-    return { color: 'text-green-600', icon: '✅' };
+    return { color: 'text-green-600', icon: <FiCheckCircle className="w-4 h-4" /> };
   }
-  
+
   if (name.includes('審核') || name.includes('review') || name.includes('檢查') ||
       name.includes('驗證') || name.includes('測試')) {
-    return { color: 'text-purple-600', icon: '👀' };
+    return { color: 'text-purple-600', icon: <FiEye className="w-4 h-4" /> };
   }
-  
+
   if (name.includes('暫停') || name.includes('擱置') || name.includes('on hold') ||
       name.includes('blocked') || name.includes('延期')) {
-    return { color: 'text-gray-600', icon: '⏸️' };
+    return { color: 'text-gray-600', icon: <FiPause className="w-4 h-4" /> };
   }
-  
-  return { color: 'text-green-600', icon: '📋' };
+
+  return { color: 'text-green-600', icon: <FiClipboard className="w-4 h-4" /> };
 };
 
 // 從 teacher-dashboard 提取的共用工具函式

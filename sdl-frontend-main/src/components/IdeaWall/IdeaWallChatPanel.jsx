@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useIdeaWallChat } from '../../hooks/useIdeaWallChat';
 import { motion } from 'framer-motion';
-import { FiX, FiSend } from 'react-icons/fi';
+import { FiX, FiSend, FiCpu } from 'react-icons/fi';
 
 const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, nodes, onClose }) => {
     const { messages, sendMessage, filterNodeId, setFilterNodeId, loading, wallContext, contextLoading, refreshWallContext } = useIdeaWallChat(ideaWallId);
@@ -77,7 +77,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, nodes, onClose }) => {
                                     <FiX className="h-3 w-3" />
                                 </button>
                                 <div className="flex items-center space-x-stack-xs">
-                                    <span className="text-body-lg animate-pulse">🤖</span>
+                                    <FiCpu className="w-5 h-5 text-[#5BA491] animate-pulse" />
                                     <span className="text-caption text-customgreen font-medium animate-pulse">
                                         AI 正在分析牆面想法中...
                                     </span>
@@ -92,7 +92,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, nodes, onClose }) => {
                                     <FiX className="h-3 w-3" />
                                 </button>
                                 <div className="flex items-start space-x-stack-xs">
-                                    <span className="text-body-lg">🤖</span>
+                                    <FiCpu className="w-5 h-5 text-[#5BA491]" />
                                     <div>
                                         <p className="text-caption font-bold text-teal-800 mb-1">
                                             AI 觀察報告 (已捕捉 {wallContext.nodeCount} 個想法)
@@ -106,7 +106,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, nodes, onClose }) => {
                         ) : (
                             <div className="bg-customgreen/10 p-component-sm border-b border-customgreen/20 flex justify-between items-center">
                                 <div className="flex items-center space-x-stack-xs">
-                                    <span className="text-body-lg">🤖</span>
+                                    <FiCpu className="w-5 h-5 text-[#5BA491]" />
                                     <span className="text-caption text-teal-800 font-medium">
                                         AI 觀察報告尚未生成
                                     </span>
@@ -126,7 +126,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, nodes, onClose }) => {
                             className="text-caption text-teal-800 flex items-center cursor-pointer hover:text-teal-900" 
                             onClick={() => setShowContext(true)}
                         >
-                            <span className="mr-1">🤖</span> {wallContext ? "AI 觀察報告 (已隱藏)" : "AI 觀察報告 (未生成)"}
+                            <FiCpu className="w-3.5 h-3.5 mr-1 inline" /> {wallContext ? "AI 觀察報告 (已隱藏)" : "AI 觀察報告 (未生成)"}
                         </span>
                         <button 
                             onClick={() => {
@@ -153,7 +153,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, nodes, onClose }) => {
                         <div key={msg.id} className={`flex flex-col ${msg.isSelf ? "items-end" : "items-start"}`}>
                             <div className="flex items-baseline space-x-stack-xs mb-1">
                                 <span className={`text-caption font-bold ${msg.isAiIntervention ? "text-purple-600" : "text-teal-700"}`}>
-                                    {msg.isAiIntervention ? "🤖 " + msg.senderName : msg.senderName}
+                                    {msg.isAiIntervention ? <><FiCpu className="w-3 h-3 inline mr-0.5" /> {msg.senderName}</> : msg.senderName}
                                 </span>
                                 <span className="text-caption text-gray-400">
                                     {new Date(msg.createdAt).toLocaleString([], {year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute:'2-digit'})}

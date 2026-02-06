@@ -1,5 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { FiFileText, FiZap, FiInfo, FiBriefcase, FiTarget, FiLink } from 'react-icons/fi';
+import { FaBrain, FaGraduationCap } from 'react-icons/fa';
 
 /**
  * 反思類型選擇器 - 雙卡片設計
@@ -41,20 +43,20 @@ export function ReflectionTypeSelector({
 
           {/* 特點標籤 */}
           <div className="flex flex-wrap gap-2 mb-stack-sm">
-            <span className="px-3 py-1 bg-gray-50 text-gray-700 text-caption rounded-full border border-gray-200">
-              📝 自由格式
+            <span className="px-3 py-1 bg-gray-50 text-gray-700 text-caption rounded-full border border-gray-200 inline-flex items-center gap-1">
+              <FiFileText className="w-3.5 h-3.5" /> 自由格式
             </span>
-            <span className="px-3 py-1 bg-gray-50 text-gray-700 text-caption rounded-full border border-gray-200">
-              ⚡ 快速記錄
+            <span className="px-3 py-1 bg-gray-50 text-gray-700 text-caption rounded-full border border-gray-200 inline-flex items-center gap-1">
+              <FiZap className="w-3.5 h-3.5" /> 快速記錄
             </span>
-            <span className="px-3 py-1 bg-gray-50 text-gray-700 text-caption rounded-full border border-gray-200">
-              💡 即時想法
+            <span className="px-3 py-1 bg-gray-50 text-gray-700 text-caption rounded-full border border-gray-200 inline-flex items-center gap-1">
+              <FiInfo className="w-3.5 h-3.5" /> 即時想法
             </span>
           </div>
 
           {/* 適用場景 */}
           <div className="pt-stack-xs border-t border-gray-100">
-            <p className="text-caption text-gray-500 mb-1">💼 適用場景：</p>
+            <p className="text-caption text-gray-500 mb-1 flex items-center gap-1"><FiBriefcase className="w-3.5 h-3.5" /> 適用場景：</p>
             <ul className="text-caption text-gray-600 space-y-1">
               <li className="flex items-start">
                 <span className="mr-1.5 text-[#5BA491] mt-0.5">•</span>
@@ -121,20 +123,20 @@ export function ReflectionTypeSelector({
 
           {/* 特點標籤 */}
           <div className="flex flex-wrap gap-2 mb-stack-sm">
-            <span className="px-3 py-1 bg-white/70 text-purple-700 text-caption rounded-full border border-purple-200 font-medium">
-              🎯 結構化
+            <span className="px-3 py-1 bg-white/70 text-purple-700 text-caption rounded-full border border-purple-200 font-medium inline-flex items-center gap-1">
+              <FiTarget className="w-3.5 h-3.5" /> 結構化
             </span>
-            <span className="px-3 py-1 bg-white/70 text-purple-700 text-caption rounded-full border border-purple-200 font-medium">
-              🧠 深度思考
+            <span className="px-3 py-1 bg-white/70 text-purple-700 text-caption rounded-full border border-purple-200 font-medium inline-flex items-center gap-1">
+              <FaBrain className="w-3.5 h-3.5" /> 深度思考
             </span>
-            <span className="px-3 py-1 bg-white/70 text-purple-700 text-caption rounded-full border border-purple-200 font-medium">
-              🔗 知識連結
+            <span className="px-3 py-1 bg-white/70 text-purple-700 text-caption rounded-full border border-purple-200 font-medium inline-flex items-center gap-1">
+              <FiLink className="w-3.5 h-3.5" /> 知識連結
             </span>
           </div>
 
           {/* 適用場景 */}
           <div className="pt-stack-xs border-t border-purple-100">
-            <p className="text-caption text-purple-600 mb-1 font-medium">🎓 適用場景：</p>
+            <p className="text-caption text-purple-600 mb-1 font-medium flex items-center gap-1"><FaGraduationCap className="w-3.5 h-3.5" /> 適用場景：</p>
             <ul className="text-caption text-gray-700 space-y-1">
               <li className="flex items-start">
                 <span className="mr-1.5 text-purple-500 mt-0.5">•</span>

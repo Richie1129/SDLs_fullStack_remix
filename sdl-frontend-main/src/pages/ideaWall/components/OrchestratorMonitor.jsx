@@ -6,6 +6,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { FiSearch, FiTool, FiLink, FiInfo } from 'react-icons/fi';
+import { FaBrain, FaGavel } from 'react-icons/fa';
 import apiClient from '../../../api/client';
 
 const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
@@ -51,7 +53,7 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-component-base mt-4">
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-body-sm font-bold text-gray-700 flex items-center">
-                    <span className="mr-2">🧠</span>
+                    <FaBrain className="w-4 h-4 mr-2 text-purple-600" />
                     Phase 2 Orchestrator 監控
                 </h3>
                 <button
@@ -97,7 +99,7 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
                 disabled={isAnalyzing}
                 className="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-body-sm font-medium transition"
             >
-                {isAnalyzing ? '🔍 分析中...' : '🔍 查看自動分析結果'}
+                {isAnalyzing ? <><FiSearch className="w-4 h-4 inline mr-1" /> 分析中...</> : <><FiSearch className="w-4 h-4 inline mr-1" /> 查看自動分析結果</>}
             </button>
 
             {/* 分析結果 */}
@@ -120,9 +122,9 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
                         <div className="mb-2 p-component-xs bg-blue-50 rounded">
                             <span className="font-medium">建議 Agent：</span>
                             <span className="ml-2 text-blue-700">
-                                {decision.role === 'IMPROVER' && '🛠️ Idea Improver'}
-                                {decision.role === 'SYNTHESIZER' && '🔗 Synthesizer'}
-                                {decision.role === 'DEVIL' && '😈 Devil\'s Advocate'}
+                                {decision.role === 'IMPROVER' && <><FiTool className="w-3.5 h-3.5 inline mr-1" /> Idea Improver</>}
+                                {decision.role === 'SYNTHESIZER' && <><FiLink className="w-3.5 h-3.5 inline mr-1" /> Synthesizer</>}
+                                {decision.role === 'DEVIL' && <><FaGavel className="w-3.5 h-3.5 inline mr-1" /> Devil's Advocate</>}
                             </span>
                         </div>
                     )}
@@ -159,7 +161,7 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
 
             {/* 說明 */}
             <div className="mt-3 p-component-xs bg-blue-50 rounded text-caption text-blue-700">
-                <span className="font-bold">💡 Phase 2 說明：</span>
+                <span className="font-bold flex items-center gap-1"><FiInfo className="w-3.5 h-3.5" /> Phase 2 說明：</span>
                 每次發文時，Orchestrator 會在背景自動分析討論品質。Phase 3 會將建議自動顯示在討論區。
             </div>
         </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiTool } from 'react-icons/fi';
 import errorReportingService from '../../services/errorReportingService';
 
 /**
@@ -131,7 +132,7 @@ class GlobalErrorBoundary extends React.Component {
             {process.env.NODE_ENV === 'development' && this.state.error && (
               <details className="mt-6 p-component-sm bg-red-50 rounded border border-red-200 text-left">
                 <summary className="text-red-700 font-medium cursor-pointer text-body-sm">
-                  🔧 開發模式 - 錯誤詳情
+                  <FiTool className="w-4 h-4 inline mr-1" /> 開發模式 - 錯誤詳情
                 </summary>
                 <div className="mt-2 text-caption text-red-600 font-mono">
                   <p><strong>錯誤:</strong> {this.state.error.toString()}</p>

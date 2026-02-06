@@ -1,4 +1,6 @@
 import React from 'react';
+import { FiZap, FiFileText, FiCheckCircle } from 'react-icons/fi';
+import { FaFire } from 'react-icons/fa';
 import { getPriorityColor } from '../utils';
 
 /**
@@ -26,9 +28,9 @@ const LearningGoals = ({ learningGoals }) => {
                 <span className="w-2 h-2 bg-customgreen rounded-full mr-2"></span>
                 {goal.title}
               </h3>
-              <span className={`px-3 py-1 rounded-full text-caption font-semibold self-start shadow-sm ${getPriorityColor(goal.priority)}`}>
-                {goal.priority === 'high' ? '🔥 高優先級' :
-                 goal.priority === 'medium' ? '⚡ 中優先級' : '📝 低優先級'}
+              <span className={`px-3 py-1 rounded-full text-caption font-semibold self-start shadow-sm inline-flex items-center gap-1 ${getPriorityColor(goal.priority)}`}>
+                {goal.priority === 'high' ? <><FaFire className="w-3 h-3" /> 高優先級</> :
+                 goal.priority === 'medium' ? <><FiZap className="w-3 h-3" /> 中優先級</> : <><FiFileText className="w-3 h-3" /> 低優先級</>}
               </span>
             </div>
             <div className="mb-3">
@@ -59,8 +61,8 @@ const LearningGoals = ({ learningGoals }) => {
                 截止日期: <span className="font-medium ml-1">{deadlineText}</span>
               </span>
               {isDone && (
-                <span className="text-green-600 font-bold bg-green-100 px-2 py-1 rounded-full text-[10px] sm:text-caption">
-                  達成 ✅
+                <span className="text-green-600 font-bold bg-green-100 px-2 py-1 rounded-full text-[10px] sm:text-caption inline-flex items-center gap-1">
+                  達成 <FiCheckCircle className="w-3 h-3" />
                 </span>
               )}
             </div>

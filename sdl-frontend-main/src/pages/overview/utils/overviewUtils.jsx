@@ -1,6 +1,9 @@
+import React from 'react';
+import { FiFileText, FiMessageSquare, FiCpu, FiInfo, FiCheckCircle, FiTrendingUp, FiUpload, FiEye, FiBookOpen, FiUsers, FiClipboard, FiLoader, FiRefreshCw, FiPause } from 'react-icons/fi';
+
 /**
  * Overview 頁面共用工具函式
- * 
+ *
  * 包含：
  * - 進度計算
  * - 時間格式化
@@ -70,65 +73,65 @@ export const getStatusColor = (progress) => {
 /**
  * 獲取活動類型圖示
  * @param {string} type - 活動類型
- * @returns {string} Emoji 圖示
+ * @returns {JSX.Element} Icon 元件
  */
 export const getActivityIcon = (type) => {
     const icons = {
-        'reflection': '📝',
-        'chat': '💬',
-        'ai': '🤖',
-        'idea': '💡',
-        'task': '✅',
-        'progress': '📈',
-        'submission': '📤',
-        'review': '👀',
-        'feedback': '💬',
-        'project': '📚',
-        'team': '👥'
+        'reflection': <FiFileText className="w-4 h-4" />,
+        'chat': <FiMessageSquare className="w-4 h-4" />,
+        'ai': <FiCpu className="w-4 h-4" />,
+        'idea': <FiInfo className="w-4 h-4" />,
+        'task': <FiCheckCircle className="w-4 h-4" />,
+        'progress': <FiTrendingUp className="w-4 h-4" />,
+        'submission': <FiUpload className="w-4 h-4" />,
+        'review': <FiEye className="w-4 h-4" />,
+        'feedback': <FiMessageSquare className="w-4 h-4" />,
+        'project': <FiBookOpen className="w-4 h-4" />,
+        'team': <FiUsers className="w-4 h-4" />
     };
-    return icons[type] || '📋';
+    return icons[type] || <FiClipboard className="w-4 h-4" />;
 };
 
 /**
  * 為 Kanban 列表名稱分配顏色和圖標
  * @param {string} columnName - 列表名稱
- * @returns {Object} { color: string, icon: string }
+ * @returns {Object} { color: string, icon: JSX.Element }
  */
 export const getColumnStyle = (columnName) => {
     const name = columnName.toLowerCase();
-    
+
     // 待處理類型
-    if (name.includes('待處理') || name.includes('待辦') || name.includes('to do') || 
+    if (name.includes('待處理') || name.includes('待辦') || name.includes('to do') ||
         name.includes('todo') || name.includes('backlog')) {
-        return { color: 'text-orange-600', icon: '⏳' };
+        return { color: 'text-orange-600', icon: <FiLoader className="w-4 h-4" /> };
     }
-    
+
     // 進行中類型
     if (name.includes('進行中') || name.includes('in progress') || name.includes('doing') ||
         name.includes('進展') || name.includes('工作中') || name.includes('處理中')) {
-        return { color: 'text-blue-600', icon: '🔄' };
+        return { color: 'text-blue-600', icon: <FiRefreshCw className="w-4 h-4" /> };
     }
-    
+
     // 完成類型
     if (name.includes('完成') || name.includes('done') || name.includes('finished') ||
         name.includes('completed') || name.includes('完畢')) {
-        return { color: 'text-green-600', icon: '✅' };
+        return { color: 'text-green-600', icon: <FiCheckCircle className="w-4 h-4" /> };
     }
-    
+
     // 審核/檢查類型
     if (name.includes('審核') || name.includes('review') || name.includes('檢查') ||
         name.includes('驗證') || name.includes('測試')) {
-        return { color: 'text-purple-600', icon: '👀' };
+        return { color: 'text-purple-600', icon: <FiEye className="w-4 h-4" /> };
     }
-    
+
     // 暫停/擱置類型
     if (name.includes('暫停') || name.includes('擱置') || name.includes('on hold') ||
         name.includes('blocked') || name.includes('延期')) {
-        return { color: 'text-gray-600', icon: '⏸️' };
+        return { color: 'text-gray-600', icon: <FiPause className="w-4 h-4" /> };
     }
-    
+
     // 默認類型
-    return { color: 'text-gray-800', icon: '📋' };
+    return { color: 'text-gray-800', icon: <FiClipboard className="w-4 h-4" /> };
 };
 
 /**

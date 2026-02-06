@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiFileText, FiClipboard, FiInfo, FiMessageSquare, FiUpload } from 'react-icons/fi';
 import { formatRelativeTime, getActivityColor } from '../utils';
 
 const OverviewView = ({ enhancedStudents, classStats, realData }) => {
@@ -77,35 +78,35 @@ const OverviewView = ({ enhancedStudents, classStats, realData }) => {
                 user: r.username || r.user_name || '未知用戶',
                 content: `新增反思記錄`,
                 time: r.createdAt || r.created_at,
-                icon: '📝'
+                icon: <FiFileText className="w-4 h-4" />
               })),
               ...realData.tasks.slice(0, 10).map(t => ({
                 type: 'kanban',
                 user: t.owner || t.created_by || '未知用戶',
                 content: `創建任務: ${t.title || '無標題'}`,
                 time: t.createdAt || t.created_at,
-                icon: '📋'
+                icon: <FiClipboard className="w-4 h-4" />
               })),
               ...realData.nodes.slice(0, 10).map(n => ({
                 type: 'idea',
                 user: n.owner || n.username || n.user_name || '未知用戶',
                 content: `新增想法: ${n.title || '無標題'}`,
                 time: n.createdAt || n.created_at,
-                icon: '💡'
+                icon: <FiInfo className="w-4 h-4" />
               })),
               ...realData.chatHistory.slice(0, 10).map(msg => ({
                 type: 'chat',
                 user: msg.username || msg.user_name || '未知用戶',
                 content: `聊天室訊息`,
                 time: msg.createdAt || msg.created_at,
-                icon: '💬'
+                icon: <FiMessageSquare className="w-4 h-4" />
               })),
               ...realData.submissions.slice(0, 10).map(s => ({
                 type: 'submit',
                 user: s.username || s.user_name || '未知用戶',
                 content: `提交作業`,
                 time: s.createdAt || s.created_at,
-                icon: '📤'
+                icon: <FiUpload className="w-4 h-4" />
               }))
             ];
 

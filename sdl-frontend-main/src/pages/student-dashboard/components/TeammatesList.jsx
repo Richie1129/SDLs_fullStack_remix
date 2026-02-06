@@ -1,4 +1,6 @@
 
+import { FiUsers } from 'react-icons/fi';
+
 /**
  * 團隊成員列表組件
  * @param {array} teammates - 團隊成員數據
@@ -54,7 +56,7 @@ const TeammatesList = ({ teammates, personalData }) => {
           ))
         ) : (
           <div className="text-center py-4 text-gray-500">
-            <div className="text-display mb-2">👥</div>
+            <div className="mb-2"><FiUsers className="w-8 h-8 text-gray-400 mx-auto" /></div>
             <p className="text-body-sm">目前只有您一人</p>
             <p className="text-caption text-gray-400">等待其他成員加入專案</p>
           </div>

@@ -10,6 +10,7 @@ import { getIdeaWall } from "../../api/ideaWall";
 import { useQuery } from "react-query";
 import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
+import { FiBookOpen, FiTrendingUp, FiClipboard, FiMessageSquare, FiInfo, FiCpu } from 'react-icons/fi';
 import TopBar from "../../components/TopBar";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
@@ -366,7 +367,7 @@ const StudentOverview = () => {
                     <p className="text-teal-100 text-caption sm:text-body-sm">參與專案</p>
                     <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalProjects}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">📚</div>
+                  <FiBookOpen className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -376,7 +377,7 @@ const StudentOverview = () => {
                     <p className="text-blue-100 text-caption sm:text-body-sm">平均進度</p>
                     <p className="text-h2 sm:text-h1 font-bold">{personalStats.averageProgress}%</p>
                   </div>
-                  <div className="text-h1 sm:text-display">📈</div>
+                  <FiTrendingUp className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -386,7 +387,7 @@ const StudentOverview = () => {
                     <p className="text-green-100 text-caption sm:text-body-sm">總任務數</p>
                     <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalTasks}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">📋</div>
+                  <FiClipboard className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -396,7 +397,7 @@ const StudentOverview = () => {
                     <p className="text-orange-100 text-caption sm:text-body-sm">聊天互動</p>
                     <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalChatMessages}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">💬</div>
+                  <FiMessageSquare className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -406,7 +407,7 @@ const StudentOverview = () => {
                     <p className="text-purple-100 text-caption sm:text-body-sm">想法節點</p>
                     <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalIdeaNodes}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">💡</div>
+                  <FiInfo className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -416,7 +417,7 @@ const StudentOverview = () => {
                     <p className="text-pink-100 text-caption sm:text-body-sm">AI互動</p>
                     <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalAiInteractions}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">🤖</div>
+                  <FiCpu className="w-8 h-8 opacity-80" />
                 </div>
               </div>
             </div>
@@ -602,7 +603,7 @@ const StudentOverview = () => {
                       <h3 className="text-body-sm font-medium text-gray-700 mb-3">任務狀況分布</h3>
                       <div className="space-y-stack-xs">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-body-sm">📋 總任務</span>
+                          <span className="text-gray-600 text-body-sm flex items-center gap-1"><FiClipboard className="w-3.5 h-3.5" /> 總任務</span>
                           <span className="font-semibold text-gray-800">{personalStats.totalTasks}</span>
                         </div>
                         {personalStats.allColumnNames.map(columnName => {

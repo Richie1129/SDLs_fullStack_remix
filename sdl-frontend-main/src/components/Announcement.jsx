@@ -352,13 +352,13 @@ export default function Announcement({ projectId, role, projectList }) {
                                 
                                 {announcementMode === 'project' ? (
                                     <>
-                                        <option value="all">🌐 全部專案 </option>
+                                        <option value="all">全部專案</option>
                                         {teacherProjects.map((project) => {
                                             const members = projectMembersMap[project.id] || [];
                                             const memberNames = members.map(m => m.username).join(', ');
                                             return (
                                                 <option key={project.id} value={project.id}>
-                                                    📁 {project.name} ({members.length}人: {memberNames || '無成員'})
+                                                    {project.name} ({members.length}人: {memberNames || '無成員'})
                                                 </option>
                                             );
                                         })}
@@ -369,7 +369,7 @@ export default function Announcement({ projectId, role, projectList }) {
                                         const projectNames = projects.map(p => p.name).join(', ');
                                         return (
                                             <option key={student.id} value={student.id}>
-                                                👤 {student.username} (參與專案: {projectNames || '無專案'})
+                                                {student.username} (參與專案: {projectNames || '無專案'})
                                             </option>
                                         );
                                     })
@@ -381,7 +381,7 @@ export default function Announcement({ projectId, role, projectList }) {
                         {selectedTarget && selectedTarget !== 'all' && (
                             <div className="mb-4 p-component-sm bg-blue-50 border border-blue-200 rounded-lg">
                                 <h4 className="text-body-sm font-semibold text-blue-800 mb-2">
-                                    {announcementMode === 'project' ? '📁 專案詳情' : '👤 學生詳情'}
+                                    {announcementMode === 'project' ? '專案詳情' : '學生詳情'}
                                 </h4>
                                 {announcementMode === 'project' ? (
                                     <div>

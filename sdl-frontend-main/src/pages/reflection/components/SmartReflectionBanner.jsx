@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { FiTarget, FiInfo } from 'react-icons/fi';
+import { FaGraduationCap } from 'react-icons/fa';
 
 /**
  * 智能反思橫幅 - 根據使用者行為動態顯示提示
@@ -108,7 +110,7 @@ export function SmartReflectionBanner({
       case 'suggest_5rs':
         return (
           <BannerCard
-            icon="🎓"
+            icon={<FaGraduationCap className="w-7 h-7 text-purple-600" />}
             title="試試看深度反思吧！"
             description={`您已經寫了 ${recentLogs.length} 篇傳統日誌！要不要試試「5Rs 結構反思」，透過系統化的思考建立更深入的知識連結？`}
             actionText="撰寫 5Rs 反思"
@@ -121,7 +123,7 @@ export function SmartReflectionBanner({
       case 'stage_milestone':
         return (
           <BannerCard
-            icon="🎯"
+            icon={<FiTarget className="w-7 h-7 text-amber-600" />}
             title="恭喜進入新階段！"
             description={`您已進入專案的「${formatStage(currentStage)}」階段。建議進行一次深度反思，總結上個階段的學習成果。`}
             actionText="撰寫階段反思"
@@ -134,7 +136,7 @@ export function SmartReflectionBanner({
       case 'encourage_logging':
         return (
           <BannerCard
-            icon="💡"
+            icon={<FiInfo className="w-7 h-7 text-green-600" />}
             title="有一陣子沒記錄了呢"
             description="定期記錄能幫助您追蹤學習進度。花 5 分鐘記錄最近的學習心得吧！"
             actionText="快速記錄"

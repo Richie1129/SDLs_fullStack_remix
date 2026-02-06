@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiCpu, FiAlertTriangle, FiInfo, FiTool, FiCheckCircle } from 'react-icons/fi';
 import AssistantChatStreaming from '../components/AssistantChatStreaming';
 
 /**
@@ -23,7 +24,7 @@ export default function AssistantDemo() {
         {/* 頁面標題 */}
         <div className="mb-8">
           <h1 className="text-h1 font-bold text-gray-900 mb-2">
-            🤖 專案助理 AI
+            <FiCpu className="w-7 h-7 inline mr-2" /> 專案助理 AI
           </h1>
           <p className="text-gray-600">
             詢問我關於專案的任何問題，我會即時回答（支援 Streaming）
@@ -34,7 +35,7 @@ export default function AssistantDemo() {
         {!projectId ? (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-component-md-lg">
             <h2 className="text-body-lg font-semibold text-yellow-900 mb-2">
-              ⚠️ 缺少專案 ID
+              <FiAlertTriangle className="w-5 h-5 inline mr-1" /> 缺少專案 ID
             </h2>
             <p className="text-yellow-800 mb-4">
               請在 URL 中提供專案 ID，例如：
@@ -68,7 +69,7 @@ export default function AssistantDemo() {
         {/* 使用說明 */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-component-md-lg">
           <h2 className="text-body-lg font-semibold text-blue-900 mb-3">
-            💡 使用提示
+            <FiInfo className="w-5 h-5 inline mr-1" /> 使用提示
           </h2>
           <div className="space-y-stack-xs text-blue-800 text-body-sm">
             <div>• 詢問專案進度：「我的專案目前進度如何？」</div>
@@ -82,23 +83,23 @@ export default function AssistantDemo() {
         {/* 技術說明 */}
         <div className="mt-8 bg-gray-100 rounded-lg p-component-md-lg">
           <h2 className="text-body-lg font-semibold text-gray-900 mb-3">
-            🔧 技術特點
+            <FiTool className="w-5 h-5 inline mr-1" /> 技術特點
           </h2>
           <div className="grid md:grid-cols-2 gap-stack-sm text-body-sm text-gray-700">
             <div>
-              <strong>✅ Streaming 回應</strong>
+              <strong><FiCheckCircle className="w-4 h-4 inline mr-1 text-green-500" />Streaming 回應</strong>
               <p className="text-gray-600">AI 會逐字回答，不用等待</p>
             </div>
             <div>
-              <strong>✅ 完整專案分析</strong>
+              <strong><FiCheckCircle className="w-4 h-4 inline mr-1 text-green-500" />完整專案分析</strong>
               <p className="text-gray-600">自動分析看板、想法牆、提交記錄</p>
             </div>
             <div>
-              <strong>✅ 雙 AI 支援</strong>
+              <strong><FiCheckCircle className="w-4 h-4 inline mr-1 text-green-500" />雙 AI 支援</strong>
               <p className="text-gray-600">Gemini（預設）+ OpenAI（備選）</p>
             </div>
             <div>
-              <strong>✅ Markdown 支援</strong>
+              <strong><FiCheckCircle className="w-4 h-4 inline mr-1 text-green-500" />Markdown 支援</strong>
               <p className="text-gray-600">回答支援格式化文字</p>
             </div>
           </div>

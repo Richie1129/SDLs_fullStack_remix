@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiGlobe, FiBarChart2, FiLayout, FiLock, FiAlertTriangle, FiTool } from 'react-icons/fi';
 import errorReportingService from '../../services/errorReportingService';
 import LoadingState from '../../pages/student-dashboard/components/LoadingState';
 
@@ -109,7 +110,7 @@ class DashboardErrorBoundary extends React.Component {
     switch (errorType) {
       case 'network':
         return {
-          icon: '🌐',
+          icon: <FiGlobe className="w-8 h-8 text-blue-500" />,
           title: '網路連接問題',
           message: '無法載入 Dashboard 數據，請檢查網路連接',
           actions: [
@@ -120,7 +121,7 @@ class DashboardErrorBoundary extends React.Component {
 
       case 'data_processing':
         return {
-          icon: '📊',
+          icon: <FiBarChart2 className="w-8 h-8 text-orange-500" />,
           title: '數據處理錯誤',
           message: '分析學習數據時發生問題，可能是數據格式異常',
           actions: [
@@ -131,7 +132,7 @@ class DashboardErrorBoundary extends React.Component {
 
       case 'rendering':
         return {
-          icon: '🎨',
+          icon: <FiLayout className="w-8 h-8 text-purple-500" />,
           title: '顯示渲染錯誤',
           message: 'Dashboard 組件渲染時發生問題',
           actions: [
@@ -141,7 +142,7 @@ class DashboardErrorBoundary extends React.Component {
 
       case 'permission':
         return {
-          icon: '🔒',
+          icon: <FiLock className="w-8 h-8 text-red-500" />,
           title: '權限不足',
           message: '您可能沒有查看此 Dashboard 的權限',
           actions: [
@@ -151,7 +152,7 @@ class DashboardErrorBoundary extends React.Component {
 
       default:
         return {
-          icon: '⚠️',
+          icon: <FiAlertTriangle className="w-8 h-8 text-yellow-500" />,
           title: 'Dashboard 載入失敗',
           message: '學習數據面板遇到未預期的問題',
           actions: [
@@ -230,7 +231,7 @@ class DashboardErrorBoundary extends React.Component {
           {process.env.NODE_ENV === 'development' && this.state.error && (
             <details className="mt-4 p-component-sm bg-red-50 rounded border border-red-200 text-left w-full max-w-md">
               <summary className="text-red-700 font-medium cursor-pointer text-body-sm">
-                🔧 開發模式 - 錯誤詳情
+                <FiTool className="w-4 h-4 inline mr-1" /> 開發模式 - 錯誤詳情
               </summary>
               <div className="mt-2 text-caption text-red-600 font-mono">
                 <p><strong>類型:</strong> {this.state.errorType}</p>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiChevronDown, FiChevronUp, FiBookOpen, FiHelpCircle, FiEdit3 } from 'react-icons/fi';
+import { FiChevronDown, FiChevronUp, FiBookOpen, FiHelpCircle, FiEdit3, FiTarget, FiInfo } from 'react-icons/fi';
 
 /**
  * 階段反思引導元件
@@ -32,9 +32,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 記錄團隊討論的過程比結果更重要',
-      '💡 不同意見是正常的，重點是如何溝通',
-      '💡 可以提到每個組員的想法和貢獻'
+      '記錄團隊討論的過程比結果更重要',
+      '不同意見是正常的，重點是如何溝通',
+      '可以提到每個組員的想法和貢獻'
     ]
   },
   '1-2': {
@@ -60,9 +60,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 記錄題目修改的過程和原因',
-      '💡 整理找到的重要文獻來源',
-      '💡 反思如何讓研究更聚焦'
+      '記錄題目修改的過程和原因',
+      '整理找到的重要文獻來源',
+      '反思如何讓研究更聚焦'
     ]
   },
   '2-1': {
@@ -88,9 +88,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 記錄文獻來源和重要發現',
-      '💡 整理不同研究的方法和結果',
-      '💡 思考如何應用在自己的研究中'
+      '記錄文獻來源和重要發現',
+      '整理不同研究的方法和結果',
+      '思考如何應用在自己的研究中'
     ]
   },
   '2-2': {
@@ -116,9 +116,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 詳細說明研究設計的理由',
-      '💡 記錄設計過程中的考量和取捨',
-      '💡 反思設計的可行性和限制'
+      '詳細說明研究設計的理由',
+      '記錄設計過程中的考量和取捨',
+      '反思設計的可行性和限制'
     ]
   },
   '3-1': {
@@ -144,9 +144,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 記錄撰寫的困難和解決方法',
-      '💡 反思如何改善報告的呈現',
-      '💡 整理還需要補充的部分'
+      '記錄撰寫的困難和解決方法',
+      '反思如何改善報告的呈現',
+      '整理還需要補充的部分'
     ]
   },
   '4-1': {
@@ -172,9 +172,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 具體記錄收到的建議',
-      '💡 反思如何給出建設性的回饋',
-      '💡 規劃改進的優先順序'
+      '具體記錄收到的建議',
+      '反思如何給出建設性的回饋',
+      '規劃改進的優先順序'
     ]
   },
   '4-2': {
@@ -200,9 +200,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 開放心態接受不同觀點',
-      '💡 記錄其他組的優點和創意',
-      '💡 思考如何整合多元回饋'
+      '開放心態接受不同觀點',
+      '記錄其他組的優點和創意',
+      '思考如何整合多元回饋'
     ]
   },
   '4-3': {
@@ -228,9 +228,9 @@ const STAGE_GUIDES = {
       }
     ],
     tips: [
-      '💡 記錄發表的經驗和感受',
-      '💡 反思整個研究歷程的學習',
-      '💡 思考未來可以改進的方向'
+      '記錄發表的經驗和感受',
+      '反思整個研究歷程的學習',
+      '思考未來可以改進的方向'
     ]
   }
 };
@@ -271,8 +271,8 @@ const StageReflectionGuide = ({ stage, className = '' }) => {
           <div className="flex items-center gap-stack-xs">
             <FiBookOpen className="w-5 h-5 text-purple-600" />
             <div className="text-left">
-              <h4 className="font-semibold text-body text-purple-900">
-                📚 階段 {guide.stageNumber} - {guide.stageName} 反思引導
+              <h4 className="font-semibold text-body text-purple-900 flex items-center gap-1.5">
+                <FiBookOpen className="w-4 h-4" /> 階段 {guide.stageNumber} - {guide.stageName} 反思引導
               </h4>
               <p className="text-caption text-purple-700">
                 點擊展開查看詳細引導
@@ -301,7 +301,7 @@ const StageReflectionGuide = ({ stage, className = '' }) => {
                 {/* 核心任務 */}
                 <div className="bg-white p-component-sm rounded-lg border border-purple-100">
                   <div className="flex items-start gap-2">
-                    <span className="text-lg">🎯</span>
+                    <FiTarget className="w-5 h-5 text-purple-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <h5 className="font-semibold text-body-sm text-gray-900 mb-1">
                         核心任務
@@ -363,8 +363,8 @@ const StageReflectionGuide = ({ stage, className = '' }) => {
                 {/* 小提示 */}
                 {guide.tips && guide.tips.length > 0 && (
                   <div className="bg-yellow-50 p-component-sm rounded-lg border border-yellow-200">
-                    <h5 className="font-semibold text-body-sm text-gray-900 mb-2">
-                      💡 小提示
+                    <h5 className="font-semibold text-body-sm text-gray-900 mb-2 flex items-center gap-1.5">
+                      <FiInfo className="w-4 h-4 text-yellow-600" /> 小提示
                     </h5>
                     <ul className="space-y-1">
                       {guide.tips.map((tip, index) => (

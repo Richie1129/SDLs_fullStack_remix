@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiChevronDown, FiChevronUp, FiHelpCircle, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
+import { FiChevronDown, FiChevronUp, FiHelpCircle, FiCheck, FiX, FiRefreshCw, FiInfo } from 'react-icons/fi';
 import { AiOutlineRobot } from 'react-icons/ai';
 import { FIVE_R_FRAMEWORK, build5RsContent, validate5RsData } from '@/utils/5RsUtils.js';
 import { analyze5RsReflection } from '@/api/llm5Rs.js';
@@ -82,7 +82,7 @@ const FiveRsReflectionForm = ({
     let htmlContent = `
       <div style="text-align: left; max-height: 400px; overflow-y: auto;">
         <div style="margin-bottom: 16px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; color: white;">
-          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: bold;">🤖 AI 分析報告</h3>
+          <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: bold;">AI 分析報告</h3>
           <p style="margin: 0; font-size: 14px; opacity: 0.9;">使用模型：${provider || 'AI'}</p>
         </div>
     `;
@@ -91,7 +91,7 @@ const FiveRsReflectionForm = ({
     if (feedback.overall_assessment) {
       htmlContent += `
         <div style="margin-bottom: 16px; padding: 12px; background: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 4px;">
-          <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 16px;">📊 整體評估</h4>
+          <h4 style="margin: 0 0 8px 0; color: #1e40af; font-size: 16px;">整體評估</h4>
           <p style="margin: 0; color: #374151; line-height: 1.5;">${feedback.overall_assessment}</p>
         </div>
       `;
@@ -101,7 +101,7 @@ const FiveRsReflectionForm = ({
     if (feedback.suggestions && feedback.suggestions.length > 0) {
       htmlContent += `
         <div style="margin-bottom: 16px; padding: 12px; background: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px;">
-          <h4 style="margin: 0 0 12px 0; color: #15803d; font-size: 16px;">💡 個人化建議</h4>
+          <h4 style="margin: 0 0 12px 0; color: #15803d; font-size: 16px;">個人化建議</h4>
           <ul style="margin: 0; padding-left: 20px; color: #374151;">
       `;
       feedback.suggestions.forEach(suggestion => {
@@ -114,7 +114,7 @@ const FiveRsReflectionForm = ({
     if (feedback.strengths && feedback.strengths.length > 0) {
       htmlContent += `
         <div style="margin-bottom: 16px; padding: 12px; background: #fefce8; border-left: 4px solid #eab308; border-radius: 4px;">
-          <h4 style="margin: 0 0 12px 0; color: #a16207; font-size: 16px;">⭐ 發現的強項</h4>
+          <h4 style="margin: 0 0 12px 0; color: #a16207; font-size: 16px;">發現的強項</h4>
           <ul style="margin: 0; padding-left: 20px; color: #374151;">
       `;
       feedback.strengths.forEach(strength => {
@@ -127,7 +127,7 @@ const FiveRsReflectionForm = ({
     if (feedback.improvements && feedback.improvements.length > 0) {
       htmlContent += `
         <div style="margin-bottom: 16px; padding: 12px; background: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px;">
-          <h4 style="margin: 0 0 12px 0; color: #dc2626; font-size: 16px;">🎯 改進方向</h4>
+          <h4 style="margin: 0 0 12px 0; color: #dc2626; font-size: 16px;">改進方向</h4>
           <ul style="margin: 0; padding-left: 20px; color: #374151;">
       `;
       feedback.improvements.forEach(improvement => {
@@ -205,7 +205,7 @@ const FiveRsReflectionForm = ({
         
         // 使用 SweetAlert2 顯示分析結果
         Swal.fire({
-          title: '🎉 AI 分析完成！',
+          title: 'AI 分析完成！',
           html: formatAnalysisResult(result.feedback, result.provider),
           icon: 'success',
           width: '800px',
@@ -338,7 +338,7 @@ const FiveRsReflectionForm = ({
           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg,.mp4,.mpeg,.mov,.avi,.webm,.mp3,.wav,.ogg,.m4a,.zip,.rar"
         />
         <p className="mt-2 text-caption text-gray-500">
-          💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+          <FiInfo className="w-3.5 h-3.5 inline mr-1" /> 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
         </p>
         {/* 現有附件（編輯時） */}
         {isEditing && existingRecord && (existingRecord.fileName || existingRecord.fileData) && (

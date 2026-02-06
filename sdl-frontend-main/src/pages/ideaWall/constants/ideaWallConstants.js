@@ -11,9 +11,9 @@ export const NODE_COLORS = [
 
 // AI Agent 類型對應名稱
 export const AGENT_NAMES = {
-    'IMPROVER': '🛠️ 想法改進者',
-    'SYNTHESIZER': '🔗 知識整合者',
-    'DEVIL': '😈 魔鬼代言人'
+    'IMPROVER': '想法改進者',
+    'SYNTHESIZER': '知識整合者',
+    'DEVIL': '魔鬼代言人'
 };
 
 // Toast 顯示時長

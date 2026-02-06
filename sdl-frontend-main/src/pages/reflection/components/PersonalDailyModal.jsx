@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Modal from "../../../components/Modal";
 import { GrFormClose, GrCircleQuestion } from "react-icons/gr";
+import { FiFileText } from 'react-icons/fi';
 import { motion } from "framer-motion";
 import { is5RsFormat } from "@/utils/5RsUtils.js";
 import { DailyFormFields } from "./DailyFormFields";
@@ -90,7 +91,7 @@ export function PersonalDailyModal({
             {reflectionGuide.hasStageGuide ? (
               <>
                 <p className="font-bold text-body mb-2">
-                  📝 {reflectionGuide.stageName} 階段反思引導
+                  <FiFileText className="w-4 h-4 inline mr-1" />{reflectionGuide.stageName} 階段反思引導
                 </p>
                 <p className="text-body-sm text-gray-600 mb-3">
                   以下問題可以幫助你更深入地反思這個階段的學習：

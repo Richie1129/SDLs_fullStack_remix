@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { FiClipboard, FiInfo, FiFileText, FiLoader, FiUsers, FiPaperclip } from 'react-icons/fi';
 import { getExportData } from '../../api/export';
 import Loader from '../../components/Loader';
 import './ExportPreview.css';
@@ -22,11 +23,11 @@ export default function ExportPreview() {
   // 區塊順序管理
   // Option B: 四階段 SRL 循環（「歷程」階段已隱藏）
   const defaultSectionOrder = [
-    { id: 'kanban', label: '看板任務', icon: '📋' },
-    { id: 'ideaWalls', label: '想法牆', icon: '💡' },
-    { id: 'submits', label: '四階段學習歷程', icon: '📝' }, // [Option B 隱藏] 原為「五階段學習歷程」
-    { id: 'personalReflections', label: '個人反思記錄', icon: '🤔' },
-    { id: 'teamReflections', label: '團隊反思記錄', icon: '👥' }
+    { id: 'kanban', label: '看板任務', icon: <FiClipboard className="w-4 h-4" /> },
+    { id: 'ideaWalls', label: '想法牆', icon: <FiInfo className="w-4 h-4" /> },
+    { id: 'submits', label: '四階段學習歷程', icon: <FiFileText className="w-4 h-4" /> }, // [Option B 隱藏] 原為「五階段學習歷程」
+    { id: 'personalReflections', label: '個人反思記錄', icon: <FiLoader className="w-4 h-4" /> },
+    { id: 'teamReflections', label: '團隊反思記錄', icon: <FiUsers className="w-4 h-4" /> }
   ];
   const [sectionOrder, setSectionOrder] = useState(defaultSectionOrder);
   const [isReorderMode, setIsReorderMode] = useState(false);
@@ -233,7 +234,7 @@ export default function ExportPreview() {
                             <div className="submit-file-info">
                               {submit.hasFile ? (
                                 <div className="submit-attachment">
-                                  📎 檔案：{submit.originalName || submit.fileName}
+                                  <FiPaperclip className="w-3 h-3 inline mr-1" />檔案：{submit.originalName || submit.fileName}
                                 </div>
                               ) : (
                                 <div className="submit-no-content">無內容或檔案</div>
@@ -242,7 +243,7 @@ export default function ExportPreview() {
                           )}
                           {submit.hasContent && submit.hasFile && (
                             <div className="submit-attachment">
-                              📎 附件：{submit.originalName || submit.fileName}
+                              <FiPaperclip className="w-3 h-3 inline mr-1" />附件：{submit.originalName || submit.fileName}
                             </div>
                           )}
                         </div>
@@ -379,7 +380,7 @@ export default function ExportPreview() {
       {/* 順序調整面板 */}
       {isReorderMode && (
         <div className="reorder-panel no-print">
-          <h3>📋 調整區塊順序</h3>
+          <h3><FiClipboard className="w-4 h-4 inline mr-1" />調整區塊順序</h3>
           <p className="reorder-hint">使用上下箭頭調整順序，完成後點擊「下載 PDF」按鈕即可生成自訂順序的 PDF（順序不會儲存）</p>
           <div className="reorder-list">
             {sectionOrder.map((section, index) => (

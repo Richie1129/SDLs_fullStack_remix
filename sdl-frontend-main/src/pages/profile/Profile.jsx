@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getCurrentUser, updateUserProfile, updateUserPassword } from '../../api/users';
 import { useNavigate } from 'react-router-dom';
 import { FaUser, FaLock, FaArrowLeft, FaEdit, FaSave, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FiAlertTriangle } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { triggerUserUpdate } from '../../utils/userUtils';
 
@@ -285,7 +286,7 @@ export default function Profile() {
                   />
                   {user.email && user.email.endsWith('@example.com') && (
                     <p className="text-caption text-orange-600 mt-1">
-                      ⚠️ 請更新您的真實電子郵件地址
+                      <FiAlertTriangle className="w-3.5 h-3.5 inline mr-1" />請更新您的真實電子郵件地址
                     </p>
                   )}
                 </div>

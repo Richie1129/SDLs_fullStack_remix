@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import { FaTimes, FaCog, FaSearch, FaFilter } from 'react-icons/fa';
+import { FiStar } from 'react-icons/fi';
 import TopBar from '../../components/TopBar';
 import SideBar from '../../components/SideBar';
 import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings } from '../../api/project';
@@ -586,7 +587,7 @@ const ClassObservationPage = () => {
                                                                             <span className='text-body-sm text-gray-700'>{c}</span>
                                                                             {isSameClass && (
                                                                                 <span className='text-caption text-blue-600 font-medium'>
-                                                                                    ✨ 組間觀摩：同學只會看到其他組的專案
+                                                                                    <FiStar className="w-3 h-3 inline mr-1" />組間觀摩：同學只會看到其他組的專案
                                                                                 </span>
                                                                             )}
                                                                         </div>

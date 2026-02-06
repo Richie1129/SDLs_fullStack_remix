@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiRefreshCw, FiTool } from 'react-icons/fi';
 import errorReportingService from '../../services/errorReportingService';
 
 /**
@@ -131,7 +132,7 @@ class ChartErrorBoundary extends React.Component {
                 className="bg-blue-500 text-white px-2 py-1 rounded text-caption hover:bg-blue-600 transition-colors"
                 title="重試載入圖表"
               >
-                🔄 重試
+                <FiRefreshCw className="w-4 h-4 inline mr-1" /> 重試
               </button>
             </div>
 
@@ -139,7 +140,7 @@ class ChartErrorBoundary extends React.Component {
             {process.env.NODE_ENV === 'development' && (
               <details className="mt-2 p-component-xs bg-red-50 rounded border border-red-200 text-left">
                 <summary className="text-red-700 font-medium cursor-pointer text-caption">
-                  🔧 圖表錯誤詳情
+                  <FiTool className="w-4 h-4 inline mr-1" /> 圖表錯誤詳情
                 </summary>
                 <div className="mt-1 text-caption text-red-600 font-mono">
                   <p><strong>錯誤:</strong> {this.state.error?.toString()}</p>

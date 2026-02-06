@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaMedal } from 'react-icons/fa';
 import {
   getSafeArrayData,
   getSafeDisplayName,
@@ -22,10 +23,9 @@ const RankingView = ({ rankingData }) => {
   const safeTasks = processSafeRankingData(rankingData?.tasks, 3);
 
   const getMedalIcon = (index) => {
-    if (index === 0) return '🥇';
-    if (index === 1) return '🥈';
-    if (index === 2) return '🥉';
-    return null;
+    const colors = ['text-yellow-500', 'text-gray-400', 'text-amber-600'];
+    if (index > 2) return null;
+    return <FaMedal className={`w-5 h-5 ${colors[index]}`} />;
   };
 
   const SafeRankingSection = ({ title, data, valueKey, valueLabel, bgColor }) => {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AiTwotoneFolderAdd, AiOutlineCloudDownload, AiOutlineUpload } from "react-icons/ai";
+import { FiInfo } from 'react-icons/fi';
 import { GrFormClose } from "react-icons/gr";
 import { useQuery, useQueryClient } from 'react-query';
 import { getAllSubmit, updateSubmitTask, updateSubmitAttachment, getSubmitChangeLogs } from '../../api/submit';
@@ -497,7 +498,7 @@ export default function Protfolio() {
                                                         附加檔案
                                                     </h3>
                                                     <p className="text-caption text-gray-500 mb-3">
-                                                        💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB
+                                                        <FiInfo className="w-3.5 h-3.5 inline mr-1" /> 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB
                                                     </p>
                                                     {modalData.fileName ? (
                                                         <p className="text-body-sm text-gray-600 font-mono bg-white px-3 py-1 rounded border inline-block">

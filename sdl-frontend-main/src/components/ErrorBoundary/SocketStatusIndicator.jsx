@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiCircle, FiWifiOff } from 'react-icons/fi';
 import { socket } from '../../services/socketManager';
 
 /**
@@ -37,7 +38,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
       return {
         color: 'bg-gray-500',
         text: '離線',
-        icon: '📴',
+        icon: <FiWifiOff className="w-4 h-4 text-gray-500" />,
         pulse: false
       };
     }
@@ -46,7 +47,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
       return {
         color: 'bg-green-500',
         text: '已連接',
-        icon: '🟢',
+        icon: <FiCircle className="w-3 h-3 fill-green-500 text-green-500" />,
         pulse: false
       };
     }
@@ -55,7 +56,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
       return {
         color: 'bg-yellow-500',
         text: '連接中',
-        icon: '🟡',
+        icon: <FiCircle className="w-3 h-3 fill-yellow-500 text-yellow-500" />,
         pulse: true
       };
     }
@@ -63,7 +64,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
     return {
       color: 'bg-red-500',
       text: '斷線',
-      icon: '🔴',
+      icon: <FiCircle className="w-3 h-3 fill-red-500 text-red-500" />,
       pulse: true
     };
   };

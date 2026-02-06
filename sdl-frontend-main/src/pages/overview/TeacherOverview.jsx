@@ -7,6 +7,7 @@ import { getAllSubmit } from "../../api/submit";
 import { useQuery } from "react-query";
 import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
+import { FiBookOpen, FiUsers, FiTrendingUp, FiAlertTriangle, FiStar, FiFileText } from 'react-icons/fi';
 import TopBar from "../../components/TopBar";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { 
@@ -321,7 +322,7 @@ const TeacherOverview = () => {
                     <p className="text-teal-100 text-caption sm:text-body-sm">指導專案</p>
                     <p className="text-h2 sm:text-h1 font-bold">{teachingStats.totalProjects}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">📚</div>
+                  <FiBookOpen className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -331,7 +332,7 @@ const TeacherOverview = () => {
                     <p className="text-blue-100 text-caption sm:text-body-sm">指導學生</p>
                     <p className="text-h2 sm:text-h1 font-bold">{teachingStats.uniqueStudents}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">👥</div>
+                  <FiUsers className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -341,7 +342,7 @@ const TeacherOverview = () => {
                     <p className="text-green-100 text-caption sm:text-body-sm">平均進度</p>
                     <p className="text-h2 sm:text-h1 font-bold">{teachingStats.averageProgress}%</p>
                   </div>
-                  <div className="text-h1 sm:text-display">📈</div>
+                  <FiTrendingUp className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -351,7 +352,7 @@ const TeacherOverview = () => {
                     <p className="text-orange-100 text-caption sm:text-body-sm">需關注</p>
                     <p className="text-h2 sm:text-h1 font-bold">{teachingStats.needAttentionStudents}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">⚠️</div>
+                  <FiAlertTriangle className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -361,7 +362,7 @@ const TeacherOverview = () => {
                     <p className="text-purple-100 text-caption sm:text-body-sm">優秀學生</p>
                     <p className="text-h2 sm:text-h1 font-bold">{teachingStats.excellentStudents}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">⭐</div>
+                  <FiStar className="w-8 h-8 opacity-80" />
                 </div>
               </div>
 
@@ -371,7 +372,7 @@ const TeacherOverview = () => {
                     <p className="text-pink-100 text-caption sm:text-body-sm">本週反思</p>
                     <p className="text-h2 sm:text-h1 font-bold">{teachingStats.thisWeekReflections}</p>
                   </div>
-                  <div className="text-h1 sm:text-display">📝</div>
+                  <FiFileText className="w-8 h-8 opacity-80" />
                 </div>
               </div>
             </div>

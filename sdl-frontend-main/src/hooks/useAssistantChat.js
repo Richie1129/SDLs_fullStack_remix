@@ -255,7 +255,7 @@ export function useAssistantChat() {
         if (lastIndex >= 0 && newMessages[lastIndex].role === 'assistant') {
           newMessages[lastIndex] = {
             ...newMessages[lastIndex],
-            content: `❌ 抱歉，發生錯誤：${err.message}`,
+            content: `抱歉，發生錯誤：${err.message}`,
             timestamp: new Date().toISOString(),
             isError: true,
           };

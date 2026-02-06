@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiBarChart2, FiClipboard, FiTarget } from 'react-icons/fi';
 import { getColumnStyle } from '../utils';
 
 /**
@@ -39,7 +40,7 @@ const PersonalData = ({ personalData, ideaNodes, kanbanTasks }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-stack-sm">
           <div className="bg-gradient-to-br from-teal-50 to-teal-100/50 p-component-sm sm:p-component-base rounded-lg border border-teal-200 hover:border-teal-300 transition-all duration-300 hover:shadow-md">
             <h3 className="font-semibold text-teal-800 mb-3 text-body-sm sm:text-body flex items-center">
-              <span className="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center text-caption mr-2">📊</span>
+              <span className="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center mr-2"><FiBarChart2 className="w-4 h-4" /></span>
               學習統計
             </h3>
             <div className="space-y-3 text-caption sm:text-body-sm">
@@ -62,7 +63,7 @@ const PersonalData = ({ personalData, ideaNodes, kanbanTasks }) => {
 
           <div className="bg-gradient-to-br from-customgreen/20 to-teal-100/50 p-component-sm sm:p-component-base rounded-lg border border-customgreen/30 hover:border-customgreen/50 transition-all duration-300 hover:shadow-md">
             <h3 className="font-semibold text-teal-800 mb-3 text-body-sm sm:text-body flex items-center">
-              <span className="w-8 h-8 bg-customgreen text-white rounded-full flex items-center justify-center text-caption mr-2">📋</span>
+              <span className="w-8 h-8 bg-customgreen text-white rounded-full flex items-center justify-center mr-2"><FiClipboard className="w-4 h-4" /></span>
               任務狀況
             </h3>
             <div className="space-y-3 text-caption sm:text-body-sm">
@@ -91,7 +92,7 @@ const PersonalData = ({ personalData, ideaNodes, kanbanTasks }) => {
                 })
               ) : (
                 <div className="text-center py-3 bg-white/50 rounded-lg">
-                  <span className="text-teal-600 text-caption font-medium">🎯 準備開始建立任務吧！</span>
+                  <span className="text-teal-600 text-caption font-medium inline-flex items-center gap-1"><FiTarget className="w-3.5 h-3.5" /> 準備開始建立任務吧！</span>
                 </div>
               )}
             </div>

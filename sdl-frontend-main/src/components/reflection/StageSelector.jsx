@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { FiFileText, FiStar, FiInfo, FiCheckCircle } from 'react-icons/fi';
 import { STAGE_NAMES } from '@/pages/submit/config/guidedQuestionsConfig';
 
 /**
@@ -56,14 +57,14 @@ export default function StageSelector({
           `}
         >
           <option value="">
-            {recommendedStage ? '📝 無特定階段（通用反思）' : '無特定階段（通用反思）'}
+            {recommendedStage ? '無特定階段（通用反思）' : '無特定階段（通用反思）'}
           </option>
           
           {Object.entries(stageGroups).map(([stageNum, group]) => (
             <optgroup key={stageNum} label={group.name}>
               {group.stages.map(({ key, name }) => (
                 <option key={key} value={key}>
-                  {key === recommendedStage ? `⭐ ${key} ${name}` : `${key} ${name}`}
+                  {key === recommendedStage ? `★ ${key} ${name}` : `${key} ${name}`}
                 </option>
               ))}
             </optgroup>
@@ -74,7 +75,7 @@ export default function StageSelector({
         {recommendedStage && !value && (
           <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-caption text-blue-700">
-              💡 <strong>智能推薦：</strong>根據目前進度，建議記錄 
+              <FiInfo className="w-3.5 h-3.5 inline mr-1" /><strong>智能推薦：</strong>根據目前進度，建議記錄 
               <button
                 type="button"
                 onClick={() => onChange(recommendedStage)}
@@ -91,7 +92,7 @@ export default function StageSelector({
         {value && (
           <div className="mt-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-caption text-green-700">
-              ✅ 此反思將關聯到「{value} {STAGE_NAMES[value]}」階段
+              <FiCheckCircle className="w-3.5 h-3.5 inline mr-1 text-green-600" />此反思將關聯到「{value} {STAGE_NAMES[value]}」階段
             </p>
           </div>
         )}

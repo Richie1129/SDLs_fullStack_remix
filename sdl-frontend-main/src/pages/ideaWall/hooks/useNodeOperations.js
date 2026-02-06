@@ -250,7 +250,7 @@ export function useNodeOperations({
         
         setCreateNodeModalOpen(true);
         
-        toast.success('已為您準備好節點，請繼續完成您的想法！', { icon: '📝' });
+        toast.success('已為您準備好節點，請繼續完成您的想法！');
     };
 
     return {

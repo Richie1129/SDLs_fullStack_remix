@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
+import { FiInfo, FiMessageCircle, FiFileText, FiBookOpen } from 'react-icons/fi';
 import { getGuidedQuestions } from '../config/guidedQuestionsConfig';
 
 /**
@@ -78,7 +79,7 @@ export default function GuidancePanel({ stageKey }) {
                       {q.question}
                     </p>
                     <p className="text-caption text-customgreen/80 bg-customgreen/5 p-2 rounded">
-                      💡 {q.hint}
+                      <FiInfo className="w-3 h-3 inline mr-1" />{q.hint}
                     </p>
                   </div>
                 )}
@@ -93,14 +94,14 @@ export default function GuidancePanel({ stageKey }) {
         <div>
           <p className="text-caption font-medium text-purple-600 mb-2 flex items-center gap-1">
             <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-            💭 延伸思考（記錄在反思日誌）
+            <FiMessageCircle className="w-3 h-3 inline mr-1" /> 延伸思考（記錄在反思日誌）
           </p>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 mb-2">
             <p className="text-caption text-purple-700 mb-2">
-              💡 這些問題可以幫助你深入思考，建議在<strong>「個人反思日誌」</strong>中記錄！
+              <FiInfo className="w-3 h-3 inline mr-1" />這些問題可以幫助你深入思考，建議在<strong>「個人反思日誌」</strong>中記錄！
             </p>
             <p className="text-caption text-purple-600">
-              📝 反思日誌位置：專案頁面 → 個人反思日誌
+              <FiFileText className="w-3 h-3 inline mr-1" />反思日誌位置：專案頁面 → 個人反思日誌
             </p>
           </div>
           {optionalQuestions.map((q) => (
@@ -127,7 +128,7 @@ export default function GuidancePanel({ stageKey }) {
                       {q.question}
                     </p>
                     <p className="text-caption text-purple-600/80 bg-purple-50 p-2 rounded">
-                      💡 {q.hint}
+                      <FiInfo className="w-3 h-3 inline mr-1" />{q.hint}
                     </p>
                   </div>
                 )}
@@ -140,7 +141,7 @@ export default function GuidancePanel({ stageKey }) {
       {/* 範例連結 */}
       <div className="mt-4 pt-4 border-t border-gray-100">
         <p className="text-caption text-gray-400 text-center">
-          📖 不知道怎麼寫？點擊上方項目查看提示
+          <FiBookOpen className="w-3 h-3 inline mr-1" />不知道怎麼寫？點擊上方項目查看提示
         </p>
       </div>
     </>
@@ -154,7 +155,7 @@ export default function GuidancePanel({ stageKey }) {
         <div className="p-4 bg-white/95 backdrop-blur border-b border-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-body-lg text-gray-800 flex items-center gap-2">
-              💡 寫作提示
+              <FiInfo className="w-4 h-4" /> 寫作提示
             </h3>
             <button
               onClick={() => setIsCollapsed(true)}
@@ -209,7 +210,7 @@ export default function GuidancePanel({ stageKey }) {
             <div className="p-4 border-b border-gray-100 flex-shrink-0 bg-gradient-to-b from-customgreen/5 to-white">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-body-lg text-gray-800 flex items-center gap-2">
-                  💡 寫作提示
+                  <FiInfo className="w-4 h-4" /> 寫作提示
                 </h3>
                 <button
                   onClick={() => setIsMobileDrawerOpen(false)}

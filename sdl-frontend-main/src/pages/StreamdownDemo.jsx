@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FiFileText, FiCode, FiBarChart2, FiHash, FiTrendingUp, FiZap, FiRefreshCw, FiInfo, FiCheckCircle, FiXCircle } from 'react-icons/fi';
 import MessageContent from '../components/MessageContent';
 
 /**
@@ -92,11 +93,11 @@ LIMIT 10;
 
 | 功能 | 支援 | 說明 |
 |------|------|------|
-| **基礎 Markdown** | ✅ | 粗體、斜體、連結等 |
-| **GFM 表格** | ✅ | GitHub Flavored Markdown |
-| **語法高亮** | ✅ | Shiki，支援 100+ 語言 |
-| **數學公式** | ✅ | KaTeX 渲染 |
-| **Mermaid 圖表** | ✅ | 流程圖、時序圖等 |
+| **基礎 Markdown** | ✓ | 粗體、斜體、連結等 |
+| **GFM 表格** | ✓ | GitHub Flavored Markdown |
+| **語法高亮** | ✓ | Shiki，支援 100+ 語言 |
+| **數學公式** | ✓ | KaTeX 渲染 |
+| **Mermaid 圖表** | ✓ | 流程圖、時序圖等 |
 
 ## 對齊測試
 
@@ -245,7 +246,7 @@ console.log(message);
 
 ---
 
-**結論**：Streamdown 完美支援所有這些功能！ 🎉`
+**結論**：Streamdown 完美支援所有這些功能！`
   };
 
   const [currentExample, setCurrentExample] = useState('basic');
@@ -290,12 +291,12 @@ console.log(message);
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {key === 'basic' && '📝 基礎語法'}
-                {key === 'code' && '💻 程式碼'}
-                {key === 'table' && '📊 表格'}
-                {key === 'math' && '🔢 數學公式'}
-                {key === 'mermaid' && '📈 圖表'}
-                {key === 'advanced' && '🚀 進階功能'}
+                {key === 'basic' && <><FiFileText className="w-4 h-4 inline mr-1" /> 基礎語法</>}
+                {key === 'code' && <><FiCode className="w-4 h-4 inline mr-1" /> 程式碼</>}
+                {key === 'table' && <><FiBarChart2 className="w-4 h-4 inline mr-1" /> 表格</>}
+                {key === 'math' && <><FiHash className="w-4 h-4 inline mr-1" /> 數學公式</>}
+                {key === 'mermaid' && <><FiTrendingUp className="w-4 h-4 inline mr-1" /> 圖表</>}
+                {key === 'advanced' && <><FiZap className="w-4 h-4 inline mr-1" /> 進階功能</>}
               </button>
             ))}
           </div>
@@ -319,7 +320,7 @@ console.log(message);
               <span>Streamdown 渲染結果</span>
               {isStreaming && (
                 <span className="text-caption bg-teal-700 px-2 py-1 rounded">
-                  🔄 Streaming 模式
+                  <FiRefreshCw className="w-3 h-3 inline mr-1" /> Streaming 模式
                 </span>
               )}
             </div>
@@ -349,43 +350,43 @@ console.log(message);
               <tbody className="divide-y">
                 <tr>
                   <td className="px-4 py-3">基礎 Markdown</td>
-                  <td className="px-4 py-3 text-center">✅</td>
-                  <td className="px-4 py-3 text-center">✅</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /></td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3">GFM（表格、任務列表）</td>
-                  <td className="px-4 py-3 text-center">✅ 需安裝 plugin</td>
-                  <td className="px-4 py-3 text-center">✅ 內建</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 需安裝 plugin</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 內建</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3">語法高亮</td>
-                  <td className="px-4 py-3 text-center">✅ 需安裝 plugin</td>
-                  <td className="px-4 py-3 text-center">✅ 內建 Shiki</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 需安裝 plugin</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 內建 Shiki</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3">數學公式（KaTeX）</td>
-                  <td className="px-4 py-3 text-center">✅ 需安裝 plugin</td>
-                  <td className="px-4 py-3 text-center">✅ 內建</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 需安裝 plugin</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 內建</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3">Mermaid 圖表</td>
-                  <td className="px-4 py-3 text-center">❌</td>
-                  <td className="px-4 py-3 text-center">✅ 內建</td>
+                  <td className="px-4 py-3 text-center"><FiXCircle className="w-4 h-4 text-red-500 mx-auto" /></td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 內建</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3">處理未完成 Markdown</td>
-                  <td className="px-4 py-3 text-center">❌</td>
-                  <td className="px-4 py-3 text-center">✅ AI Streaming 優化</td>
+                  <td className="px-4 py-3 text-center"><FiXCircle className="w-4 h-4 text-red-500 mx-auto" /></td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> AI Streaming 優化</td>
                 </tr>
                 <tr>
                   <td className="px-4 py-3">XSS 防護</td>
-                  <td className="px-4 py-3 text-center">✅ 需配置</td>
-                  <td className="px-4 py-3 text-center">✅ 預設啟用</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 需配置</td>
+                  <td className="px-4 py-3 text-center"><FiCheckCircle className="w-4 h-4 text-green-500 mx-auto" /> 預設啟用</td>
                 </tr>
                 <tr className="bg-teal-50">
                   <td className="px-4 py-3 font-semibold">配置複雜度</td>
-                  <td className="px-4 py-3 text-center">😰 高</td>
-                  <td className="px-4 py-3 text-center">😊 低</td>
+                  <td className="px-4 py-3 text-center">高</td>
+                  <td className="px-4 py-3 text-center">低</td>
                 </tr>
               </tbody>
             </table>
@@ -395,7 +396,7 @@ console.log(message);
         {/* Instructions */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-component-md-lg">
           <h3 className="text-body-lg font-semibold text-blue-900 mb-2">
-            💡 如何在專案助手中測試
+            <FiInfo className="w-5 h-5 inline mr-1" /> 如何在專案助手中測試
           </h3>
           <ol className="list-decimal list-inside space-y-stack-xs text-blue-800">
             <li>進入任意專案頁面</li>

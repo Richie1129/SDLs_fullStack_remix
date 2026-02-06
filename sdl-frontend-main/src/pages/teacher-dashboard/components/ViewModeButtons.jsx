@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiHome, FiUsers, FiLink, FiUser, FiBarChart2 } from 'react-icons/fi';
 
 const ViewModeButtons = ({ viewMode, setViewMode }) => {
   const modes = [
@@ -10,11 +11,11 @@ const ViewModeButtons = ({ viewMode, setViewMode }) => {
   ];
 
   const buttonIcons = {
-    'overview': '🏠',
-    'all-students': '👥',
-    'groups': '🔗',
-    'individual': '👤',
-    'analytics': '📊'
+    'overview': <FiHome className="w-4 h-4" />,
+    'all-students': <FiUsers className="w-4 h-4" />,
+    'groups': <FiLink className="w-4 h-4" />,
+    'individual': <FiUser className="w-4 h-4" />,
+    'analytics': <FiBarChart2 className="w-4 h-4" />
   };
 
   return (
@@ -29,7 +30,7 @@ const ViewModeButtons = ({ viewMode, setViewMode }) => {
               : 'bg-white text-teal-700 border border-teal-200 hover:border-teal-300 hover:bg-teal-50 hover:text-teal-800'
           }`}
         >
-          <span className="text-body-sm">{buttonIcons[key]}</span>
+          <span>{buttonIcons[key]}</span>
           <span>{label}</span>
         </button>
       ))}

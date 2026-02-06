@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import { FiMessageCircle, FiMessageSquare, FiXCircle } from 'react-icons/fi';
 
 // 思考中指示器
 const ThinkingIndicator = () => {
@@ -49,7 +50,7 @@ const ThinkingBlock = ({ content }) => {
         }}
       >
         <div className="flex items-center gap-stack-xs">
-          <span className="text-body">💭</span>
+          <FiMessageCircle className="w-5 h-5" />
           <span className="font-medium text-body-sm">AI 思考過程</span>
         </div>
         <span className="text-caption transition-transform" style={{
@@ -138,7 +139,7 @@ const ChatContent = ({
       {messages.length === 0 && (
         <div className="h-full flex items-center justify-center">
           <div className="text-center text-[#6c757d]">
-            <div className="text-6xl mb-4">💬</div>
+            <div className="mb-4"><FiMessageSquare className="w-14 h-14 text-gray-300" /></div>
             <div className="text-[15px] font-semibold text-[#343a40] mb-2">開始對話</div>
             <div className="text-[13px] mb-4">
               詢問我關於專案的任何問題，例如：
@@ -185,7 +186,7 @@ const ChatContent = ({
       {/* 錯誤提示 */}
       {error && (
         <div className="mb-4 px-4 py-3 bg-red-50 border border-red-200 rounded-lg">
-          <div className="text-[14px] text-red-800">❌ {error}</div>
+          <div className="text-[14px] text-red-800 flex items-center gap-1.5"><FiXCircle className="w-4 h-4" /> {error}</div>
         </div>
       )}
     </div>

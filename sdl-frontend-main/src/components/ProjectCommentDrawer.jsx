@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FiX, FiImage, FiPaperclip, FiSend, FiDownload, FiFile, FiFileText, FiTrash } from 'react-icons/fi';
+import { FiX, FiImage, FiPaperclip, FiSend, FiDownload, FiFile, FiFileText, FiTrash, FiInfo } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import Swal from 'sweetalert2';
 import { 
@@ -509,7 +509,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               )}
             </div>
             <p className="text-caption text-gray-500">
-              💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+              <FiInfo className="w-3.5 h-3.5 inline mr-1" />支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
             </p>
           </div>
         </div>
@@ -556,7 +556,7 @@ function CommentAttachmentPicker({ onPick, label = '附件' }) {
         {label}
       </button>
       <p className="text-caption text-gray-400">
-        💡 單檔最大 100MB | 最多 10 個檔案
+        <FiInfo className="w-3.5 h-3.5 inline mr-1" />單檔最大 100MB | 最多 10 個檔案
       </p>
     </div>
   );

@@ -42,7 +42,7 @@ export function useIdeaWallSocket({
             console.log('節點操作成功:', result);
             
             if (result?.code === 'NODE_DELETE_SUCCESS') {
-                toast.success(`✅ ${result.nodeTitle || '節點'} 刪除成功！`);
+                toast.success(`${result.nodeTitle || '節點'} 刪除成功！`);
             } else if (result?.message) {
                 toast.success(result.message);
             }

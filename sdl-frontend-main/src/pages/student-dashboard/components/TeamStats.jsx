@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiCpu, FiInfo, FiClipboard, FiFileText, FiUsers } from 'react-icons/fi';
 
 /**
  * 團隊統計卡片組件
@@ -15,7 +16,7 @@ const TeamStats = ({ teamStats }) => {
             <p className="text-body-lg sm:text-h2 font-bold">{teamStats.teamAiInteractions}</p>
             <p className="text-white/70 text-caption">次數</p>
           </div>
-          <div className="text-h3 sm:text-h2 bg-white/20 rounded-full w-10 h-10 flex items-center justify-center">🤖</div>
+          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiCpu className="w-5 h-5" /></div>
         </div>
       </div>
 
@@ -26,7 +27,7 @@ const TeamStats = ({ teamStats }) => {
             <p className="text-body-lg sm:text-h2 font-bold">{teamStats.ideaNodes}</p>
             <p className="text-white/70 text-caption">個數</p>
           </div>
-          <div className="text-h3 sm:text-h2 bg-white/20 rounded-full w-10 h-10 flex items-center justify-center">💡</div>
+          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiInfo className="w-5 h-5" /></div>
         </div>
       </div>
 
@@ -37,7 +38,7 @@ const TeamStats = ({ teamStats }) => {
             <p className="text-body-lg sm:text-h2 font-bold">{teamStats.kanbanTasks}</p>
             <p className="text-white/70 text-caption">張數</p>
           </div>
-          <div className="text-h3 sm:text-h2 bg-white/20 rounded-full w-10 h-10 flex items-center justify-center">📋</div>
+          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiClipboard className="w-5 h-5" /></div>
         </div>
       </div>
 
@@ -48,7 +49,7 @@ const TeamStats = ({ teamStats }) => {
             <p className="text-body-lg sm:text-h2 font-bold">{teamStats.personalReflections}</p>
             <p className="text-white/70 text-caption">篇數</p>
           </div>
-          <div className="text-h3 sm:text-h2 bg-white/20 rounded-full w-10 h-10 flex items-center justify-center">📝</div>
+          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiFileText className="w-5 h-5" /></div>
         </div>
       </div>
 
@@ -59,7 +60,7 @@ const TeamStats = ({ teamStats }) => {
             <p className="text-body-lg sm:text-h2 font-bold">{teamStats.teamReflections}</p>
             <p className="text-white/70 text-caption">篇數</p>
           </div>
-          <div className="text-h3 sm:text-h2 bg-white/20 rounded-full w-10 h-10 flex items-center justify-center">👥</div>
+          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiUsers className="w-5 h-5" /></div>
         </div>
       </div>
     </div>

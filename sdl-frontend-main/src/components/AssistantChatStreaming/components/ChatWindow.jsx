@@ -1,4 +1,5 @@
 import React from "react";
+import { FiCpu } from 'react-icons/fi';
 import ChatSidebar from "./ChatSidebar";
 import ChatContent from "./ChatContent";
 import ChatInput from "./ChatInput";
@@ -87,7 +88,7 @@ const ChatWindow = ({
             {/* 中央區域 - 標題 */}
             <div className="header-center flex items-center justify-center flex-1 gap-stack-xs absolute left-1/2 -translate-x-1/2 max-w-[360px]">
               <div className="flex items-center gap-stack-xs">
-                <span className="text-body-lg">🤖</span>
+                <FiCpu className="w-5 h-5 text-[#5BA491]" />
                 <span className="font-semibold text-[#343a40]">專案助理</span>
                 <span className="text-caption text-[#6c757d]">
                   {provider === 'gemini' ? 'Gemini' : 'GPT-4'}

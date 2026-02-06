@@ -17,7 +17,7 @@ import KanbanErrorBoundary from '../../components/ErrorBoundary/KanbanErrorBound
 import { useKanbanData } from './hooks/useKanbanData';
 import { useKanbanView } from './hooks/useKanbanView';
 import KanbanColumn from './components/KanbanColumn';
-import { PHASE_TEMPLATES, PHASES } from '../../config/kanbanTemplates';
+import { PHASE_TEMPLATES, PHASES, COLUMN_ICON_MAP } from '../../config/kanbanTemplates';
 import { setStageInfo } from '../../utils/authUtils';
 
 /**
@@ -318,8 +318,8 @@ export default function Kanban() {
                       onChange={() => toggleTemplateColumnSelection(idx)}
                     />
                     <div className="flex-1">
-                      <span className="block text-body-sm font-medium text-gray-900">
-                        {col.title}
+                      <span className="block text-body-sm font-medium text-gray-900 flex items-center gap-1.5">
+                        {col.icon && COLUMN_ICON_MAP[col.icon]}{col.title}
                       </span>
                       {col.defaultCards && col.defaultCards.length > 0 && (
                         <span className="block text-caption text-gray-500 mt-1">

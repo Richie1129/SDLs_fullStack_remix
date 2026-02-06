@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaMedal } from 'react-icons/fa';
 import { generateStudentActivityStats, calculateCreatorStats } from '../utils';
 import {
   getSafeArrayData,
@@ -206,7 +207,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 <div key={creator} className="relative flex items-center justify-between p-component-xs bg-purple-50 rounded">
                   {index < 3 && (
                     <div className="absolute -top-1 -left-1 text-body-lg">
-                      {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                      <FaMedal className={`w-5 h-5 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : 'text-orange-600'}`} />
                     </div>
                   )}
                   <span className={`text-body-sm font-medium text-purple-800 ${index < 3 ? 'ml-4' : ''}`}>{creator}</span>
@@ -293,7 +294,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 <div key={creator} className="relative flex items-center justify-between p-component-xs bg-orange-50 rounded">
                   {index < 3 && (
                     <div className="absolute -top-1 -left-1 text-body-lg">
-                      {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                      <FaMedal className={`w-5 h-5 ${index === 0 ? 'text-yellow-500' : index === 1 ? 'text-gray-400' : 'text-orange-600'}`} />
                     </div>
                   )}
                   <span className={`text-body-sm font-medium text-orange-800 ${index < 3 ? 'ml-4' : ''}`}>{creator}</span>

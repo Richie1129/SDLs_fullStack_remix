@@ -1,6 +1,7 @@
 import React from 'react';
 import { GrFormClose } from "react-icons/gr";
 import { AiOutlineCloudDownload } from "react-icons/ai";
+import { FiInfo } from 'react-icons/fi';
 
 /**
  * FileManager - 文件管理組件
@@ -60,7 +61,7 @@ export function FileManager({
 
       {/* 檔案上傳提示 */}
       <p className='text-caption text-gray-500 mb-4'>
-        💡 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
+        <FiInfo className="w-3.5 h-3.5 inline mr-1" /> 支援圖片、文件、影片、音訊、壓縮檔等格式 | 單檔最大 100MB | 最多 10 個檔案
       </p>
 
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-stack-md'>

@@ -1,4 +1,5 @@
 import React from "react";
+import { FiPlusCircle, FiStar, FiMessageSquare, FiTrash2 } from 'react-icons/fi';
 
 const ChatSidebar = ({
   showSidebar,
@@ -27,7 +28,7 @@ const ChatSidebar = ({
         onClick={onNewConversation}
         className="bg-[#5BA491] text-white border-0 rounded-lg py-3 px-4 mb-4 cursor-pointer text-body-sm font-semibold transition-all duration-fast shadow-[0_2px_4px_rgba(91,164,145,0.2)] hover:bg-[#4a9076] hover:shadow-lg"
       >
-        ✨ 新對話
+        <FiPlusCircle className="w-4 h-4 inline mr-1" /> 新對話
       </button>
 
       {/* 對話列表 */}
@@ -41,7 +42,7 @@ const ChatSidebar = ({
           </div>
         ) : chatSessions.length === 0 ? (
           <div className="p-component-md text-center text-[#6c757d] text-[13px] italic">
-            🌟 開始你的第一次對話吧！
+            <FiStar className="w-4 h-4 inline mr-1" /> 開始你的第一次對話吧！
           </div>
         ) : (
           chatSessions.map((session) => (
@@ -57,7 +58,7 @@ const ChatSidebar = ({
                 className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap mr-2"
                 onClick={() => onChatSessionClick(session.id)}
               >
-                💬 {session.name || `對話 ${session.id.substring(0, 8)}`}
+                <FiMessageSquare className="w-3.5 h-3.5 inline mr-1 flex-shrink-0" /> {session.name || `對話 ${session.id.substring(0, 8)}`}
               </div>
 
               {/* 刪除按鈕 */}
@@ -74,7 +75,7 @@ const ChatSidebar = ({
                 }}
                 title="刪除對話"
               >
-                🗑️
+                <FiTrash2 className="w-3 h-3" />
               </button>
             </div>
           ))

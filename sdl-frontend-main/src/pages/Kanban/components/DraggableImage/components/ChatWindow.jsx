@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { FiCpu, FiMaximize2, FiMinimize2 } from 'react-icons/fi';
 import ChatSidebar from "./ChatSidebar";
 import ChatContent from "./ChatContent";
 import ChatInput from "./ChatInput";
@@ -117,7 +118,7 @@ const ChatWindow = ({
               }`}
               onClick={() => setActiveTab('science')}
             >
-              🧑‍🔬 科學助手
+              <FiCpu className="w-4 h-4 inline mr-1" /> 科學助手
             </button>
             {/* <button
               className={`px-3 py-1 rounded-full text-body-sm ${
@@ -125,7 +126,7 @@ const ChatWindow = ({
               }`}
               onClick={() => setActiveTab('project-assistant')}
             >
-              🤖 專案助理
+              <FiCpu className="w-4 h-4 inline mr-1" /> 專案助理
             </button> */}
             {/* <button
               className={`px-3 py-1 rounded-full text-body-sm ${
@@ -133,7 +134,7 @@ const ChatWindow = ({
               }`}
               onClick={() => setActiveTab('mentor')}
             >
-              🧑‍🏫 自主學習助手
+              <FiCpu className="w-4 h-4 inline mr-1" /> 自主學習助手
             </button> */}
           </div>
 
@@ -145,7 +146,7 @@ const ChatWindow = ({
               className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[14px] font-medium transition-colors duration-fast bg-transparent text-[#28a745] hover:bg-[#d1e7dd]"
               title={isFullscreen ? "還原視窗" : "最大化"}
             >
-              {isFullscreen ? "🗗" : "🗖"}
+              {isFullscreen ? <FiMinimize2 className="w-4 h-4" /> : <FiMaximize2 className="w-4 h-4" />}
             </button>
 
             {/* 關閉按鈕 */}
