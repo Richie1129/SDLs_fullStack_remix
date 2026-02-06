@@ -38,6 +38,22 @@ class NodeHandler {
             this.handleNodeDelete,
             'write'
         );
+
+        // 建立節點連線
+        SocketHandlerFactory.registerProtectedEvent(
+            socket,
+            'createNodeRelation',
+            this.handleCreateNodeRelation,
+            'write'
+        );
+
+        // 刪除節點連線
+        SocketHandlerFactory.registerProtectedEvent(
+            socket,
+            'deleteNodeRelation',
+            this.handleDeleteNodeRelation,
+            'write'
+        );
     }
 
     /**
@@ -292,6 +308,183 @@ class NodeHandler {
                     errorType: error.name,
                     nodeId: id,
                     projectId: projectId
+                }
+            });
+        }
+    }
+
+    /**
+     * 處理建立節點連線（手動連結兩個已存在的節點）
+     */
+    static async handleCreateNodeRelation(data) {
+        const { from_id, to_id, projectId, ideaWallId } = data;
+        const createdBy = this.getCurrentUsername(data) || "未知";
+
+        try {
+            console.log(`📌 建立節點連線: ${from_id} → ${to_id}`);
+
+            // 驗證兩個節點是否存在
+            const fromNode = await Node.findByPk(from_id);
+            const toNode = await Node.findByPk(to_id);
+
+            if (!fromNode || !toNode) {
+                throw new Error('來源節點或目標節點不存在');
+            }
+
+            // 權限檢查：只有來源節點的擁有者可以建立連線
+            if (fromNode.owner !== createdBy) {
+                throw new Error('您沒有權限從此節點建立連線');
+            }
+
+            // 簡化：如果沒有提供 ideaWallId，從 projectId 查找
+            let actualIdeaWallId = ideaWallId;
+            if (!actualIdeaWallId && projectId) {
+                const IdeaWall = require('../../models/idea_wall');
+                const ideaWall = await IdeaWall.findOne({
+                    where: { projectId: projectId },
+                    order: [['id', 'ASC']]
+                });
+                
+                if (ideaWall) {
+                    actualIdeaWallId = ideaWall.id;
+                }
+            }
+
+            // 檢查連線是否已存在
+            const existingRelation = await Node_relation.findOne({
+                where: { from_id, to_id }
+            });
+
+            if (existingRelation) {
+                throw new Error('這兩個節點之間已存在連線');
+            }
+
+            // 建立連線
+            await Node_relation.create({
+                from_id: from_id,
+                to_id: to_id,
+                ideaWallId: actualIdeaWallId
+            }, { req: data._reqContext });
+
+            // 記錄變更
+            try {
+                await logNodeChange({
+                    nodeId: from_id,
+                    changeType: 'update',
+                    changedBy: createdBy,
+                    projectId: projectId,
+                    description: `建立了與節點「${toNode.title}」的連線`
+                });
+            } catch (logError) {
+                console.warn('記錄連線建立失敗:', logError.message);
+            }
+
+            // 更新專案時間戳
+            if (projectId) {
+                await Project.update({ id: projectId }, {
+                    where: { id: projectId }
+                });
+            }
+
+            // 廣播更新事件
+            this.broadcastToProject(projectId, "nodeUpdated", null);
+            
+            console.log(`✅ 節點連線建立成功: ${from_id} → ${to_id}`);
+            
+            this.emitSuccess('createNodeRelation', {
+                message: '連線建立成功',
+                code: 'NODE_RELATION_CREATE_SUCCESS',
+                from_id,
+                to_id
+            });
+
+        } catch (error) {
+            console.error("❌ 建立節點連線時發生錯誤:", error.message);
+            
+            this.emitError('createNodeRelation', { 
+                message: `建立連線時發生錯誤: ${error.message}`,
+                code: 'NODE_RELATION_CREATE_ERROR',
+                details: {
+                    from_id,
+                    to_id,
+                    projectId
+                }
+            });
+        }
+    }
+
+    /**
+     * 處理刪除節點連線
+     */
+    static async handleDeleteNodeRelation(data) {
+        const { from_id, to_id, projectId } = data;
+        const deletedBy = this.getCurrentUsername(data) || "未知";
+
+        try {
+            console.log(`🗑️ 刪除節點連線: ${from_id} → ${to_id}`);
+
+            // 權限檢查：只有來源節點的擁有者可以刪除連線
+            const fromNode = await Node.findByPk(from_id);
+            if (!fromNode) {
+                throw new Error('來源節點不存在');
+            }
+            
+            if (fromNode.owner !== deletedBy) {
+                throw new Error('您沒有權限刪除此連線');
+            }
+
+            // 查找並刪除連線
+            const deleted = await Node_relation.destroy({
+                where: { from_id, to_id }
+            });
+
+            if (deleted === 0) {
+                throw new Error('連線不存在或已被刪除');
+            }
+
+            // 記錄變更
+            try {
+                const toNode = await Node.findByPk(to_id);
+                await logNodeChange({
+                    nodeId: from_id,
+                    changeType: 'update',
+                    changedBy: deletedBy,
+                    projectId: projectId,
+                    description: `移除了與節點「${toNode?.title || to_id}」的連線`
+                });
+            } catch (logError) {
+                console.warn('記錄連線刪除失敗:', logError.message);
+            }
+
+            // 更新專案時間戳
+            if (projectId) {
+                await Project.update({ id: projectId }, {
+                    where: { id: projectId }
+                });
+            }
+
+            // 廣播更新事件
+            this.broadcastToProject(projectId, "nodeUpdated", null);
+            
+            console.log(`✅ 節點連線刪除成功: ${from_id} → ${to_id}`);
+            
+            this.emitSuccess('deleteNodeRelation', {
+                message: '連線刪除成功',
+                code: 'NODE_RELATION_DELETE_SUCCESS',
+                from_id,
+                to_id
+            });
+
+        } catch (error) {
+            console.error("❌ 刪除節點連線時發生錯誤:", error.message);
+            
+            this.emitError('deleteNodeRelation', { 
+                message: `刪除連線時發生錯誤: ${error.message}`,
+                code: 'NODE_RELATION_DELETE_ERROR',
+                details: {
+                    from_id,
+                    to_id,
+                    projectId
                 }
             });
         }

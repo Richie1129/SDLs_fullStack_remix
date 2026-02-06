@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaGraduationCap } from 'react-icons/fa';
+import { HiLink, HiTrash } from 'react-icons/hi';
 import Modal from '../../../../components/Modal';
 import KnowledgeForumScaffolds from '../KnowledgeForumScaffolds';
 import { formatTime } from '../../../../utils/timeUtils';
@@ -23,6 +24,9 @@ export default function UpdateNodeModal({
     onDelete,
     onKbCoach,
     onExtendIdea,
+    onStartLinking,
+    onDeleteRelation,
+    connectedNodes,
     getDisplayNodeOwnerName,
 }) {
     const currentUsername = getCurrentUsername();
@@ -116,26 +120,64 @@ export default function UpdateNodeModal({
                                 </p>
                             )}
                         </div>
+
+                        {/* 連結的節點列表 */}
+                        {connectedNodes && connectedNodes.length > 0 && (
+                            <div className='mt-4 pt-4 border-t border-gray-200'>
+                                <p className='font-bold text-body mb-2 flex items-center gap-2'>
+                                    <HiLink className="w-5 h-5 text-gray-600" />
+                                    連結到的節點
+                                </p>
+                                <div className='space-y-2'>
+                                    {connectedNodes.map((node) => (
+                                        <div 
+                                            key={node.id} 
+                                            className='flex items-center justify-between bg-gray-50 rounded-lg p-2 hover:bg-gray-100 transition-colors'
+                                        >
+                                            <div className='flex-1 min-w-0'>
+                                                <p className='text-body-sm font-medium text-gray-800 truncate'>
+                                                    {node.title}
+                                                </p>
+                                                <p className='text-caption text-gray-500'>
+                                                    {node.owner}
+                                                </p>
+                                            </div>
+                                            {/* 取消連結按鈕 - 僅限節點擁有者 */}
+                                            {!isObservationMode && isOwner && onDeleteRelation && (
+                                                <button
+                                                    onClick={() => onDeleteRelation(selectNodeInfo.id, node.id)}
+                                                    className='ml-2 px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors text-caption font-medium flex items-center gap-1'
+                                                    title='取消連結'
+                                                >
+                                                    <HiTrash className="w-4 h-4" />
+                                                    取消
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* 變更歷史 */}
                 {showNodeChangeHistory && (
-                    <div className='max-h-96 overflow-y-auto p-component-sm'>
+                    <div className='max-h-96 overflow-y-auto overflow-x-hidden p-component-sm'>
                         <div className='flex items-center mb-4'>
                             <h4 className='text-body-lg font-medium text-gray-700'>變更歷史</h4>
                         </div>
                         
                         {nodeChangeLogs.length === 0 ? (
                             <div className='text-center py-8 text-gray-500'>
-                                <p>尚無變更記錄</p>
+<p>尚無變更記錄</p>
                             </div>
                         ) : (
-                            <div className='space-y-3'>
+                            <div className='space-y-3 overflow-x-hidden'>
                                 {nodeChangeLogs.map((log, index) => (
                                     <div 
                                         key={log.id || index} 
-                                        className='bg-gray-50 rounded-lg p-component-sm border-l-4 border-purple-400'
+                                        className='bg-gray-50 rounded-lg p-component-sm border-l-4 border-purple-400 overflow-hidden'
                                     >
                                         <div className='flex items-center justify-between mb-2'>
                                             <div className='flex items-center'>
@@ -157,10 +199,23 @@ export default function UpdateNodeModal({
                                                 <span className='font-medium'>欄位：</span>
                                                 {log.fieldName}
                                                 {log.oldValue && log.newValue && (
-                                                    <div className='mt-1'>
-                                                        <span className='text-red-600'>舊值：{log.oldValue}</span>
-                                                        <br />
-                                                        <span className='text-green-600'>新值：{log.newValue}</span>
+                                                    <div className='mt-1 space-y-1'>
+                                                        <div className='break-words overflow-hidden'>
+                                                            <span className='text-red-600 font-medium'>舊值：</span>
+                                                            <span className='text-red-600'>
+                                                                {log.oldValue.length > 100 
+                                                                    ? `${log.oldValue.substring(0, 100)}...` 
+                                                                    : log.oldValue}
+                                                            </span>
+                                                        </div>
+                                                        <div className='break-words overflow-hidden'>
+                                                            <span className='text-green-600 font-medium'>新值：</span>
+                                                            <span className='text-green-600'>
+                                                                {log.newValue.length > 100 
+                                                                    ? `${log.newValue.substring(0, 100)}...` 
+                                                                    : log.newValue}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </div>
@@ -213,6 +268,18 @@ export default function UpdateNodeModal({
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                     </svg>
                                     延伸想法
+                                </button>
+                            )}
+                            
+                            {/* 連結到其他節點按鈕 - 僅限節點擁有者 */}
+                            {!isObservationMode && isOwner && onStartLinking && (
+                                <button
+                                    onClick={onStartLinking}
+                                    className="px-btn-x py-btn-y bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-fast font-medium text-ui flex items-center gap-1"
+                                    title="將此節點連結到其他節點"
+                                >
+                                    <HiLink className="w-4 h-4" />
+                                    建立連結
                                 </button>
                             )}
                         </div>

@@ -44,6 +44,10 @@ export function useIdeaWallState(projectId) {
     const [hovering, setHovering] = useState(false);
     const [showNodeChangeHistory, setShowNodeChangeHistory] = useState(false);
 
+    // 連線模式狀態
+    const [isLinkingMode, setIsLinkingMode] = useState(false);
+    const [linkingSourceNode, setLinkingSourceNode] = useState(null);
+
     // AI 相關狀態
     const [aiSuggestion, setAiSuggestion] = useState(null);
     const [suggestedAgentType, setSuggestedAgentType] = useState(null);
@@ -103,6 +107,12 @@ export function useIdeaWallState(projectId) {
         setHovering,
         showNodeChangeHistory,
         setShowNodeChangeHistory,
+
+        // 連線模式
+        isLinkingMode,
+        setIsLinkingMode,
+        linkingSourceNode,
+        setLinkingSourceNode,
 
         // AI 狀態
         aiSuggestion,

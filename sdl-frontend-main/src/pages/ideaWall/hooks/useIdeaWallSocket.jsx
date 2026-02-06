@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { socket } from '../../../utils/socket';
 import { AGENT_NAMES, TOAST_DURATION } from '../constants/ideaWallConstants';
@@ -15,13 +15,23 @@ export function useIdeaWallSocket({
     setSuggestedAgentType,
     setKbCoachModalOpen,
 }) {
+    const refetchTimeoutRef = useRef(null);
+
     useEffect(() => {
-        // 節點更新事件處理器
+        // 節點更新事件處理器（使用 debounce 避免頻繁重新載入）
         function nodeUpdateEvent(data) {
             console.log("收到節點更新事件:", data);
-            // 無論資料為何都重新載入節點 - 確保UI與資料庫同步
-            getNodesQuery.refetch();
-            getNodeRelationQuery.refetch();
+
+            // 清除之前的 timeout
+            if (refetchTimeoutRef.current) {
+                clearTimeout(refetchTimeoutRef.current);
+            }
+
+            // 延遲 300ms 後才重新載入，避免連續事件導致畫面跳動
+            refetchTimeoutRef.current = setTimeout(() => {
+                getNodesQuery.refetch();
+                getNodeRelationQuery.refetch();
+            }, 300);
         }
 
         // 錯誤處理事件：建立/更新/刪除節點失敗
@@ -120,6 +130,11 @@ export function useIdeaWallSocket({
 
         // 清理函式
         return () => {
+            // 清除未完成的 timeout
+            if (refetchTimeoutRef.current) {
+                clearTimeout(refetchTimeoutRef.current);
+            }
+            
             socket.off("nodeUpdated", nodeUpdateEvent);
             socket.off('nodeCreateError', handleNodeError);
             socket.off('nodeUpdateError', handleNodeError);
