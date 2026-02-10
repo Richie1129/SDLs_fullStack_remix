@@ -29,6 +29,7 @@ const ClassObservationPage = lazy(() => import('./pages/observation/ClassObserva
 const Profile = lazy(() => import('./pages/profile/Profile'));
 const StreamdownDemo = lazy(() => import('./pages/StreamdownDemo'));
 const TestRag = lazy(() => import('./pages/TestRag'));
+const TrackingTestPage = lazy(() => import('./test/TrackingTestPage'));
 const ProjectLayout = lazy(() => import("./layouts/ProjectLayout"));
 
 const RouteFallback = () => (
@@ -51,6 +52,7 @@ export default function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="homepage" element={<HomePage />} />
           <Route path="test-rag" element={<TestRag />} />
+          <Route path="test-tracking" element={<TrackingTestPage />} />
           <Route path="bulletin" element={<Bulletin />} />
           <Route path="List" element={<List />} />
           <Route path="overView" element={<ManagementOverview />} />
