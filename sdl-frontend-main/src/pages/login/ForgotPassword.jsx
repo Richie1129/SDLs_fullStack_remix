@@ -5,6 +5,7 @@ import { useMutation } from 'react-query';
 import axios from 'axios';
 import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
+import { useTracking } from '../../providers/TrackingProvider';
 
 const forgotPasswordAPI = async (email) => {
   const response = await axios.post('/api/auth/forgot-password', { email });
@@ -15,6 +16,7 @@ export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const { track } = useTracking();
 
   const forgotPasswordMutation = useMutation(forgotPasswordAPI, {
     onSuccess: (data) => {
@@ -34,6 +36,13 @@ export default function ForgotPassword() {
       setIsSuccess(false);
       return;
     }
+    
+    // 記錄密碼重置請求
+    track('PASSWORD_RESET_REQUEST_SUBMIT', 'user', null, {
+      email,
+      timestamp: new Date().toISOString()
+    });
+    
     forgotPasswordMutation.mutate(email);
   };
 

@@ -5,6 +5,7 @@ const User = require('../models/user');
 const PasswordResetToken = require('../models/password_reset_token');
 const { sendPasswordResetEmail } = require('../services/emailService');
 const { revokeAllTokens } = require('./auth');
+const { logAudit } = require('../services/auditService');
 
 // 設定模型關聯
 PasswordResetToken.belongsTo(User, {
@@ -68,6 +69,15 @@ const requestPasswordReset = async (req, res) => {
             });
         }
 
+        // 記錄密碼重設請求
+        logAudit(req, {
+            action: 'PASSWORD_RESET_REQUEST',
+            targetType: 'user',
+            targetId: user.id,
+            actorId: user.id,
+            metadata: { email: normalizedEmail }
+        }).catch(() => {});
+
         res.status(200).json({
             success: true,
             message: '如果該 email 存在於系統中，重設密碼郵件已發送'
@@ -122,6 +132,15 @@ const validateResetToken = async (req, res) => {
                 message: '系統錯誤，請稍後再試'
             });
         }
+
+        // 記錄 Token 驗證
+        logAudit(req, {
+            action: 'PASSWORD_RESET_TOKEN_VALIDATE',
+            targetType: 'user',
+            targetId: resetToken.User.id,
+            actorId: resetToken.User.id,
+            metadata: { email: resetToken.User.email, tokenValid: true }
+        }).catch(() => {});
 
         res.status(200).json({
             success: true,
@@ -199,6 +218,15 @@ const resetPassword = async (req, res) => {
         await PasswordResetToken.destroy({
             where: { userId: resetToken.User.id }
         });
+
+        // 記錄密碼重設成功
+        logAudit(req, {
+            action: 'PASSWORD_RESET_EXECUTE',
+            targetType: 'user',
+            targetId: resetToken.User.id,
+            actorId: resetToken.User.id,
+            metadata: { email: resetToken.User.email, resetAt: new Date().toISOString() }
+        }).catch(() => {});
 
         res.status(200).json({
             success: true,

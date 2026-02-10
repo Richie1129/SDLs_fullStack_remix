@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const config = require('../config');
 const RefreshToken = require('../models/refresh_token');
 const User = require('../models/user');
+const { logAudit } = require('../services/auditService');
 
 /**
  * POST /auth/refresh
@@ -50,6 +51,15 @@ exports.refreshToken = async (req, res) => {
             { expiresIn: config.jwt.expiresIn }
         );
 
+        // 記錄 Token 刷新
+        logAudit(req, {
+            action: 'TOKEN_REFRESH',
+            targetType: 'user',
+            targetId: tokenRecord.user.id,
+            actorId: tokenRecord.user.id,
+            metadata: { account: tokenRecord.user.account }
+        }).catch(() => {});
+
         res.status(200).json({
             accessToken,
             expiresIn: config.jwt.expiresIn
@@ -71,10 +81,30 @@ exports.refreshToken = async (req, res) => {
 exports.logout = async (req, res) => {
     try {
         const { refreshToken } = req.body;
+        let userId = null;
 
         if (refreshToken) {
+            // 嘗試獲取 userId 用於審計
+            const tokenRecord = await RefreshToken.findOne({
+                where: { token: refreshToken },
+                attributes: ['userId']
+            });
+            
+            if (tokenRecord) {
+                userId = tokenRecord.userId;
+            }
+            
             await RefreshToken.destroy({ where: { token: refreshToken } });
         }
+
+        // 記錄登出
+        logAudit(req, {
+            action: 'USER_LOGOUT',
+            targetType: 'user',
+            targetId: userId,
+            actorId: userId,
+            metadata: { logoutAt: new Date().toISOString() }
+        }).catch(() => {});
 
         res.status(200).json({ message: '登出成功' });
     } catch (err) {

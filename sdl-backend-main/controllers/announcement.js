@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const Announcement = require('../models/announcement');
 const Project = require('../models/project');
 const User = require('../models/user');
+const { logAudit } = require('../services/auditService');
 
 // 發佈公告
 exports.createAnnouncement = async (req, res) => {
@@ -50,6 +51,20 @@ exports.createAnnouncement = async (req, res) => {
         } else {
             console.error("公告儲存至資料庫失敗: 未返回新記錄");
         }
+
+        // 記錄公告建立
+        logAudit(req, {
+            action: 'ANNOUNCEMENT_CREATE',
+            targetType: 'announcement',
+            targetId: newAnnouncement.id,
+            metadata: {
+                title,
+                author,
+                projectId: finalProjectId,
+                isStudentMode,
+                scope: isStudentMode ? 'student' : (finalProjectId ? 'project' : 'global')
+            }
+        }).catch(() => {});
 
         // Socket 廣播邏輯
         if (isStudentMode) {

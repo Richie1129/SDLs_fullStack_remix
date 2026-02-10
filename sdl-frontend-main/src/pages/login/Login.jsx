@@ -8,11 +8,13 @@ import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
 import Swal from 'sweetalert2';
 import storageService, { authStorage, userStorage } from '../../services/storageService';
+import { useTracking } from '../../providers/TrackingProvider';
 
 export default function Login() {
   const [userContext, setUserContext] = useContext(AuthContext);
   const [userData, setUserData] = useState({});
   const navigate = useNavigate();
+  const { track } = useTracking();
 
   const handleChange = (e) =>{
       const { name, value } = e.target
@@ -98,6 +100,13 @@ export default function Login() {
 
   const handleSubmit = (e) =>{
     e.preventDefault()
+    
+    // 記錄登入嘗試
+    track('LOGIN_SUBMIT', 'user', null, {
+      account: userData.account,
+      timestamp: new Date().toISOString()
+    });
+    
     userLoginMutation.mutate(userData)
   } 
 

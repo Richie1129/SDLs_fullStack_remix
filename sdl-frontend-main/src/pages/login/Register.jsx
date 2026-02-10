@@ -7,6 +7,7 @@ import { AuthContext } from '../../utils/AuthContext';
 import Swal from 'sweetalert2';
 import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
+import { useTracking } from '../../providers/TrackingProvider';
 
 export default function Register() {
     const [userData, setUserData] = useState({ role: "student", class: "", seatNumber: "" });
@@ -14,6 +15,7 @@ export default function Register() {
     const [error, setError] = useState("");
     const navigate = useNavigate();
     const [isFormSubmitted, setIsFormSubmitted] = useState(false);
+    const { track } = useTracking();
 
     const handleChange = e => {
         const { name, value } = e.target;
@@ -172,6 +174,13 @@ export default function Register() {
         // setIsFormSubmitted(true);
         const isValid = validateInput(); // 获取验证结果
         if (isValid) {
+            // 記錄註冊嘗試
+            track('REGISTER_SUBMIT', 'user', null, {
+                account: userData.account,
+                role: userData.role,
+                timestamp: new Date().toISOString()
+            });
+            
             userRegisterMutation.mutate(userData);
         }
     };

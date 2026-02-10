@@ -5,6 +5,7 @@ import { useMutation } from 'react-query';
 import axios from 'axios';
 import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
+import { useTracking } from '../../providers/TrackingProvider';
 
 const validateTokenAPI = async (token) => {
   const response = await axios.get(`/api/auth/reset-password/${token}`);
@@ -23,6 +24,7 @@ export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const navigate = useNavigate();
+  const { track } = useTracking();
 
   const [passwords, setPasswords] = useState({
     newPassword: '',
@@ -96,6 +98,12 @@ export default function ResetPassword() {
       setError('密碼不一致');
       return;
     }
+
+    // 記錄密碼重置執行
+    track('PASSWORD_RESET_SUBMIT', 'user', null, {
+      email: userEmail,
+      timestamp: new Date().toISOString()
+    });
 
     resetPasswordMutation.mutate({
       token,
