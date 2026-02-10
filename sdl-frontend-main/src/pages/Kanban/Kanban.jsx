@@ -306,11 +306,14 @@ export default function Kanban() {
             
             <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
               <p className="text-body-sm text-gray-500 mb-4">
-                勾選您想要加入看板的列表。包含範例卡片的列表將會一併匯入卡片。
+                {PHASE_TEMPLATES[selectedTemplatePhase].description || 
+                  "勾選您想要加入看板的列表。每個列表都會建立為空白欄位，您可以開始新增卡片。"}
               </p>
               <div className="space-y-3">
                 {PHASE_TEMPLATES[selectedTemplatePhase].columns.map((col, idx) => (
-                  <label key={idx} className="flex items-start space-x-3 p-component-sm border rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
+                  <label key={idx} className={`flex items-start space-x-3 p-component-sm border rounded-md hover:bg-gray-50 cursor-pointer transition-colors ${
+                    col.recommended ? 'border-[#5BA491] bg-[#5BA491]/5' : ''
+                  }`}>
                     <input
                       type="checkbox"
                       className="h-4 w-4 text-[#5BA491] focus:ring-[#5BA491] border-gray-300 rounded mt-1"
@@ -320,10 +323,15 @@ export default function Kanban() {
                     <div className="flex-1">
                       <span className="block text-body-sm font-medium text-gray-900 flex items-center gap-1.5">
                         {col.icon && COLUMN_ICON_MAP[col.icon]}{col.title}
+                        {col.recommended && (
+                          <span className="ml-1 px-1.5 py-0.5 text-[10px] font-medium bg-[#5BA491] text-white rounded">
+                            推薦
+                          </span>
+                        )}
                       </span>
-                      {col.defaultCards && col.defaultCards.length > 0 && (
+                      {col.description && (
                         <span className="block text-caption text-gray-500 mt-1">
-                          包含 {col.defaultCards.length} 張範例卡片
+                          {col.description}
                         </span>
                       )}
                     </div>

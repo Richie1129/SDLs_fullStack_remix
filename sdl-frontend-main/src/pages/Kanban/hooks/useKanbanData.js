@@ -311,52 +311,6 @@ export const useKanbanData = (projectId) => {
         console.log(`✅ Column created: ${colTemplate.title} (ID: ${realColumnId})`);
         createdColumns.push({ id: realColumnId, template: colTemplate });
 
-        // B. 如果有預設卡片，創建任務
-        if (colTemplate.defaultCards && colTemplate.defaultCards.length > 0) {
-          console.log(`📝 Creating ${colTemplate.defaultCards.length} default cards for "${colTemplate.title}"`);
-          
-          // 等待一小段時間確保後端資料同步
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          // 重新查詢最新的 kanbanData
-          await queryClient.invalidateQueries(['kanbanDatas', projectId]);
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          const latestKanbanData = queryClient.getQueryData(['kanbanDatas', projectId]) || kanbanData;
-          const columnIndex = latestKanbanData.findIndex(col => col.id === realColumnId);
-          
-          console.log(`🔍 Found column at index ${columnIndex} for ID ${realColumnId}`);
-          
-          if (columnIndex !== -1) {
-            for (let cardIdx = 0; cardIdx < colTemplate.defaultCards.length; cardIdx++) {
-              const card = colTemplate.defaultCards[cardIdx];
-              
-              console.log(`📤 Emitting taskItemCreated for: ${card.title}`);
-              
-              socket.emit("taskItemCreated", {
-                eventType: 'taskItemCreated',
-                selectedcolumn: columnIndex,
-                item: {
-                  title: card.title,
-                  content: card.content || "",
-                  labels: [],
-                  assignees: []
-                },
-                kanbanData: latestKanbanData,
-                projectId,
-                user: { username, id: userId }
-              });
-              
-              // 延遲避免任務創建順序錯亂
-              await new Promise(resolve => setTimeout(resolve, 200));
-            }
-            console.log(`✅ Created ${colTemplate.defaultCards.length} cards for "${colTemplate.title}"`);
-          } else {
-            console.error(`❌ Cannot find column index for ID ${realColumnId}`);
-            console.log('Current kanbanData:', latestKanbanData.map(col => ({ id: col.id, name: col.name })));
-          }
-        }
-
       } catch (error) {
         console.error(`❌ Failed to create column: ${colTemplate.title}`, error);
         // 即使單個列表失敗，繼續創建其他列表
