@@ -3,7 +3,6 @@ import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route } 
 import { ProtectedLogin, ProtectedRoute } from "./utils/ProtectedRoute";
 import { AuthProvider } from "./utils/AuthContext";
 import RootLayout from "./layouts/RootLayout";
-import ConsentBanner from "./components/Privacy/ConsentBanner";
 
 const HomePage = lazy(() => import("./pages/home/HomePage"));
 const Login = lazy(() => import("./pages/login/Login"));
@@ -86,7 +85,6 @@ export default function App() {
       <Suspense fallback={<RouteFallback />}>
         <RouterProvider router={router} />
       </Suspense>
-      <ConsentBanner />
     </AuthProvider>
   )
 }

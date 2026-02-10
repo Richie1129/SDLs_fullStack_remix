@@ -179,7 +179,6 @@ app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
 app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
-app.use('/api/consent', require('./routes/consent')); // Phase 6: 隱私合規 - 同意管理
 app.use('/api/usage', require('./routes/usage'));
 app.use('/api', require('./routes/projectComments'));
 app.use('/api', require('./routes/comments'));

@@ -1,50 +1,9 @@
 import { createContext, useContext, useCallback, useRef, useEffect } from 'react';
 import { getCurrentUserId } from '../utils/authUtils';
-import { authStorage, consentStorage } from '../services/storageService';
+import { authStorage } from '../services/storageService';
 import { initAutoCaptureWithTrack } from '../utils/autoCapture';
 
 const TrackingContext = createContext(null);
-
-/**
- * Phase 6: 前端同意等級常數與分類邏輯
- * 與後端 constants/retentionPolicy.js 保持一致
- */
-const CONSENT_LEVEL_VALUES = { essential: 0, functional: 1, analytics: 2, full: 3 };
-
-const ACTION_PREFIXES = {
-  essential: ['USER_LOGIN', 'USER_LOGOUT', 'PASSWORD_', 'TOKEN_'],
-  functional: [
-    'TASK_', 'PROJECT_', 'COMMENT_', 'FILE_',
-    'KANBAN_COLUMN_', 'KANBAN_TASK_CREATE', 'KANBAN_TASK_DELETE', 'KANBAN_TASK_UPDATE',
-    'IDEAWALL_NODE_CREATE', 'IDEAWALL_NODE_DELETE', 'IDEAWALL_NODE_UPDATE',
-    'REFLECTION_', 'SUBMIT_', 'PORTFOLIO_',
-    'ANNOUNCEMENT_', 'STAGE_', 'CONSENT_',
-  ],
-  analytics: [
-    'PAGE_VIEW', 'KANBAN_TASK_CLICK', 'KANBAN_COLUMN_CLICK',
-    'IDEAWALL_NODE_CLICK', 'IDEAWALL_VIEW',
-    'HOME_PROJECT_', 'HOME_SECTION_', 'HOME_INVITE_',
-  ],
-  full: ['SCROLL_', 'HOVER_', 'FOCUS_', 'BLUR_', 'MOUSE_', 'VIEWPORT_', 'VISIBILITY_'],
-};
-
-function classifyActionClient(action) {
-  if (!action) return 'functional';
-  const upper = action.toUpperCase();
-  for (const level of ['essential', 'functional', 'analytics', 'full']) {
-    if (ACTION_PREFIXES[level].some(p => upper.startsWith(p))) return level;
-  }
-  return 'functional';
-}
-
-function isActionAllowedClient(action) {
-  // 學習平台預設全同意 (full)，使用者可自行降級
-  const userLevel = consentStorage.get('consentLevel') || 'full';
-  const required = classifyActionClient(action);
-  // essential 永遠允許
-  if (CONSENT_LEVEL_VALUES[required] === 0) return true;
-  return (CONSENT_LEVEL_VALUES[userLevel] ?? 0) >= (CONSENT_LEVEL_VALUES[required] ?? 0);
-}
 
 /**
  * EventBatcher - 批量發送審計事件，優化效能
@@ -222,11 +181,6 @@ export function TrackingProvider({ children }) {
     if (!action) {
       console.warn('⚠️ [TrackingProvider] action 不可為空');
       return;
-    }
-
-    // Phase 6: 前端同意等級過濾
-    if (!isActionAllowedClient(action)) {
-      return; // 使用者未同意此等級的追蹤，靜默跳過
     }
 
     // 防禦性檢查：確保 EventBatcher 已經初始化

@@ -462,6 +462,5 @@ export const authStorage = storageService.namespace('auth');
 export const userStorage = storageService.namespace('user');
 export const projectStorage = storageService.namespace('project');
 export const stageStorage = storageService.namespace('stage');
-export const consentStorage = storageService.namespace('consent'); // Phase 6: 隱私合規
 
 export default storageService;
