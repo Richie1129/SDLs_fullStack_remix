@@ -80,6 +80,9 @@ export function ReflectionLayout({
               {/* Action Buttons - only students can add */}
               {!isTeacher && !showTypeSelector && (
                 <button
+                  data-track
+                  data-track-action="REFLECTION_WRITE_OPEN"
+                  data-track-type="reflection"
                   onClick={() => setShowTypeSelector(true)}
                   className="flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-[#5BA491] to-[#4A9680] hover:from-[#5BA491]/90 hover:to-[#4A9680]/90 text-white font-medium rounded-lg transition-all duration-fast shadow-sm hover:shadow-md text-body-sm sm:text-body"
                 >
@@ -115,6 +118,9 @@ export function ReflectionLayout({
                   }}
                 />
                 <button
+                  data-track
+                  data-track-action="REFLECTION_TYPE_BACK"
+                  data-track-type="reflection"
                   onClick={() => setShowTypeSelector(false)}
                   className="mt-stack-sm text-body-sm text-gray-500 hover:text-gray-700 transition-colors duration-fast"
                 >
@@ -169,6 +175,9 @@ export function ReflectionLayout({
               {!isTeacher && (
                 <div className="flex">
                   <button
+                    data-track
+                    data-track-action="REFLECTION_TEAM_CREATE_OPEN"
+                    data-track-type="reflection"
                     onClick={onOpenTeamModal}
                     className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-fast shadow-sm text-body-sm sm:text-body w-full sm:w-auto"
                   >

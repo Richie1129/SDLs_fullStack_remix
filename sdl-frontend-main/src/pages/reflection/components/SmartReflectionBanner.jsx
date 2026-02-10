@@ -227,12 +227,18 @@ function BannerCard({
           {/* Actions */}
           <div className="flex flex-wrap items-center gap-2">
             <button
+              data-track
+              data-track-action="REFLECTION_BANNER_ACTION"
+              data-track-type="reflection"
               onClick={onAction}
               className={`px-4 py-2 ${styles.button} font-medium rounded-lg transition-colors duration-fast text-body-sm shadow-sm`}
             >
               {actionText}
             </button>
             <button
+              data-track
+              data-track-action="REFLECTION_BANNER_DISMISS"
+              data-track-type="reflection"
               onClick={onDismiss}
               className="px-3 py-2 text-gray-600 hover:text-gray-800 text-body-sm transition-colors duration-fast"
             >

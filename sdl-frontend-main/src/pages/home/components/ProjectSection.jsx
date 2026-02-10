@@ -102,6 +102,9 @@ const ProjectSection = ({
       <div className='flex justify-start items-center gap-3 mb-4 mt-2 pl-4'>
         {showCreateButton && (
           <button
+            data-track
+            data-track-action="HOME_PROJECT_CREATE_OPEN"
+            data-track-type="project"
             onClick={onCreateProject}
             className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition-shadow duration-fast ease-in-out hover:shadow-lg"
             data-tour={role === "teacher" ? "create-project" : undefined}
@@ -111,6 +114,9 @@ const ProjectSection = ({
         )}
         {showJoinButton && (
           <button
+            data-track
+            data-track-action="HOME_PROJECT_JOIN_OPEN"
+            data-track-type="project"
             onClick={onJoinProject}
             className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-6 py-2 shadow-md transition-shadow duration-fast ease-in-out hover:shadow-lg"
           >
@@ -134,6 +140,9 @@ const ProjectSection = ({
     <div className="">
       {/* Accordion Header */}
       <button
+        data-track
+        data-track-action="HOME_SECTION_TOGGLE"
+        data-track-type="home"
         className="flex justify-between items-center w-full py-2 px-4 bg-gray-200 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:bg-gray-300 transition duration-300"
         onClick={handleToggle}
       >

@@ -54,6 +54,9 @@ const InviteModal = ({
         <div className='flex justify-end'>
           <button
             type="submit"
+            data-track
+            data-track-action="HOME_INVITE_SUBMIT"
+            data-track-type="project"
             className="w-1/4 h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white disabled:opacity-50"
             disabled={isLoading || !referralCode.trim()}
           >

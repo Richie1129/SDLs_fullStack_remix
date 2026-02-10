@@ -240,6 +240,9 @@ export default function Protfolio() {
                             <h2 className="text-h3 font-bold text-gray-800">學習歷程</h2>
                         </div>
                         <button
+                            data-track
+                            data-track-action="PORTFOLIO_EXPORT_PDF"
+                            data-track-type="portfolio"
                             onClick={handleExportPortfolio}
                             className="w-full flex items-center justify-center gap-stack-xs px-4 py-2.5 bg-gradient-to-r from-[#5BA491] to-[#4a8f7c] text-white rounded-lg hover:shadow-lg transition-shadow duration-fast font-medium"
                         >
@@ -300,6 +303,11 @@ export default function Protfolio() {
                                                     .map(item => (
                                                         <button
                                                             key={item.id}
+                                                            data-track
+                                                            data-track-action="PORTFOLIO_STAGE_SELECT"
+                                                            data-track-type="submit"
+                                                            data-track-id={item.id}
+                                                            data-track-meta-stage={item.stage}
                                                             onClick={() => {
                                                                 setActiveItemId(item.id);
                                                                 setFolderModalOpen(true);
@@ -413,6 +421,9 @@ export default function Protfolio() {
                                         </div>
                                     </div>
                                     <button
+                                        data-track
+                                        data-track-action="PORTFOLIO_CLOSE"
+                                        data-track-type="portfolio"
                                         onClick={() => {
                                             setFolderModalOpen(false);
                                             setActiveItemId(null);
@@ -429,6 +440,10 @@ export default function Protfolio() {
                                 <div className="px-4 sm:px-6">
                                     <nav className="flex space-x-stack-md-lg">
                                         <button
+                                            data-track
+                                            data-track-action="PORTFOLIO_TAB_SWITCH"
+                                            data-track-type="portfolio"
+                                            data-track-meta-tab="edit"
                                             onClick={() => setShowSubmitChangeHistory(false)}
                                             className={`py-4 px-1 border-b-2 font-medium text-body-sm transition-colors ${
                                                 !showSubmitChangeHistory 
@@ -444,6 +459,10 @@ export default function Protfolio() {
                                             </span>
                                         </button>
                                         <button
+                                            data-track
+                                            data-track-action="PORTFOLIO_TAB_SWITCH"
+                                            data-track-type="portfolio"
+                                            data-track-meta-tab="history"
                                             onClick={() => {
                                                 setShowSubmitChangeHistory(true);
                                                 getSubmitChangeLogs(modalData.id).then(setSubmitChangeLogs).catch(console.error);
@@ -547,18 +566,24 @@ export default function Protfolio() {
 
                                             {/* Action Buttons */}
                                             <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
-                                                <button
-                                                    onClick={() => {
-                                                        setFolderModalOpen(false);
-                                                        setActiveItemId(null);
-                                                    }}
-                                                    className="px-6 py-2 border border-gray-300 rounded-lg text-body-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+                                                    <button
+                                                        onClick={() => {
+                                                            setFolderModalOpen(false);
+                                                            setActiveItemId(null);
+                                                        }}
+                                                        data-track
+                                                        data-track-action="PORTFOLIO_CANCEL"
+                                                        data-track-type="portfolio"
+                                                        className="px-6 py-2 border border-gray-300 rounded-lg text-body-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                                                 >
                                                     取消
                                                 </button>
                                                 {/* 儲存按鈕 - 觀摩模式隱藏 */}
                                                 {!isObservationMode && (
                                                     <button
+                                                        data-track
+                                                        data-track-action="PORTFOLIO_SAVE"
+                                                        data-track-type="portfolio"
                                                         onClick={handleSave}
                                                         className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-body-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
                                                     >

@@ -180,7 +180,11 @@ export default function SubmitTask() {
                             }
                         })}
                         <div className='flex justify-center mt-4'>
-                            <button onClick={e => { handleSubmit(e) }}
+                            <button
+                                data-track
+                                data-track-action="SUBMIT_UPLOAD"
+                                data-track-type="submit"
+                                onClick={e => { handleSubmit(e) }}
                                 className="w-full py-2 sm:py-3 bg-customgreen hover:bg-customgreen/90 rounded-lg font-bold text-body-sm sm:text-body text-white transition-colors duration-fast">
                                 上傳
                             </button>

@@ -179,6 +179,7 @@ app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
 app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
+app.use('/api/consent', require('./routes/consent')); // Phase 6: 隱私合規 - 同意管理
 app.use('/api/usage', require('./routes/usage'));
 app.use('/api', require('./routes/projectComments'));
 app.use('/api', require('./routes/comments'));
@@ -241,6 +242,15 @@ server.listen(PORT, () => {
     console.log(`📂 所有路由已加載完成`);
     console.log(`🔧 配置模式: ${config.isDevelopment ? '開發' : '生產'}`);
 
+    // Phase 6: 啟動審計事件自動清理排程
+    try {
+        const { startPurgeSchedule } = require('./services/auditPurgeService');
+        startPurgeSchedule();
+        console.log('🧹 審計事件自動清理排程已啟動');
+    } catch (err) {
+        console.warn('⚠️ 審計清理排程啟動失敗 (非關鍵):', err.message);
+    }
+
     // 顯示 Socket 連接統計
     statsIntervalId = setInterval(() => {
         const stats = socketManager.getStats();
@@ -281,6 +291,12 @@ const gracefulShutdown = (signal) => {
     if (stopUsageCleanup) {
         stopUsageCleanup();
     }
+
+    // Phase 6: 停止審計清理排程
+    try {
+        const { stopPurgeSchedule } = require('./services/auditPurgeService');
+        stopPurgeSchedule();
+    } catch (_) {}
 
     // 清理所有 Socket 連線
     if (io) {

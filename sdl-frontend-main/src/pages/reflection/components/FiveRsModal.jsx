@@ -49,14 +49,21 @@ export function FiveRsModal({
         {/* Tabs */}
         <div className="flex border-b border-gray-200 mb-3 flex-shrink-0 mr-8">
           <button
+            data-track
+            data-track-action="REFLECTION_5RS_TAB_SWITCH"
+            data-track-type="daily_personal"
+            data-track-meta-tab="edit"
             onClick={() => setActiveTab('edit')}
             className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             編輯 5Rs 反思
           </button>
           <button
+            data-track
+            data-track-action="REFLECTION_5RS_TAB_SWITCH"
+            data-track-type="daily_personal"
+            data-track-meta-tab="history"
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             變更歷史
           </button>

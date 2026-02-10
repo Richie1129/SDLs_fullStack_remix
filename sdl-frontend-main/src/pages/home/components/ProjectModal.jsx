@@ -113,6 +113,9 @@ const ProjectModal = ({
         <div className='flex justify-end gap-stack-xs mt-4'>
           <button
             type="button"
+            data-track
+            data-track-action="HOME_PROJECT_MODAL_CANCEL"
+            data-track-type="project"
             onClick={handleClose}
             className="flex-1 h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60"
             disabled={isLoading}
@@ -121,6 +124,9 @@ const ProjectModal = ({
           </button>
           <button
             type="submit"
+            data-track
+            data-track-action="HOME_PROJECT_MODAL_SUBMIT"
+            data-track-type="project"
             className="flex-1 h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white disabled:opacity-50"
             disabled={isLoading}
           >

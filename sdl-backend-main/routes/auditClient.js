@@ -4,6 +4,8 @@ const { validateToken } = require('../middlewares/AuthMiddleware');
 const { logAudit } = require('../services/auditService');
 const { Op } = require('sequelize');
 const AuditEvent = require('../models/audit_event');
+const UserConsent = require('../models/user_consent');
+const { classifyAction, calculateExpiresAt, isActionAllowed, CONSENT_LEVELS } = require('../constants/retentionPolicy');
 
 // Client-side audit ingestion
 router.post('/client', validateToken, async (req, res) => {
@@ -45,6 +47,14 @@ router.post('/batch', validateToken, async (req, res) => {
     
     // 準備批量記錄 (自動注入認證資訊)
     const now = new Date();
+    // Phase 6: 查詢使用者同意等級 (快取在請求層級)
+    // 學習平台預設全同意 (full)，使用者可自行降級
+    let userConsentLevel = CONSENT_LEVELS.FULL;
+    try {
+      const consent = await UserConsent.findOne({ where: { userId: req.userId }, attributes: ['consentLevel'] });
+      if (consent) userConsentLevel = consent.consentLevel;
+    } catch (_) {}
+
     const records = events.map(event => {
       const { 
         action, 
@@ -61,6 +71,11 @@ router.post('/batch', validateToken, async (req, res) => {
       if (!action) {
         req?.log?.warn?.({ event }, 'Skipping event without action');
         return null;
+      }
+
+      // Phase 6: 檢查同意等級是否允許記錄此事件
+      if (!isActionAllowed(userConsentLevel, action)) {
+        return null; // 使用者未同意此等級的追蹤
       }
       
       return {
@@ -79,7 +94,10 @@ router.post('/batch', validateToken, async (req, res) => {
         metadata: {
           ...metadata,
           _clientId, // 用於客戶端去重
-        }
+        },
+        // Phase 6: 保留政策
+        consentLevel: classifyAction(action),
+        expiresAt: calculateExpiresAt(action),
       };
     }).filter(Boolean); // 過濾掉無效記錄
     

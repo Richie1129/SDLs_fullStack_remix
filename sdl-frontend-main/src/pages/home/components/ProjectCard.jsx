@@ -112,6 +112,10 @@ export default function ProjectCard({
     if (type === 'viewable') {
       return (
         <button
+          data-track
+          data-track-action="HOME_PROJECT_OBSERVE"
+          data-track-type="project"
+          data-track-id={project.id}
           className='mt-2 bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 transition duration-fast ease-in-out font-semibold flex items-center justify-center'
           onClick={() => navigate(`/project/${project.id}/kanban?mode=observation`)}
         >
@@ -125,6 +129,10 @@ export default function ProjectCard({
       return (
         <div className='flex justify-between items-center'>
           <button className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold mr-2'
+                  data-track
+                  data-track-action="HOME_PROJECT_VIEW_HISTORY"
+                  data-track-type="project"
+                  data-track-id={project.id}
                   onClick={() => navigate(`/project/${project.id}/kanban`)}>
             查看學習歷程
           </button>
@@ -138,6 +146,10 @@ export default function ProjectCard({
     if (type === 'completed') {
       return (
         <button className='mt-2 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold'
+                data-track
+                data-track-action="HOME_PROJECT_MAKE_PORTFOLIO"
+                data-track-type="project"
+                data-track-id={project.id}
                 onClick={() => navigate(`/project/${project.id}/kanban`)}>
           製作學習歷程
         </button>
@@ -149,16 +161,28 @@ export default function ProjectCard({
       return (
         <div className='flex justify-between gap-stack-xs mt-2'>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_EDIT"
+            data-track-type="project"
+            data-track-id={project.id}
             onClick={() => onEdit(project)}
             className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold">
             編輯活動
           </button>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_VIEW"
+            data-track-type="project"
+            data-track-id={project.id}
             className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold'
             onClick={() => navigate(`/project/${project.id}/kanban`)}>
             查看活動
           </button>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_DELETE"
+            data-track-type="project"
+            data-track-id={project.id}
             onClick={() => onDelete(project.id)}
             className="flex-1 bg-[#FF0000]/80 text-white rounded-lg px-4 py-2 transition duration-fast ease-in-out font-semibold">
             刪除活動
@@ -169,11 +193,19 @@ export default function ProjectCard({
       return (
         <div className='flex justify-between gap-stack-xs mt-2'>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_EDIT"
+            data-track-type="project"
+            data-track-id={project.id}
             onClick={() => onEdit(project)}
             className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold">
             編輯活動
           </button>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_VIEW"
+            data-track-type="project"
+            data-track-id={project.id}
             className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold'
             onClick={() => navigate(`/project/${project.id}/kanban`)}>
             查看活動

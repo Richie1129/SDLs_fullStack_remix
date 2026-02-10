@@ -17,6 +17,9 @@ export function ReflectionTypeSelector({
       {/* 傳統日誌卡片 - 綠色主題 */}
       <motion.div
         whileHover={{ y: -4 }}
+        data-track
+        data-track-action="REFLECTION_TYPE_TRADITIONAL"
+        data-track-type="reflection"
         className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#5BA491] transition-all duration-normal shadow-sm hover:shadow-lg overflow-hidden cursor-pointer"
         onClick={onSelectTraditional}
       >
@@ -86,6 +89,9 @@ export function ReflectionTypeSelector({
       {/* 5Rs 反思卡片 - 紫色漸層主題 */}
       <motion.div
         whileHover={{ y: -4 }}
+        data-track
+        data-track-action="REFLECTION_TYPE_5RS"
+        data-track-type="reflection"
         className="group bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 rounded-xl border-2 border-purple-200 hover:border-purple-400 transition-all duration-normal shadow-sm hover:shadow-lg overflow-hidden cursor-pointer relative"
         onClick={onSelect5Rs}
       >

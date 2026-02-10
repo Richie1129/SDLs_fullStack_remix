@@ -122,12 +122,20 @@ export function PersonalDailyModal({
         {/* Tabs */}
         <div className="flex border-b border-gray-200 mb-3">
           <button
+            data-track
+            data-track-action="REFLECTION_PERSONAL_TAB_SWITCH"
+            data-track-type="daily_personal"
+            data-track-meta-tab="edit"
             onClick={() => setActiveTab('edit')}
             className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             {isTeacher ? "查看日誌" : "編輯日誌"}
           </button>
           <button
+            data-track
+            data-track-action="REFLECTION_PERSONAL_TAB_SWITCH"
+            data-track-type="daily_personal"
+            data-track-meta-tab="history"
             onClick={() => setActiveTab('history')}
             className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
@@ -135,6 +143,10 @@ export function PersonalDailyModal({
           </button>
           {isCurrent5Rs && (
             <button
+              data-track
+              data-track-action="REFLECTION_PERSONAL_TAB_SWITCH"
+              data-track-type="daily_personal"
+              data-track-meta-tab="aiHistory"
               onClick={() => setActiveTab('aiHistory')}
               className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'aiHistory' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
             >
@@ -162,6 +174,9 @@ export function PersonalDailyModal({
             />
             <div className="flex justify-end m-2">
               <button
+                data-track
+                data-track-action="REFLECTION_PERSONAL_CANCEL"
+                data-track-type="daily_personal"
                 onClick={onClose}
                 className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2"
               >
@@ -169,6 +184,9 @@ export function PersonalDailyModal({
               </button>
               {!isTeacher && (
                 <button
+                  data-track
+                  data-track-action="REFLECTION_PERSONAL_SAVE"
+                  data-track-type="daily_personal"
                   onClick={onSubmit}
                   type="submit"
                   className="mx-auto w-full h-7 mb-2 bg-[#5BA491] rounded font-bold text-caption sm:text-body-sm text-white"
