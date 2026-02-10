@@ -23,9 +23,8 @@ const { callGeminiAPI, callGeminiGrounding } = require("../services/gemini");
 const { streamOpenAIResponse, streamGeminiResponse } = require("../services/streamingService");
 const { streamGeminiResponseStructured } = require("../services/structuredStreamingService");
 const ASSISTANT_CONFIG = require("../config/assistant");
-// v2.0 新版建構器（推薦，性能提升 ~40%）
-// 已完全遷移至 PromptBuilder，移除舊函數導入（舊函數仍保留在 assistantPrompts.js 以保持向後相容）
 const { PromptBuilder } = require("../config/assistantPrompts");
+const { logAudit } = require("../services/auditService");
 
 /**
  * 估算 Token 數量
@@ -1006,6 +1005,29 @@ exports.getGuidance = async (req, res) => {
     };
 
     res.status(200).json(response);
+
+    // 審計追蹤：AI 助理指導請求
+    logAudit(req, {
+      action: 'ASSISTANT_GUIDANCE_REQUEST',
+      targetType: 'Project',
+      targetId: projectId,
+      projectId: projectId,
+      metadata: {
+        projectName: projectData.project.name,
+        userMessage: userMessage ? userMessage.substring(0, 100) : null,
+        messageLength: userMessage ? userMessage.length : 0,
+        responseLength: detailedMessage ? detailedMessage.length : 0,
+        degradedMode: projectAnalysis.degradedMode || false,
+        stats: {
+          kanbanColumns: kanbanSnapshot.length,
+          totalTasks: kanbanSnapshot.reduce((sum, col) => sum + col.tasks.length, 0),
+          ideaNodes: ideaWallSnapshot.total,
+          submissions: submissions.length
+        }
+      }
+    }).catch(err => {
+      console.error('❌ [Audit] 記錄 ASSISTANT_GUIDANCE_REQUEST 失敗:', err.message);
+    });
   } catch (error) {
     console.error("Guidance generation failed | 指導建議生成失敗:", error);
     res.status(500).json({
@@ -1172,6 +1194,26 @@ exports.chatWithStreaming = async (req, res) => {
         }).catch(err => {
           console.error('❌ [Assistant Chat] 儲存對話失敗:', err);
         });
+
+        // 審計追蹤：AI 助理聊天請求 (Gemini)
+        logAudit(req, {
+          action: 'ASSISTANT_CHAT_REQUEST',
+          targetType: 'Project',
+          targetId: parseInt(projectId, 10),
+          projectId: parseInt(projectId, 10),
+          metadata: {
+            projectName: projectData.project.name,
+            provider: 'gemini',
+            sessionId: sessionId || 'default',
+            message: message.substring(0, 100),
+            messageLength: message.length,
+            responseLength: result.assistantContent ? result.assistantContent.length : 0,
+            hasThinking: !!result.thinkingContent,
+            useStructuredOutput: process.env.USE_STRUCTURED_OUTPUT === 'true'
+          }
+        }).catch(err => {
+          console.error('❌ [Audit] 記錄 ASSISTANT_CHAT_REQUEST 失敗:', err.message);
+        });
       }
 
     } else if (provider === 'openai') {
@@ -1221,6 +1263,26 @@ exports.chatWithStreaming = async (req, res) => {
           sessionId: sessionId || 'default'  // Include sessionId for session management
         }).catch(err => {
           console.error('❌ [Assistant Chat] 儲存對話失敗:', err);
+        });
+
+        // 審計追蹤：AI 助理聊天請求 (OpenAI)
+        logAudit(req, {
+          action: 'ASSISTANT_CHAT_REQUEST',
+          targetType: 'Project',
+          targetId: parseInt(projectId, 10),
+          projectId: parseInt(projectId, 10),
+          metadata: {
+            projectName: projectData.project.name,
+            provider: 'openai',
+            sessionId: sessionId || 'default',
+            message: message.substring(0, 100),
+            messageLength: message.length,
+            responseLength: result.assistantContent ? result.assistantContent.length : 0,
+            hasThinking: !!result.thinkingContent,
+            model: 'gpt-4o-mini'
+          }
+        }).catch(err => {
+          console.error('❌ [Audit] 記錄 ASSISTANT_CHAT_REQUEST 失敗:', err.message);
         });
       }
 

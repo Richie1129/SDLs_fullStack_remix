@@ -3,6 +3,7 @@ const Project = require('../../models/project')
 const User = require('../../models/user')
 const User_project = require('../../models/user_project');
 const sequelize = require('../../util/database');
+const { logAudit } = require('../../services/auditService');
 
 exports.inviteForProject = async (req, res) => {
     const referral_Code = req.body.referral_Code;
@@ -57,6 +58,23 @@ exports.inviteForProject = async (req, res) => {
         await referralProject.addUser(invitedUser);
 
         console.log('Successfully invited user to project!');
+        
+        // 記錄審計事件（非阻塞）
+        logAudit(req, {
+            action: 'PROJECT_MEMBER_ADD',
+            targetType: 'User',
+            targetId: userId,
+            projectId: referralProject.id,
+            metadata: {
+                projectName: referralProject.name,
+                invitedUser: invitedUser.username,
+                userId: userId,
+                method: 'referral_code'
+            }
+        }).catch(err => {
+            console.error('記錄審計事件失敗（成員加入）:', err);
+        });
+        
         // 成功邀請用戶加入項目
         return res.status(200).json({ message: '成功加入活動!' });
     } catch (error) {
@@ -94,6 +112,23 @@ exports.assignStudentsToGroup = async (req, res) => {
             await t.rollback();
             throw txErr;
         }
+        
+        // 記錄審計事件（非阻塞）
+        logAudit(req, {
+            action: 'PROJECT_MEMBER_ADD',
+            targetType: 'User',
+            targetId: null,
+            projectId: projectId,
+            metadata: {
+                projectName: project.name,
+                addedCount: students.length,
+                studentIds: studentIds,
+                studentNames: students.map(s => s.username),
+                method: 'batch_assign'
+            }
+        }).catch(err => {
+            console.error('記錄審計事件失敗（批量分配學生）:', err);
+        });
 
         return res.status(200).json({ message: '學生成功分配到專案' });
     } catch (err) {

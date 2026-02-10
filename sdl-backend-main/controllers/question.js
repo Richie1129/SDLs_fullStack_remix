@@ -1,5 +1,6 @@
 const Question = require('../models/question')
 const QuestionMessage = require('../models/question_message')
+const { logAudit } = require('../services/auditService');
 
 exports.getAllChatrooms = async (req, res) => {
     const projectId = req.params.projectId;
@@ -57,7 +58,21 @@ exports.createChatroom = async (req, res) => {
         projectId: projectId,
         title: title,
     })
-        .then(() => {
+        .then((chatroom) => {
+            // 記錄審計事件（非阻塞）
+            logAudit(req, {
+                action: 'CHATROOM_CREATE',
+                targetType: 'Question',
+                targetId: chatroom.id,
+                projectId: projectId,
+                metadata: {
+                    title: title,
+                    userId: userId,
+                    projectId: projectId
+                }
+            }).catch(err => {
+                console.error('記錄審計事件失敗（建立聊天室）:', err);
+            });
             return res.status(200).send({ message: 'create success!' });
         })
         .catch(err => {
@@ -80,7 +95,21 @@ exports.createMessage = async (req, res) => {
         author: author,
         questionId: questionId,
     })
-        .then(() => {
+        .then((msg) => {
+            // 記錄審計事件（非阻塞）
+            logAudit(req, {
+                action: 'CHATROOM_MESSAGE_SEND',
+                targetType: 'QuestionMessage',
+                targetId: msg.id,
+                projectId: null,
+                metadata: {
+                    questionId: questionId,
+                    author: author,
+                    messageLength: message ? message.length : 0
+                }
+            }).catch(err => {
+                console.error('記錄審計事件失敗（發送聊天室訊息）:', err);
+            });
             return res.status(200).send({ message: 'create success!' });
         })
         .catch(err => {

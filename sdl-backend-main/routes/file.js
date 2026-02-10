@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { getPresignedDownloadUrl, deleteFileFromMinio, fileExistsInMinio } = require('../config/minio');
+const { validateToken } = require('../middlewares/AuthMiddleware');
+const { logAudit } = require('../services/auditService');
 
 /**
  * 獲取圖片預簽名 URL (用於前端顯示)
@@ -164,7 +166,7 @@ router.get('/direct/:fileName', async (req, res) => {
  * 刪除單個檔案
  * DELETE /api/file/:fileName
  */
-router.delete('/:fileName', async (req, res) => {
+router.delete('/:fileName', validateToken, async (req, res) => {
     console.log('=== 🗑️ MinIO 檔案刪除請求 ===');
     const { fileName } = req.params;
     console.log('刪除檔案:', fileName);
@@ -190,6 +192,20 @@ router.delete('/:fileName', async (req, res) => {
             message: '檔案刪除成功',
             fileName
         });
+
+        // 審計追蹤：檔案刪除
+        logAudit(req, {
+            action: 'FILE_DELETE',
+            targetType: 'File',
+            targetId: fileName,
+            metadata: {
+                fileName,
+                fileUrl: fileName,
+                deletedAt: new Date()
+            }
+        }).catch(err => {
+            console.error('❌ [Audit] 記錄 FILE_DELETE 失敗:', err.message);
+        });
         
     } catch (error) {
         console.error('❌ 檔案刪除失敗:', error);
@@ -205,7 +221,7 @@ router.delete('/:fileName', async (req, res) => {
  * POST /api/file/batch-delete
  * Body: { fileNames: ['file1.jpg', 'file2.pdf'] }
  */
-router.post('/batch-delete', async (req, res) => {
+router.post('/batch-delete', validateToken, async (req, res) => {
     console.log('=== 🗑️ MinIO 批量檔案刪除請求 ===');
     const { fileNames } = req.body;
     
@@ -266,6 +282,26 @@ router.post('/batch-delete', async (req, res) => {
             },
             results
         });
+
+        // 審計追蹤：批量檔案刪除
+        const successFiles = results.filter(r => r.success).map(r => r.fileName);
+        if (successFiles.length > 0) {
+            logAudit(req, {
+                action: 'FILE_BATCH_DELETE',
+                targetType: 'File',
+                targetId: null,
+                metadata: {
+                    totalRequested: fileNames.length,
+                    successCount,
+                    failCount,
+                    successFiles: successFiles.slice(0, 10),  // 只記錄前 10 個
+                    hasMore: successFiles.length > 10,
+                    deletedAt: new Date()
+                }
+            }).catch(err => {
+                console.error('❌ [Audit] 記錄 FILE_BATCH_DELETE 失敗:', err.message);
+            });
+        }
         
     } catch (error) {
         console.error('❌ 批量刪除失敗:', error);

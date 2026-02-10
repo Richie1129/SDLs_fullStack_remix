@@ -3,6 +3,7 @@ const Project = require('../../models/project')
 const User = require('../../models/user')
 const User_project = require('../../models/user_project');
 const sequelize = require('../../util/database');
+const { logAudit } = require('../../services/auditService');
 
 /**
  * 設定專案的觀摩權限（僅限教師或專案成員）
@@ -36,6 +37,21 @@ exports.updateViewingSettings = async (req, res) => {
         project.allowed_classes = is_open_for_viewing ? allowed_classes : null;
 
         await project.save();
+        
+        // 記錄審計事件（非阻塞）
+        logAudit(req, {
+            action: 'PROJECT_VIEWING_UPDATE',
+            targetType: 'Project',
+            targetId: project.id,
+            projectId: project.id,
+            metadata: {
+                projectName: project.name,
+                is_open_for_viewing,
+                allowed_classes: project.allowed_classes
+            }
+        }).catch(err => {
+            console.error('記錄審計事件失敗（專案觀摩設定）:', err);
+        });
 
         res.status(200).json({
             message: '觀摩權限設定更新成功',
@@ -446,6 +462,23 @@ exports.batchUpdateViewingSettings = async (req, res) => {
         const updateResults = await Promise.all(updatePromises);
 
         await t.commit();
+        
+        // 記錄審計事件（非阻塞）
+        logAudit(req, {
+            action: 'PROJECT_VIEWING_BATCH_UPDATE',
+            targetType: 'Project',
+            targetId: null,
+            projectId: null,
+            metadata: {
+                sourceClass,
+                targetClasses,
+                mentorName,
+                updatedCount: updateResults.length,
+                projectIds: updateResults.map(r => r.projectId)
+            }
+        }).catch(err => {
+            console.error('記錄審計事件失敗（批量觀摩設定）:', err);
+        });
 
         res.status(200).json({
             message: `成功設定 ${projects.length} 個專案的觀摩權限`,
