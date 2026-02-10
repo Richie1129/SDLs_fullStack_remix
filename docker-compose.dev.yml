@@ -47,6 +47,13 @@ services:
       - EMAIL_PASS=${EMAIL_PASS}
       - EMAIL_FROM=${EMAIL_FROM}
       - FRONTEND_URL=${FRONTEND_URL}
+      # vLLM 環境變數
+      - HSUEH_VLLM_BASE_URL=${HSUEH_VLLM_BASE_URL}
+      - HSUEH_VLLM_MODEL_NAME=${HSUEH_VLLM_MODEL_NAME}
+      - HSUEH_VLLM_API_KEY=${HSUEH_VLLM_API_KEY}
+      - VLLM_BASE_URL=${VLLM_BASE_URL}
+      - VLLM_MODEL_NAME=${VLLM_MODEL_NAME}
+      - VLLM_API_KEY=${VLLM_API_KEY}
     volumes:
       - "./sdl-backend-main:/sdl-backend-main"
       - "/sdl-backend-main/node_modules"

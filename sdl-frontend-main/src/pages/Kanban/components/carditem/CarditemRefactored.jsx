@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from 'react-query';
 import { Draggable } from 'react-beautiful-dnd';
 import { Toaster } from 'react-hot-toast';
-import { FiEdit } from "react-icons/fi";
+import { FiEdit, FiHelpCircle } from "react-icons/fi";
 import { AiOutlineCloudDownload } from "react-icons/ai";
 import { getProjectUser } from '../../../../api/users';
 import useObservationMode from '../../../../hooks/useObservationMode';
@@ -14,6 +14,7 @@ import { useFileManagement } from './hooks/useFileManagement';
 import { useCardSocket } from './hooks/useCardSocket';
 import { CardDetailModal } from './components/CardDetailModal';
 import { CardImage, Tooltip, personImg } from './components/SharedComponents';
+import AITaskAssistantModal from '../../../../components/AITaskAssistant/AITaskAssistantModal';
 
 /**
  * Carditem - 看板卡片組件（重構版）
@@ -38,6 +39,7 @@ import { CardImage, Tooltip, personImg } from './components/SharedComponents';
  */
 function Carditem({ data, index, columnIndex }) {
   const [open, setOpen] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const { projectId } = useParams();
   const queryClient = useQueryClient();
   const { isObservationMode } = useObservationMode();
@@ -105,17 +107,35 @@ function Carditem({ data, index, columnIndex }) {
             )}
 
             <div className="p-component-sm">
-              {/* 標題與編輯按鈕 */}
+              {/* 標題與操作按鈕 */}
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-body font-semibold text-gray-800 line-clamp-2 pr-2">
                   {cardData.title}
                 </h3>
-                <button
-                  onClick={handleCardClick}
-                  className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
-                >
-                  <FiEdit size={16} />
-                </button>
+                <div className="flex gap-1 flex-shrink-0">
+                  {/* AI 助手按鈕 */}
+                  {!isObservationMode && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowAIAssistant(true);
+                      }}
+                      className="p-1.5 rounded-md transition-all duration-fast
+                               text-customgreen hover:text-white
+                               hover:bg-customgreen/90 hover:shadow-md"
+                      title="求助引導"
+                    >
+                      <FiHelpCircle size={16} />
+                    </button>
+                  )}
+                  {/* 編輯按鈕 */}
+                  <button
+                    onClick={handleCardClick}
+                    className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                  >
+                    <FiEdit size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* 內容預覽 */}
@@ -185,6 +205,14 @@ function Carditem({ data, index, columnIndex }) {
         columnIndex={columnIndex}
         index={index}
         menberData={menberData}
+      />
+
+      {/* AI 助手模態框 */}
+      <AITaskAssistantModal
+        open={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+        cardData={cardData}
+        projectId={projectId}
       />
 
       <Toaster />

@@ -176,6 +176,7 @@ app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/llm', require('./routes/llm'));
 app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
+app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));

@@ -22,7 +22,7 @@ export default function Modal({ open, onClose, opacity, position, modalCoordinat
                     </div>
                 </div>   
                 :
-                <div className={`z-50 fixed inset-0 flex transition-colors duration-normal ${open ? "visible" : "invisible"} ${opacity ? "bg-black/50" : ""} ${position}`}>
+                <div className={`z-50 fixed inset-0 flex items-center justify-center transition-colors duration-normal ${open ? "visible" : "invisible"} ${opacity ? "bg-black/50" : ""} ${position}`}>
                 <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-md shadow p-component-sm sm:p-component-md lg:p-component-lg transition-all duration-normal ${scrollClass} ${custom ? custom : "w-11/12 sm:w-3/4 lg:w-1/3"} ${open ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} >
                     {children}
                     </div>
