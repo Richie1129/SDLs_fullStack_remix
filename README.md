@@ -448,7 +448,7 @@ curl http://localhost:9000/minio/health/live
 cat sdl-backend-main/.env | grep API_KEY
 
 # 檢查後端日誌
-docker compose logs -f api | grep -i "api\|gemini\|openai"
+docker compose logs -f api | grep -i "api\|gemini"
 ```
 
 ### 更多問題？

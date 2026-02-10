@@ -1,13 +1,9 @@
 const { GoogleGenAI } = require('@google/genai');
-const OpenAI = require('openai');
 
 // Initialize Clients
 const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const PRIMARY_MODEL = "gemini-2.5-flash";
-const FALLBACK_MODEL = "gpt-5-nano"; // User requested fallback
-const SAFE_FALLBACK_MODEL = "gpt-4o-mini"; // Real fallback if gpt-5-nano doesn't exist
 
 /**
  * Generate AI intervention for IdeaWall Chat
@@ -21,25 +17,11 @@ async function generateChatIntervention(contextMessages, relatedNode, wallNodes 
     const userPrompt = buildUserPrompt(contextMessages);
 
     try {
-        console.log(`🧠 [Chat LLM] Trying Primary Model: ${PRIMARY_MODEL}`);
+        console.log(`🧠 [Chat LLM] Using Model: ${PRIMARY_MODEL}`);
         return await callGemini(PRIMARY_MODEL, systemPrompt, userPrompt);
-    } catch (primaryError) {
-        console.warn(`⚠️ [Chat LLM] Primary Model ${PRIMARY_MODEL} failed:`, primaryError.message);
-        
-        try {
-            console.log(`🧠 [Chat LLM] Trying Fallback Model: ${FALLBACK_MODEL}`);
-            return await callOpenAI(FALLBACK_MODEL, systemPrompt, userPrompt);
-        } catch (fallbackError) {
-            console.warn(`⚠️ [Chat LLM] Fallback Model ${FALLBACK_MODEL} failed:`, fallbackError.message);
-            
-            try {
-                console.log(`🧠 [Chat LLM] Trying Safe Fallback Model: ${SAFE_FALLBACK_MODEL}`);
-                return await callOpenAI(SAFE_FALLBACK_MODEL, systemPrompt, userPrompt);
-            } catch (finalError) {
-                console.error(`❌ [Chat LLM] All models failed.`);
-                return null;
-            }
-        }
+    } catch (error) {
+        console.error(`❌ [Chat LLM] Gemini model failed:`, error.message);
+        return null;
     }
 }
 
@@ -67,18 +49,6 @@ async function callGemini(modelName, systemPrompt, userPrompt) {
 
     // Fallback: return stringified result if structure is unknown
     return JSON.stringify(result);
-}
-
-async function callOpenAI(modelName, systemPrompt, userPrompt) {
-    const completion = await openai.chat.completions.create({
-        model: modelName,
-        messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-        ],
-    });
-
-    return completion.choices[0].message.content;
 }
 
 function buildSystemPrompt(relatedNode, wallNodes = []) {
@@ -160,12 +130,8 @@ Please summarize the main themes or topics being discussed.`;
     try {
         return await callGemini(PRIMARY_MODEL, systemPrompt, userPrompt);
     } catch (error) {
-        console.warn('Summary generation failed, trying fallback...');
-        try {
-            return await callOpenAI(FALLBACK_MODEL, systemPrompt, userPrompt);
-        } catch (e) {
-            return `目前牆上有 ${nodes.length} 個想法節點，主要關於: ${nodes.slice(0, 3).map(n => n.title).join(', ')}...`;
-        }
+        console.error('Summary generation failed:', error.message);
+        return `目前牆上有 ${nodes.length} 個想法節點，主要關於: ${nodes.slice(0, 3).map(n => n.title).join(', ')}...`;
     }
 }
 

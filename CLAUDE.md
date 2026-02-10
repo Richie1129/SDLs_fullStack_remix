@@ -10,7 +10,7 @@ SDL (Self-Directed Learning) 是一個全端學習平台,結合科學探究五�
 - 前端: React 18 + Vite 5 + TailwindCSS + Socket.io Client
 - 後端: Node.js + Express + PostgreSQL + Sequelize ORM v6 + Socket.io v4.6
 - 檔案儲存: MinIO (S3 相容的對象儲存)
-- AI 整合: OpenAI GPT-4o-mini + Google Gemini 2.5-flash
+- AI 整合: Google Gemini 2.5-flash
 - DevOps: Docker Compose + Nginx 反向代理
 
 ## 常用開發指令
@@ -124,7 +124,7 @@ docker compose exec -T postgres psql -U postgres postgres < backup.sql
   - `orchestrator.js` - AI 助理協調器 (整合 RAG 與 Streaming)
   - `streamingService.js` - AI Streaming 回應服務
   - `structuredStreamingService.js` - 結構化 Streaming (5Rs 反思分析)
-  - `gpt.js` / `gemini.js` - AI 模型介面
+  - `gemini.js` - AI 模型介面
   - `emailService.js` - 郵件服務
   - `auditService.js` - 審計日誌服務
 - `middlewares/` - Express 中間件:
@@ -160,18 +160,18 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 
 **重要提醒:** 斷線時必須 `socket.removeAllListeners()` 防止記憶體洩漏
 
-### AI 系統架構 (雙引擎 + RAG + Streaming)
+### AI 系統架構 (Gemini + RAG + Streaming)
 
 **專案助理系統 (Project Assistant):**
 - **RAG 整合**: 自動收集專案資料(看板任務、想法牆、提交記錄、對話歷史)注入 Prompt
 - **Streaming 回應**: 使用 `streamingService.js` 逐字串流,提供即時反饋
-- **雙 AI 引擎**: Gemini (預設) + OpenAI GPT-4o-mini (備選),自動容錯
+- **AI 引擎**: 使用 Google Gemini 2.5-flash
 - **個人化稱呼**: 系統自動帶入使用者名稱
 
 **5Rs 反思分析系統:**
 - **反思框架**: Reporting → Responding → Relating → Reasoning → Reconstructing
 - **結構化 Streaming**: 使用 `structuredStreamingService.js` 逐項串流分析結果
-- **雙 AI 分析**: 針對每個 R 層次提供個人化改進建議
+- **AI 分析**: 針對每個 R 層次提供個人化改進建議
 - 前端元件: `FiveRsReflectionForm.jsx` (輸入) + `FiveRsReflectionDisplay.jsx` (顯示)
 
 ### 認證與權限系統
@@ -371,7 +371,6 @@ MINIO_SECRET_KEY=your_minio_password
 MINIO_BUCKET_NAME=sdl-files
 
 # AI 服務 API Keys
-OPENAI_API_KEY=your_openai_api_key
 GEMINI_API_KEY=your_gemini_api_key
 
 # JWT 認證密鑰
@@ -419,9 +418,9 @@ NODE_ENV=development
 
 ### AI 功能無法使用
 
-1. 確認環境變數 `OPENAI_API_KEY` 或 `GEMINI_API_KEY` 已設定
+1. 確認環境變數 `GEMINI_API_KEY` 已設定
 2. 檢查 API Key 是否有效 (可使用 Postman 測試)
-3. 查看後端日誌: `docker compose logs -f api | grep -i "gemini\|openai"`
+3. 查看後端日誌: `docker compose logs -f api | grep -i "gemini"`
 4. Gemini API Key 申請: https://makersuite.google.com/app/apikey
 
 ## 系統監控

@@ -1,8 +1,8 @@
-const OpenAI = require('openai');
+const { GoogleGenAI } = require('@google/genai');
 require('dotenv').config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const genai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
@@ -23,22 +23,27 @@ exports.generateIdea = async (req, res) => {
   "reason": "請簡要說明為何選擇這種類型"
 }`;
 
-    const classificationResult = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
+    const classificationResult = await genai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
         {
-          role: "system",
-          content: "你是一位熟悉教育理論的AI助手，請幫助判斷學生的想法最適合發展的方向，並用JSON格式回覆。"
-        },
-        {
-          role: "user",
-          content: classificationPrompt
+          role: 'user',
+          parts: [{ text: classificationPrompt }]
         }
       ],
-      temperature: 0.3,
+      config: {
+        systemInstruction: {
+          parts: [{
+            text: "你是一位熟悉教育理論的AI助手，請幫助判斷學生的想法最適合發展的方向，並用JSON格式回覆。"
+          }]
+        },
+        temperature: 0.3,
+        responseMimeType: 'application/json'
+      }
     });
 
-    const classificationResponse = JSON.parse(classificationResult.choices[0].message.content);
+    const classificationText = classificationResult.text || '';
+    const classificationResponse = JSON.parse(classificationText);
     const { type, reason } = classificationResponse;
 
     // 第二階段：根據發展類型進行具體引導
@@ -52,23 +57,27 @@ exports.generateIdea = async (req, res) => {
   "content": "你希望學生思考的引導問題或提醒"
 }`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
+    const completion = await genai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
         {
-          role: "system",
-          content: `你是一位善於提問與引導的學習夥伴，根據學生的想法與判斷出的想法發展類型，提出具引導性的提問或回饋。請不要給出結論或答案，只提供一個鼓勵學生思考的問題或想法擴展的啟發。`
-        },
-        {
-          role: "user",
-          content: guidancePrompt
+          role: 'user',
+          parts: [{ text: guidancePrompt }]
         }
       ],
-      temperature: 0.7,
+      config: {
+        systemInstruction: {
+          parts: [{
+            text: `你是一位善於提問與引導的學習夥伴，根據學生的想法與判斷出的想法發展類型，提出具引導性的提問或回饋。請不要給出結論或答案，只提供一個鼓勵學生思考的問題或想法擴展的啟發。`
+          }]
+        },
+        temperature: 0.7,
+        responseMimeType: 'application/json'
+      }
     });
 
-    const response = completion.choices[0].message.content;
-    const parsedResponse = JSON.parse(response);
+    const responseText = completion.text || '';
+    const parsedResponse = JSON.parse(responseText);
 
     const responseWithOwner = {
       ...parsedResponse,
@@ -85,7 +94,7 @@ exports.generateIdea = async (req, res) => {
           input: { title: summarizeText(title || ''), content: summarizeText(content || '') },
           classification: { type, reason: summarizeText(reason || '') },
           output: { title: summarizeText(responseWithOwner.title || ''), content: summarizeText(responseWithOwner.content || '') },
-          provider: 'openai:gpt-4o-mini'
+          provider: 'gemini:gemini-2.5-flash'
         })
       });
     } catch (_) {}

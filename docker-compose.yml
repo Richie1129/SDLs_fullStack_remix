@@ -25,7 +25,6 @@ services:
       - PG_USER=postgres
       - PG_PASSWORD=postgres
       - PG_NAME=postgres
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
       - RAGFLOW_API_KEY=${RAGFLOW_API_KEY}

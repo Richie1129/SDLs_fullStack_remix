@@ -18,9 +18,8 @@ const Stage = require("../models/stage");
 const Sub_stage = require("../models/sub_stage");
 const ChatTurn = require("../models/chat_turn");
 
-const { callGPTAPI } = require("../services/gpt");
 const { callGeminiAPI, callGeminiGrounding } = require("../services/gemini");
-const { streamOpenAIResponse, streamGeminiResponse } = require("../services/streamingService");
+const { streamGeminiResponse } = require("../services/streamingService");
 const { streamGeminiResponseStructured } = require("../services/structuredStreamingService");
 const ASSISTANT_CONFIG = require("../config/assistant");
 const { PromptBuilder } = require("../config/assistantPrompts");
@@ -1098,8 +1097,8 @@ exports.chatWithStreaming = async (req, res) => {
       chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
     });
 
-    // === 第 6 步：根據 provider 選擇使用 Gemini 或 OpenAI ===
-    if (provider === 'gemini') {
+    // === 第 6 步：使用 Gemini ===
+    if (provider === 'gemini' || !provider) {
       // 使用 Gemini（預設）
       console.log('🚀 [Assistant Chat] 使用 Gemini 開始串流...');
 
@@ -1216,78 +1215,8 @@ exports.chatWithStreaming = async (req, res) => {
         });
       }
 
-    } else if (provider === 'openai') {
-      // 使用 OpenAI（備選）
-      console.log('🚀 [Assistant Chat] 使用 OpenAI 開始串流...');
-
-      // 使用獨立配置生成 System Content（包含邊界約束）
-      // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
-      const systemContent = promptBuilder.forOpenAI();
-
-      const messages = [
-        {
-          role: 'system',
-          content: systemContent
-        },
-        {
-          role: 'user',
-          content: message
-        }
-      ];
-
-      // Token 計數監控
-      const totalPromptText = systemContent + message;
-      const promptTokens = estimateTokenCount(totalPromptText);
-      const contextSize = JSON.stringify(projectContext).length;
-      console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
-      console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
-      console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
-
-      // Stream response and get thinking + content
-      const result = await streamOpenAIResponse(messages, res, {
-        model: 'gpt-4o-mini',
-        temperature: 0.7
-      });
-
-      // Save to database (async, don't block response)
-      if (result && (result.thinkingContent || result.assistantContent)) {
-        ChatTurn.create({
-          projectId: parseInt(projectId, 10),
-          projectName: projectData.project.name,
-          userId: parseInt(userId, 10),
-          username: userName,
-          userContent: message,
-          assistantContent: result.assistantContent || '',
-          thinkingContent: result.thinkingContent || null,
-          assistantUsername: 'AI 導師',
-          sessionId: sessionId || 'default'  // Include sessionId for session management
-        }).catch(err => {
-          console.error('❌ [Assistant Chat] 儲存對話失敗:', err);
-        });
-
-        // 審計追蹤：AI 助理聊天請求 (OpenAI)
-        logAudit(req, {
-          action: 'ASSISTANT_CHAT_REQUEST',
-          targetType: 'Project',
-          targetId: parseInt(projectId, 10),
-          projectId: parseInt(projectId, 10),
-          metadata: {
-            projectName: projectData.project.name,
-            provider: 'openai',
-            sessionId: sessionId || 'default',
-            message: message.substring(0, 100),
-            messageLength: message.length,
-            responseLength: result.assistantContent ? result.assistantContent.length : 0,
-            hasThinking: !!result.thinkingContent,
-            model: 'gpt-4o-mini'
-          }
-        }).catch(err => {
-          console.error('❌ [Audit] 記錄 ASSISTANT_CHAT_REQUEST 失敗:', err.message);
-        });
-      }
-
     } else {
-      return res.status(400).json({ error: 'provider 必須是 "gemini" 或 "openai"' });
+      return res.status(400).json({ error: 'provider 必須是 "gemini"' });
     }
 
   } catch (error) {
