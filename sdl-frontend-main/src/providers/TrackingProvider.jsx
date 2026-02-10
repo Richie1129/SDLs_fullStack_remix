@@ -1,5 +1,6 @@
 import { createContext, useContext, useCallback, useRef, useEffect } from 'react';
 import { getCurrentUserId } from '../utils/authUtils';
+import { authStorage } from '../services/storageService';
 
 const TrackingContext = createContext(null);
 
@@ -14,11 +15,11 @@ const TrackingContext = createContext(null);
  * - keepalive 保持連線
  */
 class EventBatcher {
-  constructor({ 
-    maxBatchSize = 20, 
-    flushIntervalMs = 5000, 
-    endpoint = '/api/audit/batch',
-    maxRetries = 3 
+  constructor({
+    maxBatchSize = 20,
+    flushIntervalMs = 5000,
+    endpoint = '/audit/batch',
+    maxRetries = 3
   }) {
     this.queue = [];
     this.endpoint = endpoint;
@@ -34,7 +35,7 @@ class EventBatcher {
       if (document.visibilityState === 'hidden' && this.queue.length > 0) {
         const payload = JSON.stringify({ events: this.queue });
         const sent = navigator.sendBeacon(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${this.endpoint}`,
+          `${import.meta.env.VITE_API_BASE_URL || '/api'}${this.endpoint}`,
           payload
         );
         if (sent) {
@@ -76,12 +77,12 @@ class EventBatcher {
     
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}${this.endpoint}`,
+        `${import.meta.env.VITE_API_BASE_URL || '/api'}${this.endpoint}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'accessToken': localStorage.getItem('accessToken') || ''
+            'accessToken': authStorage.get('accessToken') || ''
           },
           body: JSON.stringify({ events: batch }),
           keepalive: true, // 保證請求完成
@@ -140,26 +141,33 @@ class EventBatcher {
  */
 export function TrackingProvider({ children }) {
   const batcherRef = useRef(null);
-  
-  // 初始化 EventBatcher (只執行一次)
-  if (!batcherRef.current) {
+
+  // 使用 useEffect 初始化 EventBatcher，確保與 React 生命週期同步
+  useEffect(() => {
+    // 如果已經初始化過，不重複建立
+    if (batcherRef.current) {
+      return;
+    }
+
+    // 建立新的 EventBatcher 實例
     batcherRef.current = new EventBatcher({
       maxBatchSize: 20,
       flushIntervalMs: 5000,
-      endpoint: '/api/audit/batch',
+      endpoint: '/audit/batch',
       maxRetries: 3
     });
-  }
 
-  // 元件卸載時清理資源
-  useEffect(() => {
+    console.log('✅ [TrackingProvider] EventBatcher 已初始化');
+
+    // 清理函數：元件卸載時清理資源
     return () => {
       if (batcherRef.current) {
+        console.log('🧹 [TrackingProvider] 正在清理 EventBatcher');
         batcherRef.current.destroy();
         batcherRef.current = null;
       }
     };
-  }, []);
+  }, []); // 空依賴陣列，確保只執行一次
 
   /**
    * 追蹤事件
@@ -174,8 +182,14 @@ export function TrackingProvider({ children }) {
       return;
     }
 
+    // 防禦性檢查：確保 EventBatcher 已經初始化
+    if (!batcherRef.current) {
+      console.warn('⚠️ [TrackingProvider] EventBatcher 尚未初始化，事件將被忽略:', action);
+      return;
+    }
+
     const userId = getCurrentUserId();
-    
+
     batcherRef.current.push({
       action,
       targetType,

@@ -2,6 +2,7 @@ const { SocketHandlerFactory } = require('../socketHandlers');
 const Chatroom_message = require('../../models/chatroom_message');
 const Rag_message = require('../../models/rag_message');
 const QuestionMessage = require('../../models/question_message');
+const auditService = require('../../services/auditService');
 
 /**
  * 訊息相關 Socket 事件處理器
@@ -52,6 +53,27 @@ class MessageHandler {
                 userId: data.creator,
                 projectId: data.room
             });
+            
+            // 記錄審計事件（非阻塞）
+            const req = {
+                user: { id: data.creator },
+                ip: this.socket.handshake.address,
+                headers: { 'user-agent': this.socket.handshake.headers['user-agent'] || 'socket-client' }
+            };
+            
+            auditService.logAudit(req, {
+                action: 'SOCKET_MESSAGE_SENT',
+                targetType: 'Message',
+                targetId: null,
+                result: 'success',
+                metadata: {
+                    projectId: data.room,
+                    author: data.author,
+                    messageLength: data.message ? data.message.length : 0
+                }
+            }).catch(auditError => {
+                console.error('記錄審計事件失敗（聊天訊息）:', auditError);
+            });
         } catch (error) {
             console.error("保存訊息時出錯：", error);
         }
@@ -72,6 +94,27 @@ class MessageHandler {
                 message: data.message,
                 author: data.author,
                 questionId: data.questionId
+            });
+            
+            // 記錄審計事件（非阻塞）
+            const req = {
+                user: { id: data.creator || null },
+                ip: this.socket.handshake.address,
+                headers: { 'user-agent': this.socket.handshake.headers['user-agent'] || 'socket-client' }
+            };
+            
+            auditService.logAudit(req, {
+                action: 'SOCKET_QUESTION_MESSAGE_SENT',
+                targetType: 'QuestionMessage',
+                targetId: data.questionId,
+                result: 'success',
+                metadata: {
+                    questionId: data.questionId,
+                    author: data.author,
+                    messageLength: data.message ? data.message.length : 0
+                }
+            }).catch(auditError => {
+                console.error('記錄審計事件失敗（問答訊息）:', auditError);
             });
         } catch (error) {
             console.error("保存問答訊息時出錯：", error);
@@ -110,6 +153,29 @@ class MessageHandler {
                 // 將訊息的 ID 返回前端，便於後續 response_message 更新
                 this.socket.emit('input_stored', { id: newMessage.id });
                 
+                // 記錄審計事件（非阻塞） - RAG 輸入訊息
+                const req = {
+                    user: { id: userId },
+                    ip: this.socket.handshake.address,
+                    headers: { 'user-agent': this.socket.handshake.headers['user-agent'] || 'socket-client' }
+                };
+                
+                auditService.logAudit(req, {
+                    action: 'SOCKET_RAG_MESSAGE_SENT',
+                    targetType: 'RagMessage',
+                    targetId: newMessage.id,
+                    result: 'success',
+                    metadata: {
+                        messageType: 'input',
+                        projectId: data.projectId || data.project_id || data.room || null,
+                        sessionId: sessionId,
+                        userName: userName,
+                        messageLength: data.message ? data.message.length : 0
+                    }
+                }).catch(auditError => {
+                    console.error('記錄審計事件失敗（RAG 輸入訊息）:', auditError);
+                });
+                
             } else if (data.messageType === 'response') {
                 // 當接收到 response_message 時，根據前端返回的 messageId 進行更新
                 // ✅ 儲存 reference 和 externalLinks
@@ -132,6 +198,31 @@ class MessageHandler {
                 );
                 
                 console.log(`✅ 已儲存 reference_data 和 external_links 到資料庫 (messageId: ${data.messageId})`);
+                
+                // 記錄審計事件（非阻塞） - RAG 回應訊息
+                const req = {
+                    user: { id: userId },
+                    ip: this.socket.handshake.address,
+                    headers: { 'user-agent': this.socket.handshake.headers['user-agent'] || 'socket-client' }
+                };
+                
+                auditService.logAudit(req, {
+                    action: 'SOCKET_RAG_MESSAGE_SENT',
+                    targetType: 'RagMessage',
+                    targetId: data.messageId,
+                    result: 'success',
+                    metadata: {
+                        messageType: 'response',
+                        sessionId: sessionId,
+                        ragflowSessionId: ragflowSessionId,
+                        userName: userName,
+                        hasReference: !!data.reference,
+                        hasExternalLinks: !!data.externalLinks,
+                        messageLength: data.message ? data.message.length : 0
+                    }
+                }).catch(auditError => {
+                    console.error('記錄審計事件失敗（RAG 回應訊息）:', auditError);
+                });
             }
         } catch (error) {
             console.error("保存 RAG 訊息時出錯：", error);

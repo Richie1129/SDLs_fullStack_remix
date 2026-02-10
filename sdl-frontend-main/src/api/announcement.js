@@ -35,3 +35,14 @@ export const createAnnouncement = async (announcementData) => {
         throw error;
     }
 };
+
+// 刪除公告
+export const deleteAnnouncement = async (announcementId) => {
+    try {
+        const response = await apiClient.delete(`/announcements/${announcementId}`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to delete announcement | 無法刪除公告:", error);
+        throw error;
+    }
+};

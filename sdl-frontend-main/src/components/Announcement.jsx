@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, MessageCircle } from 'lucide-react';
+import { Bell, MessageCircle, Trash2 } from 'lucide-react';
 import Modal from './Modal';
 import Swal from 'sweetalert2';
 import { useQuery } from 'react-query';
-import { getAnnouncements, createAnnouncement } from '../api/announcement';
+import { getAnnouncements, createAnnouncement, deleteAnnouncement } from '../api/announcement';
 import { getProjectUser, batchGetProjectUsers } from '../api/users';
 import { getProjectsByMentor } from '../api/project'; // 新增引入
 import { socket } from '../utils/socket';
@@ -53,7 +53,7 @@ export default function Announcement({ projectId, role, projectList }) {
         }
     );
 
-    // 處理 socket.io 的公告接收
+    // 處理 socket.io 的公告接收和刪除
     useEffect(() => {
         const handleReceiveAnnouncement = (data) => {
             console.log("從 socket 收到公告:", data);
@@ -65,12 +65,31 @@ export default function Announcement({ projectId, role, projectList }) {
             });
         };
 
+        const handleAnnouncementDeleted = (data) => {
+            console.log("從 socket 收到公告刪除通知:", data);
+            setNotifications((prev) => prev.filter(n => n.id !== data.id));
+
+            // 如果正在查看被刪除的公告，關閉 Modal
+            if (selectedAnnouncement && selectedAnnouncement.id === data.id) {
+                setSelectedAnnouncement(null);
+                Swal.fire({
+                    icon: 'info',
+                    title: '公告已被刪除',
+                    text: '該公告已被管理者刪除',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        };
+
         socket.on('receiveAnnouncement', handleReceiveAnnouncement);
+        socket.on('announcementDeleted', handleAnnouncementDeleted);
 
         return () => {
             socket.off('receiveAnnouncement', handleReceiveAnnouncement);
+            socket.off('announcementDeleted', handleAnnouncementDeleted);
         };
-    }, []);
+    }, [selectedAnnouncement]);
 
     // 當 projectId 變更時，加入或離開對應的 socket room
     useEffect(() => {
@@ -206,7 +225,7 @@ export default function Announcement({ projectId, role, projectList }) {
         }
 
         let payload;
-        
+
         if (announcementMode === 'project') {
             // 專案模式：發布給特定專案或所有專案
             payload = {
@@ -233,6 +252,64 @@ export default function Announcement({ projectId, role, projectList }) {
         } catch (error) {
             console.error('公告發佈失敗:', error);
             Swal.fire('公告發佈失敗', error.response?.data?.message || '請稍後再試', 'error');
+        }
+    };
+
+    // 處理刪除公告
+    const handleDeleteAnnouncement = async (announcementId) => {
+        const result = await Swal.fire({
+            title: '確認刪除',
+            text: '確定要刪除此公告嗎？此操作無法復原！',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: '確定刪除',
+            cancelButtonText: '取消'
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        try {
+            await deleteAnnouncement(announcementId);
+
+            // 本地更新：從列表中移除已刪除的公告
+            setNotifications((prev) => prev.filter(n => n.id !== announcementId));
+
+            // 關閉公告詳情 Modal
+            setSelectedAnnouncement(null);
+
+            Swal.fire({
+                icon: 'success',
+                title: '刪除成功',
+                text: '公告已成功刪除',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            console.error('刪除公告失敗:', error);
+
+            const errorMessage = error.response?.data?.message || '請稍後再試';
+            const errorCode = error.response?.data?.code;
+
+            // 處理權限錯誤
+            if (errorCode === 'PERMISSION_DENIED') {
+                Swal.fire({
+                    icon: 'error',
+                    title: '權限不足',
+                    text: errorMessage,
+                    confirmButtonText: '確定'
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: '刪除失敗',
+                    text: errorMessage,
+                    confirmButtonText: '確定'
+                });
+            }
         }
     };
 
@@ -480,8 +557,8 @@ export default function Announcement({ projectId, role, projectList }) {
 
             {/* 公告詳情 Modal */}
             {selectedAnnouncement && (
-                <Modal 
-                    open={true} 
+                <Modal
+                    open={true}
                     onClose={() => setSelectedAnnouncement(null)}
                     opacity={true}
                     position="justify-center items-center"
@@ -494,13 +571,25 @@ export default function Announcement({ projectId, role, projectList }) {
                             </p>
                         </div>
                         <p className="text-gray-700 mb-6 whitespace-pre-wrap leading-relaxed">{selectedAnnouncement.content}</p>
-                        <div className="text-right">
-                            <button
-                                className="px-5 py-2 bg-[#5BA491] text-white rounded-lg hover:bg-opacity-90 transition-colors"
-                                onClick={() => setSelectedAnnouncement(null)}
-                            >
-                                關閉
-                            </button>
+                        <div className="flex justify-between items-center gap-stack-sm">
+                            {/* 刪除按鈕（只有教師可見） */}
+                            {role === "teacher" && (
+                                <button
+                                    className="flex items-center gap-2 px-btn-x py-btn-y bg-red-500 text-white rounded-lg hover:bg-red-600 hover:shadow-lg transition-all duration-fast"
+                                    onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    刪除公告
+                                </button>
+                            )}
+                            <div className={`${role === "teacher" ? 'ml-auto' : 'text-right w-full'}`}>
+                                <button
+                                    className="px-btn-x-lg py-btn-y-lg bg-[#5BA491] text-white rounded-lg hover:bg-[#5BA491]/90 hover:shadow-lg transition-all duration-fast"
+                                    onClick={() => setSelectedAnnouncement(null)}
+                                >
+                                    關閉
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </Modal>
