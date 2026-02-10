@@ -1,6 +1,7 @@
 import { createContext, useContext, useCallback, useRef, useEffect } from 'react';
 import { getCurrentUserId } from '../utils/authUtils';
 import { authStorage } from '../services/storageService';
+import { initAutoCaptureWithTrack } from '../utils/autoCapture';
 
 const TrackingContext = createContext(null);
 
@@ -211,6 +212,25 @@ export function TrackingProvider({ children }) {
   const flush = useCallback(() => {
     batcherRef.current?.flush();
   }, []);
+
+  // Phase 4: 初始化 data-track 自動捕獲機制
+  const autoCaptureCleanupRef = useRef(null);
+
+  useEffect(() => {
+    // 確保 track 函式可用後再初始化 autoCapture
+    if (autoCaptureCleanupRef.current) return;
+
+    autoCaptureCleanupRef.current = initAutoCaptureWithTrack(track, {
+      debounceMs: 300,
+    });
+
+    return () => {
+      if (autoCaptureCleanupRef.current) {
+        autoCaptureCleanupRef.current();
+        autoCaptureCleanupRef.current = null;
+      }
+    };
+  }, [track]);
 
   return (
     <TrackingContext.Provider value={{ track, flush }}>

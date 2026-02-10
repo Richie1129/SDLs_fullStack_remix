@@ -196,6 +196,11 @@ export function CardDetailModal({
             {/* 標籤頁導航 */}
             <div className='flex border-b border-gray-200 mb-4'>
               <button
+                data-track
+                data-track-action="KANBAN_TASK_TAB_SWITCH"
+                data-track-type="task"
+                data-track-id={cardData.id}
+                data-track-meta-tab="edit"
                 onClick={() => setShowChangeHistory(false)}
                 className={`px-4 py-2 font-medium text-body-sm ${
                   !showChangeHistory
@@ -206,6 +211,11 @@ export function CardDetailModal({
                 編輯任務
               </button>
               <button
+                data-track
+                data-track-action="KANBAN_TASK_TAB_SWITCH"
+                data-track-type="task"
+                data-track-id={cardData.id}
+                data-track-meta-tab="history"
                 onClick={() => {
                   setShowChangeHistory(true);
                   queryClient.invalidateQueries(['taskChangeLogs', cardData.id]);
@@ -290,6 +300,10 @@ export function CardDetailModal({
                 <div className='flex justify-end gap-stack-xs pt-stack-md mt-stack-md border-t border-gray-200'>
                   {permissions.canDelete && (
                     <button
+                      data-track
+                      data-track-action="KANBAN_TASK_DELETE"
+                      data-track-type="task"
+                      data-track-id={cardData.id}
                       onClick={cardHandleDelete}
                       className="px-btn-x py-btn-y bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-fast font-medium"
                     >
@@ -297,6 +311,10 @@ export function CardDetailModal({
                     </button>
                   )}
                   <button
+                    data-track
+                    data-track-action="KANBAN_TASK_CLOSE"
+                    data-track-type="task"
+                    data-track-id={cardData.id}
                     onClick={onClose}
                     className="px-btn-x py-btn-y bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-fast font-medium"
                   >
@@ -304,6 +322,10 @@ export function CardDetailModal({
                   </button>
                   {permissions.canEdit && (
                     <button
+                      data-track
+                      data-track-action="KANBAN_TASK_SAVE"
+                      data-track-type="task"
+                      data-track-id={cardData.id}
                       onClick={cardHandleSubmit}
                       className="px-btn-x py-btn-y bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-fast font-medium"
                     >

@@ -27,12 +27,18 @@ export default function CreateOptionMenu({
             >
                 <div className="flex flex-col">
                     <button 
+                        data-track
+                        data-track-action="IDEAWALL_CREATE_IDEA_SELECT"
+                        data-track-type="node"
                         onClick={onCreateIdea} 
                         className='w-full p-component-sm rounded-t-md bg-white hover:bg-gray-100 text-ui font-medium transition-colors duration-fast border-b border-gray-200'
                     >
                         建立想法
                     </button>
                     <button 
+                        data-track
+                        data-track-action="IDEAWALL_CONTEXT_MENU_CANCEL"
+                        data-track-type="node"
                         onClick={onCloseCreateOption} 
                         className='w-full p-component-sm rounded-b-md bg-white hover:bg-gray-100 text-ui text-gray-600 transition-colors duration-fast'
                     >
@@ -52,12 +58,18 @@ export default function CreateOptionMenu({
             >
                 <div className="flex flex-col">
                     <button 
+                        data-track
+                        data-track-action="IDEAWALL_EXTEND_IDEA_SELECT"
+                        data-track-type="node"
                         onClick={onExtendIdea} 
                         className='w-full p-component-sm rounded-t-md bg-white hover:bg-gray-100 text-ui font-medium transition-colors duration-fast border-b border-gray-200'
                     >
                         延伸想法
                     </button>
                     <button 
+                        data-track
+                        data-track-action="IDEAWALL_CONTEXT_MENU_CANCEL"
+                        data-track-type="node"
                         onClick={onCloseBuildOnOption} 
                         className='w-full p-component-sm rounded-b-md bg-white hover:bg-gray-100 text-ui text-gray-600 transition-colors duration-fast'
                     >

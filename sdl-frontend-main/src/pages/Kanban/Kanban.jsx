@@ -388,6 +388,10 @@ export default function Kanban() {
           {/* 左側: 分組 Tab */}
           <div className="flex items-center gap-stack-xs bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
             <button
+              data-track
+              data-track-action="KANBAN_TAB_SWITCH"
+              data-track-type="kanban"
+              data-track-meta-tab="status"
               onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'status' }))}
               className={`px-btn-x py-2 rounded-md text-ui font-medium transition-colors duration-fast ${
                 viewConfig.groupBy === 'status'
@@ -398,6 +402,10 @@ export default function Kanban() {
               依狀態
             </button>
             <button
+              data-track
+              data-track-action="KANBAN_TAB_SWITCH"
+              data-track-type="kanban"
+              data-track-meta-tab="assignee"
               onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'assignee' }))}
               className={`px-btn-x py-2 rounded-md text-ui font-medium transition-colors duration-fast ${
                 viewConfig.groupBy === 'assignee'
@@ -422,6 +430,9 @@ export default function Kanban() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
+                data-track
+                data-track-action="KANBAN_SEARCH"
+                data-track-type="kanban"
                 type="text"
                 placeholder="搜尋任務..."
                 className="pl-9 pr-3 py-2 w-48 border border-gray-300 rounded-lg text-ui bg-white focus:outline-none focus:ring-2 focus:ring-customgreen focus:border-transparent transition-shadow duration-fast placeholder:text-gray-400"
@@ -449,6 +460,9 @@ export default function Kanban() {
             {/* 成員篩選按鈕 */}
             <div className="relative">
               <button
+                data-track
+                data-track-action="KANBAN_FILTER_MEMBER_TOGGLE"
+                data-track-type="kanban"
                 onClick={() => setShowMemberFilter(!showMemberFilter)}
                 className={`relative px-3 py-2 border rounded-lg text-ui font-medium transition-all duration-fast flex items-center gap-2 ${
                   viewConfig.filter?.assignee?.length > 0
@@ -568,6 +582,9 @@ export default function Kanban() {
             {/* 清除所有篩選按鈕 - 只在有篩選時顯示 */}
             {(viewConfig.filter?.keyword || viewConfig.filter?.assignee?.length > 0) && (
               <button
+                data-track
+                data-track-action="KANBAN_FILTER_CLEAR"
+                data-track-type="kanban"
                 onClick={() => setViewConfig(prev => ({
                   ...prev,
                   filter: { keyword: '', assignee: [], label: '', assigneeLogic: 'OR' }
@@ -604,6 +621,9 @@ export default function Kanban() {
                 {viewConfig.groupBy === 'status' && !showAddGroupInput && !isObservationMode && (
                   <div className="flex flex-col gap-stack-sm w-full md:w-60 shrink-0">
                     <button 
+                      data-track
+                      data-track-action="KANBAN_COLUMN_CREATE_OPEN"
+                      data-track-type="column"
                       className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-component-base md:p-7" 
                       onClick={toggleAddGroupInput}
                     >
@@ -615,6 +635,9 @@ export default function Kanban() {
 
                     <div className="relative w-full h-20 md:h-24">
                       <button 
+                        data-track
+                        data-track-action="KANBAN_TEMPLATE_MENU_TOGGLE"
+                        data-track-type="kanban"
                         className="w-full h-full bg-white border-2 border-dashed border-gray-300 hover:border-[#5BA491] hover:text-[#5BA491] text-gray-500 flex flex-col items-center justify-center rounded-lg p-component-base transition-colors"
                         onClick={() => setShowTemplateMenu(!showTemplateMenu)}
                       >
@@ -631,6 +654,10 @@ export default function Kanban() {
                           </div>
                           {PHASES.map(phaseKey => (
                             <button
+                              data-track
+                              data-track-action="KANBAN_TEMPLATE_SELECT"
+                              data-track-type="kanban"
+                              data-track-meta-phase={phaseKey}
                               key={phaseKey}
                               onClick={() => handleAddTemplate(phaseKey)}
                               className="block w-full text-left px-4 py-2 text-body-sm text-gray-700 hover:bg-gray-100 hover:text-[#5BA491]"

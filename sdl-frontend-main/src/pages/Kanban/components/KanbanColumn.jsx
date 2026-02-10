@@ -55,8 +55,10 @@ const KanbanColumn = ({
               {column.name}
             </h3>
             {!isObservationMode && (
-              <button
-                onClick={() => onDelete(column)}
+              <button                data-track
+                data-track-action="KANBAN_COLUMN_DELETE"
+                data-track-type="column"
+                data-track-id={column.id}                onClick={() => onDelete(column)}
                 className="text-[#494b4a] hover:text-[#494b4a]/60"
                 title="删除列"
               >
@@ -105,6 +107,10 @@ const KanbanColumn = ({
               />
               <div className='flex justify-start items-center'>
                 <button
+                  data-track
+                  data-track-action="KANBAN_CARD_CREATE"
+                  data-track-type="task"
+                  data-track-meta-column={column.name}
                   type="submit"
                   style={{ backgroundColor: "#5BA491" }}
                   className='p-component-xs text-body-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-normal'
@@ -124,6 +130,10 @@ const KanbanColumn = ({
             !isObservationMode && (
               <div className="flex justify-start px-4 pt-1 pb-2">
                 <button
+                  data-track
+                  data-track-action="KANBAN_CARD_CREATE_OPEN"
+                  data-track-type="column"
+                  data-track-id={column.id}
                   onClick={() => setShowForm(true)}
                   className="bg-[#5BA491] hover:bg-[#5BA491]/80 text-body-sm p-component-xs mb-2 text-white font-bold py-1 px-4 rounded transition ease-in-out duration-normal"
                 >

@@ -46,12 +46,18 @@ export default function CreateNodeModal({
             </div>
             <div className='flex justify-end m-2'>
                 <button 
+                    data-track
+                    data-track-action="IDEAWALL_NODE_CREATE_CANCEL"
+                    data-track-type="node"
                     onClick={onClose} 
                     className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2"
                 >
                     取消
                 </button>
                 <button 
+                    data-track
+                    data-track-action="IDEAWALL_NODE_CREATE_SUBMIT"
+                    data-track-type="node"
                     onClick={onSubmit} 
                     style={{ backgroundColor: "#5BA491" }} 
                     className="mx-auto w-full h-7 mb-2 rounded font-bold text-caption sm:text-body-sm text-white"

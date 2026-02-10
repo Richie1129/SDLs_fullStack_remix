@@ -315,6 +315,9 @@ export default function IdeaWall() {
                         <p className="text-sm">從「{state.linkingSourceNode.title}」連結到...</p>
                     </div>
                     <button
+                        data-track
+                        data-track-action="IDEAWALL_LINKING_CANCEL"
+                        data-track-type="node"
                         onClick={handleCancelLinking}
                         className="ml-4 px-4 py-2 bg-white text-blue-500 rounded-md hover:bg-gray-100 transition-colors font-medium flex items-center gap-2"
                     >
@@ -416,6 +419,9 @@ export default function IdeaWall() {
             {/* 新增節點按鈕 */}
             {!isObservationMode && (
                 <button
+                    data-track
+                    data-track-action="IDEAWALL_NODE_CREATE_OPEN"
+                    data-track-type="node"
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
                     onClick={handleCreateIdeaClick}
@@ -443,6 +449,9 @@ export default function IdeaWall() {
                         />
                     ) : (
                         <button 
+                            data-track
+                            data-track-action="IDEAWALL_CHAT_OPEN"
+                            data-track-type="ideawall"
                             onClick={() => state.setIsChatPanelOpen(true)}
                             className="fixed right-0 bottom-48 bg-white text-gray-600 border border-gray-200 shadow-lg rounded-l-xl py-4 px-1 z-40 hover:bg-gray-50 transition-all duration-300 flex flex-col items-center gap-1"
                             title="開啟討論室"

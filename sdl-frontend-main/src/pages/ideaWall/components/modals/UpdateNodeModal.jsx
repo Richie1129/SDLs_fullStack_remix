@@ -42,6 +42,10 @@ export default function UpdateNodeModal({
                     {/* 左側：標籤頁 */}
                     <div className='flex'>
                         <button
+                            data-track
+                            data-track-action="IDEAWALL_NODE_TAB_SWITCH"
+                            data-track-type="node"
+                            data-track-meta-tab="edit"
                             onClick={() => onTabChange(false)}
                             className={`px-4 py-2 font-medium text-body-sm ${
                                 !showNodeChangeHistory 
@@ -52,6 +56,10 @@ export default function UpdateNodeModal({
                             編輯節點
                         </button>
                         <button
+                            data-track
+                            data-track-action="IDEAWALL_NODE_TAB_SWITCH"
+                            data-track-type="node"
+                            data-track-meta-tab="history"
                             onClick={() => onTabChange(true)}
                             className={`px-4 py-2 font-medium text-body-sm ${
                                 showNodeChangeHistory 
@@ -67,6 +75,10 @@ export default function UpdateNodeModal({
                     {!showNodeChangeHistory && !isObservationMode && isOwner && (
                         <div className='flex items-center gap-2 pr-2'>
                             <button
+                                data-track
+                                data-track-action="IDEAWALL_KBCOACH_OPEN"
+                                data-track-type="node"
+                                data-track-id={selectNodeInfo?.id}
                                 onClick={onKbCoach}
                                 className="group relative px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-fast flex items-center gap-1.5 text-caption font-medium border border-blue-200"
                                 title="KB Coach - 基於Knowledge Building 12原則的深度引導"
@@ -145,6 +157,10 @@ export default function UpdateNodeModal({
                                             {/* 取消連結按鈕 - 僅限節點擁有者 */}
                                             {!isObservationMode && isOwner && onDeleteRelation && (
                                                 <button
+                                                    data-track
+                                                    data-track-action="IDEAWALL_RELATION_DELETE"
+                                                    data-track-type="relation"
+                                                    data-track-id={node.id}
                                                     onClick={() => onDeleteRelation(selectNodeInfo.id, node.id)}
                                                     className='ml-2 px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors text-caption font-medium flex items-center gap-1'
                                                     title='取消連結'
@@ -248,19 +264,27 @@ export default function UpdateNodeModal({
                     <div className='flex items-center justify-between px-component-sm pb-component-sm'>
                         {/* 左側：次要操作 */}
                         <div className='flex items-center gap-stack-xs'>
-                            {/* 刪除按鈕 */}
                             {!isObservationMode && isOwner && (
                                 <button 
+                                    data-track
+                                    data-track-action="IDEAWALL_NODE_DELETE"
+                                    data-track-type="node"
+                                    data-track-id={selectNodeInfo?.id}
                                     onClick={onDelete} 
                                     className="px-btn-x py-btn-y bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-fast font-medium text-ui"
                                 >
                                     刪除
                                 </button>
-                            )}
+                            )
+                            }
                             
                             {/* 延伸想法按鈕 */}
                             {!isObservationMode && (
                                 <button
+                                    data-track
+                                    data-track-action="IDEAWALL_NODE_EXTEND"
+                                    data-track-type="node"
+                                    data-track-id={selectNodeInfo?.id}
                                     onClick={onExtendIdea}
                                     className="px-btn-x py-btn-y bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors duration-fast font-medium text-ui flex items-center gap-1"
                                 >
@@ -274,6 +298,10 @@ export default function UpdateNodeModal({
                             {/* 連結到其他節點按鈕 - 僅限節點擁有者 */}
                             {!isObservationMode && isOwner && onStartLinking && (
                                 <button
+                                    data-track
+                                    data-track-action="IDEAWALL_LINKING_START"
+                                    data-track-type="node"
+                                    data-track-id={selectNodeInfo?.id}
                                     onClick={onStartLinking}
                                     className="px-btn-x py-btn-y bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-fast font-medium text-ui flex items-center gap-1"
                                     title="將此節點連結到其他節點"
@@ -287,6 +315,10 @@ export default function UpdateNodeModal({
                         {/* 右側：主要操作 */}
                         <div className='flex items-center gap-stack-xs'>
                             <button 
+                                data-track
+                                data-track-action="IDEAWALL_NODE_CLOSE"
+                                data-track-type="node"
+                                data-track-id={selectNodeInfo?.id}
                                 onClick={onClose} 
                                 className="px-btn-x py-btn-y bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-fast font-medium text-ui"
                             >
@@ -296,6 +328,10 @@ export default function UpdateNodeModal({
                             {/* 儲存按鈕 - 只有擁有者且非觀摩模式才顯示 */}
                             {!isObservationMode && isOwner && (
                                 <button 
+                                    data-track
+                                    data-track-action="IDEAWALL_NODE_SAVE"
+                                    data-track-type="node"
+                                    data-track-id={selectNodeInfo?.id}
                                     onClick={onSubmit} 
                                     className="px-btn-x py-btn-y bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition-colors duration-fast font-medium text-ui"
                                 >

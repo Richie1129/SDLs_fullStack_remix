@@ -91,6 +91,10 @@ function Carditem({ data, index, columnIndex }) {
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...(!isObservationMode ? provided.dragHandleProps : {})}
+            data-track
+            data-track-action="KANBAN_TASK_CLICK"
+            data-track-type="task"
+            data-track-id={data.id}
             className={`item-container rounded-lg mb-3 w-full transition-all duration-fast ${
               snapshot.isDragging
                 ? "shadow-xl bg-customgreen/90 text-white"
@@ -116,6 +120,10 @@ function Carditem({ data, index, columnIndex }) {
                   {/* AI 助手按鈕 */}
                   {!isObservationMode && (
                     <button
+                      data-track
+                      data-track-action="KANBAN_AI_ASSISTANT_OPEN"
+                      data-track-type="task"
+                      data-track-id={data.id}
                       onClick={(e) => {
                         e.stopPropagation();
                         setShowAIAssistant(true);
@@ -130,6 +138,10 @@ function Carditem({ data, index, columnIndex }) {
                   )}
                   {/* 編輯按鈕 */}
                   <button
+                    data-track
+                    data-track-action="KANBAN_TASK_EDIT_OPEN"
+                    data-track-type="task"
+                    data-track-id={data.id}
                     onClick={handleCardClick}
                     className="p-1 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
                   >
