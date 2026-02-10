@@ -17,7 +17,7 @@ const UserConsent = sequelize.define('user_consent', {
     type: DataTypes.STRING(20),
     allowNull: false,
     defaultValue: 'full',
-    comment: '同意等級: essential | functional | analytics | full (學習平台預設全同意)','
+    comment: '同意等級: essential | functional | analytics | full (學習平台預設全同意)',
     validate: {
       isIn: [['essential', 'functional', 'analytics', 'full']],
     },
