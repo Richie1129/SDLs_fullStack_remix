@@ -56,3 +56,17 @@ export const getHelpSeekingStats = async (userId, timeRange = '7d') => {
     throw error;
   }
 };
+
+/**
+ * Get help-seeking history for a specific task
+ */
+export const getTaskHistory = async (taskId, projectId = null) => {
+  try {
+    const params = projectId ? { projectId } : {};
+    const response = await client.get(`/ai-task-assistant/task-history/${taskId}`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error getting task history:', error);
+    throw error;
+  }
+};

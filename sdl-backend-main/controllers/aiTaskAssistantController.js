@@ -6,6 +6,7 @@ const Project = require('../models/project');
 const User = require('../models/user');
 const Comment = require('../models/comment');
 const { Op } = require('sequelize');
+const { logAudit } = require('../services/auditService');
 
 // Helper functions
 function calculateStartDate(timeRange) {
@@ -129,7 +130,7 @@ async function generateSuggestions(req, res) {
       skippedThinking || false
     );
 
-    // Log help-seeking behavior
+    // Log help-seeking behavior WITH suggestions
     const log = await HelpSeekingLog.create({
       userId,
       projectId,
@@ -138,8 +139,23 @@ async function generateSuggestions(req, res) {
       helpSeekingType,
       askedSources: askedSources || [],
       answers: answers || {},
-      skippedThinking: skippedThinking || false
+      skippedThinking: skippedThinking || false,
+      suggestions
     });
+
+    // Audit: Record AI Task Assistant usage
+    await logAudit(req, {
+      action: 'AI_TASK_ASSISTANT_REQUEST',
+      targetType: 'task',
+      targetId: taskId,
+      projectId,
+      metadata: {
+        helpSeekingType,
+        metacognitiveState: selectedState,
+        askedSources: askedSources || [],
+        skippedThinking: skippedThinking || false
+      }
+    }).catch(() => {}); // Non-blocking
 
     res.json({
       success: true,
@@ -248,9 +264,79 @@ async function getHelpSeekingStats(req, res) {
   }
 }
 
+/**
+ * Get help-seeking history for a specific task
+ * GET /api/ai-task-assistant/task-history/:taskId
+ */
+async function getTaskHistory(req, res) {
+  try {
+    const { taskId } = req.params;
+    const { projectId } = req.query;
+
+    if (!taskId) {
+      return res.status(400).json({ error: 'Missing taskId' });
+    }
+
+    const whereClause = { taskId };
+    if (projectId) {
+      whereClause.projectId = projectId;
+    }
+
+    // Query with User information
+    const logs = await HelpSeekingLog.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: User,
+          attributes: ['id', 'username'],
+          required: true
+        }
+      ],
+      order: [['createdAt', 'DESC']],
+      limit: 50
+    });
+
+    const history = logs.map(log => ({
+      id: log.id,
+      userId: log.userId,
+      username: log.user.username,
+      metacognitiveState: log.metacognitiveState,
+      helpSeekingType: log.helpSeekingType,
+      askedSources: log.askedSources,
+      skippedThinking: log.skippedThinking,
+      suggestions: log.suggestions,
+      createdAt: log.createdAt,
+      updatedAt: log.updatedAt
+    }));
+
+    // Audit: Record help-seeking history view
+    await logAudit(req, {
+      action: 'AI_TASK_ASSISTANT_HISTORY_VIEW',
+      targetType: 'task',
+      targetId: parseInt(taskId),
+      projectId: projectId ? parseInt(projectId) : null,
+      metadata: {
+        historyCount: history.length
+      }
+    }).catch(() => {}); // Non-blocking
+
+    res.json({
+      success: true,
+      taskId: parseInt(taskId),
+      count: history.length,
+      history
+    });
+
+  } catch (error) {
+    console.error('Error getting task history:', error);
+    res.status(500).json({ error: 'Failed to get task history', details: error.message });
+  }
+}
+
 module.exports = {
   analyzeCard,
   generateSuggestions,
   submitFeedback,
-  getHelpSeekingStats
+  getHelpSeekingStats,
+  getTaskHistory
 };

@@ -112,7 +112,7 @@ exports.loginUser = async (req, res) => {
 
         // 生成 Access Token
         const accessToken = sign(
-            { account: user.account, id: user.id, role: user.role },
+            { account: user.account, id: user.id, role: user.role, username: user.username },
             config.jwt.secret,
             { expiresIn: config.jwt.expiresIn }
         );
@@ -204,8 +204,10 @@ exports.registerUser = (req, res) => {
                     .then(result => {
                         const account = result.account;
                         const id = result.id;
+                        const username = result.username;
+                        const roleValue = result.role;
                         const accessToken = sign(
-                            { account: account, id: id },
+                            { account: account, id: id, role: roleValue, username: username },
                             config.jwt.secret,
                             { expiresIn: config.jwt.expiresIn }
                         );

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import Modal from '../Modal';
-import { FiHelpCircle, FiInfo, FiThumbsUp, FiThumbsDown, FiUsers, FiX } from 'react-icons/fi';
-import { generateSuggestions, submitFeedback } from '../../api/aiTaskAssistant';
+import { FiHelpCircle, FiInfo, FiThumbsUp, FiThumbsDown, FiUsers, FiX, FiClock, FiArrowLeft } from 'react-icons/fi';
+import { generateSuggestions, submitFeedback, getTaskHistory } from '../../api/aiTaskAssistant';
 import toast from 'react-hot-toast';
+import AITaskHistoryList from './AITaskHistoryList';
+import AITaskHistoryDetail from './AITaskHistoryDetail';
 
 const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
   const [currentStep, setCurrentStep] = useState(1); // 1: metacognitive, 2: suggestions
@@ -15,6 +17,12 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
   const [feedback, setFeedback] = useState('');
   const [feedbackDetail, setFeedbackDetail] = useState('');
   const [showDetailedSteps, setShowDetailedSteps] = useState(false);
+
+  // History view states
+  const [viewMode, setViewMode] = useState('questionnaire'); // 'questionnaire' | 'history' | 'history-detail'
+  const [aiHistory, setAIHistory] = useState([]);
+  const [selectedHistoryEntry, setSelectedHistoryEntry] = useState(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const metacognitiveOptions = [
     {
@@ -139,21 +147,50 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
     setFeedback('');
     setFeedbackDetail('');
     setShowDetailedSteps(false);
+    setViewMode('questionnaire');
+    setAIHistory([]);
+    setSelectedHistoryEntry(null);
+    setIsLoadingHistory(false);
     onClose();
+  };
+
+  const fetchHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const result = await getTaskHistory(cardData.id, projectId);
+      setAIHistory(result.history || []);
+      setViewMode('history');
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      toast.error('載入歷史記錄失敗');
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
   const renderMetacognitiveCheck = () => (
     <div className="p-component-lg">
-      <div className="flex items-center gap-stack-sm mb-stack-md">
-        <FiHelpCircle className="text-h2 text-customgreen" />
-        <div>
-          <h2 className="text-h2 font-bold text-gray-800">
-            求助引導 - 關於 {cardData.title}
-          </h2>
-          <p className="text-body-sm text-gray-600 mt-1">
-            在給建議前，先幫我了解你的狀態
-          </p>
+      <div className="flex items-center justify-between mb-stack-md">
+        <div className="flex items-center gap-stack-sm">
+          <FiHelpCircle className="text-h2 text-customgreen" />
+          <div>
+            <h2 className="text-h2 font-bold text-gray-800">
+              求助引導 - 關於 {cardData.title}
+            </h2>
+            <p className="text-body-sm text-gray-600 mt-1">
+              在給建議前，先幫我了解你的狀態
+            </p>
+          </div>
         </div>
+        <button
+          onClick={fetchHistory}
+          disabled={isLoadingHistory}
+          className="px-btn-x py-btn-y-sm rounded-lg bg-gray-100 text-gray-700
+                     hover:bg-gray-200 transition-colors duration-fast flex items-center gap-2"
+        >
+          <FiClock />
+          <span className="text-body-sm">{isLoadingHistory ? '載入中...' : '歷史記錄'}</span>
+        </button>
       </div>
 
       <div className="bg-blue-50 rounded-lg p-component-md mb-stack-md">
@@ -459,7 +496,64 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="md">
-      {currentStep === 1 ? renderMetacognitiveCheck() : renderSuggestions()}
+      {viewMode === 'questionnaire' && currentStep === 1 && renderMetacognitiveCheck()}
+      {viewMode === 'questionnaire' && currentStep === 2 && renderSuggestions()}
+
+      {viewMode === 'history' && (
+        <div className="p-component-lg">
+          <div className="flex items-center justify-between mb-stack-md">
+            <div className="flex items-center gap-stack-sm">
+              <FiClock className="text-h2 text-customgreen" />
+              <h2 className="text-h2 font-bold text-gray-800">歷史記錄</h2>
+            </div>
+            <button
+              onClick={() => {
+                setViewMode('questionnaire');
+                setSelectedHistoryEntry(null);
+              }}
+              className="px-btn-x py-btn-y-sm rounded-lg bg-gray-100 text-gray-700
+                         hover:bg-gray-200 transition-colors duration-fast flex items-center gap-2"
+            >
+              <FiArrowLeft />
+              <span className="text-body-sm">返回求助</span>
+            </button>
+          </div>
+          <AITaskHistoryList
+            history={aiHistory}
+            onSelectEntry={(entry) => {
+              setSelectedHistoryEntry(entry);
+              setViewMode('history-detail');
+            }}
+            isLoading={isLoadingHistory}
+          />
+        </div>
+      )}
+
+      {viewMode === 'history-detail' && (
+        <div className="p-component-lg">
+          <div className="flex items-center justify-between mb-stack-md">
+            <div className="flex items-center gap-stack-sm">
+              <FiClock className="text-h2 text-customgreen" />
+              <h2 className="text-h2 font-bold text-gray-800">記錄詳情</h2>
+            </div>
+            <button
+              onClick={() => {
+                setViewMode('questionnaire');
+                setSelectedHistoryEntry(null);
+              }}
+              className="px-btn-x py-btn-y-sm rounded-lg bg-gray-100 text-gray-700
+                         hover:bg-gray-200 transition-colors duration-fast flex items-center gap-2"
+            >
+              <FiArrowLeft />
+              <span className="text-body-sm">返回求助</span>
+            </button>
+          </div>
+          <AITaskHistoryDetail
+            entry={selectedHistoryEntry}
+            onBack={() => setViewMode('history')}
+          />
+        </div>
+      )}
     </Modal>
   );
 };

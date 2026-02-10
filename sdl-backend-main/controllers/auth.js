@@ -45,7 +45,8 @@ exports.refreshToken = async (req, res) => {
             {
                 account: tokenRecord.user.account,
                 id: tokenRecord.user.id,
-                role: tokenRecord.user.role
+                role: tokenRecord.user.role,
+                username: tokenRecord.user.username
             },
             config.jwt.secret,
             { expiresIn: config.jwt.expiresIn }

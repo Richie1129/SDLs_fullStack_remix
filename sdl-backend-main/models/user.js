@@ -76,4 +76,8 @@ RefreshToken.belongsTo(User, {
 User.hasMany(IdeaWallMessage, { foreignKey: 'senderId' });
 IdeaWallMessage.belongsTo(User, { foreignKey: 'senderId' });
 
+const HelpSeekingLog = require('./help_seeking_log');
+User.hasMany(HelpSeekingLog, { foreignKey: 'userId' });
+HelpSeekingLog.belongsTo(User, { foreignKey: 'userId' });
+
 module.exports = User;

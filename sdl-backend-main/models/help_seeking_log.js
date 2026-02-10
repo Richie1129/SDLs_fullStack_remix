@@ -53,6 +53,17 @@ const HelpSeekingLog = sequelize.define('help_seeking_log', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  suggestions: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    get() {
+      const rawValue = this.getDataValue('suggestions');
+      return rawValue ? JSON.parse(rawValue) : null;
+    },
+    set(value) {
+      this.setDataValue('suggestions', value ? JSON.stringify(value) : null);
+    }
+  },
 }, {
   timestamps: true,
 });
