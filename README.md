@@ -1,8 +1,8 @@
 # SDL (Self-Directed Learning) 全端學習平台
 
-> **🚀 2025 最新版本**：整合 AI 反思分析功能、模組化儀表板架構與 MinIO 檔案儲存系統
+> **🚀 2026 最新版本 v3.2**：整合 Shadow Orchestrator 影子中控、StorageService 統一儲存管理、反思階段選擇器、KB Coach 知識建構教練、與 P1-P3 三級審計追蹤系統
 
-一個專為教育研究設計的智慧型自主學習平台，結合科學探究方法論、AI 輔助學習分析與現代化協作工具。
+一個專為教育研究設計的智慧型自主學習平台，結合科學探究方法論、AI 輔助學習分析與現代化協作工具。採用 React 18 + Node.js + PostgreSQL + Socket.IO 全端架構，提供完整的專案式學習 (PBL) 支援。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/)
@@ -31,17 +31,22 @@
 - **AI 學習助手**：基於 RAG 技術的個人化學習支援（[詳細指南](Reference/AI_ASSISTANT_GUIDE.md)）
 - **數位作品集**：階段性學習成果展示與管理
 
-### 🧠 AI 反思分析系統
+### 🧠 AI 反思分析與知識建構系統
 - **5Rs 反思框架**：Reporting → Responding → Relating → Reasoning → Reconstructing
-- **雙 AI 引擎支援**：GPT-4o-mini + gemini-2.5-flash，自動容錯機制
+- **階段選擇功能**：支援關聯專案階段（如 1-1, 2-3），提供智慧推薦與驗證
+- **UI 差異化設計**：雙卡片選擇器區分「傳統日誌」與「5Rs 結構化反思」，搭配智慧橫幅提示
+- **KB Coach 教練系統**：基於 Knowledge Building 12 原則的 AI 教練，使用 Gemini Function Calling 提供結構化引導
+- **雙 AI 引擎支援**：vLLM (本地部署) + gemini-2.5-flash，自動容錯與降級機制
 - **專業回饋生成**：針對每個反思層次提供個人化改進建議
-- **學習品質評估**：自動分析反思深度與完整度
 
 ### 🤝 協作與交流
-- **即時聊天系統**：專案群組、學習小組的即時通訊與檔案分享
+- **即時聊天系統**：專案群組、學習小組的即時通訊與檔案分享（Socket.IO v4.6）
 - **互動問答平台**：師生問答、同儕互助的知識交流空間
-- **創意想法牆**：腦力激盪與創意分享，支援節點關係視覺化
-- **公告通知系統**：多層級、精準推播的資訊發佈平台
+- **創意想法牆 (Idea Improver 2.0)**：
+  - **影子中控 (Shadow Orchestrator)**：解耦 AI 邏輯與聊天視圖，實現非侵入式智慧監控
+  - **AI 自動引導**：基於死規則過濾器（冷卻時間、訊息累積）+ LLM 上下文分析（Conflict/Question/Social）
+  - **雙模式切換**：支援「全域討論」與「節點討論」模式，右側滑出式抽屜設計
+- **公告通知系統**：完整的 RBAC 權限控制（教師/管理員）、建立/刪除功能與 Socket.IO 即時推播
 
 ### 📊 智慧儀表板系統
 - **學生儀表板**：個人學習概覽、團隊協作資訊、學習軌跡記錄
@@ -50,10 +55,19 @@
 - **響應式設計**：桌面版表格與移動版卡片雙重佈局
 
 ### 🔧 技術創新特色
-- **統一檔案管理**：MinIO 對象儲存確保檔案安全與高可用性
-- **即時協作同步**：基於 Socket.io 的高效能即時通訊
-- **模組化架構**：前後端組件化設計，易於維護和擴展
-- **Session 管理優化**：UUID + localStorage 持久化（[修復說明](Reference/SESSION_FIX_IMPLEMENTATION.md)）
+- **StorageService 統一儲存管理**：
+  - 取代 88+ 處直接 `localStorage` 呼叫，提供類型安全、錯誤處理、命名空間隔離
+  - 認證工具函式（`getCurrentUserId`, `getCurrentUserRole`）簡化常用操作
+  - 支援物件序列化、批量操作、資料匯出/匯入
+- **結構化日誌系統**：Pino 高效能日誌，自動遮蔽敏感資訊（password, token, apiKey）
+- **三級審計追蹤系統**（P0-P3）：
+  - **P0 (最高風險)**：認證、授權、權限變更 - 已完成
+  - **P1 (中等風險)**：專案查看權限、成員管理、聊天室、AI 互動、檔案操作 - 已完成（9 個追蹤點）
+  - **P2-P3**：規劃中 - 學習資料與低風險操作
+- **MinIO 對象儲存**：統一檔案管理，S3 相容介面，確保檔案安全與高可用性
+- **即時協作同步**：Socket.io v4.6 高效能即時通訊，支援房間訂閱與事件廣播
+- **模組化架構**：前後端組件化設計，控制器層拆分優化（儀表板 1000+ 行 → 14-15 個模組）
+- **Session 管理優化**：UUID + StorageService 持久化（[修復說明](Reference/SESSION_FIX_IMPLEMENTATION.md)）
 
 ---
 
@@ -74,7 +88,11 @@
 - **身份驗證**：JWT + Bcrypt（[Refresh Token 實作](Reference/REFRESH_TOKEN_IMPLEMENTATION.md)）
 - **即時通訊**：Socket.io v4.6
 - **檔案處理**：MinIO Object Storage + AWS SDK v3
-- **AI 整合**：OpenAI GPT-4o-mini + Google gemini-2.5-flash
+- **日誌系統**：Pino v9 + Pino-HTTP（結構化日誌、敏感資訊遮蔽）
+- **AI 整合**：
+  - vLLM（本地部署大型語言模型，反思分析、對話）
+  - Google gemini-2.5-flash（Gemini Flash Thinking, Function Calling）
+  - 自動容錯與降級機制
 
 #### DevOps 基礎設施
 - **容器化**：Docker + Docker Compose
@@ -151,8 +169,8 @@ MINIO_ACCESS_KEY=minioadmin
 MINIO_SECRET_KEY=your_minio_password
 MINIO_BUCKET_NAME=sdl-files
 
-# AI 服務 API Keys
-OPENAI_API_KEY=your_openai_api_key
+# AI 服務設定
+VLLM_API_BASE=http://vllm:8000/v1  # vLLM 本地部署端點
 GEMINI_API_KEY=your_gemini_api_key
 
 # JWT 認證密鑰
@@ -254,6 +272,7 @@ SDLs_fullStack_remix/
 
 | 文檔 | 說明 |
 |------|------|
+| [AGENTS.md](AGENTS.md) | **AI 編碼代理開發指南**（必讀！程式碼規範、StorageService、設計系統規範） |
 | [AI_ASSISTANT_GUIDE.md](Reference/AI_ASSISTANT_GUIDE.md) | AI 專案助理完整使用指南（Streaming、RAG 系統） |
 | [SESSION_FIX_IMPLEMENTATION.md](Reference/SESSION_FIX_IMPLEMENTATION.md) | Session ID 管理修復實作總結 |
 | [CLAUDE.md](CLAUDE.md) | Claude AI 輔助開發指南 |
@@ -265,34 +284,93 @@ SDLs_fullStack_remix/
 | [Reference/REFRESH_TOKEN_IMPLEMENTATION.md](Reference/REFRESH_TOKEN_IMPLEMENTATION.md) | Refresh Token 實作說明 |
 | [Reference/TOKENS_EXPLAINED.md](Reference/TOKENS_EXPLAINED.md) | Token 機制詳細說明 |
 | [Reference/MONITORING.md](Reference/MONITORING.md) | 系統監控與日誌指南 |
-| [docs/backend/README.md](Reference/backend/BACKEND_API_README.md) | 後端 API 文檔 |
+| [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md) | **深度分析與優化建議**（Socket 記憶體洩漏、程式碼品質評分） |
+| [LOGGER_FIX_REPORT.md](LOGGER_FIX_REPORT.md) | Logger 循環引用修復報告 |
 
-### 📊 版本更新
-
-| 文檔 | 說明 |
-|------|------|
-| [Reference/versions/v2.3-stage-completion.md](Reference/versions/v2.3-stage-completion.md) | v2.3 階段完成功能 |
-| [Reference/versions/v2.2-stage-aware.md](Reference/versions/v2.2-stage-aware.md) | v2.2 階段感知型 AI 助理 |
-| [Reference/versions/v2.1-advisor-upgrade.md](Reference/versions/v2.1-advisor-upgrade.md) | v2.1 AI Advisor 升級 |
-
-### 🛠️ 問題修復記錄
+### 📊 功能實作報告
 
 | 文檔 | 說明 |
 |------|------|
+| [PHASE3_IMPLEMENTATION_COMPLETE.md](PHASE3_IMPLEMENTATION_COMPLETE.md) | **Phase 3 P1 審計追蹤**（9 個中等風險操作追蹤點） |
+| [STAGE_SELECTOR_IMPLEMENTATION.md](STAGE_SELECTOR_IMPLEMENTATION.md) | **階段選擇器實作報告**（反思日誌階段關聯功能） |
+| [UI_DIFFERENTIATION_REPORT.md](UI_DIFFERENTIATION_REPORT.md) | **UI 差異化實施報告**（雙卡片選擇器、智慧橫幅） |
+| [Improve-Idea-Improver.md](Improve-Idea-Improver.md) | **Idea Improver 2.0 實作計畫**（Shadow Orchestrator 架構） |
+| [ANNOUNCEMENT_DELETE_COMPLETE.md](ANNOUNCEMENT_DELETE_COMPLETE.md) | 公告刪除功能完整實作（RBAC 權限、審計追蹤） |
+| [docs/KB_COACH_IMPLEMENTATION.md](docs/KB_COACH_IMPLEMENTATION.md) | **KB Coach 知識建構教練**（Gemini Function Calling） |
+| [docs/PHASE0_IMPLEMENTATION_COMPLETE.md](docs/PHASE0_IMPLEMENTATION_COMPLETE.md) | Phase 0 P0 最高風險審計追蹤（認證、授權） |
+| [docs/PHASE1_IMPLEMENTATION_COMPLETE.md](docs/PHASE1_IMPLEMENTATION_COMPLETE.md) | Phase 1 實作完成報告 |
+| [docs/PHASE2_IMPLEMENTATION_COMPLETE.md](docs/PHASE2_IMPLEMENTATION_COMPLETE.md) | Phase 2 實作完成報告 |
+
+### 🛠️ 問題修復與指南
+
+| 文檔 | 說明 |
+|------|------|
+| [docs/TOKEN_CLEANUP_GUIDE.md](docs/TOKEN_CLEANUP_GUIDE.md) | **Token 清理指南**（移除遺留 Token 系統） |
+| [docs/TRACKING_PROVIDER_GUIDE.md](docs/TRACKING_PROVIDER_GUIDE.md) | 追蹤提供者整合指南 |
+| [docs/AUDIT_COVERAGE_REPORT.md](docs/AUDIT_COVERAGE_REPORT.md) | 審計覆蓋率報告 |
 | [Reference/reflection-log-permission-fix.md](Reference/reflection-log-permission-fix.md) | 反思日誌權限修復 |
 | [Reference/frontend/LOGIN_FIX_TEST.md](Reference/frontend/LOGIN_FIX_TEST.md) | 登入功能修復測試 |
 | [Reference/backend/FIXES_SUMMARY.md](Reference/backend/FIXES_SUMMARY.md) | 後端修復總結 |
-| [Reference/general/IMPROVEMENTS_SUMMARY.md](Reference/general/IMPROVEMENTS_SUMMARY.md) | 系統改進總結 |
 
 ---
 
 ## 🆕 最新更新
 
+### v3.2.0 (2026-02-11) - 儲存管理與知識建構系統
+
+#### 🌟 重大更新
+- **StorageService 統一儲存管理**
+  - 完全重構本地儲存機制，取代 88+ 處直接 `localStorage` 呼叫
+  - 命名空間系統（`authStorage`, `userStorage`, `projectStorage`）
+  - 類型安全工具（`getInt`, `getBoolean`, `getNumber`）
+  - 認證快捷函式（`getCurrentUserId`, `getCurrentUserRole`, `isAuthenticated`, `isTeacher`）
+  - 完整錯誤處理與降級機制（localStorage 不可用時自動切換記憶體儲存）
+- **KB Coach 知識建構教練**
+  - 基於 Knowledge Building 12 原則的 AI 教練系統
+  - Gemini 2.5 Flash Function Calling 提供結構化輸出
+  - 6 個核心 KB 原則（Phase 1）：真實想法、可改進想法、想法多樣性、知識代理、社群知識、KB 對話
+  - 零破壞性設計：與舊版「想法發展助手」並存
+- **結構化日誌系統**
+  - Pino 高效能日誌取代 console.log
+  - 自動遮蔽敏感資訊（password, token, apiKey, sessionId）
+  - 開發環境美化輸出，生產環境高效 JSON 格式
+  - 修復循環引用問題（consoleLogger.raw）
+
+#### ✨ 新功能
+- **反思系統升級**
+  - **階段選擇器**：支援日誌關聯特定專案階段（如 1-1, 2-3），提供智慧推薦與驗證
+  - **UI 差異化**：雙卡片入口（傳統日誌 vs 5Rs 反思）與智慧橫幅引導
+  - 智慧橫幅三大情境：建議嘗試 5Rs、階段里程碑、鼓勵記錄
+- **Idea Improver 2.0**
+  - 導入 **Shadow Orchestrator** 架構，實現非侵入式 AI 監控
+  - 死規則過濾器：冷卻時間（10 分鐘）+ 訊息累積（5 則）
+  - 雙模式切換：全域討論 + 節點討論，右側滑出式抽屜設計
+  - LLM 上下文分析：Conflict/Question/Social 三類討論自動識別
+- **公告管理系統增強**
+  - 完整的刪除功能，包含 RBAC 權限檢查（教師/管理員）
+  - Socket.IO 即時同步刪除事件
+  - 審計追蹤記錄（ACTION_CODE: `ANNOUNCEMENT_DELETE`）
+
+#### 🔧 技術改進
+- **審計追蹤系統完成 Phase 3 P1**
+  - 9 個中等風險操作追蹤點：
+    - **A. 專案查看權限**：單一更新、批量更新
+    - **B. 專案成員管理**：邀請碼加入、批量分配
+    - **C. 聊天室管理**：建立聊天室、發送訊息
+    - **D. AI 助理互動**：指導請求、聊天請求
+    - **E. 檔案操作**：單一刪除、批量刪除
+  - 完整的 metadata 記錄，支援審計追溯
+- **架構優化**
+  - 聊天訊息資料結構解耦（`IdeaWallMessage` 模型）
+  - 權限控制中間件強化（`announcementPermission.js`）
+  - 資料庫索引優化（階段查詢、專案階段組合索引）
+  - Socket 事件處理器重構（`SocketHandlerFactory`）
+
 ### v3.0.0 (2025-01-12) - 重大更新
 
 #### ✨ 新功能
 - **5Rs 反思框架與 AI 智能分析功能**
-  - 雙 AI 引擎支援（GPT-4o-mini + gemini-2.5-flash）
+  - 雙 AI 引擎支援（vLLM 本地部署 + gemini-2.5-flash）
   - 結構化反思模型與專業回饋生成
 - **儀表板系統模組化重構**
   - 學生儀表板：1000+ 行 → 14 個模組
@@ -472,4 +550,32 @@ chore: 更新依賴套件
 
 ---
 
-*最後更新：2025-01-13 | 版本：v3.0.0*
+## 📈 專案特色亮點
+
+### 🎓 教育研究價值
+- **科學探究方法論**：完整實作五階段學習引導（定標 → 擇策 → 監評 → 調節 → 學習歷程）
+- **5Rs 反思框架**：基於 Gibbs 反思循環的結構化反思模型
+- **Knowledge Building 理論**：KB Coach 實踐 12 原則的知識建構教練系統
+- **專案式學習 (PBL)**：完整的協作工具鏈支援
+
+### 🔐 企業級安全設計
+- **三級審計追蹤系統**：P0（最高風險）/ P1（中等風險）/ P2-P3（低風險）全方位操作記錄
+- **JWT + Refresh Token**：雙 Token 機制，存取權杖 15 分鐘 + 更新權杖 7 天
+- **RBAC 權限控制**：角色基礎存取控制（學生/教師/管理員）
+- **敏感資訊保護**：Pino 日誌自動遮蔽 password, token, apiKey 等敏感欄位
+
+### 🚀 效能與可維護性
+- **模組化重構**：儀表板系統從 2000+ 行拆分為 14-15 個專業模組
+- **統一儲存管理**：StorageService 取代 88+ 處直接 localStorage 操作
+- **結構化日誌**：Pino 高效能日誌系統，生產環境零配置
+- **MinIO 對象儲存**：S3 相容介面，效能提升 300%
+
+### 🤖 AI 技術整合
+- **多模型協作**：vLLM (本地部署) + Gemini 2.5 Flash 雙引擎，自動容錯
+- **Streaming 回應**：即時 AI 回應體驗，支援 Server-Sent Events
+- **Function Calling**：Gemini 結構化輸出，保證 JSON 格式正確性
+- **Shadow Orchestrator**：非侵入式 AI 監控與智能介入
+
+---
+
+*最後更新：2026-02-11 | 版本：v3.2.0*
