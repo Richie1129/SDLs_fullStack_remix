@@ -4,6 +4,7 @@ const User = require('../../models/user')
 const User_project = require('../../models/user_project');
 const sequelize = require('../../util/database');
 const { logAudit } = require('../../services/auditService');
+const { getTaiwanSemester } = require('../../utils/semesterUtils');
 
 /**
  * 設定專案的觀摩權限（僅限教師或專案成員）
@@ -144,8 +145,9 @@ exports.checkViewingPermission = async (req, res) => {
  */
 exports.getViewableProjects = async (req, res) => {
     try {
-        const { viewable_by } = req.query;
+        const { viewable_by, semester } = req.query;
         const userId = req.userId;
+        const semesterFilter = semester || getTaiwanSemester();
 
         if (!viewable_by) {
             return res.status(400).json({ message: '缺少 viewable_by 參數' });
@@ -155,6 +157,7 @@ exports.getViewableProjects = async (req, res) => {
         console.log('=== getViewableProjects Debug ===');
         console.log('userId:', userId);
         console.log('viewable_by:', viewable_by);
+        console.log('semester:', semesterFilter);
 
         const user = await User.findByPk(userId);
         console.log('user found:', user ? user.dataValues : 'null');
@@ -181,11 +184,15 @@ exports.getViewableProjects = async (req, res) => {
         const userProjectIds = userProjects.map(up => up.projectId);
         console.log('User participated projects:', userProjectIds);
 
+        // 建立查詢條件（加入學期過濾）
+        const whereClause = { is_open_for_viewing: true };
+        if (semesterFilter !== 'all') {
+            whereClause.semester = semesterFilter;
+        }
+
         // 查詢可觀摩的專案
         const projects = await Project.findAll({
-            where: {
-                is_open_for_viewing: true
-            },
+            where: whereClause,
             include: [{
                 model: User,
                 through: { attributes: [] },
@@ -209,6 +216,7 @@ exports.getViewableProjects = async (req, res) => {
             currentStage: project.currentStage,
             currentSubStage: project.currentSubStage,
             createdAt: project.createdAt,
+            semester: project.semester,
             members: project.users.map(user => ({
                 id: user.id,
                 username: user.username,
@@ -282,7 +290,8 @@ exports.getAllClasses = async (req, res) => {
 exports.getClassUsersAndProjects = async (req, res) => {
     console.log('=== getClassUsersAndProjects 控制器被調用 ===');
     const className = req.params.className;
-    console.log('查詢班級:', className);
+    const semester = req.query.semester || getTaiwanSemester();
+    console.log('查詢班級:', className, '學期:', semester);
 
     try {
         // 1. 獲取該班級的所有用戶
@@ -302,11 +311,17 @@ exports.getClassUsersAndProjects = async (req, res) => {
             });
         }
 
-        // 2. 獲取這些用戶參與的所有專案
+        // 2. 獲取這些用戶參與的所有專案（加入學期過濾）
         const userIds = classUsers.map(user => user.id);
         console.log('用戶ID列表:', userIds);
 
+        const projectWhereClause = {};
+        if (semester !== 'all') {
+            projectWhereClause.semester = semester;
+        }
+
         const projects = await Project.findAll({
+            where: projectWhereClause,
             include: [{
                 model: User,
                 attributes: ['id', 'username', 'class', 'seatNumber'],
@@ -328,7 +343,8 @@ exports.getClassUsersAndProjects = async (req, res) => {
                 'updatedAt',
                 // 觀摩設定相關欄位，供前端 Modal 初始化狀態
                 'is_open_for_viewing',
-                'allowed_classes'
+                'allowed_classes',
+                'semester'
             ]
         });
 
@@ -351,6 +367,7 @@ exports.getClassUsersAndProjects = async (req, res) => {
                     // 將觀摩設定欄位一併回傳，供前端初始化
                     is_open_for_viewing: project.is_open_for_viewing,
                     allowed_classes: project.allowed_classes,
+                    semester: project.semester,
                     classMembers: project.users.filter(user => user.class === className)
                 });
             }
@@ -382,7 +399,8 @@ exports.batchUpdateViewingSettings = async (req, res) => {
     const t = await sequelize.transaction();
 
     try {
-        const { sourceClass, targetClasses, mentorName } = req.body;
+        const { sourceClass, targetClasses, mentorName, semester } = req.body;
+        const semesterFilter = semester || getTaiwanSemester();
 
         // 驗證輸入
         if (!sourceClass || !Array.isArray(targetClasses) || targetClasses.length === 0) {
@@ -399,7 +417,7 @@ exports.batchUpdateViewingSettings = async (req, res) => {
             });
         }
 
-        console.log(`批量設定觀摩: ${sourceClass} → ${targetClasses.join(', ')}`);
+        console.log(`批量設定觀摩: ${sourceClass} → ${targetClasses.join(', ')} (學期: ${semesterFilter})`);
 
         // 1. 取得來源班級的所有用戶
         const sourceUsers = await User.findAll({
@@ -415,9 +433,14 @@ exports.batchUpdateViewingSettings = async (req, res) => {
 
         const sourceUserIds = sourceUsers.map(user => user.id);
 
-        // 2. 取得這些用戶參與的專案(需要是指定老師指導的)
+        // 2. 取得這些用戶參與的專案(需要是指定老師指導的，且為指定學期)
+        const projectWhereClause = { mentor: mentorName };
+        if (semesterFilter !== 'all') {
+            projectWhereClause.semester = semesterFilter;
+        }
+
         const projects = await Project.findAll({
-            where: { mentor: mentorName },
+            where: projectWhereClause,
             include: [{
                 model: User,
                 where: {

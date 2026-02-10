@@ -25,8 +25,19 @@ export const getAllProject = async (config) => {
     return response.data;
 }
 
-export const getProjectsByMentor = async (mentorName) => {
-    const response = await apiClient.get(`/projects/mentor/${mentorName}`);
+export const getProjectsByMentor = async (mentorName, semester) => {
+    const params = {};
+    if (semester) params.semester = semester;
+    const response = await apiClient.get(`/projects/mentor/${mentorName}`, { params });
+    return response.data;
+};
+
+/**
+ * 取得教師所有專案的可用學期列表
+ * @param {string} mentorName - 教師名稱
+ */
+export const getAvailableSemesters = async (mentorName) => {
+    const response = await apiClient.get(`/projects/mentor/${mentorName}/semesters`);
     return response.data;
 };
 

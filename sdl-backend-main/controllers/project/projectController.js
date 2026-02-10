@@ -15,6 +15,7 @@ const Sub_stage = require('../../models/sub_stage');
 const User_project = require('../../models/user_project');
 const sequelize = require('../../util/database');
 const projectViewingController = require('./projectViewingController');
+const { getTaiwanSemester } = require('../../utils/semesterUtils');
 
 exports.getProject = async (req, res) => {
     const projectId = req.params.projectId;
@@ -27,18 +28,24 @@ exports.getProject = async (req, res) => {
 
 exports.getAllProject = async (req, res) => {
     try {
-        const { viewable_by } = req.query;
+        const { viewable_by, semester } = req.query;
         // 支援 query.userId 或由驗證中介層掛上的 req.userId
         const rawUserId = typeof req.query.userId !== 'undefined' ? req.query.userId : req.userId;
+
+        // 決定學期過濾條件（預設為當前學期，'all' 表示不過濾）
+        const semesterFilter = semester || getTaiwanSemester();
 
         console.log('=== getAllProject Debug ===');
         console.log('req.query.userId:', req.query.userId);
         console.log('req.userId:', req.userId);
         console.log('viewable_by:', viewable_by);
+        console.log('semester:', semesterFilter);
 
         // 分支：可觀摩專案查詢
         if (viewable_by) {
             console.log('[getAllProject] 轉交至 getViewableProjects');
+            // 確保 semester 參數傳遞給 getViewableProjects
+            req.query.semester = semesterFilter;
             return projectViewingController.getViewableProjects(req, res);
         }
 
@@ -53,8 +60,12 @@ exports.getAllProject = async (req, res) => {
             return res.status(400).json({ message: 'userId 參數格式不正確' });
         }
 
-        console.log('[getAllProject] 查詢用戶參與的專案 userId:', userId);
+        // 建立學期過濾條件
+        const whereClause = semesterFilter !== 'all' ? { semester: semesterFilter } : {};
+
+        console.log('[getAllProject] 查詢用戶參與的專案 userId:', userId, 'semester:', semesterFilter);
         const projects = await Project.findAll({
+            where: whereClause,
             include: [{
                 model: User,
                 attributes: ['id', 'username', 'class'],
@@ -76,20 +87,47 @@ exports.getAllProject = async (req, res) => {
 
 exports.getProjectsByMentor = async (req, res) => {
     const mentorName = req.params.mentor; // 從 URL 參數中獲取 mentor 名字
-    console.log("mentorName:",mentorName)
+    const semester = req.query.semester || getTaiwanSemester();
+    console.log("mentorName:", mentorName, "semester:", semester);
     try {
-        const projects = await Project.findAll({
-            where: { mentor: mentorName }
-        });
-
-        if (projects.length === 0) {
-            return res.status(404).json({ message: '沒有找到該導師的項目' });
+        const whereClause = { mentor: mentorName };
+        if (semester !== 'all') {
+            whereClause.semester = semester;
         }
 
+        const projects = await Project.findAll({
+            where: whereClause
+        });
+
+        // 空學期是正常情況，回傳空陣列而非 404
         res.status(200).json(projects);
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ message: '內部服務器錯誤' });
+    }
+};
+
+/**
+ * 取得教師所有專案的可用學期列表
+ * GET /projects/mentor/:mentor/semesters
+ */
+exports.getAvailableSemesters = async (req, res) => {
+    try {
+        const mentorName = req.params.mentor;
+        const semesters = await Project.findAll({
+            where: { mentor: mentorName },
+            attributes: [[sequelize.fn('DISTINCT', sequelize.col('semester')), 'semester']],
+            order: [[sequelize.col('semester'), 'DESC']],
+            raw: true
+        });
+
+        res.status(200).json({
+            semesters: semesters.map(s => s.semester),
+            currentSemester: getTaiwanSemester()
+        });
+    } catch (error) {
+        console.error('取得學期列表錯誤:', error);
+        res.status(500).json({ message: '取得學期列表時發生錯誤' });
     }
 };
 
@@ -112,7 +150,8 @@ exports.createProject = async (req, res) => {
             mentor: projectMentor,
             referral_code: referral_code,
             currentStage: 1,
-            currentSubStage: 1
+            currentSubStage: 1,
+            semester: getTaiwanSemester()
         }, { transaction: t, req });
 
         const userId = req.body.userId;

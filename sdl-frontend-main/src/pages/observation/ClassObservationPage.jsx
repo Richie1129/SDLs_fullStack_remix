@@ -5,10 +5,11 @@ import { FaTimes, FaCog, FaSearch, FaFilter } from 'react-icons/fa';
 import { FiStar } from 'react-icons/fi';
 import TopBar from '../../components/TopBar';
 import SideBar from '../../components/SideBar';
-import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings } from '../../api/project';
+import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings, getAvailableSemesters } from '../../api/project';
 import { getProjectUser } from '../../api/users';
 import Swal from 'sweetalert2';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { getCurrentSemester, getSemesterLabel } from '../../utils/semesterUtils';
 
 /**
  * 專案分享與權限管理頁面
@@ -33,6 +34,9 @@ const ClassObservationPage = () => {
     const [showBatchModal, setShowBatchModal] = useState(false);
     const [selectedSourceClass, setSelectedSourceClass] = useState('');
     const [selectedTargetClasses, setSelectedTargetClasses] = useState([]);
+
+    // 學期篩選
+    const [semesterFilter, setSemesterFilter] = useState(getCurrentSemester());
     
     // 取得當前用戶資訊和指導老師名稱
     useEffect(() => {
@@ -71,15 +75,25 @@ const ClassObservationPage = () => {
         }
     );
 
-    // 取得指導老師的所有專案
-    const { 
-        data: mentorProjects, 
-        isLoading: isLoadingProjects, 
+    // 取得可用學期列表
+    const { data: semesterData } = useQuery(
+        ['availableSemesters', mentorName],
+        () => getAvailableSemesters(mentorName),
+        {
+            enabled: !!mentorName,
+            staleTime: 10 * 60 * 1000,
+        }
+    );
+
+    // 取得指導老師的所有專案（加入學期過濾）
+    const {
+        data: mentorProjects,
+        isLoading: isLoadingProjects,
         error: projectsError,
-        refetch: refetchProjects 
+        refetch: refetchProjects
     } = useQuery(
-        ['mentorProjects', mentorName],
-        () => mentorName ? getProjectsByMentor(mentorName) : Promise.resolve([]),
+        ['mentorProjects', mentorName, semesterFilter],
+        () => mentorName ? getProjectsByMentor(mentorName, semesterFilter) : Promise.resolve([]),
         {
             enabled: !!mentorName,
             onError: (error) => {
@@ -172,7 +186,8 @@ const ClassObservationPage = () => {
             const result = await batchUpdateViewingSettings({
                 sourceClass: selectedSourceClass,
                 targetClasses: selectedTargetClasses,
-                mentorName: mentorName
+                mentorName: mentorName,
+                semester: semesterFilter
             });
 
             setShowBatchModal(false);
@@ -314,6 +329,21 @@ const ClassObservationPage = () => {
                                                 {ownedClassOptions.map((cls) => (
                                                     <option key={cls} value={cls}>{cls}</option>
                                                 ))}
+                                            </select>
+                                        </div>
+                                        {/* 學期過濾 */}
+                                        <div>
+                                            <select
+                                                value={semesterFilter}
+                                                onChange={(e) => setSemesterFilter(e.target.value)}
+                                                className='w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                            >
+                                                {[...new Set([getCurrentSemester(), ...(semesterData?.semesters || [])])].sort().reverse().map(sem => (
+                                                    <option key={sem} value={sem}>
+                                                        {getSemesterLabel(sem)}{sem === getCurrentSemester() ? ' (目前)' : ''}
+                                                    </option>
+                                                ))}
+                                                <option value="all">所有學期</option>
                                             </select>
                                         </div>
                                     </div>

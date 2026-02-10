@@ -9,6 +9,7 @@ import ProjectSection from './components/ProjectSection';
 import ProjectModal from './components/ProjectModal';
 import InviteModal from './components/InviteModal';
 import SearchAndFilter from './components/SearchAndFilter';
+import SemesterSelector from './components/SemesterSelector';
 
 // Hooks 和工具
 import { useProjectData } from './hooks/useProjectData';
@@ -47,6 +48,8 @@ export default function HomePage() {
     setCompletedSearch,
     doneSearch,
     setDoneSearch,
+    semesterFilter,
+    setSemesterFilter,
     isLoading,
     calculateProgress,
     calculateProgressPercentage,
@@ -246,6 +249,17 @@ export default function HomePage() {
 
       <div className='flex flex-col my-10 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 2xl:px-40 py-10 w-full items-center'>
         <div className='flex flex-col w-full'>
+          {/* 學期選擇器 - 教師可切換學期 */}
+          {role === 'teacher' && (
+            <div className="mb-6 flex justify-end">
+              <SemesterSelector
+                currentSemester={semesterFilter}
+                onSemesterChange={setSemesterFilter}
+                mentorName={userName}
+              />
+            </div>
+          )}
+
           {/* 根據角色配置動態渲染區塊 */}
           {roleConfiguration.sections.map((sectionConfig) => {
             const projects = projectDataMap[sectionConfig.type] || [];

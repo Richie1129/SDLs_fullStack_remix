@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import dateFormat from 'dateformat';
+import { getSemesterLabel } from '../../../utils/semesterUtils';
 
 const Tooltip = ({ children, content }) => {
   return (
@@ -282,7 +283,14 @@ export default function ProjectCard({
         </div>
       )}
 
-      {/* 時間資訊 */}
+      {/* 學期與時間資訊 */}
+      {project.semester && (
+        <div className='text-body-sm text-gray-500'>
+          <span className='inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-caption'>
+            {getSemesterLabel(project.semester)}
+          </span>
+        </div>
+      )}
       <div className='flex justify-between text-body-sm text-gray-500'>
         <span className='flex items-center'>
           {type !== 'viewable' && (

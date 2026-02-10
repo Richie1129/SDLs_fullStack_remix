@@ -14,10 +14,11 @@ const projectViewingController = require('./projectViewingController');
 
 // Re-export all functions to maintain the same interface
 module.exports = {
-    // Basic CRUD operations (6 functions from projectController.js)
+    // Basic CRUD operations (7 functions from projectController.js)
     getProject: projectController.getProject,
     getAllProject: projectController.getAllProject,
     getProjectsByMentor: projectController.getProjectsByMentor,
+    getAvailableSemesters: projectController.getAvailableSemesters,
     createProject: projectController.createProject,
     updateProject: projectController.updateProject,
     deleteProject: projectController.deleteProject,

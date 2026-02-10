@@ -50,6 +50,11 @@ const Project = sequelize.define('project', {
         type: DataTypes.JSON,
         allowNull: true,
         comment: '可觀摩的班級清單'
+    },
+    semester: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        comment: '學期代碼，例如 114-2'
     }
 },{
     timestamps: true,
@@ -58,7 +63,9 @@ const Project = sequelize.define('project', {
         { fields: ['mentor'] },                     // 導師查詢
         { fields: ['is_open_for_viewing'] },        // 觀摩篩選
         { fields: ['referral_code'], unique: true }, // 推薦碼查詢
-        { fields: ['createdAt'] }                   // 時間排序
+        { fields: ['createdAt'] },                  // 時間排序
+        { fields: ['semester'] },                   // 學期篩選
+        { fields: ['mentor', 'semester'] }          // 導師+學期複合查詢
     ]
 });
 

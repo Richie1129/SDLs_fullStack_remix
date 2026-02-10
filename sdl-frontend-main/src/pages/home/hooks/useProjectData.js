@@ -10,12 +10,14 @@ import { getAllTeachers, batchGetProjectUsers } from '../../../api/users';
 import { getCurrentUsername } from '../../../utils/userUtils';
 import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
 import { userStorage, authStorage } from '../../../services/storageService';
+import { getCurrentSemester } from '../../../utils/semesterUtils';
 
 export const useProjectData = () => {
   const [members, setMembers] = useState([]);
   const [classFilter, setClassFilter] = useState('all');
   const [completedSearch, setCompletedSearch] = useState('');
   const [doneSearch, setDoneSearch] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState(getCurrentSemester());
 
   const role = getCurrentUserRole();
   const userName = getCurrentUsername();
@@ -43,19 +45,23 @@ export const useProjectData = () => {
     return percentage.toFixed(2);
   };
 
-  // 主要專案查詢 - 根據角色決定
+  // 主要專案查詢 - 根據角色決定，加入學期過濾
   const {
     isLoading,
     isError,
     error,
     data: projectData = []
   } = useQuery(
-    role === "teacher" ? "TeacherProjectDatas" : "projectDatas",
+    role === "teacher"
+      ? ["TeacherProjectDatas", semesterFilter]
+      : ["projectDatas", semesterFilter],
     () => {
       if (role === "teacher") {
-        return getProjectsByMentor(userName);
+        return getProjectsByMentor(userName, semesterFilter);
       } else {
-        return getAllProject({ params: { userId: getCurrentUserId() } });
+        return getAllProject({
+          params: { userId: getCurrentUserId(), semester: semesterFilter }
+        });
       }
     },
     {
@@ -179,12 +185,13 @@ export const useProjectData = () => {
     fetchMembers();
   }, [role, projectData]);
 
+  // 可觀摩專案查詢 - 加入學期過濾
   const { data: viewableProjectsData = [] } = useQuery(
-    ['viewableProjects', userClass, role],
+    ['viewableProjects', userClass, role, semesterFilter],
     async () => {
       try {
         const response = await getAllProject({
-          params: { viewable_by: userClass },
+          params: { viewable_by: userClass, semester: semesterFilter },
           headers: { 'accessToken': authStorage.get('accessToken') }
         });
 
@@ -237,6 +244,8 @@ export const useProjectData = () => {
     setCompletedSearch,
     doneSearch,
     setDoneSearch,
+    semesterFilter,
+    setSemesterFilter,
 
     // 查詢狀態
     isLoading,

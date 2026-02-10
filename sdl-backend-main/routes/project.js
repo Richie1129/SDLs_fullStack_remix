@@ -20,6 +20,7 @@ router.get('/:id/viewable', validateToken, controller.checkViewingPermission);
 
 // 現有路由
 router.get('/', validateToken, controller.getAllProject);  // 添加 validateToken 中間件
+router.get('/mentor/:mentor/semesters', controller.getAvailableSemesters);
 router.get('/mentor/:mentor', controller.getProjectsByMentor);
 router.get('/:projectId', controller.getProject);
 // Aggregated project content for AI assistant
