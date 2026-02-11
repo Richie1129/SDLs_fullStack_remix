@@ -64,8 +64,51 @@ const HelpSeekingLog = sequelize.define('help_seeking_log', {
       this.setDataValue('suggestions', value ? JSON.stringify(value) : null);
     }
   },
+  // === 求助成效追蹤欄位 ===
+  taskStatusBefore: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'task_status_before'
+  },
+  taskStatusAfter24h: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    field: 'task_status_after_24h'
+  },
+  statusChanged: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    field: 'status_changed'
+  },
+  effectivenessScore: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: {
+      min: 0,
+      max: 100
+    },
+    field: 'effectiveness_score'
+  },
+  followUpNeeded: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: false,
+    field: 'follow_up_needed'
+  },
+  effectivenessCheckedAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    field: 'effectiveness_checked_at'
+  },
 }, {
   timestamps: true,
 });
+
+// 定義關聯
+HelpSeekingLog.associate = function(models) {
+  HelpSeekingLog.belongsTo(models.User, { foreignKey: 'userId' });
+  HelpSeekingLog.belongsTo(models.Task, { foreignKey: 'taskId' });
+  HelpSeekingLog.belongsTo(models.Project, { foreignKey: 'projectId' });
+};
 
 module.exports = HelpSeekingLog;

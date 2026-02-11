@@ -177,6 +177,7 @@ app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/llm', require('./routes/llm'));
 app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
 app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
+app.use('/api/teacher/help-seeking', require('./routes/teacherHelpSeeking')); // Teacher Help-Seeking Dashboard
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));
@@ -248,6 +249,15 @@ server.listen(PORT, () => {
         console.log('🧹 審計事件自動清理排程已啟動');
     } catch (err) {
         console.warn('⚠️ 審計清理排程啟動失敗 (非關鍵):', err.message);
+    }
+
+    // Help-Seeking 分析排程任務
+    try {
+        const { startHelpSeekingScheduledTasks } = require('./services/helpSeekingScheduler');
+        startHelpSeekingScheduledTasks();
+        console.log('🔍 Help-Seeking 分析排程任務已啟動');
+    } catch (err) {
+        console.warn('⚠️ Help-Seeking 排程啟動失敗 (非關鍵):', err.message);
     }
 
     // 顯示 Socket 連接統計

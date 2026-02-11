@@ -54,4 +54,14 @@ const TaskChangeLog = require('./task_change_log');
 Task.hasMany(TaskChangeLog, { foreignKey: 'taskId', as: 'changeLogs' });
 TaskChangeLog.belongsTo(Task, { foreignKey: 'taskId' });
 
+// 建立與 HelpSeekingLog 的關聯
+const HelpSeekingLog = require('./help_seeking_log');
+Task.hasMany(HelpSeekingLog, { foreignKey: 'taskId' });
+HelpSeekingLog.belongsTo(Task, { foreignKey: 'taskId' });
+
+// 建立與 HelpSeekingAvoidanceRisk 的關聯
+const HelpSeekingAvoidanceRisk = require('./help_seeking_avoidance_risk');
+Task.hasMany(HelpSeekingAvoidanceRisk, { foreignKey: 'taskId' });
+HelpSeekingAvoidanceRisk.belongsTo(Task, { foreignKey: 'taskId' });
+
 module.exports = Task;

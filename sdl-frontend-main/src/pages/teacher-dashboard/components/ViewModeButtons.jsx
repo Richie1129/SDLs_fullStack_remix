@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiHome, FiUsers, FiLink, FiUser, FiBarChart2 } from 'react-icons/fi';
+import { FiHome, FiUsers, FiLink, FiUser, FiBarChart2, FiHelpCircle } from 'react-icons/fi';
 
 const ViewModeButtons = ({ viewMode, setViewMode }) => {
   const modes = [
@@ -7,7 +7,8 @@ const ViewModeButtons = ({ viewMode, setViewMode }) => {
     { key: 'all-students', label: '所有學生' },
     { key: 'groups', label: '小組檢視' },
     { key: 'individual', label: '個人檢視' },
-    { key: 'analytics', label: '數據分析' }
+    { key: 'analytics', label: '數據分析' },
+    { key: 'help-seeking', label: 'Help-Seeking' }
   ];
 
   const buttonIcons = {
@@ -15,7 +16,8 @@ const ViewModeButtons = ({ viewMode, setViewMode }) => {
     'all-students': <FiUsers className="w-4 h-4" />,
     'groups': <FiLink className="w-4 h-4" />,
     'individual': <FiUser className="w-4 h-4" />,
-    'analytics': <FiBarChart2 className="w-4 h-4" />
+    'analytics': <FiBarChart2 className="w-4 h-4" />,
+    'help-seeking': <FiHelpCircle className="w-4 h-4" />
   };
 
   return (

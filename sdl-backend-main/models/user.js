@@ -80,4 +80,8 @@ const HelpSeekingLog = require('./help_seeking_log');
 User.hasMany(HelpSeekingLog, { foreignKey: 'userId' });
 HelpSeekingLog.belongsTo(User, { foreignKey: 'userId' });
 
+const HelpSeekingAvoidanceRisk = require('./help_seeking_avoidance_risk');
+User.hasMany(HelpSeekingAvoidanceRisk, { foreignKey: 'userId' });
+HelpSeekingAvoidanceRisk.belongsTo(User, { foreignKey: 'userId' });
+
 module.exports = User;

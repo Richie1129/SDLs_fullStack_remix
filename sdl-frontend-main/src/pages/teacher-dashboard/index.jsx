@@ -13,6 +13,7 @@ import AllStudentsView from "./components/AllStudentsView";
 import GroupsView from "./components/GroupsView";
 import IndividualView from "./components/IndividualView";
 import AnalyticsView from "./components/AnalyticsView";
+import HelpSeekingView from "./components/HelpSeekingView";
 import { DashboardErrorBoundary } from "../../components/ErrorBoundary";
 
 const TeacherManagementDashboard = () => {
@@ -133,6 +134,14 @@ const TeacherManagementDashboard = () => {
               <AnalyticsView
                 enhancedStudents={enhancedStudents}
                 realData={realData}
+              />
+            </DashboardErrorBoundary>
+          );
+        case 'help-seeking':
+          return (
+            <DashboardErrorBoundary>
+              <HelpSeekingView
+                projectId={parsedProjectId}
               />
             </DashboardErrorBoundary>
           );

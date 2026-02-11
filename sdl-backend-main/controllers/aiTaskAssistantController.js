@@ -7,6 +7,7 @@ const User = require('../models/user');
 const Comment = require('../models/comment');
 const { Op } = require('sequelize');
 const { logAudit } = require('../services/auditService');
+const helpSeekingEffectivenessService = require('../services/helpSeekingEffectivenessService');
 
 // Helper functions
 function calculateStartDate(timeRange) {
@@ -130,7 +131,10 @@ async function generateSuggestions(req, res) {
       skippedThinking || false
     );
 
-    // Log help-seeking behavior WITH suggestions
+    // 捕捉求助前的任務狀態（用於成效追蹤）
+    const taskStatusBefore = await helpSeekingEffectivenessService.captureTaskStatusBefore(taskId);
+
+    // Log help-seeking behavior WITH suggestions AND task status
     const log = await HelpSeekingLog.create({
       userId,
       projectId,
@@ -140,7 +144,8 @@ async function generateSuggestions(req, res) {
       askedSources: askedSources || [],
       answers: answers || {},
       skippedThinking: skippedThinking || false,
-      suggestions
+      suggestions,
+      taskStatusBefore // 新增：記錄求助前狀態
     });
 
     // Audit: Record AI Task Assistant usage
