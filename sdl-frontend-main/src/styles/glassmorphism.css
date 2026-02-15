@@ -1,0 +1,106 @@
+/* Glassmorphism 玻璃擬態效果 */
+
+/* 基礎 Glass Card - 亮色背景 */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+}
+
+/* Glass Card Hover 效果 */
+.glass-card-hover {
+  transition: all 0.25s ease;
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
+}
+
+/* Dark Glass Card - 深色背景（可選） */
+.glass-card-dark {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* 漸變文字效果 */
+.gradient-text {
+  background: linear-gradient(135deg, #1E293B 0%, #475569 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 動畫 Icon 背景 */
+.icon-bg {
+  transition: transform 0.15s ease;
+}
+
+.group:hover .icon-bg {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* 進度條動畫 */
+.progress-bar {
+  transition: width 1s ease-out;
+}
+
+/* 卡片 Hover 效果 */
+.card-hover {
+  transition: all 0.25s ease;
+}
+
+.card-hover:hover {
+  transform: scale(1.05) translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* 按鈕漣漪效果 */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-ripple:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* 降級方案：不支援 backdrop-filter 的瀏覽器 */
+@supports not (backdrop-filter: blur(10px)) {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.95);
+  }
+  
+  .glass-card-dark {
+    background: rgba(30, 41, 59, 0.95);
+  }
+}
+
+/* Tab 按鈕樣式 */
+.tab-button {
+  transition: all 0.25s ease;
+}
+
+.tab-button:not(.active):hover {
+  background: rgba(91, 164, 145, 0.1);
+  color: #5BA491;
+}

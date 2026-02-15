@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { FaMedal } from 'react-icons/fa';
 import { generateStudentActivityStats, calculateCreatorStats } from '../utils';
 import {
@@ -8,42 +8,148 @@ import {
 } from '../../student-dashboard/utils';
 import LoadingState from '../../student-dashboard/components/LoadingState';
 
+// 圖表元件
+import {
+  ProgressLineChart,
+  ReflectionBarChart
+} from '../../../components/charts';
+
+// 互動元件
+import FilterBar from './FilterBar';
+import QuickActions from './QuickActions';
+
+// 優化 Hooks
+import {
+  useFilteredData,
+  usePerformanceMonitor,
+  useLazyLoad
+} from '../hooks/useOptimization';
+
 const AnalyticsView = ({ enhancedStudents, realData }) => {
+  // 效能監控
+  usePerformanceMonitor('AnalyticsView');
+  
+  // 篩選狀態
+  const [filterOptions, setFilterOptions] = useState({
+    timeRange: 'all',
+    students: []
+  });
+  const [nodeDetailModal, setNodeDetailModal] = useState({
+    isOpen: false,
+    nodeTitle: '',
+    relatedNodes: []
+  });
+  const [expandedRelatedNodeKeys, setExpandedRelatedNodeKeys] = useState({});
+
   // 安全資料驗證
   if (!realData) {
     return <LoadingState type="loading" message="分析資料載入中..." />;
   }
 
-  // 安全的資料存取
-  const safeNodes = getSafeArrayData(realData.nodes);
-  const safeTasks = getSafeArrayData(realData.tasks);
-  const safeNodeRelations = getSafeArrayData(realData.nodeRelations);
-  const safeReflections = getSafeArrayData(realData.reflections);
+  // 處理篩選變更
+  const handleFilterChange = useCallback((newFilters) => {
+    setFilterOptions(newFilters);
+  }, []);
+
+  // 應用篩選
+  const filteredData = useFilteredData(realData, filterOptions);
+
+  // 安全的資料存取（使用篩選後的資料）
+  const safeNodes = getSafeArrayData(filteredData.nodes);
+  const safeTasks = getSafeArrayData(filteredData.tasks);
+  const safeNodeRelations = getSafeArrayData(filteredData.nodeRelations);
+  const safeReflections = getSafeArrayData(filteredData.reflections);
   const safeEnhancedStudents = getSafeArrayData(enhancedStudents);
+  
+  // 根據篩選條件過濾學生
+  const filteredStudents = safeEnhancedStudents.filter(student => {
+    if (filterOptions.students.length === 0) return true;
+    return filterOptions.students.includes(student.id) || 
+           filterOptions.students.includes(student.userId);
+  });
+
+  // 節點延遲載入
+  const {
+    visibleData: visibleNodes,
+    loadMore: loadMoreNodes,
+    hasMore: hasMoreNodes
+  } = useLazyLoad(safeNodes, 20);
 
   // 建立關聯對照表 - 安全版本
   const relationMap = {};
   try {
     safeNodeRelations.forEach(relation => {
-      if (relation?.from_node_id && relation?.to_node_id) {
-        if (!relationMap[relation.from_node_id]) {
-          relationMap[relation.from_node_id] = [];
+      const fromNodeId = relation?.from_node_id
+        ?? relation?.fromNodeId
+        ?? relation?.fromId
+        ?? relation?.from
+        ?? relation?.source
+        ?? relation?.source_id
+        ?? relation?.sourceId;
+      const toNodeId = relation?.to_node_id
+        ?? relation?.toNodeId
+        ?? relation?.toId
+        ?? relation?.to
+        ?? relation?.target
+        ?? relation?.target_id
+        ?? relation?.targetId;
+
+      if (fromNodeId != null && toNodeId != null) {
+        const fromKey = String(fromNodeId);
+        if (!relationMap[fromKey]) {
+          relationMap[fromKey] = [];
         }
-        relationMap[relation.from_node_id].push(relation.to_node_id);
+        relationMap[fromKey].push(toNodeId);
       }
     });
   } catch (error) {
     console.warn('建立關聯對照表時發生錯誤:', error);
   }
 
-  // 計算統計數據 - 安全版本
+  // 計算統計數據 - 安全版本（使用篩選後的學生）
   const nodeCreators = calculateCreatorStats(safeNodes, 'owner');
   const taskCreators = calculateCreatorStats(safeTasks, 'owner');
-  const studentActivity = generateStudentActivityStats(safeEnhancedStudents);
+  const studentActivity = generateStudentActivityStats(filteredStudents);
+
+  const openNodeDetailModal = useCallback((nodeTitle, relatedIds) => {
+    const relatedNodes = relatedIds.map((id) => {
+      const targetNode = safeNodes.find((node) => String(node?.id) === String(id));
+      return {
+        id,
+        title: targetNode?.title || `節點${id}`,
+        content: targetNode?.content || '無內容'
+      };
+    });
+
+    setNodeDetailModal({
+      isOpen: true,
+      nodeTitle: nodeTitle || '無標題',
+      relatedNodes
+    });
+
+    setExpandedRelatedNodeKeys({});
+  }, [safeNodes]);
+
+  const closeNodeDetailModal = useCallback(() => {
+    setNodeDetailModal({
+      isOpen: false,
+      nodeTitle: '',
+      relatedNodes: []
+    });
+
+    setExpandedRelatedNodeKeys({});
+  }, []);
+
+  const toggleRelatedNodeExpand = useCallback((nodeKey) => {
+    setExpandedRelatedNodeKeys((prev) => ({
+      ...prev,
+      [nodeKey]: !prev[nodeKey]
+    }));
+  }, []);
 
   // 渲染節點表格行 - 抽取成獨立函數
   const renderNodeTableRows = () => {
-    if (safeNodes.length === 0) {
+    if (visibleNodes.length === 0) {
       return (
         <tr>
           <td colSpan="5" className="border p-component-base text-center text-gray-500">無節點數據</td>
@@ -52,38 +158,32 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
     }
 
     try {
-      // 計算 rowSpan
-      const ownerRowSpan = {};
-      const validNodes = safeNodes.filter(node => node && typeof node === 'object');
+      const validNodes = visibleNodes
+        .filter(node => node && typeof node === 'object')
+        .sort((a, b) => {
+          const ownerA = (getSafeDisplayName(a) || '未知').toString();
+          const ownerB = (getSafeDisplayName(b) || '未知').toString();
+          if (ownerA !== ownerB) return ownerA.localeCompare(ownerB, 'zh-Hant');
 
-      validNodes.forEach((node) => {
-        const owner = getSafeDisplayName(node) || '未知';
-        ownerRowSpan[owner] = (ownerRowSpan[owner] || 0) + 1;
-      });
-
-      let processedOwners = new Set();
+          const timeA = new Date(a?.createdAt || 0).getTime();
+          const timeB = new Date(b?.createdAt || 0).getTime();
+          return timeA - timeB;
+        });
 
       return validNodes.map((node, index) => {
         const owner = getSafeDisplayName(node) || '未知';
-        const isFirstOccurrence = !processedOwners.has(owner);
-        if (isFirstOccurrence) {
-          processedOwners.add(owner);
-        }
+        const previousOwner = index > 0 ? (getSafeDisplayName(validNodes[index - 1]) || '未知') : null;
+        const isFirstInOwnerGroup = owner !== previousOwner;
 
         const safeNodeId = node.id || `node-${index}`;
-        const relatedIds = relationMap[node.id] || [];
+        const relatedIds = relationMap[String(node.id)] || [];
 
         return (
           <tr key={safeNodeId} className="hover:bg-gray-50">
-            {isFirstOccurrence && (
-              <td
-                className="border p-component-xs font-medium bg-purple-50 text-purple-800 text-center align-top"
-                rowSpan={ownerRowSpan[owner]}
-              >
-                {owner}
-              </td>
-            )}
-            <td className="border p-component-xs">{node.title || '無標題'}</td>
+            <td className="border p-component-xs font-medium bg-purple-50 text-purple-800 text-center align-top break-words">
+              {isFirstInOwnerGroup ? owner : <span className="text-transparent select-none">　</span>}
+            </td>
+            <td className="border p-component-xs break-words">{node.title || '無標題'}</td>
             <td className="border p-component-xs">
               <div className="max-w-xs truncate">
                 {node.content || '無內容'}
@@ -95,16 +195,20 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 "無資料"}
             </td>
             <td className="border p-component-xs text-center">
-              <span className={relatedIds.length > 0 ? "text-teal-600 font-medium" : "text-gray-500"}>
-                {relatedIds.length > 0
-                  ? relatedIds
-                      .map(id => {
-                        const targetNode = safeNodes.find(n => n?.id === id);
-                        return targetNode?.title || `節點${id}`;
-                      })
-                      .join(", ")
-                  : "無延伸節點"}
-              </span>
+              {relatedIds.length > 0 ? (
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-teal-600 font-medium">{relatedIds.length} 個</span>
+                  <button
+                    onClick={() => openNodeDetailModal(node.title || '無標題', relatedIds)}
+                    className="text-trust-blue-600 hover:text-trust-blue-700 underline text-caption font-medium"
+                    aria-label="查看延伸節點詳情"
+                  >
+                    查看
+                  </button>
+                </div>
+              ) : (
+                <span className="text-gray-500">無延伸節點</span>
+              )}
             </td>
           </tr>
         );
@@ -122,7 +226,48 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
   };
 
   return (
-    <div className="space-y-stack-sm sm:space-y-stack-md">
+    <div className="space-y-stack-sm sm:space-y-stack-md analytics-view">
+      {/* 篩選與快速操作區 */}
+      <div className="relative z-30 grid grid-cols-1 lg:grid-cols-3 gap-component-md-lg">
+        <div className="lg:col-span-2">
+          <FilterBar
+            students={safeEnhancedStudents}
+            onFilterChange={handleFilterChange}
+            defaultTimeRange="all"
+          />
+        </div>
+        <div>
+          <QuickActions
+            data={{
+              enhancedStudents: filteredStudents,
+              nodes: safeNodes,
+              tasks: safeTasks,
+              reflections: safeReflections
+            }}
+            fileName="teacher-dashboard"
+          />
+        </div>
+      </div>
+
+      {/* 數據視覺化圖表區 */}
+      <div className="grid grid-cols-1 gap-component-md-lg">
+        {/* 學習進度折線圖 */}
+        <div>
+          <ProgressLineChart
+            enhancedStudents={filteredStudents}
+            realData={filteredData}
+          />
+        </div>
+
+        {/* 反思品質長條圖 */}
+        <div>
+          <ReflectionBarChart
+            enhancedStudents={filteredStudents}
+            realData={filteredData}
+          />
+        </div>
+      </div>
+
       {/* 數據統計卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-stack-sm sm:gap-stack-md">
         <div className="bg-gradient-to-r from-customgreen to-teal-600 p-component-base sm:p-component-md-lg rounded-lg text-white">
@@ -221,7 +366,14 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
         <div className="hidden lg:block overflow-x-auto">
           <div className="max-h-96 overflow-y-auto border border-gray-300 rounded scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-50" 
                style={{ scrollBehavior: 'smooth' }}>
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse table-fixed">
+              <colgroup>
+                <col className="w-[10%]" />
+                <col className="w-[20%]" />
+                <col className="w-[34%]" />
+                <col className="w-[15%]" />
+                <col className="w-[21%]" />
+              </colgroup>
               <thead className="bg-gray-100 sticky top-0">
                 <tr>
                   <th className="border p-component-xs text-left">擁有者</th>
@@ -240,8 +392,8 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
 
         {/* 行動裝置版卡片 */}
         <div className="lg:hidden space-y-3 max-h-96 overflow-y-auto">
-          {safeNodes.length > 0 ? safeNodes.filter(node => node && typeof node === 'object').map((node, index) => {
-            const relatedIds = relationMap[node.id] || [];
+          {visibleNodes.length > 0 ? visibleNodes.filter(node => node && typeof node === 'object').map((node, index) => {
+            const relatedIds = relationMap[String(node.id)] || [];
             return (
             <div key={node.id || index} className="border border-gray-200 rounded-lg p-component-sm sm:p-component-base hover:bg-gray-50">
               <div className="flex justify-between items-start mb-2">
@@ -259,16 +411,20 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
               </p>
               <div className="text-caption">
                 <span className="text-gray-600">延伸節點: </span>
-                <span className={relatedIds.length > 0 ? "font-medium text-teal-600" : "text-gray-500"}>
-                  {relatedIds.length > 0
-                    ? relatedIds
-                        .map(id => {
-                          const targetNode = safeNodes.find(n => n?.id === id);
-                          return targetNode?.title || `節點${id}`;
-                        })
-                        .join(", ")
-                    : "無延伸節點"}
-                </span>
+                {relatedIds.length > 0 ? (
+                  <>
+                    <span className="font-medium text-teal-600">{relatedIds.length} 個</span>
+                    <button
+                      onClick={() => openNodeDetailModal(node.title || '無標題', relatedIds)}
+                      className="ml-2 text-trust-blue-600 hover:text-trust-blue-700 underline"
+                      aria-label="查看延伸節點詳情"
+                    >
+                      查看詳情
+                    </button>
+                  </>
+                ) : (
+                  <span className="text-gray-500">無延伸節點</span>
+                )}
               </div>
             </div>
             );
@@ -276,7 +432,92 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
             <div className="text-center text-gray-500 py-8">無節點數據</div>
           )}
         </div>
+
+        {/* 載入更多按鈕 */}
+        {hasMoreNodes && (
+          <div className="mt-4 text-center">
+            <button
+              onClick={loadMoreNodes}
+              className="btn-ripple px-6 py-2 bg-gradient-to-r from-trust-blue-500 to-trust-blue-600 hover:from-trust-blue-600 hover:to-trust-blue-700 text-white rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+              aria-label="載入更多節點"
+            >
+              載入更多 ({visibleNodes.length} / {safeNodes.length})
+            </button>
+          </div>
+        )}
       </div>
+
+      {nodeDetailModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={closeNodeDetailModal} />
+          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-body-lg font-semibold text-gray-800">延伸節點詳情</h3>
+                <p className="text-caption text-gray-600 mt-1">來源節點：{nodeDetailModal.nodeTitle}</p>
+              </div>
+              <button
+                onClick={closeNodeDetailModal}
+                className="text-gray-500 hover:text-gray-700 text-body-lg"
+                aria-label="關閉延伸節點詳情"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {nodeDetailModal.relatedNodes.length > 0 ? (
+                <div className="space-y-2">
+                  {nodeDetailModal.relatedNodes.map((relatedNode, index) => (
+                    (() => {
+                      const nodeKey = `${relatedNode.id}-${index}`;
+                      const isExpanded = !!expandedRelatedNodeKeys[nodeKey];
+                      const contentText = relatedNode.content || '無內容';
+                      const shouldShowToggle = contentText.length > 90;
+
+                      return (
+                        <div
+                          key={nodeKey}
+                          className="p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-body-sm font-medium text-gray-800 break-words">{relatedNode.title}</p>
+                            <span className="text-caption text-gray-500 flex-shrink-0">#{relatedNode.id}</span>
+                          </div>
+
+                          <p
+                            className="text-caption text-gray-600 mt-1 break-words"
+                            style={!isExpanded ? {
+                              display: '-webkit-box',
+                              WebkitBoxOrient: 'vertical',
+                              WebkitLineClamp: 3,
+                              overflow: 'hidden'
+                            } : undefined}
+                          >
+                            {contentText}
+                          </p>
+
+                          {shouldShowToggle && (
+                            <button
+                              onClick={() => toggleRelatedNodeExpand(nodeKey)}
+                              className="mt-1 text-caption text-trust-blue-700 hover:text-trust-blue-800 underline"
+                              aria-label={isExpanded ? '收合內容' : '展開內容'}
+                            >
+                              {isExpanded ? '收合' : '展開'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-body-sm">無延伸節點</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 進度看板統計 */}
       <div className="bg-white p-component-base rounded-lg shadow-md">

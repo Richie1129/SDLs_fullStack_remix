@@ -1,7 +1,12 @@
+/* 所有 @import 必須在最前面 */
 /* 主要字體：Noto Serif TC（繁體中文內容） */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500;600;700;900&display=swap');
 /* 輔助字體：Inter（介面元素） */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+/* 數字字體：Poppins（數據展示） */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
+/* 導入 Glassmorphism 樣式 */
+@import './styles/glassmorphism.css';
 
 @tailwind base;
 @tailwind components;

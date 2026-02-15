@@ -35,6 +35,8 @@ module.exports = {
         sans: ['Inter', 'Noto Sans TC', '微軟正黑體', 'Microsoft JhengHei', 'sans-serif'],
         // 內容字體（中文內容）：Noto Serif TC
         serif: ['Noto Serif TC', 'serif'],
+        // 數字字體（數據展示）：Poppins
+        poppins: ['Poppins', 'sans-serif'],
       },
       fontSize: {
         // 語意化字體大小
@@ -53,8 +55,45 @@ module.exports = {
       // 色彩系統
       // ========================================
       colors: {
+        // 品牌色（保留）
         'customgreen': '#5BA491',
         'customgray': '#F6F5F8',
+        
+        // 新增信任藍色系
+        'trust-blue': {
+          50: '#EFF6FF',
+          100: '#DBEAFE',
+          200: '#BFDBFE',
+          300: '#93C5FD',
+          400: '#60A5FA',
+          500: '#3B82F6',
+          600: '#2563EB',
+          700: '#1D4ED8',
+          800: '#1E40AF',
+          900: '#1E3A8A',
+        },
+        
+        // 行動橙色系
+        'action-orange': {
+          50: '#FFF7ED',
+          100: '#FFEDD5',
+          200: '#FED7AA',
+          300: '#FDBA74',
+          400: '#FB923C',
+          500: '#F97316',
+          600: '#EA580C',
+          700: '#C2410C',
+          800: '#9A3412',
+          900: '#7C2D12',
+        },
+        
+        // 狀態色
+        'status': {
+          excellent: '#10B981',
+          active: '#3B82F6',
+          attention: '#F59E0B',
+          inactive: '#EF4444',
+        }
       },
 
       // ========================================

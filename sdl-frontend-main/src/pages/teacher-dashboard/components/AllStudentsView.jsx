@@ -1,10 +1,11 @@
 import React from 'react';
 import { formatRelativeTime, getStatusColor } from '../utils';
 
-const AllStudentsView = ({ enhancedStudents, setViewMode, setSelectedStudent }) => {
+const AllStudentsView = ({ enhancedStudents, onViewDetails }) => {
   const handleViewDetails = (student) => {
-    setSelectedStudent(student);
-    setViewMode('individual');
+    if (onViewDetails) {
+      onViewDetails(student);
+    }
   };
 
   return (

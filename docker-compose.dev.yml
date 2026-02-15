@@ -72,6 +72,7 @@ services:
       context: ./sdl-frontend-main
       # dockerfile: dockerfile
     image: stone881129/sdl-front:latest
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "5174:5173"  # 開發環境映射到 5174（5173 可能被主分支佔用）
     volumes:
