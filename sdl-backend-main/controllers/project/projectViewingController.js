@@ -273,6 +273,17 @@ exports.getAllClasses = async (req, res) => {
         };
         console.log('準備發送響應:', response);
 
+        // 記錄教師查看班級列表
+        if (req.userId) {
+            logAudit(req, {
+                action: 'TEACHER_VIEW_CLASS_LIST',
+                targetType: 'system',
+                targetId: null,
+                actorId: req.userId,
+                metadata: { classCount: classList.length }
+            }).catch(err => console.error('Audit log error:', err));
+        }
+
         res.status(200).json(response);
     } catch (error) {
         console.error('取得班級列表錯誤:', error);

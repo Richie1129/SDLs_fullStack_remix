@@ -16,6 +16,7 @@ const User_project = require('../../models/user_project');
 const sequelize = require('../../util/database');
 const projectViewingController = require('./projectViewingController');
 const { getTaiwanSemester } = require('../../utils/semesterUtils');
+const { logAudit } = require('../../services/auditService');
 
 exports.getProject = async (req, res) => {
     const projectId = req.params.projectId;
@@ -75,6 +76,16 @@ exports.getAllProject = async (req, res) => {
         });
 
         console.log('[getAllProject] 專案數量:', projects.length);
+        
+        // 記錄學生查看儀表板/專案列表
+        logAudit(req, {
+            action: 'STUDENT_VIEW_DASHBOARD',
+            targetType: 'user',
+            targetId: userId,
+            actorId: userId,
+            metadata: { projectCount: projects.length, semester: semesterFilter }
+        }).catch(err => console.error('Audit log error:', err));
+        
         return res.status(200).json(projects);
     } catch (error) {
         console.error('取得專案列表錯誤:', error);
@@ -98,6 +109,17 @@ exports.getProjectsByMentor = async (req, res) => {
         const projects = await Project.findAll({
             where: whereClause
         });
+
+        // 記錄教師查看專案列表
+        if (req.userId) {
+            logAudit(req, {
+                action: 'TEACHER_VIEW_PROJECTS',
+                targetType: 'project',
+                targetId: null,
+                actorId: req.userId,
+                metadata: { mentor: mentorName, semester, projectCount: projects.length }
+            }).catch(err => console.error('Audit log error:', err));
+        }
 
         // 空學期是正常情況，回傳空陣列而非 404
         res.status(200).json(projects);

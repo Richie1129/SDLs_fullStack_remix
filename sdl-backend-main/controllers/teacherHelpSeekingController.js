@@ -7,6 +7,7 @@ const { Op } = require('sequelize');
 const sequelize = require('../util/database');
 const helpSeekingAvoidanceService = require('../services/helpSeekingAvoidanceService');
 const helpSeekingEffectivenessService = require('../services/helpSeekingEffectivenessService');
+const { logAudit } = require('../services/auditService');
 
 /**
  * 計算 Help-Seeking 品質分數
@@ -267,7 +268,19 @@ async function getProjectHelpSeekingStats(req, res) {
         createdAt: log.createdAt
       }))
     });
-
+    // 記錄教師查看專案 help-seeking 統計
+    logAudit(req, {
+      action: 'TEACHER_VIEW_PROJECT_HELP_SEEKING',
+      targetType: 'project',
+      targetId: projectId,
+      actorId: teacherId,
+      metadata: { 
+        projectId, 
+        timeRange, 
+        totalCount: overallStats.total, 
+        studentCount: studentList.length 
+      }
+    }).catch(err => console.error('Audit log error:', err));
   } catch (error) {
     console.error('Error getting project help-seeking stats:', error);
     res.status(500).json({ 
@@ -376,6 +389,19 @@ async function getTeacherHelpSeekingOverview(req, res) {
 
     // 按求助次數排序
     projectList.sort((a, b) => b.helpSeekingCount - a.helpSeekingCount);
+
+    // 記錄教師查看 help-seeking 概覽
+    logAudit(req, {
+      action: 'TEACHER_VIEW_HELP_SEEKING_OVERVIEW',
+      targetType: 'system',
+      targetId: null,
+      actorId: req.user.id,
+      metadata: { 
+        timeRange, 
+        projectCount: projects.length, 
+        totalHelpSeekingCount: totalStats.total 
+      }
+    }).catch(err => console.error('Audit log error:', err));
 
     res.json({
       success: true,
@@ -527,6 +553,20 @@ async function getStudentHelpSeekingDetails(req, res) {
       stats,
       logs: detailedLogs
     });
+
+    // 記錄教師查看學生 help-seeking 詳情
+    logAudit(req, {
+      action: 'TEACHER_VIEW_STUDENT_HELP_SEEKING',
+      targetType: 'user',
+      targetId: userId,
+      actorId: req.user.id,
+      metadata: { 
+        studentId: userId, 
+        projectId: projectId || 'all', 
+        timeRange, 
+        helpSeekingCount: stats.total 
+      }
+    }).catch(err => console.error('Audit log error:', err));
 
   } catch (error) {
     console.error('Error getting student help-seeking details:', error);

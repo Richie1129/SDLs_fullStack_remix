@@ -61,6 +61,15 @@ exports.getCurrentUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
         
+        // 記錄用戶查看個人資料
+        logAudit(req, {
+            action: 'USER_VIEW_PROFILE',
+            targetType: 'user',
+            targetId: userId,
+            actorId: userId,
+            metadata: { role: user.role }
+        }).catch(err => console.error('Audit log error:', err));
+        
         res.status(200).json(user);
     } catch (error) {
         console.error('Error fetching current user:', error);

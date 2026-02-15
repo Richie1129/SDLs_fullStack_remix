@@ -4,6 +4,7 @@ const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
 const Stage = require('../models/stage');
 const { logSubmitChange, logSubmitFieldChanges } = require('../utils/submitChangeLogger');
+const { logAudit } = require('../services/auditService');
 const sequelize = require('../util/database');
 const { createErrorResponse, getHttpStatusByErrorCode } = require('../constants/dailyErrorCodes');
 const { invalidateProjectCache } = require('./assistant');
@@ -151,6 +152,20 @@ exports.createSubmit = async(req, res) => {
         invalidateProjectCache(projectId);
 
         await t.commit();
+        
+        // Audit: Record submit creation
+        await logAudit(req, {
+            action: 'SUBMIT_CREATE',
+            targetType: 'submit',
+            targetId: null,
+            projectId: pId,
+            metadata: {
+                stage: `${currentStageInt}-${currentSubStageInt}`,
+                fileCount: req.uploadedFiles ? req.uploadedFiles.length : 0,
+                hasContent: !!content
+            }
+        }).catch(() => {}); // Non-blocking
+        
         res.status(200).json({
             success: true,
             message: 'Submit created successfully | 提交建立成功'
@@ -320,6 +335,19 @@ exports.updateSubmit = async (req, res) => {
         }
 
         await t.commit();
+        
+        // Audit: Record submit update
+        await logAudit(req, {
+            action: 'SUBMIT_UPDATE',
+            targetType: 'submit',
+            targetId: submitId,
+            projectId: submit.projectId,
+            metadata: {
+                hasFileUpdate: !!req.uploadedFile,
+                hasContentUpdate: content !== undefined
+            }
+        }).catch(() => {}); // Non-blocking
+        
         return res.status(200).json({
             success: true,
             message: "Submit updated successfully | 更新成功"
@@ -410,6 +438,17 @@ exports.deleteSubmit = async (req, res) => {
 
         // 刪除提交記錄（用 instance.destroy 讓 hooks 正常觸發）
         await submit.destroy({ req });
+        
+        // Audit: Record submit deletion
+        await logAudit(req, {
+            action: 'SUBMIT_DELETE',
+            targetType: 'submit',
+            targetId: submitId,
+            projectId: submit.projectId,
+            metadata: {
+                stage: submit.stage
+            }
+        }).catch(() => {}); // Non-blocking
 
         return res.status(200).json({
             success: true,

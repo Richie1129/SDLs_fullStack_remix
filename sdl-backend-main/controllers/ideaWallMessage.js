@@ -2,6 +2,7 @@ const IdeaWallMessage = require('../models/idea_wall_message');
 const User = require('../models/user');
 const { Op } = require("sequelize");
 const { orchestrateChat } = require('../services/orchestrator');
+const { logAudit } = require('../services/auditService');
 
 exports.createMessage = async (req, res) => {
     const { wallId } = req.params;
@@ -43,6 +44,28 @@ exports.createMessage = async (req, res) => {
         // We pass the plain object to avoid Sequelize instance issues if any
         orchestrateChat(message.toJSON()).catch(err => {
             console.error('Orchestrator Trigger Error:', err);
+        });
+        
+        // Audit: Record idea wall message creation (non-blocking)
+        setImmediate(async () => {
+            try {
+                const IdeaWall = require('../models/idea_wall');
+                const ideaWall = await IdeaWall.findByPk(wallId);
+                
+                await logAudit(req, {
+                    action: 'IDEA_WALL_MESSAGE_CREATE',
+                    targetType: 'idea_wall_message',
+                    targetId: message.id,
+                    projectId: ideaWall?.projectId || null,
+                    metadata: {
+                        ideaWallId: wallId,
+                        relatedNodeId: relatedNodeId || null,
+                        messageLength: content?.length || 0
+                    }
+                }).catch(() => {});
+            } catch (auditError) {
+                console.error('Audit log failed (non-blocking):', auditError.message);
+            }
         });
 
         res.status(201).json(messageWithSender);

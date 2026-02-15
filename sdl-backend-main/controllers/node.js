@@ -2,6 +2,7 @@ const Node = require('../models/node');
 const Node_relation = require('../models/node_relation');
 const NodeChangeLog = require('../models/node_change_log');
 const { Op } = require('sequelize');
+const { logAudit } = require('../services/auditService');
 
 // Phase 2: Orchestrator 整合
 const IdeaWall = require('../models/idea_wall');
@@ -25,6 +26,26 @@ exports.createNode = async(req, res) => {
         
         // 立即回應使用者（不阻塞）
         res.status(200).json(result);
+        
+        // Audit: Record node creation (non-blocking)
+        setImmediate(async () => {
+            try {
+                const ideaWall = await IdeaWall.findByPk(ideaWallId);
+                await logAudit(req, {
+                    action: 'NODE_CREATE',
+                    targetType: 'idea_wall_node',
+                    targetId: result.id,
+                    projectId: ideaWall?.projectId || null,
+                    metadata: {
+                        ideaWallId,
+                        hasTitle: !!title,
+                        hasContent: !!content
+                    }
+                }).catch(() => {});
+            } catch (auditError) {
+                console.error('Audit log failed (non-blocking):', auditError.message);
+            }
+        });
         
         // ================================================================
         // Phase 2 Hook: 非同步觸發 Orchestrator 分析
@@ -224,6 +245,28 @@ exports.createNodeRelation = async (req, res) => {
         }
 
         const result = await Node_relation.create({ from_id, to_id });
+        
+        // Audit: Record node relation creation (non-blocking)
+        setImmediate(async () => {
+            try {
+                const fromNode = await Node.findByPk(from_id, { include: [IdeaWall] });
+                const projectId = fromNode?.IdeaWall?.projectId || null;
+                
+                await logAudit(req, {
+                    action: 'NODE_RELATION_CREATE',
+                    targetType: 'node_relation',
+                    targetId: result.id,
+                    projectId,
+                    metadata: {
+                        fromNodeId: from_id,
+                        toNodeId: to_id
+                    }
+                }).catch(() => {});
+            } catch (auditError) {
+                console.error('Audit log failed (non-blocking):', auditError.message);
+            }
+        });
+        
         res.status(200).json(result);
     } catch (err) {
         console.error('createNodeRelation 錯誤:', err);
