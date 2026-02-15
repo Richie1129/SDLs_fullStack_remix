@@ -148,3 +148,6 @@ daily_file/
 
 # folders
 /Todo
+
+# Copilot instructions (Postman extension)
+.copilot-instructions/
