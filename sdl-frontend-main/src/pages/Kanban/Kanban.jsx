@@ -401,7 +401,7 @@ export default function Kanban() {
               data-track-type="kanban"
               data-track-meta-tab="status"
               onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'status' }))}
-              className={`px-btn-x py-2 rounded-md text-ui font-medium transition-colors duration-fast ${
+              className={`px-2 sm:px-btn-x py-1.5 sm:py-2 rounded-md text-sm sm:text-ui font-medium transition-colors duration-fast whitespace-nowrap ${
                 viewConfig.groupBy === 'status'
                   ? 'bg-customgreen text-white'
                   : 'text-gray-600 hover:bg-gray-100'
@@ -415,7 +415,7 @@ export default function Kanban() {
               data-track-type="kanban"
               data-track-meta-tab="assignee"
               onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'assignee' }))}
-              className={`px-btn-x py-2 rounded-md text-ui font-medium transition-colors duration-fast ${
+              className={`px-2 sm:px-btn-x py-1.5 sm:py-2 rounded-md text-sm sm:text-ui font-medium transition-colors duration-fast whitespace-nowrap ${
                 viewConfig.groupBy === 'assignee'
                   ? 'bg-customgreen text-white'
                   : 'text-gray-600 hover:bg-gray-100'

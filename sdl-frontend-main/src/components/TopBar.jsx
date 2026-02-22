@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ChevronDown, Eye, MessageSquare, PlusCircle, X } from 'lucide-react';
+import { Activity, ChevronDown, Eye, LogOut, MessageSquare, PlusCircle, X } from 'lucide-react';
 import { getProjectUser } from '../api/users';
 import { getProject, getProjectsByMentor } from '../api/project';
 import { logout } from '../api/auth';  // 引入 logout API
@@ -277,22 +277,22 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-h2">
           <img src="/SDLS_LOGO_GEMINI.png" alt="Logo" className="h-14 w-auto" />
         </Link>
-        <div className="flex items-center">
+        <div className="flex items-center flex-shrink-0 gap-1">
           {/* 跨班觀摩按鈕 - 只有教師可見 */}
           {role === "teacher" && (
             <button
               onClick={() => navigate("/observation")}
-              className="flex items-center space-x-1 mr-3 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-3 py-2 text-body-sm font-semibold transition-colors duration-fast"
+              className="flex items-center space-x-1 mr-3 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-body-sm font-semibold transition-colors duration-fast whitespace-nowrap"
               title="跨班專案觀摩"
             >
               <Eye className="h-4 w-4" />
-              <span>觀摩</span>
+              <span className="hidden xs:inline">觀摩</span>
             </button>
           )}
           
           <div className="relative">
             <div
-              className="font-bold cursor-pointer p-1 mr-2 rounded-lg mx-3 hover:bg-gray-100 transition-colors duration-fast flex items-center gap-1"
+              className="font-bold cursor-pointer p-1 mr-1 rounded-lg mx-1 sm:mx-3 hover:bg-gray-100 transition-colors duration-fast flex items-center gap-1 whitespace-nowrap max-w-[6rem] sm:max-w-none truncate"
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
               title="用戶選單"
             >
@@ -325,7 +325,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           </div>
           {/* 移除 dashboard icon 按鈕 */}
           <Announcement projectId={projectId || 'all'} role={role} projectList={projectList} />
-          <button onClick={handleLogout} className="ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-component-xs font-semibold">
+          <button onClick={handleLogout} className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md px-2 py-1 sm:p-component-xs font-semibold whitespace-nowrap">
             登出
           </button>
         </div>
@@ -353,7 +353,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
       {/* 右側功能 */}
       <div className="flex items-center flex-shrink-0">
         {!isOverviewPage && (
-        <ul className="flex items-center justify-center space-x-1">
+        <ul className="hidden sm:flex items-center justify-center space-x-1">
           {getProjectUserQuery.isLoading || projectId === undefined ? <></> :
             getProjectUserQuery.isError ? <p className='font-bold text-h2'>Error</p> :
               projectUsers.map((projectUser, index) => {
@@ -367,7 +367,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
               })
           }
           <li>
-            <button className="p-1 rounded-md text-gray-500 hover:text-gray-900 ">
+            <button className="p-1 rounded-md text-gray-500 hover:text-gray-900">
               <PlusCircle className="h-8 w-8" onClick={() => setReferralCodeModalOpen(true)} />
             </button>
           </li>
@@ -414,14 +414,15 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         </div>
         <Announcement projectId={projectId} role={role} projectList={projectList} />
         <button
-          className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-1 sm:p-component-xs font-semibold text-caption sm:text-body-sm"
+          className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md p-1.5 sm:p-component-xs font-semibold text-caption sm:text-body-sm flex items-center gap-1"
           onClick={async () => {
             socket.disconnect();
-            await logout();  // 使用新的 logout API
+            await logout();
           }}
+          title="登出"
         >
+          <LogOut className="h-4 w-4 sm:hidden" />
           <span className="hidden sm:inline">登出</span>
-          <span className="sm:hidden">出</span>
         </button>
       </div>
       <Modal open={referralCodeModalOpen} onClose={() => setReferralCodeModalOpen(false)} opacity={true} position={"justify-center items-center"}>

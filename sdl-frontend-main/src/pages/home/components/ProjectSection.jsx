@@ -131,9 +131,9 @@ const ProjectSection = ({
   // 根據類型決定網格佈局
   const getGridClasses = () => {
     if (role === "teacher" && type === 'normal') {
-      return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-stack-sm place-items-center';
+      return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-stack-sm';
     }
-    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-stack-sm place-items-center';
+    return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-stack-sm';
   };
 
   return (
