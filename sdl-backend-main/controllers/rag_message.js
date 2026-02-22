@@ -1,6 +1,7 @@
 // controller for rag_message
 const Rag_message = require('../models/rag_message');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+const axios = require('axios');
 
 // 根據 userId 取得所有 RAG 訊息歷史
 exports.getRagMessageHistory = async (req, res) => {
@@ -98,7 +99,7 @@ exports.getUserSessions = async (req, res) => {
 
         // 先獲取所有該用戶的訊息，然後在 JavaScript 中處理去重
         const messages = await Rag_message.findAll({
-            attributes: ['sessionId', 'userName', 'project_id', 'createdAt'],
+            attributes: ['sessionId', 'userName', 'project_id', 'createdAt', 'session_title'],
             where: whereCondition,
             order: [['createdAt', 'DESC']]
         });
@@ -118,8 +119,12 @@ exports.getUserSessions = async (req, res) => {
                     sessionId: message.sessionId,
                     userName: displayName,
                     userId: userId,
-                    lastActivity: message.createdAt
+                    lastActivity: message.createdAt,
+                    sessionTitle: message.session_title || null
                 });
+            } else if (message.session_title && !sessionMap.get(message.sessionId).sessionTitle) {
+                // 如果舊記錄有標題，補上（因為 DESC 排序，最新訊息可能沒標題）
+                sessionMap.get(message.sessionId).sessionTitle = message.session_title;
             }
         });
 
@@ -242,6 +247,85 @@ exports.deleteSessionMessages = async (req, res) => {
             details: err.message
         });
     }
+};
+
+// 新增：使用 vLLM 生成對話摘要標題，並儲存回該 session 的所有訊息
+// Fallback 順序：GPT-OSS-20B (Hsueh) → Gemma-3-27B (earth)
+exports.generateSessionTitle = async (req, res) => {
+    const { sessionId } = req.params;
+    const { userId, firstMessage, projectId } = req.body;
+
+    console.log("生成對話標題（vLLM），sessionId:", sessionId, "userId:", userId);
+
+    if (!firstMessage || !firstMessage.trim()) {
+        return res.status(200).json({ title: null });
+    }
+
+    const systemPrompt = '你是對話標題生成助手。根據使用者的問題，輸出一個簡短標題（不超過12個中文字）。只輸出標題文字，不加引號、標點或說明。';
+    const userPrompt = `使用者問題：${firstMessage.slice(0, 200)}\n\n請輸出對話標題：`;
+
+    const VLLM_ENDPOINTS = [
+        {
+            baseURL: process.env.HSUEH_VLLM_BASE_URL || 'https://vllm-210.hsueh.tw/v1',
+            modelName: process.env.HSUEH_VLLM_MODEL_NAME || 'openai/gpt-oss-20b',
+            displayName: 'GPT-OSS-20B',
+            apiKey: process.env.HSUEH_VLLM_API_KEY || 'dummy',
+        },
+        {
+            baseURL: process.env.VLLM_BASE_URL || 'https://earth-vllmapi.agenticgrader.com/v1',
+            modelName: process.env.VLLM_MODEL_NAME || 'ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g',
+            displayName: 'Gemma-3-27B',
+            apiKey: process.env.VLLM_API_KEY || '',
+        }
+    ];
+
+    let title = null;
+    for (const endpoint of VLLM_ENDPOINTS) {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (endpoint.apiKey && endpoint.apiKey !== 'dummy') {
+                headers['Authorization'] = `Bearer ${endpoint.apiKey}`;
+            }
+
+            const response = await axios.post(
+                `${endpoint.baseURL}/chat/completions`,
+                {
+                    model: endpoint.modelName,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 30,
+                },
+                { timeout: 15000, headers }
+            );
+
+            const raw = response.data?.choices?.[0]?.message?.content?.trim();
+            if (raw) {
+                title = raw.replace(/^[「"'【\[「『\n]+|[」"'】\]」』\n]+$/g, '').trim().slice(0, 15);
+                console.log(`[${endpoint.displayName}] 對話標題生成成功:`, title);
+                break;
+            }
+        } catch (err) {
+            console.warn(`[${endpoint.displayName}] 標題生成失敗，嘗試備援:`, err.message);
+        }
+    }
+
+    if (title) {
+        const whereCondition = { sessionId };
+        if (userId) whereCondition.userId = parseInt(userId, 10);
+        if (projectId) whereCondition.project_id = parseInt(projectId, 10);
+
+        await Rag_message.update(
+            { session_title: title },
+            { where: whereCondition }
+        ).catch(err => console.error('儲存標題失敗:', err.message));
+
+        console.log("對話標題已儲存:", title, "sessionId:", sessionId);
+    }
+
+    res.status(200).json({ title: title || null });
 };
 
 // 新增：創建新會話並保存開場白

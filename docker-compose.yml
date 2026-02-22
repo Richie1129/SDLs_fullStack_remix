@@ -20,11 +20,11 @@ services:
     expose:
       - 3000
     environment:
-      - PG_HOST=postgres
-      - PG_PORT=5432
-      - PG_USER=${PG_USER:-postgres}
-      - PG_PASSWORD=${PG_PASSWORD:-postgres}
-      - PG_NAME=${PG_NAME:-postgres}
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_NAME=${PG_NAME}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
       - RAGFLOW_API_KEY=${RAGFLOW_API_KEY}
@@ -33,13 +33,13 @@ services:
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
       - METRICS_TOKEN=${METRICS_TOKEN}
       # MinIO 環境變數
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
       # Email 環境變數
-      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
-      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASS=${EMAIL_PASS}
       - EMAIL_FROM=${EMAIL_FROM}

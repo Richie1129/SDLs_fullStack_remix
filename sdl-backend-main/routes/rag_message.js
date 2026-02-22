@@ -23,4 +23,7 @@ router.delete('/session/:userId/:sessionId', controller.deleteSessionMessages);
 // 新增：創建新會話並保存開場白
 router.post('/create-session', controller.createNewSession);
 
+// 新增：使用 Gemini 生成對話摘要標題
+router.post('/generate-title/:sessionId', controller.generateSessionTitle);
+
 module.exports = router;

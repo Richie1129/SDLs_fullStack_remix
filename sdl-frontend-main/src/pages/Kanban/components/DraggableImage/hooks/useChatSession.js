@@ -6,7 +6,8 @@ import {
   testConnection,
   deleteSession,
   deleteSessionMessages,
-  createNewSessionInDB
+  createNewSessionInDB,
+  generateSessionTitle
 } from "../../../../../api/rag";
 import { getCurrentUsername } from "../../../../../utils/userUtils";
 import { getCurrentUserId } from "../../../../../utils/authUtils";
@@ -117,8 +118,12 @@ export const useChatSession = () => {
         console.log(`找到 ${sessions.length} 個歷史對話`);
 
         const formattedSessions = sessions.map((session, index) => {
-          let displayName;
+          // 優先使用 AI 生成的摘要標題
+          if (session.sessionTitle) {
+            return { id: session.sessionId, name: session.sessionTitle };
+          }
 
+          let displayName;
           if (session.userName && session.userName !== '未知用戶') {
             displayName = session.userName;
           } else if (session.userId) {
@@ -284,8 +289,10 @@ export const useChatSession = () => {
   const handleSubmit = async (question, projectId) => {
     if (!question.trim()) return;
 
-    // 記錄是否為當前 session 的第一則訊息，用於決定是否需要重整側邊欄
-    const isFirstMessage = history.length === 0;
+    // 記錄是否為使用者在此 session 的第一則訊息（history 只有開場白），用於觸發標題生成
+    const isFirstUserMessage = history.length === 1 && history[0].question === null;
+    // 保留舊變數名稱以相容後續邏輯（原判斷 history.length === 0 實際上永遠不成立）
+    const isFirstMessage = isFirstUserMessage;
 
     setIsSubmitting(true);
     let currentSessionId = currentChatId;
@@ -459,6 +466,20 @@ export const useChatSession = () => {
         // A. 直接發訊：由 createSession() 隱性建立新 session
         // B. 點選「新增對話」後首次發訊：session 已預建，但側邊欄尚未顯示
         if (isFirstMessage) {
+          // 使用 Gemini 生成對話摘要標題（非同步，失敗不影響主功能）
+          generateSessionTitle(currentSessionId, userId, userQuestion, Number.isFinite(projectIdNum) ? projectIdNum : null)
+            .then(result => {
+              if (result?.title) {
+                console.log("對話標題已生成:", result.title);
+                setChatSessions(prevSessions =>
+                  prevSessions.map(s =>
+                    s.id === currentSessionId ? { ...s, name: result.title } : s
+                  )
+                );
+              }
+            })
+            .catch(() => {});
+
           setTimeout(() => {
             refreshChatSessions();
           }, 3000);
@@ -590,8 +611,12 @@ export const useChatSession = () => {
       const sessions = await getUserSessions(userId, projectId);
 
       const formattedSessions = sessions.map((session, index) => {
-        let displayName;
+        // 優先使用 AI 生成的摘要標題
+        if (session.sessionTitle) {
+          return { id: session.sessionId, name: session.sessionTitle };
+        }
 
+        let displayName;
         if (session.userName && session.userName !== '未知用戶') {
           displayName = session.userName;
         } else if (session.userId) {

@@ -54,6 +54,12 @@ const Rag_message = sequelize.define('Rag_message', {
         type: DataTypes.JSONB,
         allowNull: true,
         defaultValue: null
+    },
+    // ✅ 新增欄位：AI 生成的對話摘要標題
+    session_title: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: null
     }
 }, {
     tableName: 'rag_messages'

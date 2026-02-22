@@ -83,3 +83,13 @@ export const createNewSessionInDB = async (userId, sessionId, userName, projectI
     });
     return response.data;
 }
+
+// 新增：使用 Gemini 生成對話摘要標題
+export const generateSessionTitle = async (sessionId, userId, firstMessage, projectId = null) => {
+    const response = await apiClient.post(`/rag_message/generate-title/${sessionId}`, {
+        userId,
+        firstMessage,
+        projectId
+    });
+    return response.data;
+}
