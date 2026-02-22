@@ -22,9 +22,9 @@ services:
     environment:
       - PG_HOST=postgres
       - PG_PORT=5432
-      - PG_USER=postgres
-      - PG_PASSWORD=postgres
-      - PG_NAME=postgres
+      - PG_USER=${PG_USER:-postgres}
+      - PG_PASSWORD=${PG_PASSWORD:-postgres}
+      - PG_NAME=${PG_NAME:-postgres}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
       - RAGFLOW_API_KEY=${RAGFLOW_API_KEY}
@@ -82,9 +82,9 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${PG_NAME:-postgres}
+      - POSTGRES_USER=${PG_USER:-postgres}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     networks:
@@ -146,8 +146,8 @@ services:
     image: dpage/pgadmin4
     restart: unless-stopped
     environment:
-      - PGADMIN_DEFAULT_EMAIL=wulab@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=ytwu35415
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@localhost}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     ports:
@@ -160,7 +160,9 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      - PGPASSWORD=postgres
+      - PGPASSWORD=${PG_PASSWORD:-postgres}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_NAME=${PG_NAME:-postgres}
     depends_on:
       postgres:
         condition: service_healthy
@@ -172,7 +174,7 @@ services:
       while true; do
         sleep 21600;
         echo '⏰ [$(date)] 開始清理過期 tokens...';
-        DELETED=$$(psql -h postgres -U postgres -d postgres -t -c \"DELETE FROM refresh_tokens WHERE \\\"expiresAt\\\" < NOW(); SELECT ROW_COUNT();\");
+        DELETED=$$(psql -h postgres -U $$PG_USER -d $$PG_NAME -t -c \"DELETE FROM refresh_tokens WHERE \\\"expiresAt\\\" < NOW(); SELECT ROW_COUNT();\");
         echo '✅ [$(date)] 已刪除 '$${DELETED}' 個過期 tokens';
       done
       "

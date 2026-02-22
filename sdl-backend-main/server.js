@@ -12,6 +12,11 @@ const SocketManager = require('./sockets/socketManager');
 const { httpLogger } = require('./middlewares/logging');
 const { uploadToMinio } = require('./middlewares/minioUploadMiddleware');
 const { logAudit, clampMetadataSize } = require('./services/auditService');
+const { validateToken } = require('./middlewares/AuthMiddleware');
+
+// 安全套件
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 // 監控系統 - Phase 2 監控基礎設施
 const PerformanceMonitor = require('./middlewares/performanceMonitor');
@@ -38,6 +43,40 @@ try {
 // 基礎中間件設定
 app.set('trust proxy', 1);
 app.set('io', io);
+
+// 安全 HTTP Headers
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // 允許跨域圖片載入
+}));
+
+// Rate Limiting
+const loginLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1 分鐘
+    max: 10,                    // 最多 10 次嘗試
+    message: { message: '登入嘗試次數過多，請稍後再試' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const resetLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,  // 1 小時
+    max: 5,
+    message: { message: '密碼重設請求次數過多，請稍後再試' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1 分鐘
+    max: 30,
+    message: { message: 'AI 請求次數過多，請稍後再試' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/users/login', loginLimiter);
+app.use('/api/auth/forgot-password', resetLimiter);
+app.use('/api/auth/reset-password', resetLimiter);
+app.use('/api/llm', aiLimiter);
+app.use('/proxy/api/v1/chats', aiLimiter);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(require('cors')(config.cors));
@@ -115,8 +154,8 @@ try {
 app.use('/api/daily_file', express.static(path.join(__dirname, 'daily_file')));
 console.log('Static file directory:', path.join(__dirname, 'daily_file'));
 
-// 檔案上傳路由 - 使用 MinIO
-app.post('/api/upload', uploadToMinio('files', 10), (req, res) => {
+// 檔案上傳路由 - 使用 MinIO（需要認證）
+app.post('/api/upload', validateToken, uploadToMinio('files', 10), (req, res) => {
     console.log('MinIO uploaded files:', req.uploadedFiles);
     try {
         if (!req.uploadedFiles || req.uploadedFiles.length === 0) {

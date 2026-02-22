@@ -9,36 +9,38 @@
 const express = require('express');
 const router = express.Router();
 const kbCoachController = require('../controllers/kbCoach');
+const { validateToken } = require('../middlewares/AuthMiddleware');
+const { checkTeacherRole } = require('../middlewares/projectViewingMiddleware');
 
 // ============================================================================
 // Phase 1 端點
 // ============================================================================
 
 // 主要端點：提供KB教練建議
-router.post('/guidance', kbCoachController.provideGuidance);
+router.post('/guidance', validateToken, kbCoachController.provideGuidance);
 
 // 輔助端點：取得KB原則列表
-router.get('/principles', kbCoachController.getPrinciples);
+router.get('/principles', validateToken, kbCoachController.getPrinciples);
 
 // ============================================================================
 // Phase 3 新增端點：回饋機制
 // ============================================================================
 
 // 儲存用戶回饋
-router.post('/feedback', kbCoachController.saveFeedback);
+router.post('/feedback', validateToken, kbCoachController.saveFeedback);
 
 // 取得回饋統計 (供管理者查看)
-router.get('/feedback/stats', kbCoachController.getFeedbackStats);
+router.get('/feedback/stats', validateToken, checkTeacherRole, kbCoachController.getFeedbackStats);
 
 // ============================================================================
 // 歷史記錄端點
 // ============================================================================
 
 // 查詢歷史記錄列表
-router.get('/history', kbCoachController.getHistory);
+router.get('/history', validateToken, kbCoachController.getHistory);
 
 // 查詢單筆歷史記錄詳情
-router.get('/history/:id', kbCoachController.getHistoryDetail);
+router.get('/history/:id', validateToken, kbCoachController.getHistoryDetail);
 
 // ============================================================================
 // Phase 2 新增端點：查詢 Orchestrator 狀態
@@ -49,7 +51,7 @@ router.get('/history/:id', kbCoachController.getHistoryDetail);
  * 
  * 讓前端查看 Orchestrator 的冷卻狀態
  */
-router.get('/orchestrator/status/:ideaWallId', async (req, res) => {
+router.get('/orchestrator/status/:ideaWallId', validateToken, async (req, res) => {
     try {
         const { getCooldownManager } = require('../utils/cooldownManager');
         const Node = require('../models/node');
@@ -82,7 +84,7 @@ router.get('/orchestrator/status/:ideaWallId', async (req, res) => {
  * 手動觸發 Orchestrator 分析（Debug 用）
  * Body: { "ideaWallId": 1, "projectId": 1 }
  */
-router.post('/orchestrator/analyze', async (req, res) => {
+router.post('/orchestrator/analyze', validateToken, checkTeacherRole, async (req, res) => {
     try {
         const { orchestrate } = require('../services/orchestrator');
         const { ideaWallId, projectId } = req.body;

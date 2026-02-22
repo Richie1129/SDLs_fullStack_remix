@@ -29,25 +29,27 @@ class SocketManager {
         this.io.use(async (socket, next) => {
             try {
                 const token = socket.handshake.auth.token || socket.handshake.headers.accesstoken;
-                
+
                 if (!token) {
-                    console.log('Socket connection without token');
-                    return next(); // 允許連接但標記為未認證
+                    return next(new Error('Authentication required'));
                 }
 
                 const validToken = verify(token, config.jwt.secret);
-                
-                if (validToken) {
-                    const user = await User.findByPk(validToken.id);
-                    socket.userId = validToken.id;
-                    socket.user = user;
-                    console.log(`Socket authenticated for user: ${user?.username} (ID: ${validToken.id})`);
+
+                if (!validToken) {
+                    return next(new Error('Invalid authentication token'));
                 }
-                
+
+                const user = await User.findByPk(validToken.id);
+                if (!user) {
+                    return next(new Error('User not found'));
+                }
+
+                socket.userId = validToken.id;
+                socket.user = user;
                 next();
             } catch (error) {
-                console.log('Socket authentication error:', error.message);
-                next(); // 允許連接但標記為未認證
+                return next(new Error('Invalid authentication token'));
             }
         });
     }

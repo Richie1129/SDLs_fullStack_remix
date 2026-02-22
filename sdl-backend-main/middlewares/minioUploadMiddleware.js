@@ -12,8 +12,8 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         // 支援的檔案類型
         const allowedTypes = [
-            // 圖片
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml',
+            // 圖片（SVG 已移除：可包含內嵌 JavaScript，構成 XSS 攻擊向量）
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
             // 文件
             'application/pdf', 'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

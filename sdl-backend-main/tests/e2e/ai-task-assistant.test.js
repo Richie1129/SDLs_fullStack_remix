@@ -13,8 +13,8 @@ let testTaskId = null;
 
 // Test data
 const TEST_USER = {
-  account: 'stone881129',
-  password: '0921457822a'
+  account: 'test_user_e2e',
+  password: 'test1234'
 };
 
 // ANSI color codes for terminal output

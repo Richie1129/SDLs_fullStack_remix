@@ -12,12 +12,14 @@ import { getCurrentUsername } from "../../../../../utils/userUtils";
 import { getCurrentUserId } from "../../../../../utils/authUtils";
 import storageService, { authStorage, projectStorage } from "../../../../../services/storageService";
 
-const API_URL = "/proxy/api/v1/chats/d59983d4ff8711f0b4fda61716fb138a";
+const RAGFLOW_CHAT_ID = import.meta.env.VITE_RAGFLOW_CHAT_ID;
+const API_URL = `/proxy/api/v1/chats/${RAGFLOW_CHAT_ID}`;
 const OPENING_MESSAGE = "嗨！我是一位專門輔導高中生科學探究與實作的自然科學導師。我會用適合高中生的語言，保持專業的同時，幫助你探索自然科學的奧秘，並引導你選擇一個有興趣的科展主題，以及更深入了解你的研究問題。什麼可以幫到你的嗎？";
 
-const headers = {
+const getHeaders = () => ({
   "Content-Type": "application/json",
-};
+  "accessToken": authStorage.get('accessToken') || authStorage.get('token') || "",
+});
 
 /**
  * ✅ 輔助函數：取得當前專案 ID（0破壞性）
@@ -213,7 +215,7 @@ export const useChatSession = () => {
 
       const response = await fetch(`${API_URL}/sessions`, {
         method: "POST",
-        headers,
+        headers: getHeaders(),
         body: JSON.stringify(sessionPayload),
       });
 
@@ -282,9 +284,11 @@ export const useChatSession = () => {
   const handleSubmit = async (question, projectId) => {
     if (!question.trim()) return;
 
+    // 記錄是否為當前 session 的第一則訊息，用於決定是否需要重整側邊欄
+    const isFirstMessage = history.length === 0;
+
     setIsSubmitting(true);
     let currentSessionId = currentChatId;
-    let isNewSession = false;
 
     const userQuestion = question;
     setHistory((prevHistory) => [...prevHistory, { question: userQuestion, answer: "正在思考中..." }]);
@@ -292,7 +296,6 @@ export const useChatSession = () => {
     try {
       if (!currentSessionId) {
         currentSessionId = await createSession();
-        isNewSession = true;
       }
 
       const payload = {
@@ -319,7 +322,7 @@ export const useChatSession = () => {
           // RAGFlow API 呼叫
           fetch(`${API_URL}/completions`, {
             method: "POST",
-            headers,
+            headers: getHeaders(),
             body: JSON.stringify(payload),
           }).then(res => res.json()),
 
@@ -382,7 +385,7 @@ export const useChatSession = () => {
         // ✅ 開關關閉，只呼叫 RAGFlow（原有邏輯，0 破壞性）
         const response = await fetch(`${API_URL}/completions`, {
           method: "POST",
-          headers,
+          headers: getHeaders(),
           body: JSON.stringify(payload),
         });
 
@@ -452,8 +455,10 @@ export const useChatSession = () => {
         };
         socket.emit("rag_message", payloadResponse);
 
-        if (isNewSession) {
-          console.log("檢測到新會話，3秒後自動更新對話歷史列表");
+        // 第一則訊息後重整側邊欄 session 列表（涵蓋兩種情境）：
+        // A. 直接發訊：由 createSession() 隱性建立新 session
+        // B. 點選「新增對話」後首次發訊：session 已預建，但側邊欄尚未顯示
+        if (isFirstMessage) {
           setTimeout(() => {
             refreshChatSessions();
           }, 3000);

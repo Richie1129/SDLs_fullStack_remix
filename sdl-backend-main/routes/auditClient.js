@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { validateToken } = require('../middlewares/AuthMiddleware');
+const { checkTeacherRole } = require('../middlewares/projectViewingMiddleware');
 const { logAudit } = require('../services/auditService');
 const { Op } = require('sequelize');
 const AuditEvent = require('../models/audit_event');
@@ -108,8 +109,8 @@ router.post('/batch', validateToken, async (req, res) => {
   }
 });
 
-// Query audit events (admin/teacher scope assumed)
-router.get('/events', validateToken, async (req, res) => {
+// Query audit events (teacher/admin only)
+router.get('/events', validateToken, checkTeacherRole, async (req, res) => {
   try {
     const { action, targetType, targetId, projectId, source, actorId, limit = 20, offset = 0, before, after } = req.query;
     const where = {};
