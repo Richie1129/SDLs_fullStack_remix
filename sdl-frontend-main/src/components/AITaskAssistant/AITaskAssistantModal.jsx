@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../Modal';
-import { FiHelpCircle, FiInfo, FiThumbsUp, FiThumbsDown, FiUsers, FiX, FiClock, FiArrowLeft } from 'react-icons/fi';
+import { FiHelpCircle, FiInfo, FiThumbsUp, FiThumbsDown, FiUsers, FiX, FiClock, FiArrowLeft, FiAlertTriangle } from 'react-icons/fi';
 import { generateSuggestions, submitFeedback, getTaskHistory } from '../../api/aiTaskAssistant';
 import toast from 'react-hot-toast';
 import AITaskHistoryList from './AITaskHistoryList';
@@ -17,6 +17,7 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
   const [feedback, setFeedback] = useState('');
   const [feedbackDetail, setFeedbackDetail] = useState('');
   const [showDetailedSteps, setShowDetailedSteps] = useState(false);
+  const [irrelevantReason, setIrrelevantReason] = useState('');
 
   // History view states
   const [viewMode, setViewMode] = useState('questionnaire'); // 'questionnaire' | 'history' | 'history-detail'
@@ -61,7 +62,11 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
 
   const handleSourceChange = (source) => {
     if (source === '還沒問任何人') {
-      setAskedSources(['還沒問任何人']);
+      if (askedSources.includes('還沒問任何人')) {
+        setAskedSources([]);
+      } else {
+        setAskedSources(['還沒問任何人']);
+      }
     } else {
       const filtered = askedSources.filter(s => s !== '還沒問任何人');
       if (askedSources.includes(source)) {
@@ -86,6 +91,13 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
       };
 
       const result = await generateSuggestions(data);
+
+      // AI 判斷卡片內容與專案無關
+      if (result.isRelevant === false) {
+        setIrrelevantReason(result.irrelevantReason || '這張卡片的內容無法提供有效的學習引導。');
+        setCurrentStep(3);
+        return;
+      }
 
       setSuggestions(result.suggestions);
       setHelpSeekingType(result.helpSeekingType);
@@ -147,6 +159,7 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
     setFeedback('');
     setFeedbackDetail('');
     setShowDetailedSteps(false);
+    setIrrelevantReason('');
     setViewMode('questionnaire');
     setAIHistory([]);
     setSelectedHistoryEntry(null);
@@ -240,18 +253,30 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
           你試過問誰了？
         </p>
         <div className="space-y-2">
-          {sourcesOptions.map((source) => (
-            <label key={source} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                value={source}
-                checked={askedSources.includes(source)}
-                onChange={() => handleSourceChange(source)}
-                className="text-purple-600 focus:ring-purple-500"
-              />
-              <span className="text-body-sm text-gray-700">{source}</span>
-            </label>
-          ))}
+          {sourcesOptions.map((source) => {
+            const otherSources = ['同學', '老師', '查資料'];
+            const isDisabled =
+              source === '還沒問任何人'
+                ? otherSources.some(s => askedSources.includes(s))
+                : askedSources.includes('還沒問任何人');
+
+            return (
+              <label
+                key={source}
+                className={`flex items-center gap-2 ${isDisabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
+              >
+                <input
+                  type="checkbox"
+                  value={source}
+                  checked={askedSources.includes(source)}
+                  onChange={() => handleSourceChange(source)}
+                  disabled={isDisabled}
+                  className="text-purple-600 focus:ring-purple-500 disabled:cursor-not-allowed"
+                />
+                <span className="text-body-sm text-gray-700">{source}</span>
+              </label>
+            );
+          })}
         </div>
 
         {askedSources.includes('還沒問任何人') && (
@@ -494,10 +519,64 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
     );
   };
 
+  const renderIrrelevant = () => (
+    <div className="p-component-lg">
+      <div className="flex items-center gap-stack-sm mb-stack-md">
+        <FiAlertTriangle className="text-h2 text-amber-500" />
+        <div>
+          <h2 className="text-h2 font-bold text-gray-800">無法提供引導</h2>
+          <p className="text-body-sm text-gray-600 mt-1">關於 {cardData.title}</p>
+        </div>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-300 rounded-lg p-component-md mb-stack-md">
+        <p className="text-body font-medium text-gray-800 mb-2">
+          AI 判斷這張卡片目前無法提供有效的學習引導：
+        </p>
+        <p className="text-body-sm text-gray-700">{irrelevantReason}</p>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-component-md mb-stack-md">
+        <p className="text-body font-medium text-gray-800 mb-stack-sm flex items-center gap-2">
+          <FiInfo className="text-blue-600" />
+          建議你可以這樣做
+        </p>
+        <ul className="space-y-2 text-body-sm text-gray-700">
+          <li className="flex items-start gap-2">
+            <span className="flex-shrink-0 text-blue-500">1.</span>
+            為這張卡片加上更清楚的標題，說明要完成什麼任務
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="flex-shrink-0 text-blue-500">2.</span>
+            在卡片描述中補充任務的目的和預期成果
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="flex-shrink-0 text-blue-500">3.</span>
+            確認這張卡片與你們的專案探究主題相關，再回來求助
+          </li>
+        </ul>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            setCurrentStep(1);
+            setIrrelevantReason('');
+          }}
+          className="px-btn-x-lg py-btn-y rounded-lg bg-customgreen text-white
+                     hover:bg-customgreen/90 transition-colors duration-fast"
+        >
+          返回重試
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <Modal open={open} onClose={handleClose} maxWidth="md">
       {viewMode === 'questionnaire' && currentStep === 1 && renderMetacognitiveCheck()}
       {viewMode === 'questionnaire' && currentStep === 2 && renderSuggestions()}
+      {viewMode === 'questionnaire' && currentStep === 3 && renderIrrelevant()}
 
       {viewMode === 'history' && (
         <div className="p-component-lg">

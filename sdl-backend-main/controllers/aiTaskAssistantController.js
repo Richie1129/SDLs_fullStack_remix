@@ -123,13 +123,22 @@ async function generateSuggestions(req, res) {
     const context = await aiTaskAssistantService.collectTaskContext(taskId, projectId, models);
 
     // Generate suggestions
-    const { helpSeekingType, suggestions } = await aiTaskAssistantService.generateSuggestions(
+    const { helpSeekingType, suggestions, isRelevant } = await aiTaskAssistantService.generateSuggestions(
       context,
       selectedState,
       answers || {},
       askedSources || [],
       skippedThinking || false
     );
+
+    // 如果 AI 判斷卡片內容不相關，直接回傳，不寫 log
+    if (isRelevant === false) {
+      return res.json({
+        success: false,
+        isRelevant: false,
+        irrelevantReason: suggestions.irrelevantReason || '這張卡片的內容無法提供有效的學習引導。'
+      });
+    }
 
     // 捕捉求助前的任務狀態（用於成效追蹤）
     const taskStatusBefore = await helpSeekingEffectivenessService.captureTaskStatusBefore(taskId);

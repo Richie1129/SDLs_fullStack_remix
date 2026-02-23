@@ -208,7 +208,23 @@ class AITaskAssistantService {
 
     const prompt = `你是一個學習引導 AI，協助學生進行自主學習專案。
 
-**重要原則**：
+**第一步：先判斷這張卡片是否為合理的學習任務**
+
+請根據以下資訊判斷：
+- 專案名稱：${context.project.projectName}
+- 專案描述：${context.project.projectDescription || '（尚無描述）'}
+- 當前探究階段：${context.project.projectStage}
+- 卡片標題：${context.task.title}
+- 卡片描述：${context.task.content || '（尚無描述）'}
+
+判斷標準（以下任一條件成立即為不相關）：
+1. 卡片標題或描述為亂碼、純數字、無意義符號
+2. 卡片內容明顯與這個專案的探究主題毫無關係
+3. 卡片描述過於空泛（完全無描述且標題意義不明），無法給予有效引導
+
+如果判斷為不相關，請將 isRelevant 設為 false，並在 irrelevantReason 說明原因，其餘欄位設為空值。
+
+**若判斷相關，請依以下原則生成建議**：
 1. **促進 Instrumental/Adaptive Help-Seeking**：給予提示和引導，而非直接答案
 2. **鼓勵向真人求助**：主動建議學生向同儕或教師討論
 3. **促進深度思考**：用問題引導學生思考「為什麼」
@@ -243,6 +259,8 @@ ${helpSeekingType === 'adaptive' ? `
 
 請生成回應，包含以下結構（使用 JSON 格式）：
 {
+  "isRelevant": true 或 false,
+  "irrelevantReason": "（僅在 isRelevant 為 false 時填寫，說明為何這張卡片無法提供有效引導）",
   "summary": "對學生狀態的簡短摘要（1-2 句話）",
   "thinkingDirections": [
     {
@@ -370,7 +388,14 @@ ${helpSeekingType === 'adaptive' ? `
         const raw = await provider.call();
         const suggestions = this._parseAIResponse(raw);
         console.log(`[AI Task Assistant] ${provider.name} succeeded`);
-        return { helpSeekingType, suggestions };
+
+        // 如果 AI 判斷卡片內容不相關，提前返回
+        if (suggestions.isRelevant === false) {
+          console.log(`[AI Task Assistant] Card deemed irrelevant: ${suggestions.irrelevantReason}`);
+          return { helpSeekingType, suggestions, isRelevant: false };
+        }
+
+        return { helpSeekingType, suggestions, isRelevant: true };
       } catch (error) {
         console.warn(`[AI Task Assistant] ${provider.name} failed: ${error.message}`);
       }
