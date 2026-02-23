@@ -461,15 +461,19 @@ export function CardDetailModal({
 
       {/* 成員指派模態框 */}
       {permissions.canEdit && (
-        <Modal open={assignMemberModalopen} onClose={() => setAssignMemberModalOpen(false)} opacity={false} position={"justify-end items-center m-3"}>
-          <button onClick={() => setAssignMemberModalOpen(false)} className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'>
-            <GrFormClose className='w-6 h-6' />
-          </button>
+        <Modal
+          open={assignMemberModalopen}
+          onClose={() => setAssignMemberModalOpen(false)}
+          opacity={true}
+          position="justify-center items-center"
+          custom="w-auto !p-0 rounded-xl overflow-hidden shadow-none"
+          enableScroll={false}
+        >
           <AssignMember
             menberData={menberData}
-            setMenberData={() => {}} // 由父組件管理
             setCardData={setCardData}
-            cardHandleSubmit={cardHandleSubmit}
+            cardAssignees={cardData.assignees}
+            onClose={() => setAssignMemberModalOpen(false)}
           />
         </Modal>
       )}

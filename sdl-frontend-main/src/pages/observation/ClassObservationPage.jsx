@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { FaTimes, FaCog, FaSearch, FaFilter } from 'react-icons/fa';
 import { FiStar } from 'react-icons/fi';
 import TopBar from '../../components/TopBar';
-import SideBar from '../../components/SideBar';
 import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings, getAvailableSemesters } from '../../api/project';
 import { getProjectUser } from '../../api/users';
 import Swal from 'sweetalert2';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { getCurrentUserRole } from '../../utils/authUtils';
 import { getCurrentSemester, getSemesterLabel } from '../../utils/semesterUtils';
 
 /**
@@ -42,7 +42,7 @@ const ClassObservationPage = () => {
     useEffect(() => {
         // 教師直接用自己的名稱作為指導老師
         const userName = getCurrentUsername();
-        const userRole = localStorage.getItem('role');
+        const userRole = getCurrentUserRole(); // 使用 userStorage namespace 正確讀取
         
         if (userRole === 'teacher') {
             setMentorName(userName);
@@ -252,10 +252,7 @@ const ClassObservationPage = () => {
     return (
         <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-col">
             <TopBar />
-
-            <div className="flex flex-1 min-h-0 overflow-hidden">
-                <SideBar />
-                <main className="flex-1 flex flex-col min-h-0">
+            <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 overflow-y-auto">
                         <div className='px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 py-10'>
                             {/* 頁面標題 */}
@@ -401,6 +398,12 @@ const ClassObservationPage = () => {
                                                             {(projectClassMap[project.id] || []).length > 0 && (
                                                                 <div className='text-caption text-gray-500 mt-1'>
                                                                     所屬班級：{(projectClassMap[project.id] || []).join(', ')}
+                                                                </div>
+                                                            )}
+                                                            {/* 學期 */}
+                                                            {project.semester && (
+                                                                <div className='text-caption text-gray-400 mt-1'>
+                                                                    學期：{getSemesterLabel(project.semester)}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -650,7 +653,6 @@ const ClassObservationPage = () => {
                         </div>
                     </div>
                 </main>
-            </div>
         </div>
     );
 };

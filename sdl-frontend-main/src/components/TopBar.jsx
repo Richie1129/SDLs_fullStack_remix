@@ -49,6 +49,8 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   
   // 檢查是否為overview頁面
   const isOverviewPage = location.pathname === '/student-overview' || location.pathname === '/teacher-overview';
+  // 檢查是否為觀摩設定頁面
+  const isObservationPage = location.pathname === '/observation';
   const [projectList, setProjectList] = useState([]);
   // 使用全域用戶工具並監聽更新事件
   const [userName, setUserName] = useState(getCurrentUsername());
@@ -101,34 +103,6 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     };
   }, []);
 
-  // useEffect(() => {
-  //   async function fetchData() {
-  //     try {
-  //       let projectData = null;
-  
-  //       // 獲取單個專案資訊
-  //       if (projectId) {
-  //         projectData = await getProject(projectId);
-  //         setProjectInfo(projectData);
-  //       }
-  
-  //       // 獲取指導老師的所有專案
-  //       const mentorProjects = await getProjectsByMentor(userName);
-  
-  //       // 合併專案列表並過濾重複專案
-  //       const allProjects = projectData ? [projectData, ...mentorProjects] : mentorProjects;
-  //       const uniqueProjects = Array.from(
-  //         new Map(allProjects.map((project) => [project.id, project])).values()
-  //       );
-  //       setProjectList(uniqueProjects);
-  //     } catch (error) {
-  //       console.error("Error fetching projects:", error);
-  //     }
-  //   }
-  
-  //   fetchData();
-  // }, [projectId, userName]);
-  
     useEffect(() => {
     async function fetchData() {
         try {
@@ -181,61 +155,6 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     fetchData();
 }, [projectId]); // 添加依賴，只需要 projectId
 
-// useEffect(() => {
-//   async function fetchData() {
-//       try {
-//           let projectData = null;
-//           console.log("當前登入的使用者名稱:", userName);
-
-//           // 確保有有效的 userName
-//           if (!userName || userName === "未知指導老師") {
-//               console.warn("未提供有效的指導老師名稱，跳過 API 請求");
-//               return;
-//           }
-
-//           console.log("正在以 projectId 獲取資料:", projectId);
-
-//           // 獲取單個專案資訊
-//           if (projectId) {
-//               projectData = await getProject(projectId);
-//               console.log("已獲取單一專案資料:", projectData);
-
-//               if (projectData) {
-//                   // 保存專案資訊與進度
-//                   setProjectInfo(projectData);
-//                   localStorage.setItem("currentStage", projectData.currentStage);
-//                   localStorage.setItem("currentSubStage", projectData.currentSubStage);
-//                   setCurrentStageIndex(projectData.currentStage);
-//                   setCurrentSubStageIndex(projectData.currentSubStage);
-//               }
-//           }
-
-//           // 獲取特定指導老師的所有專案
-//           const mentorName = projectData ? projectData.mentor : userName;
-//           console.log("正在以指導老師名稱獲取專案:", mentorName);
-
-//           const mentorProjects = await getProjectsByMentor(mentorName);
-//           console.log("已獲取指導老師的專案:", mentorProjects);
-
-//           // 合併專案列表
-//           const allProjects = projectData ? [projectData, ...mentorProjects] : mentorProjects;
-//           console.log("合併所有專案列表:", allProjects);
-
-//           // 過濾唯一專案
-//           const uniqueProjects = Array.from(
-//               new Map(allProjects.map((project) => [project.id, project])).values()
-//           );
-//           console.log("過濾後的唯一專案列表:", uniqueProjects);
-
-//           setProjectList(uniqueProjects);
-//       } catch (error) {
-//           console.error("獲取專案時發生錯誤:", error);
-//       }
-//   }
-
-//   fetchData();
-// }, [projectId, userName]); // 添加依賴 projectId 和 userName
-  
   const cleanStage = () => {
     clearStageInfo();
   };
@@ -339,8 +258,8 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-body-lg sm:text-h2">
           <img src="/SDLS_LOGO_GEMINI.png" alt="Logo" className="h-10 sm:h-14 w-auto" />
         </Link>
-        {!isOverviewPage && (
-        <p className="font-bold text-body-sm sm:text-h3 text-teal-900 truncate">{projectInfo.name || "專案名稱"}</p>
+        {!isOverviewPage && projectId && (
+        <p className="font-bold text-body-sm sm:text-h3 text-teal-900 truncate">{projectInfo.name || "..."}</p>
         )}
         {/* 觀摩模式指示器 */}
         {isObservationMode && !isOverviewPage && (
@@ -352,7 +271,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
       </div>
       {/* 右側功能 */}
       <div className="flex items-center flex-shrink-0">
-        {!isOverviewPage && (
+        {!isOverviewPage && !isObservationPage && (
         <ul className="hidden sm:flex items-center justify-center space-x-1">
           {getProjectUserQuery.isLoading || projectId === undefined ? <></> :
             getProjectUserQuery.isError ? <p className='font-bold text-h2'>Error</p> :
