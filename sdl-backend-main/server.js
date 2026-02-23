@@ -233,6 +233,9 @@ app.use('/api', require('./routes/metrics'));
 // 學習歷程匯出 API
 app.use('/api', require('./routes/export'));
 
+// 個人學習歷程 API
+app.use('/api', require('./routes/studentPortfolio'));
+
 // 統一錯誤處理中間件 - Linus 式簡潔設計
 const { errorHandler, NotFoundError } = require('./utils/errorHandler');
 

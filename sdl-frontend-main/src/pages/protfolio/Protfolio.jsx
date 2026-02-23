@@ -39,7 +39,7 @@ export default function Protfolio() {
 
     // 匯出學習歷程
     const handleExportPortfolio = () => {
-        navigate(`/project/${projectId}/export-preview`);
+        navigate(`/project/${projectId}/student-portfolio`);
     };
     
     const {

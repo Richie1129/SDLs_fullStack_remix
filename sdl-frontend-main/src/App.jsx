@@ -19,6 +19,7 @@ const Protfolio = lazy(() => import('./pages/protfolio/Protfolio'));
 const ManageIdeaWall = lazy(() => import("./pages/manageIdeaWall/ManageIdeaWall"));
 const IdeaWall = lazy(() => import("./pages/ideaWall/IdeaWall"));
 const ExportPreview = lazy(() => import("./pages/ExportPreview"));
+const StudentPortfolio = lazy(() => import('./pages/StudentPortfolio'));
 const NotFound = lazy(() => import("./pages/notFound/NotFound"));
 const TeacherManagementDashboard = lazy(() => import('./pages/teacher-dashboard'));
 const ManagementOverview = lazy(() => import('./pages/overview/ManagementOverview'));
@@ -68,6 +69,7 @@ export default function App() {
             <Route path="reflection" element={<Reflection />} />
             <Route path="protfolio" element={<Protfolio />} />
             <Route path="export-preview" element={<ExportPreview />} />
+            <Route path="student-portfolio" element={<StudentPortfolio />} />
             <Route path="manageIdeaWall" element={<ManageIdeaWall />} />
             <Route path="ideaWall" element={<IdeaWall />} />
             <Route path="teacherDashboard" element={<TeacherManagementDashboard />} />
