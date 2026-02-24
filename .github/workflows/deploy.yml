@@ -63,6 +63,9 @@ jobs:
           tags: |
             stone881129/sdl-front:${{ env.IMAGE_TAG }}
             stone881129/sdl-front:sdls-v3
+          # 傳入 VITE_* 建構時變數（不在 .env 中，需透過 Secrets 傳入）
+          build-args: |
+            VITE_RAGFLOW_CHAT_ID=${{ secrets.VITE_RAGFLOW_CHAT_ID }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
