@@ -15,7 +15,7 @@ import { getNodeChangeLogs } from '../../api/kanban';
 import Modal from '../../components/Modal';
 import Timer from './components/Timer';
 import KB_Coach from './components/KB_Coach';
-import OrchestratorMonitor from './components/OrchestratorMonitor';
+// import OrchestratorMonitor from './components/OrchestratorMonitor';
 import IdeaWallChatPanel from '../../components/IdeaWall/IdeaWallChatPanel';
 import CreateNodeModal from './components/modals/CreateNodeModal';
 import UpdateNodeModal from './components/modals/UpdateNodeModal';
@@ -405,17 +405,17 @@ export default function IdeaWall() {
 
             {/* Timer */}
             <Timer />
-            
+
             {/* Phase 2 Orchestrator 監控面板 */}
-            {!isObservationMode && state.ideaWallInfo?.id && (
+            {/* {!isObservationMode && state.ideaWallInfo?.id && (
                 <div className="absolute top-4 right-4 w-80 z-40">
-                    <OrchestratorMonitor 
-                        ideaWallId={state.ideaWallInfo.id} 
+                    <OrchestratorMonitor
+                        ideaWallId={state.ideaWallInfo.id}
                         projectId={parseInt(projectId)}
                     />
                 </div>
-            )}
-            
+            )} */}
+
             {/* 新增節點按鈕 */}
             {!isObservationMode && (
                 <button

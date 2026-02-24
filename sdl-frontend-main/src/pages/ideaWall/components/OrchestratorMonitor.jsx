@@ -1,6 +1,6 @@
 /**
  * Phase 2 Orchestrator 驗證頁面
- * 
+ *
  * 這個元件讓你能看到 Orchestrator 在背景做了什麼決策
  * 放在 IdeaWall 頁面的底部或側邊欄
  */
@@ -70,14 +70,14 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
                     <div className="flex items-center justify-between mb-2">
                         <span className="font-medium text-gray-600">冷卻狀態：</span>
                         <span className={`px-2 py-1 rounded ${
-                            status.canIntervene 
-                                ? 'bg-green-100 text-green-700' 
+                            status.canIntervene
+                                ? 'bg-green-100 text-green-700'
                                 : 'bg-yellow-100 text-yellow-700'
                         }`}>
                             {status.message}
                         </span>
                     </div>
-                    
+
                     {status.cooldownStatus && (
                         <div className="text-gray-500 space-y-1">
                             <div>最後介入：{status.cooldownStatus.lastIntervention ? new Date(status.cooldownStatus.lastIntervention).toLocaleString('zh-TW') : '從未介入'}</div>
@@ -86,7 +86,7 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
                             )}
                         </div>
                     )}
-                    
+
                     <div className="mt-2 text-gray-500">
                         目前貼文數：{status.nodeCount}
                     </div>
@@ -108,8 +108,8 @@ const OrchestratorMonitor = ({ ideaWallId, projectId }) => {
                     <div className="font-bold text-gray-700 mb-2 flex items-center justify-between">
                         <span>Orchestrator 決策：</span>
                         <span className={`px-2 py-1 rounded text-caption ${
-                            decision.action === 'TRIGGER' 
-                                ? 'bg-red-100 text-red-700' 
+                            decision.action === 'TRIGGER'
+                                ? 'bg-red-100 text-red-700'
                                 : decision.action === 'WAIT'
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-yellow-100 text-yellow-700'
