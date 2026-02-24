@@ -125,7 +125,21 @@ jobs:
               # --no-deps：不啟動/重建依賴服務，postgres 已在運行中
               # 容器仍會加入 compose 定義的網路，可連到 postgres
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
-              docker-compose -f "$compose_file" run --rm --no-deps api npx sequelize-cli db:migrate || {
+              # 取得專案名稱 (通常是目錄名稱的小寫，例如 sdls_fullstack_remix_v3_lazyinwork)
+              PROJECT_NAME=$(basename "$deploy_dir" | tr '[:upper:]' '[:lower:]')
+              # 組合出網路名稱 (專案名稱_agent_network)
+              NETWORK_NAME="${PROJECT_NAME}_agent_network"
+              
+              echo "🔗 使用網路: ${NETWORK_NAME}"
+              # 傳入環境變數，確保臨時容器能讀到 .env 裡的 DB 連線資訊
+              docker-compose -f "$compose_file" run --rm --no-deps --network "$NETWORK_NAME" \
+                -e PG_HOST=postgres \
+                -e PG_PORT=5432 \
+                -e PG_USER \
+                -e PG_PASSWORD \
+                -e PG_NAME \
+                -e NODE_ENV=production \
+                api npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
                 exit 1
               }
