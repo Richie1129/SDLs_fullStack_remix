@@ -133,19 +133,29 @@ jobs:
                 exit 1
               fi
 
-              NETWORK_NAME=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{range $k, $v := .NetworkSettings.Networks}}{{printf "%s\n" $k}}{{end}}' | head -1)
+              NETWORK_NAME=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{range $k, $v := .NetworkSettings.Networks}}{{printf "%s\n" $k}}{{end}}' | grep 'agent_network' | head -1)
+              if [ -z "$NETWORK_NAME" ]; then
+                NETWORK_NAME=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{range $k, $v := .NetworkSettings.Networks}}{{printf "%s\n" $k}}{{end}}' | head -1)
+              fi
               if [ -z "$NETWORK_NAME" ]; then
                 echo "❌ 無法取得 postgres 所屬網路"
                 docker inspect "$POSTGRES_CONTAINER_ID" --format '{{json .NetworkSettings.Networks}}'
                 exit 1
               fi
 
-              echo "🔗 使用網路: ${NETWORK_NAME}"
+              POSTGRES_IP=$(docker inspect "$POSTGRES_CONTAINER_ID" --format "{{(index .NetworkSettings.Networks \"$NETWORK_NAME\").IPAddress}}")
+              if [ -z "$POSTGRES_IP" ]; then
+                echo "❌ 無法取得 postgres 容器 IP"
+                docker inspect "$POSTGRES_CONTAINER_ID" --format '{{json .NetworkSettings.Networks}}'
+                exit 1
+              fi
+
+              echo "🔗 使用網路: ${NETWORK_NAME}, postgres IP: ${POSTGRES_IP}"
               # 傳入 .env 及必要覆蓋值，確保臨時容器能讀到正確 DB 連線資訊
               # 注意：舊版 docker-compose run 不支援 --network，改用 docker run 直接啟動
               docker run --rm --network "$NETWORK_NAME" \
                 --env-file .env \
-                -e PG_HOST=postgres \
+                -e PG_HOST="$POSTGRES_IP" \
                 -e PG_PORT=5432 \
                 -e NODE_ENV=production \
                 stone881129/sdl-api:${NEW_TAG} npx sequelize-cli db:migrate || {
