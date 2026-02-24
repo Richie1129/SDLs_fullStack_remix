@@ -3,8 +3,14 @@ const router = express.Router();
 const controller = require('../controllers/assistant');
 const { validateToken } = require('../middlewares/AuthMiddleware');
 
-// Content aggregation can be re-used by frontend, but also expose guidance generator
+// 舊的 API（保留，向後相容）
 router.post('/guidance', validateToken, controller.getGuidance);
+
+// 新的 API（支援 streaming）
+router.post('/chat', validateToken, controller.chatWithStreaming);
+
+// ✅ 外部連結 API（Gemini Grounding）
+router.post('/grounding', validateToken, controller.getExternalLinks);
 
 module.exports = router;
 

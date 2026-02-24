@@ -1,10 +1,11 @@
 import apiClient from './client';
+import storageService, { authStorage } from '../services/storageService';
 
 /**
  * 登出並撤銷 Refresh Token
  */
 export const logout = async () => {
-  const refreshToken = localStorage.getItem('refreshToken');
+  const refreshToken = authStorage.get('refreshToken');
 
   if (refreshToken) {
     try {
@@ -14,6 +15,6 @@ export const logout = async () => {
     }
   }
 
-  localStorage.clear();
+  storageService.clear();
   window.location.assign('/login');
 };

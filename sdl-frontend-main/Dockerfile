@@ -1,4 +1,4 @@
-FROM node:20.7.0
+FROM node:20.19-slim
 
 WORKDIR /sdl-frontend-main
 

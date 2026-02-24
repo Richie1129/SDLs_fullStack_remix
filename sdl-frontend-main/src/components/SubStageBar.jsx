@@ -6,12 +6,14 @@ import { getProject } from '../api/project';
 import { socket } from '../utils/socket';
 // import { useQuery } from 'react-query';
 import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
+import { getStageInfo, setStageInfo } from '../utils/authUtils';
 
 const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     const [animationClass, setAnimationClass] = useState('');
     const [dialogContent, setDialogContent] = useState('嗨!有什麼能夠幫助你的嗎?');
     const [showOptions, setShowOptions] = useState(true);
 
+    // Option B: 四階段 SRL 循環（「歷程」階段目標已隱藏）
     const stageGoal = [
         ["這個階段的目標是為了確定研究的主題範圍，並確保主題具有研究價值和實務意義哦!",
             "這個階段的目標是為了明確研究旨在解決的問題或達到的效果，闡述研究的重要性哦~",
@@ -24,13 +26,15 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
             "這個階段的目標是為了詳細記錄研究過程和發現，包括資料分析、討論和結論哦!"],
         ["這個階段的目標是為了定期回顧研究工作的進展，確保研究按計畫進行哦~",
             "這個階段的目標是為了與導師、同儕或研究小組討論研究發現和問題，以獲得回饋和建議哦!",
-            "這個階段的目標是為了總結研究的主要發現，討論研究的意義、限制和未來研究的方向哦~"],
-        ["封面製作的目的是為學習歷程檔案提供一個引人注目的開始，反映出檔案的主題和內容精神。它首先給讀者留下視覺上的印象，有助於建立檔案的專業形象。",
-            "摘要的目的是提供一個簡短而全面的學習歷程概述，包括學習目標、主要活動、獲得的學習成果等，讓讀者快速了解整個學習歷程的精髓。",
-            "目錄編制的目的是為了提供一個清晰的學習歷程架構概覽，使讀者能夠快速找到感興趣的部分。",
-            "內容撰寫的目的是深入記錄和分析學習過程中的各項活動、發現、思考和反思，以展現學習者的學習深度和廣度。",
-            "反思撰寫的目的是促進學習者對自己學習過程的深入思考，包括反思學習成果、過程中的挑戰、學到的課程以及未來的學習計劃。"]
+            "這個階段的目標是為了總結研究的主要發現，討論研究的意義、限制和未來研究的方向哦~"]
+        // [Option B 隱藏] 「歷程」階段目標
+        // ["這個階段的目標是製作一份完整的學習歷程封面哦!",
+        //     "這個階段的目標是撰寫研究摘要，概述研究的主要內容哦~",
+        //     "這個階段的目標是編制目錄，方便讀者查閱哦!",
+        //     "這個階段的目標是撰寫完整的研究內容哦~",
+        //     "這個階段的目標是進行學習反思，總結學習過程哦!"]
     ];
+    // Option B: 四階段 SRL 循環（「歷程」階段流程已隱藏）
     const stageProcess = [
         ["在這個階段你可以先進行文獻回顧，識別研究領域中的空白或爭議點，再透過討論和思考縮小研究範圍，最後再和小組成員一起確定出一個具體的研究主題!",
             "在這個階段你可以基於研究主題去細化研究的目標與期望成果，其中也包括了理論與實務層面的貢獻哦~",
@@ -43,12 +47,13 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
             "在這個階段你可以整理分析數據，撰寫研究報告的各個部分，包括引言、方法、結果、討論和結論等~"],
         ["在這個階段你可以定期檢視研究行程和成果，評估是否需要調整研究方向或方法!",
             "在這個階段你可以組織研究討論會，呈現研究結果，收集與整合回饋意見，對研究進行深入分析與完善!",
-            "在這個階段你可以基於研究結果和討論，撰寫結論部分，明確指出研究的貢獻和後續研究的建議~"],
-        ["使用線上設計軟體（Pixlr、Canva、Fotor）進行設計，確保封面既美觀又具有專業度，建議可以保持簡潔，避免過多的裝飾元素。",
-            "摘要文長建議約300字左右，簡練地概述統整後的學習活動的背景、目標、方法、主要發現或成果以及結論。",
-            "建議可依據學習主題進行分類排序，整理出一目了然的目錄，讓讀者快速理解你想呈現的學習重點。",
-            "建議根據歷程檔案中的階段紀錄資訊進行重製，內容的撰寫切記保持語言清晰、邏輯嚴謹。",
-            "反思撰寫切記「重質不重量」，不是越多越好!可以思考當初為何要參加?在過程中學會什麼?"]
+            "在這個階段你可以基於研究結果和討論，撰寫結論部分，明確指出研究的貢獻和後續研究的建議~"]
+        // [Option B 隱藏] 「歷程」階段流程
+        // ["在這個階段你可以設計和製作學習歷程的封面!",
+        //     "在這個階段你可以撰寫研究摘要，概述研究目的、方法和結果~",
+        //     "在這個階段你可以編制目錄，列出各章節的標題和頁碼!",
+        //     "在這個階段你可以撰寫完整的研究報告內容~",
+        //     "在這個階段你可以進行學習反思，總結學習過程中的收穫和成長!"]
     ];
 
     const [displayedContent, setDisplayedContent] = useState('');
@@ -102,13 +107,12 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     }, [isOpen]);
 
     const handleOptionSelect = (option) => {
-        const currentStageIndex = parseInt(localStorage.getItem("currentStage"), 10) || 1;
-        const currentSubStageIndex = parseInt(localStorage.getItem('currentSubStage'), 10) || 1;
+        const { currentStage, currentSubStage } = getStageInfo();
         if (option === 'option1') {
-            setDialogContent(stageGoal[currentStageIndex - 1][currentSubStageIndex - 1] || '目前沒有設定子階段目標。');
+            setDialogContent(stageGoal[currentStage - 1][currentSubStage - 1] || '目前沒有設定子階段目標。');
         }
         if (option === 'option2') {
-            setDialogContent(stageProcess[currentStageIndex - 1][currentSubStageIndex - 1] || '目前沒有設定子階段流程。');
+            setDialogContent(stageProcess[currentStage - 1][currentSubStage - 1] || '目前沒有設定子階段流程。');
         }
         setShowOptions(false);
     };
@@ -126,29 +130,31 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
 
 
     return (
-        <div className={`absolute right-2 sm:right-4 lg:right-40 bottom-0 mb-16 sm:mb-20 lg:mb-28 rounded-lg transform transition-all duration-500 ease-in-out ${animationClass} shadow-2xl dialog-box max-w-xs sm:max-w-sm lg:max-w-md`}>
-            <div className="bg-slate-100 p-3 sm:p-4 rounded-lg font-bold">
-                <p className="text-xs sm:text-sm lg:text-base">{displayedContent}</p>
+        <div className={`absolute right-2 sm:right-4 lg:right-40 bottom-0 mb-16 sm:mb-20 lg:mb-28 rounded-lg transform transition-all duration-slow ease-in-out ${animationClass} shadow-2xl dialog-box max-w-xs sm:max-w-sm lg:max-w-md`}>
+            <div className="bg-slate-100 p-component-sm sm:p-component-base rounded-lg font-bold">
+                <p className="text-caption sm:text-body-sm lg:text-body">{displayedContent}</p>
                 {showOptions && (
                     <>
-                        <button onClick={() => handleOptionSelect('option1')} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-xs sm:text-sm">階段目標說明</button>
-                        <button onClick={() => handleOptionSelect('option2')} className="bg-[#5BA491] text-white w-full rounded-lg py-1 sm:py-2 text-xs sm:text-sm">階段如何進行</button>
+                        <button onClick={() => handleOptionSelect('option1')} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-caption sm:text-body-sm">階段目標說明</button>
+                        <button onClick={() => handleOptionSelect('option2')} className="bg-[#5BA491] text-white w-full rounded-lg py-1 sm:py-2 text-caption sm:text-body-sm">階段如何進行</button>
                     </>
                 )}
                 {!showOptions && (
-                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-xs sm:text-sm">我了解了!</button>
+                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-caption sm:text-body-sm">我了解了!</button>
                 )}
             </div>
         </div>
     );
 };
 
+// Option B: 四階段 SRL 循環（「歷程」階段已隱藏）
 const stageInfo = [
-    ["提出研究主題", "提出研究目的", "提出研究問題"],
-    ["訂定研究構想表", "設計研究記錄表格", "規劃研究排程"],
-    ["進行嘗試性研究", "分析資列與繪圖", "撰寫研究結果"],
-    ["檢視研究進度", "進行研究討論", "撰寫研究結論"],
-    ["封面製作", "摘要撰寫", "目錄編制", "內容撰寫", "反思撰寫"]
+    ["提出研究主題", "提出研究目的", "提出研究問題"],       // 定標
+    ["訂定研究構想表", "設計研究記錄表格", "規劃研究排程"], // 擇策
+    ["進行嘗試性研究", "分析資列與繪圖", "撰寫研究結果"],   // 監評
+    ["檢視研究進度", "進行研究討論", "撰寫研究結論"]        // 調節
+    // [Option B 隱藏] 「歷程」階段 - 改為獨立的 Portfolio 功能模組
+    // ["封面製作", "摘要撰寫", "目錄編制", "內容撰寫", "反思撰寫"]
 ];
 // const currentStageIndex = parseInt(localStorage.getItem("currentStage"), 10) || 1;
 // const currentSubStageIndex = parseInt(localStorage.getItem("currentSubStage"), 10) || 1;
@@ -203,8 +209,7 @@ export default function SubStageComponent() {
     const getProjectQuery = useQuery("getProject", () => getProject(projectId),
         {
             onSuccess: (data) => {
-                localStorage.setItem('currentStage', data.currentStage)
-                localStorage.setItem('currentSubStage', data.currentSubStage)
+                setStageInfo(data.currentStage, data.currentSubStage);
                 setCurrentStageIndex(data.currentStage)
                 setCurrentSubStageIndex(data.currentSubStage)
             },
@@ -283,14 +288,14 @@ export default function SubStageComponent() {
     }, [isDialogOpen]); // 依賴於 isDialogOpen 的變化來重新添加/移除事件監聽器
 
     return (
-        <div className="w-full bg-[#F5F5F5] h-12 sm:h-14 lg:h-16 duration-500 border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4">
-            <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-2 lg:p-4 overflow-x-auto" ref={dialogRef}>
-                <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4 min-w-0 flex-1">
+        <div className="w-full bg-[#F5F5F5] h-12 sm:h-14 lg:h-16 duration-slow border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4">
+            <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-component-xs lg:p-component-base overflow-x-auto" ref={dialogRef}>
+                <div className="flex items-center space-x-1 sm:space-x-stack-xs lg:space-x-stack-sm min-w-0 flex-1">
                     {stages.map((subStage, index) => (
                         <React.Fragment key={index}>
                             <div 
                                 style={{ backgroundColor: getStageColor(index + 1) }} 
-                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner text-xs sm:text-sm lg:text-base whitespace-nowrap`}
+                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner text-caption sm:text-body-sm lg:text-body whitespace-nowrap`}
                             >
                                 {subStage}
                             </div>
@@ -306,7 +311,7 @@ export default function SubStageComponent() {
                     onClick={handleRobotClick}
                     className="ml-2 sm:ml-4 lg:ml-36 cursor-pointer flex-shrink-0"
                     style={{ width: '32px', height: '32px' }}>
-                    <img src={imageSrc} alt="Robot" className={`w-full h-full transition-all duration-300 ease-in-out ${isHovered ? 'scale-110 ' : 'scale-100'}`} />
+                    <img src={imageSrc} alt="Robot" className={`w-full h-full transition-opacity duration-normal ease-in-out ${isHovered ? 'opacity-80' : 'opacity-100'}`} />
                 </span>
                 <DialogBox
                     isOpen={isDialogOpen}

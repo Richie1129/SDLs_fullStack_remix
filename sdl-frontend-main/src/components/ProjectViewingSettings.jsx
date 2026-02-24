@@ -83,41 +83,41 @@ const ProjectViewingSettings = ({ project, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-component-base">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-hidden">
                 {/* 標題列 */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                        <FaCog className="text-lg" />
-                        <h2 className="text-lg font-semibold">觀摩權限設定</h2>
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-component-base flex items-center justify-between">
+                    <div className="flex items-center space-x-stack-xs">
+                        <FaCog className="text-body-lg" />
+                        <h2 className="text-body-lg font-semibold">觀摩權限設定</h2>
                     </div>
                     <button
                         onClick={onClose}
                         className="text-white hover:text-gray-200 transition-colors"
                     >
-                        <FaTimes className="text-lg" />
+                        <FaTimes className="text-body-lg" />
                     </button>
                 </div>
 
-                <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+                <div className="p-component-md-lg max-h-[calc(90vh-120px)] overflow-y-auto">
                     {/* 專案資訊 */}
-                    <div className="mb-6 p-3 bg-gray-50 rounded-lg">
+                    <div className="mb-6 p-component-sm bg-gray-50 rounded-lg">
                         <h3 className="font-medium text-gray-800 mb-1">{project.name}</h3>
-                        <p className="text-sm text-gray-600 line-clamp-2">{project.describe}</p>
+                        <p className="text-body-sm text-gray-600 line-clamp-2">{project.describe}</p>
                     </div>
 
                     {/* 開放觀摩開關 */}
                     <div className="mb-6">
-                        <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                        <div className="flex items-center justify-between p-component-base bg-blue-50 rounded-lg">
                             <div className="flex items-center space-x-3">
                                 {isOpen ? (
-                                    <FaEye className="text-green-600 text-xl" />
+                                    <FaEye className="text-green-600 text-h3" />
                                 ) : (
-                                    <FaEyeSlash className="text-gray-400 text-xl" />
+                                    <FaEyeSlash className="text-gray-400 text-h3" />
                                 )}
                                 <div>
                                     <h4 className="font-medium text-gray-800">開放觀摩</h4>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-body-sm text-gray-600">
                                         {isOpen ? '其他班級可觀摩此專案' : '僅限專案成員可見'}
                                     </p>
                                 </div>
@@ -137,7 +137,7 @@ const ProjectViewingSettings = ({ project, onClose }) => {
                     {/* 班級選擇 */}
                     {isOpen && (
                         <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                            <label className="block text-body-sm font-medium text-gray-700 mb-3">
                                 可觀摩的班級 <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
@@ -176,7 +176,7 @@ const ProjectViewingSettings = ({ project, onClose }) => {
                                             </label>
                                         ))}
                                         {availableClasses.length === 0 && (
-                                            <div className="px-4 py-3 text-gray-500 text-sm">
+                                            <div className="px-4 py-3 text-gray-500 text-body-sm">
                                                 暫無可用班級
                                             </div>
                                         )}
@@ -186,11 +186,11 @@ const ProjectViewingSettings = ({ project, onClose }) => {
 
                             {/* 已選擇的班級標籤 */}
                             {selectedClasses.length > 0 && (
-                                <div className="mt-3 flex flex-wrap gap-2">
+                                <div className="mt-3 flex flex-wrap gap-stack-xs">
                                     {selectedClasses.map((className) => (
                                         <span
                                             key={className}
-                                            className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                                            className="inline-flex items-center px-3 py-1 rounded-full text-body-sm bg-blue-100 text-blue-800"
                                         >
                                             {className}
                                             <button
@@ -198,7 +198,7 @@ const ProjectViewingSettings = ({ project, onClose }) => {
                                                 onClick={() => handleClassToggle(className)}
                                                 className="ml-2 text-blue-600 hover:text-blue-800"
                                             >
-                                                <FaTimes className="text-xs" />
+                                                <FaTimes className="text-caption" />
                                             </button>
                                         </span>
                                     ))}

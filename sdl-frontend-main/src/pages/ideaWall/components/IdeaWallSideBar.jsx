@@ -16,10 +16,10 @@ export default function IdeaWallSideBar() {
             <div className='mt-2 py-3 pl-3 flex justify-start'>
                 <FaBars size={26} className='cursor-pointer' onClick={()=>setOpen(!open)}/>
             </div>
-            <div className='mt-4 flex flex-col gap-4 relative'>
+            <div className='mt-4 flex flex-col gap-stack-sm relative'>
                 {
                     menus?.map((menu, i) => (
-                    <div key={i} className={`${menu?.margin && "mt-5"} group flex items-center text-sm gap-3.5 font-medium p-3 hover:bg-slate-100 rounded-sm cursor-pointer`}>
+                    <div key={i} className={`${menu?.margin && "mt-5"} group flex items-center text-body-sm gap-3.5 font-medium p-component-sm hover:bg-slate-100 rounded-sm cursor-pointer`}>
                         <div>{React.createElement(menu?.icon, { size: "26" })}</div>
                         <h2 style={{transitionDelay: `${i + 1}00ms`,}} className={`whitespace-pre duration-500 ${!open && "opacity-0 translate-x-28 overflow-hidden"}`}>
                         {menu?.name}
@@ -31,7 +31,7 @@ export default function IdeaWallSideBar() {
                     ))
                 }
             </div> 
-            <Link to='/homepage' className='fixed bottom-0 items-center gap-3.5 font-medium p-3 hover:bg-slate-100 rounded-sm cursor-pointer'>
+            <Link to='/homepage' className='fixed bottom-0 items-center gap-3.5 font-medium p-component-sm hover:bg-slate-100 rounded-sm cursor-pointer'>
                 <AiOutlineRollback size={26} className='cursor-pointer'/>
             </Link>   
         </div>

@@ -19,22 +19,20 @@ router.patch('/:id/viewing-settings', validateToken, checkProjectOwnerOrTeacher,
 router.get('/:id/viewable', validateToken, controller.checkViewingPermission);
 
 // 現有路由
-router.get('/', validateToken, controller.getAllProject);  // 添加 validateToken 中間件
-router.get('/mentor/:mentor', controller.getProjectsByMentor);
-router.get('/:projectId', controller.getProject);
-// Aggregated project content for AI assistant
-// router.get('/:projectId/content', validateToken, checkProjectViewingPermission, assistantController.getProjectContent);
+router.get('/', validateToken, controller.getAllProject);
+router.get('/mentor/:mentor/semesters', validateToken, controller.getAvailableSemesters);
+router.get('/mentor/:mentor', validateToken, controller.getProjectsByMentor);
+router.post('/', validateToken, controller.createProject);
+router.post('/referral', validateToken, controller.inviteForProject);
 
 // Project chat history and turns (AssistantChat)
+router.get('/:projectId/chat/sessions', validateToken, checkProjectViewingPermission, chatTurnController.listSessions);
+router.delete('/:projectId/chat/sessions/:sessionId', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.deleteSession);
 router.get('/:projectId/chat', validateToken, checkProjectViewingPermission, chatTurnController.listByProject);
 router.post('/:projectId/chat', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.create);
 router.put('/:projectId/chat/:id', validateToken, checkProjectViewingPermission, checkWritePermission, chatTurnController.update);
-router.post('/', controller.createProject);
-router.post('/referral', controller.inviteForProject)
-router.put("/:projectId", controller.updateProject);
-router.delete("/:projectId", controller.deleteProject);
-
-// router.put('/:projectId', controller.updateProject);
-// router.delete('/:projectId', controller.deleteProject);
+router.get('/:projectId', validateToken, checkProjectViewingPermission, controller.getProject);
+router.put("/:projectId", validateToken, checkProjectOwnerOrTeacher, controller.updateProject);
+router.delete("/:projectId", validateToken, checkProjectOwnerOrTeacher, controller.deleteProject);
 
 module.exports = router;

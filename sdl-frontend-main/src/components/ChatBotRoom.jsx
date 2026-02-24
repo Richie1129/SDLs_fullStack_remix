@@ -44,7 +44,7 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
     }, [socket, chatRoomOpen]);
     return (
         <div className= {`w-[300px] h-[500px] fixed right-5 bottom-0 border-2 p-0 border-black/70 rounded bg-slate-100 ${chatRoomOpen ? "visible" : "invisible"}`}>
-            <div className='h-[31px] w-full flex justify-between text-base p-1 bg-gray-400 text-white'>
+            <div className='h-[31px] w-full flex justify-between text-body p-1 bg-gray-400 text-white'>
                 <span>小組討論區</span>
                 <button onClick={()=>{setChatRoomOpen(false)}} className='cursor-pointer rounded-lg hover:bg-gray-200 '>
                     <GrFormClose size={20} />
@@ -59,7 +59,7 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
                                     <div className={`w-fit max-w-[120px] rounded text-white flex items-center break-all px-[5px] mx-[5px] ${messages.author===getCurrentUsername()? "bg-[#5BA491]": "bg-sky-700"}`}>
                                         {messages.message}
                                     </div>
-                                    <div className='flex justify-end text-xs mx-[5px]'>
+                                    <div className='flex justify-end text-caption mx-[5px]'>
                                         <p>{messages.time}</p>
                                         <p>{messages.author}</p>
                                     </div>
@@ -70,7 +70,7 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
                 }
                 <div ref={bottomRef} />
             </div>
-            <div className=' h-[35px] w-full flex justify-between text-base p-0 border-t-2 bg-slate-50 border-black/70'>
+            <div className=' h-[35px] w-full flex justify-between text-body p-0 border-t-2 bg-slate-50 border-black/70'>
                 <input 
                     type="text" 
                     className='w-10/12 outline-none p-1'

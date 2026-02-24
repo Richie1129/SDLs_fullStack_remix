@@ -1,6 +1,6 @@
 // 引入必要的套件
-const axios = require('axios'); // 用於 GPT API 呼叫
-const { GoogleGenerativeAI } = require('@google/generative-ai'); // 用於 Gemini API 呼叫
+const axios = require('axios'); // 用於 vLLM API 呼叫 (Gemma-3, GPT-OSS-20b)
+const { GoogleGenAI } = require('@google/genai'); // 用於 Gemini API 呼叫
 require('dotenv').config(); // 載入環境變數
 
 // 5Rs 反思框架的詳細定義
@@ -135,107 +135,20 @@ Reconstructing：${studentContent.reconstructing || '未填寫'}
 • 每個區塊的文字回饋以2–4句為宜。`;
 }
 
-// GPT API 呼叫函數
-async function callGPTAPI(prompt) {
+// Gemini API 呼叫函數 (使用新版 SDK)
+async function callGeminiAPI(prompt, options = {}) {
   try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4o-mini', // 使用 gpt-4o-mini 模型
-        messages: [
-          {
-            role: 'system',
-            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7, // 設定生成溫度
-        max_tokens: 2000 // 設定最大輸出 token 數
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // 從環境變數獲取 API Key
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    return {
-      success: true,
-      provider: 'gpt-4o-mini',
-      content: response.data.choices[0].message.content // 返回 AI 生成的內容
-    };
-  } catch (error) {
-    console.error('GPT API 呼叫失敗:', error.response?.data || error.message);
-    throw new Error(`GPT API 呼叫失敗: ${error.response?.data?.error?.message || error.message}`);
-  }
-}
-
-// GPT-4.1-Nano API 呼叫函數
-async function callGPTNanoAPI(prompt) {
-  try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4.1-nano', // 使用 gpt-4.1-nano 模型
-        messages: [
-          {
-            role: 'system',
-            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7, // 設定生成溫度
-        max_tokens: 2000 // 設定最大輸出 token 數
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // 從環境變數獲取 API Key
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    return {
-      success: true,
-      provider: 'gpt-4.1-nano',
-      content: response.data.choices[0].message.content // 返回 AI 生成的內容
-    };
-  } catch (error) {
-    console.error('GPT-4.1-Nano API 呼叫失敗:', error.response?.data || error.message);
-    throw new Error(`GPT-4.1-Nano API 呼叫失敗: ${error.response?.data?.error?.message || error.message}`);
-  }
-}
-
-// Gemini API 呼叫函數 (已更新為直接使用 Node.js SDK)
-async function callGeminiAPI(prompt) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY; // 從環境變數獲取 API Key
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new Error("GEMINI_API_KEY not found in environment variables");
     }
 
-    // 初始化 GoogleGenerativeAI 客戶端
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const genAI = new GoogleGenAI({ apiKey });
 
-    // 獲取 Gemini 模型實例
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    // ✅ 修復：加入 systemInstruction 支援
+    const systemInstruction = options.systemInstruction ||
+      '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。';
 
-    // 設定生成配置
-    const generationConfig = {
-      temperature: 0.7,
-      topP: 1,
-      topK: 1,
-      maxOutputTokens: 2048,
-    };
-
-    // 設定安全設定
     const safetySettings = [
       { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
       { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
@@ -243,25 +156,109 @@ async function callGeminiAPI(prompt) {
       { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
     ];
 
-    // 呼叫 Gemini API
-    const result = await model.generateContent({
-      contents: [{ parts: [{ text: prompt }] }], // 將 prompt 作為內容傳遞
-      generationConfig,
-      safetySettings,
+    // ✅ 修復：攤平 config 結構，符合 @google/genai API 規範
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        systemInstruction,  // ✅ 修復：加入 systemInstruction
+        temperature: 0.7,   // ✅ 修復：攤平到 config 層級
+        topP: 1,
+        topK: 1,
+        maxOutputTokens: 2048,
+        safetySettings,
+      }
     });
 
-    const response = await result.response; // 獲取 API 回應
-    const text = response.text(); // 提取回應中的文字內容
+    const text = response.text;
 
     return {
       success: true,
-      provider: "gemini-2.0-flash",
-      content: text, // 返回 AI 生成的內容
+      provider: "gemini-2.5-flash",
+      content: text,
     };
 
   } catch (error) {
     console.error('Gemini API 呼叫失敗:', error.message);
     throw new Error(`Gemini API 呼叫失敗: ${error.message}`);
+  }
+}
+
+// vLLM API 呼叫函數 (Gemma-3-27b)
+async function callVLLMGemmaAPI(prompt) {
+  try {
+    const response = await axios.post(
+      `${process.env.VLLM_BASE_URL}/chat/completions`,
+      {
+        model: process.env.VLLM_MODEL_NAME,
+        messages: [
+          {
+            role: 'system',
+            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.VLLM_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return {
+      success: true,
+      provider: 'gemma-3-27b',
+      content: response.data.choices[0].message.content
+    };
+  } catch (error) {
+    console.error('vLLM Gemma-3 API 呼叫失敗:', error.response?.data || error.message);
+    throw new Error(`vLLM Gemma-3 API 呼叫失敗: ${error.response?.data?.error?.message || error.message}`);
+  }
+}
+
+// Hsueh vLLM API 呼叫函數 (GPT-OSS-20b)
+async function callHsuehVLLMAPI(prompt) {
+  try {
+    const response = await axios.post(
+      `${process.env.HSUEH_VLLM_BASE_URL}/chat/completions`,
+      {
+        model: process.env.HSUEH_VLLM_MODEL_NAME,
+        messages: [
+          {
+            role: 'system',
+            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${process.env.HSUEH_VLLM_API_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return {
+      success: true,
+      provider: 'gpt-oss-20b',
+      content: response.data.choices[0].message.content
+    };
+  } catch (error) {
+    console.error('Hsueh vLLM GPT-OSS API 呼叫失敗:', error.response?.data || error.message);
+    throw new Error(`Hsueh vLLM GPT-OSS API 呼叫失敗: ${error.response?.data?.error?.message || error.message}`);
   }
 }
 
@@ -295,55 +292,59 @@ exports.analyze5RsReflection = async (req, res) => {
 
     // 根據偏好選擇 API 提供者
     if (preferredProvider === 'auto') {
+      // 自動模式：優先使用 Gemma-3，失敗則嘗試其他選項
       try {
-        console.log('自動模式：嘗試使用 Gemini API...');
-        result = await callGeminiAPI(analysisPrompt);
-        console.log('Gemini API 成功，使用模型:', result.provider);
-      } catch (geminiError) {
-        console.log('Gemini 失敗，嘗試使用 GPT-4.1-Nano API...');
+        console.log('自動模式：嘗試使用 Gemma-3 API...');
+        result = await callVLLMGemmaAPI(analysisPrompt);
+        console.log('Gemma-3 API 成功，使用模型:', result.provider);
+      } catch (gemmaError) {
+        console.log('Gemma-3 失敗，嘗試使用 GPT-OSS-20b...');
         try {
-          result = await callGPTNanoAPI(analysisPrompt);
-          console.log('GPT-4.1-Nano 成功，使用模型:', result.provider);
-        } catch (nanoError) {
-          console.log('Nano 也失敗，改用 GPT-4o-mini API...');
-          result = await callGPTAPI(analysisPrompt);
-          console.log('GPT-4o-mini 成功，使用模型:', result.provider);
+          result = await callHsuehVLLMAPI(analysisPrompt);
+          console.log('GPT-OSS-20b 成功，使用模型:', result.provider);
+        } catch (gptOssError) {
+          console.log('GPT-OSS-20b 也失敗，嘗試使用 Gemini...');
+          result = await callGeminiAPI(analysisPrompt);
+          console.log('Gemini API 成功，使用模型:', result.provider);
         }
       }
-    } else if (preferredProvider === 'gpt') {
+    } else if (preferredProvider === 'gemma-3') {
+      // Gemma-3 優先，失敗則 fallback 到 Gemini
       try {
-        console.log('嘗試使用 GPT-4o-mini API...');
-        result = await callGPTAPI(analysisPrompt);
-        console.log('GPT-4o-mini API 成功，使用模型:', result.provider);
+        console.log('嘗試使用 Gemma-3 API...');
+        result = await callVLLMGemmaAPI(analysisPrompt);
+        console.log('Gemma-3 API 成功，使用模型:', result.provider);
       } catch (error) {
-        console.log('GPT-4o-mini API 失敗，嘗試使用 Gemini API...');
+        console.log('Gemma-3 API 失敗，fallback 到 Gemini API...');
         result = await callGeminiAPI(analysisPrompt);
         console.log('Gemini API 成功，使用模型:', result.provider);
       }
-    } else if (preferredProvider === 'gpt-nano') {
+    } else if (preferredProvider === 'gpt-oss-20b') {
+      // GPT-OSS-20b 優先，失敗則 fallback 到 Gemini
       try {
-        console.log('嘗試使用 GPT-4.1-Nano API...');
-        result = await callGPTNanoAPI(analysisPrompt);
-        console.log('GPT-4.1-Nano API 成功，使用模型:', result.provider);
+        console.log('嘗試使用 GPT-OSS-20b API...');
+        result = await callHsuehVLLMAPI(analysisPrompt);
+        console.log('GPT-OSS-20b API 成功，使用模型:', result.provider);
       } catch (error) {
-        console.log('GPT-4.1-Nano API 失敗，嘗試使用 GPT-4o-mini API...');
-        result = await callGPTAPI(analysisPrompt);
-        console.log('GPT-4o-mini API 成功，使用模型:', result.provider);
+        console.log('GPT-OSS-20b API 失敗，fallback 到 Gemini API...');
+        result = await callGeminiAPI(analysisPrompt);
+        console.log('Gemini API 成功，使用模型:', result.provider);
       }
     } else if (preferredProvider === 'gemini') {
+      // Gemini 優先，失敗則嘗試 Gemma-3
       try {
         console.log('嘗試使用 Gemini API...');
         result = await callGeminiAPI(analysisPrompt);
         console.log('Gemini API 成功，使用模型:', result.provider);
       } catch (error) {
-        console.log('Gemini API 失敗，嘗試使用 GPT-4.1-Nano API...');
-        result = await callGPTNanoAPI(analysisPrompt);
-        console.log('GPT-4.1-Nano API 成功，使用模型:', result.provider);
+        console.log('Gemini API 失敗，嘗試使用 Gemma-3 API...');
+        result = await callVLLMGemmaAPI(analysisPrompt);
+        console.log('Gemma-3 API 成功，使用模型:', result.provider);
       }
     } else {
       return res.status(400).json({
         success: false,
-        message: '不支援的 API 提供者。請使用 "gpt", "gpt-nano", "gemini", 或 "auto"'
+        message: '不支援的 API 提供者。請使用 "gemma-3", "gpt-oss-20b", "gemini", 或 "auto"'
       });
     }
 

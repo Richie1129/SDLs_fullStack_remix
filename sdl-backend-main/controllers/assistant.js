@@ -18,8 +18,195 @@ const Stage = require("../models/stage");
 const Sub_stage = require("../models/sub_stage");
 const ChatTurn = require("../models/chat_turn");
 
-const { callGPTAPI } = require("../services/gpt");
-const { callGeminiAPI } = require("../services/gemini");
+const { callGeminiAPI, callGeminiGrounding } = require("../services/gemini");
+const { streamGeminiResponse } = require("../services/streamingService");
+const { streamGeminiResponseStructured } = require("../services/structuredStreamingService");
+const ASSISTANT_CONFIG = require("../config/assistant");
+const { PromptBuilder } = require("../config/assistantPrompts");
+const { logAudit } = require("../services/auditService");
+
+/**
+ * 估算 Token 數量
+ * 簡化演算法：中文約 1.5-2 字元 = 1 token，英文約 4 字元 = 1 token
+ * @param {string} text - 要估算的文字
+ * @returns {number} 估算的 token 數
+ */
+function estimateTokenCount(text) {
+  if (!text) return 0;
+
+  const chineseChars = (text.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const otherChars = text.length - chineseChars;
+
+  // 中文：1.5 字元 ≈ 1 token，英文：4 字元 ≈ 1 token
+  const estimatedTokens = Math.ceil(chineseChars / 1.5 + otherChars / 4);
+
+  return estimatedTokens;
+}
+
+/**
+ * ProjectContext 快取系統
+ * Linus 原則：簡單的資料結構，消除重複計算
+ *
+ * 快取策略：
+ * - TTL: 5 分鐘（連續對話期間不重複查詢）
+ * - Key: projectId
+ * - 自動清理過期條目
+ */
+const projectContextCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 分鐘
+
+/**
+ * 取得 ProjectContext（帶快取）
+ *
+ * @param {number} projectId - 專案 ID
+ * @param {Object} projectData - 專案基本資料（含使用者資訊）
+ * @param {boolean} forceRefresh - 強制重新查詢（預設 false）
+ * @returns {Promise<Object>} projectContext
+ */
+async function getProjectContext(projectId, projectData, forceRefresh = false) {
+  const cacheKey = `project_${projectId}`;
+  const now = Date.now();
+
+  // 快取命中且未過期
+  if (!forceRefresh) {
+    const cached = projectContextCache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      console.log(`🚀 [Cache Hit] ProjectContext 從快取載入 (${projectId})`);
+      return cached.data;
+    }
+  }
+
+  // 快取未命中或強制刷新，重新查詢資料庫
+  console.log(`📊 [Cache Miss] 開始撈取 ProjectContext (${projectId})`);
+
+  const [stageMeta, stageStructure, stageCompletion, kanban, ideaWall, submissions] = await Promise.all([
+    getStageMeta(projectData.project),
+    getCompleteStageStructure(projectId),
+    getStageCompletionStatus(projectId, projectData.project.currentStage, projectData.project.currentSubStage),
+    getKanbanSnapshot(projectId),
+    getIdeaWallSnapshot(projectId),
+    getSubmissions(projectId),
+  ]);
+
+  // 組裝 projectContext
+  const projectContext = {
+    專案名稱: projectData.project.name,
+    專案描述: projectData.project.describe || '無描述',
+    當前階段: `${projectData.project.currentStage || '未設定'}/${projectData.project.currentSubStage || '未設定'}`,
+
+    階段要求: {
+      hasData: !!stageMeta,
+      階段名稱: stageMeta?.stageName || null,
+      子階段名稱: stageMeta?.meta.name || null,
+      子階段說明: stageMeta?.meta.description || null,
+      需填寫欄位: stageMeta?.meta.requiredFields || []
+    },
+
+    完整階段結構: {
+      hasData: !!stageStructure && stageStructure.length > 0,
+      總階段數: stageStructure?.length || 0,
+      所有階段: stageStructure || [],
+      當前階段ID: projectData.project.currentStage,
+      當前子階段ID: projectData.project.currentSubStage
+    },
+
+    階段完成狀態: stageCompletion || {
+      hasData: false,
+      message: "無階段完成資料"
+    },
+
+    看板狀況: {
+      hasData: kanban.length > 0,
+      總欄位數: kanban.length,
+      總任務數: kanban.reduce((sum, col) => sum + col.tasks.length, 0),
+      欄位詳情: kanban.map(col => ({
+        欄位名稱: col.name,
+        任務數量: col.tasks.length,
+        任務列表: col.tasks.slice(0, ASSISTANT_CONFIG.PROMPT_KANBAN_TASKS_LIMIT).map(t => ({
+          標題: t.title,
+          內容: t.content ? t.content.substring(0, ASSISTANT_CONFIG.PROMPT_TASK_CONTENT_LIMIT) : '',
+          負責人: t.assignees?.map(a => a.username).join(', ') || '未指派',
+          標籤: t.labels?.join(', ') || '無',
+        }))
+      }))
+    },
+
+    想法牆: {
+      hasData: ideaWall.total > 0,
+      總節點數: ideaWall.total,
+      想法列表: ideaWall.nodes.slice(0, ASSISTANT_CONFIG.PROMPT_IDEA_NODES_LIMIT).map(n => ({
+        標題: n.title,
+        內容: n.content ? n.content.substring(0, ASSISTANT_CONFIG.PROMPT_IDEA_CONTENT_LIMIT) : '',
+        作者: n.owner,
+        建立時間: n.createdAt,
+      }))
+    },
+
+    最近提交記錄: {
+      hasData: submissions.length > 0,
+      總數: submissions.length,
+      記錄列表: submissions.slice(0, ASSISTANT_CONFIG.PROMPT_SUBMISSIONS_LIMIT).map(s => ({
+        階段: s.stage,
+        內容摘要: typeof s.content === 'string'
+          ? s.content.substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT)
+          : JSON.stringify(s.content).substring(0, ASSISTANT_CONFIG.PROMPT_SUBMIT_CONTENT_LIMIT),
+        提交時間: s.createdAt,
+      }))
+    },
+  };
+
+  // 存入快取
+  projectContextCache.set(cacheKey, {
+    data: projectContext,
+    timestamp: now
+  });
+
+  console.log(`✅ [Cache Store] ProjectContext 已快取 (${projectId})`);
+
+  // 定期清理過期快取（簡單策略：當快取超過 100 個時觸發清理）
+  if (projectContextCache.size > 100) {
+    cleanExpiredCache();
+  }
+
+  return projectContext;
+}
+
+/**
+ * 清理過期的快取條目
+ * Linus 原則：簡單實用，不過度設計
+ */
+function cleanExpiredCache() {
+  const now = Date.now();
+  let cleaned = 0;
+
+  for (const [key, value] of projectContextCache.entries()) {
+    if (now - value.timestamp >= CACHE_TTL) {
+      projectContextCache.delete(key);
+      cleaned++;
+    }
+  }
+
+  if (cleaned > 0) {
+    console.log(`🧹 [Cache Clean] 清理 ${cleaned} 個過期快取條目`);
+  }
+}
+
+/**
+ * 手動清除特定專案的快取（供外部更新事件使用）
+ * 例如：當看板、想法牆有變更時，呼叫此函數清除快取
+ *
+ * @param {number} projectId - 專案 ID
+ */
+function invalidateProjectCache(projectId) {
+  const cacheKey = `project_${projectId}`;
+  const deleted = projectContextCache.delete(cacheKey);
+  if (deleted) {
+    console.log(`🗑️ [Cache Invalidate] 已清除 ProjectContext 快取 (${projectId})`);
+  }
+}
+
+// 匯出快取管理函數（供其他 controller 使用）
+module.exports.invalidateProjectCache = invalidateProjectCache;
 
 /**
  * 整合專案內容供 LLM 分析使用
@@ -151,6 +338,234 @@ async function getStageMeta(project) {
   };
 }
 
+/**
+ * 取得完整階段結構（所有階段和子階段）
+ *
+ * Linus 設計哲學：
+ * - 資料結構優先：讓 AI 能看到完整專案流程
+ * - 簡單實用：一次查詢取得所有資料
+ * - 消除特殊情況：所有階段使用相同格式
+ *
+ * @param {number} projectId - 專案 ID
+ * @returns {Promise<Object|null>} 完整階段結構或 null
+ */
+async function getCompleteStageStructure(projectId) {
+  try {
+    // 查詢專案的 Process，包含所有 Stage 和 Sub_stage
+    const process = await Process.findOne({
+      where: { projectId },
+      include: [
+        {
+          model: Stage,
+          include: [
+            {
+              model: Sub_stage,
+              attributes: ['id', 'name', 'description', 'userSubmit'],
+            },
+          ],
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    if (!process || !process.stages || process.stages.length === 0) {
+      console.log(`⚠️ [Stage Structure] 專案 ${projectId} 沒有階段資料`);
+      return null;
+    }
+
+    // 轉換為 AI 友善的格式
+    const stageStructure = process.stages.map((stage) => ({
+      階段ID: stage.id,
+      階段名稱: stage.name,
+      子階段: (stage.sub_stages || []).map((subStage) => ({
+        子階段ID: subStage.id,
+        子階段名稱: subStage.name,
+        子階段說明: subStage.description || '無說明',
+        需填寫欄位: subStage.userSubmit || {},
+      })),
+    }));
+
+    console.log(`✅ [Stage Structure] 成功載入 ${process.stages.length} 個階段`);
+    return stageStructure;
+  } catch (error) {
+    console.error(`❌ [Stage Structure] 查詢失敗:`, error);
+    return null;
+  }
+}
+
+/**
+ * 取得階段完成狀態（整合提交記錄）
+ *
+ * v2.3 新功能：
+ * - 整合階段結構與提交記錄
+ * - 檢查每個子階段的提交狀態
+ * - 分析欄位完整性（已填寫 vs 遺漏）
+ * - 計算完成度百分比
+ *
+ * Linus 設計哲學：
+ * - 資料結構優先：一次查詢，清晰整合
+ * - 消除特殊情況：所有子階段統一格式
+ * - 簡單實用：邏輯清晰，無複雜分支
+ *
+ * @param {number} projectId - 專案 ID
+ * @param {number} currentStageId - 當前階段 ID
+ * @param {number} currentSubStageId - 當前子階段 ID
+ * @returns {Promise<Object|null>} 階段完成狀態或 null
+ */
+async function getStageCompletionStatus(projectId, currentStageId, currentSubStageId) {
+  try {
+    // 第 1 步：查詢完整階段結構
+    const process = await Process.findOne({
+      where: { projectId },
+      include: [
+        {
+          model: Stage,
+          include: [
+            {
+              model: Sub_stage,
+              attributes: ['id', 'name', 'description', 'userSubmit'],
+            },
+          ],
+          attributes: ['id', 'name'],
+        },
+      ],
+    });
+
+    if (!process || !process.stages || process.stages.length === 0) {
+      console.log(`⚠️ [Stage Completion] 專案 ${projectId} 沒有階段資料`);
+      return null;
+    }
+
+    // 第 2 步：查詢所有提交記錄（不限制數量）
+    const allSubmissions = await Submit.findAll({
+      where: { projectId },
+      attributes: ['id', 'stage', 'content', 'createdAt', 'userId'],
+      order: [['createdAt', 'DESC']],
+    });
+
+    // 建立提交記錄索引：stage -> submission
+    const submissionMap = new Map();
+    allSubmissions.forEach(sub => {
+      // 每個階段可能有多次提交，取最新的
+      if (!submissionMap.has(sub.stage)) {
+        submissionMap.set(sub.stage, sub);
+      }
+    });
+
+    // 第 3 步：遍歷階段，整合提交狀態
+    let totalSubStages = 0;
+    let completedSubStages = 0;
+
+    const stageCompletionData = process.stages.map((stage) => {
+      const subStageStatusList = (stage.sub_stages || []).map((subStage) => {
+        totalSubStages++;
+        const stageKey = `${stage.id}-${subStage.id}`;
+        const submission = submissionMap.get(stageKey);
+
+        // 取得需填寫欄位
+        const requiredFields = Object.keys(subStage.userSubmit || {});
+
+        let subStageStatus;
+        if (submission) {
+          // 有提交記錄：檢查欄位完整性
+          const submittedContent = submission.content || {};
+          const submittedFields = Object.keys(submittedContent);
+
+          // 檢查哪些欄位已填寫（非空）
+          const filledFields = requiredFields.filter(key => {
+            const value = submittedContent[key];
+            // 嚴格檢查：排除 null、undefined、空字串、空陣列
+            if (value === null || value === undefined) return false;
+            if (typeof value === 'string' && value.trim() === '') return false;
+            if (Array.isArray(value) && value.length === 0) return false;
+            return true;
+          });
+
+          const missingFields = requiredFields.filter(key => !filledFields.includes(key));
+          const completeness = requiredFields.length > 0
+            ? Math.round((filledFields.length / requiredFields.length) * 100)
+            : 100;
+
+          // 如果完成度 100%，計為完成
+          if (completeness === 100) {
+            completedSubStages++;
+          }
+
+          subStageStatus = {
+            子階段ID: subStage.id,
+            子階段名稱: subStage.name,
+            需填寫欄位: subStage.userSubmit || {},
+            提交狀態: '已提交',
+            提交時間: submission.createdAt,
+            提交ID: submission.id,
+            欄位完整性: {
+              已填寫: filledFields,
+              遺漏: missingFields,
+              完整度: `${completeness}%`,
+            },
+          };
+        } else {
+          // 無提交記錄
+          const isCurrentStage = (stage.id === currentStageId && subStage.id === currentSubStageId);
+
+          subStageStatus = {
+            子階段ID: subStage.id,
+            子階段名稱: subStage.name,
+            需填寫欄位: subStage.userSubmit || {},
+            提交狀態: isCurrentStage ? '當前階段，進行中' : '未提交',
+            欄位完整性: {
+              已填寫: [],
+              遺漏: requiredFields,
+              完整度: '0%',
+            },
+          };
+        }
+
+        return subStageStatus;
+      });
+
+      // 計算該階段的完成度
+      const stageTotal = subStageStatusList.length;
+      const stageCompleted = subStageStatusList.filter(
+        sub => sub.欄位完整性.完整度 === '100%'
+      ).length;
+      const stageCompleteness = stageTotal > 0
+        ? Math.round((stageCompleted / stageTotal) * 100)
+        : 0;
+
+      return {
+        階段ID: stage.id,
+        階段名稱: stage.name,
+        階段完成度: `${stageCompleteness}%`,
+        子階段狀況: subStageStatusList,
+      };
+    });
+
+    // 計算總完成度
+    const totalCompleteness = totalSubStages > 0
+      ? Math.round((completedSubStages / totalSubStages) * 100)
+      : 0;
+
+    const result = {
+      hasData: true,
+      當前階段: { 階段ID: currentStageId, 子階段ID: currentSubStageId },
+      總完成度: `${totalCompleteness}%`,
+      統計: {
+        總子階段數: totalSubStages,
+        已完成數: completedSubStages,
+        未完成數: totalSubStages - completedSubStages,
+      },
+      各階段狀況: stageCompletionData,
+    };
+
+    console.log(`✅ [Stage Completion] 成功分析 ${process.stages.length} 個階段，總完成度: ${totalCompleteness}%`);
+    return result;
+  } catch (error) {
+    console.error(`❌ [Stage Completion] 查詢失敗:`, error);
+    return null;
+  }
+}
+
 async function getKanbanSnapshot(projectId) {
   const kanban = await Kanban.findOne({
     where: { projectId },
@@ -168,7 +583,7 @@ async function getKanbanSnapshot(projectId) {
               "assignees",
               "createdAt",
             ],
-            limit: 30, 
+            limit: ASSISTANT_CONFIG.DB_KANBAN_TASKS_LIMIT,
             order: [["createdAt", "DESC"]],
           },
         ],
@@ -183,8 +598,8 @@ async function getKanbanSnapshot(projectId) {
     name: column.name,
     tasks: column.tasks.map((task) => ({
       id: task.id,
-      title: task.title ? truncateText(task.title, 200) : "",
-      content: task.content ? truncateText(task.content, 1500) : "",
+      title: task.title ? truncateText(task.title, ASSISTANT_CONFIG.TRUNCATE_TASK_TITLE) : "",
+      content: task.content ? truncateText(task.content, ASSISTANT_CONFIG.TRUNCATE_TASK_CONTENT) : "",
       labels: task.labels || [],
       assignees: task.assignees || [],
       createdAt: task.createdAt,
@@ -202,7 +617,7 @@ async function getIdeaWallSnapshot(projectId) {
           [Op.and]: [{ title: { [Op.ne]: null } }, { title: { [Op.ne]: "" } }],
         },
         attributes: ["id", "title", "content", "createdAt", "owner"],
-        limit: 100,
+        limit: ASSISTANT_CONFIG.DB_IDEA_WALL_NODES_LIMIT,
         order: [["createdAt", "DESC"]],
       },
     ],
@@ -216,8 +631,8 @@ async function getIdeaWallSnapshot(projectId) {
     total: ideaWall.nodes.length,
     nodes: ideaWall.nodes.map((node) => ({
       id: node.id,
-      title: node.title ? truncateText(node.title, 200) : "",
-      content: node.content ? truncateText(node.content, 1500) : "",
+      title: node.title ? truncateText(node.title, ASSISTANT_CONFIG.TRUNCATE_NODE_TITLE) : "",
+      content: node.content ? truncateText(node.content, ASSISTANT_CONFIG.TRUNCATE_NODE_CONTENT) : "",
       createdAt: node.createdAt,
       owner: node.owner,
     })),
@@ -228,7 +643,7 @@ async function getSubmissions(projectId) {
   const submissions = await Submit.findAll({
     where: { projectId },
     attributes: ["id", "stage", "content", "createdAt", "userId"],
-    limit: 30,
+    limit: ASSISTANT_CONFIG.DB_SUBMISSIONS_LIMIT,
     order: [["createdAt", "DESC"]],
   });
 
@@ -236,7 +651,7 @@ async function getSubmissions(projectId) {
     id: submit.id,
     stage: submit.stage,
     content: submit.content
-      ? truncateText(JSON.stringify(submit.content), 2000)
+      ? truncateText(JSON.stringify(submit.content), ASSISTANT_CONFIG.TRUNCATE_SUBMIT_CONTENT)
       : "",
     createdAt: submit.createdAt,
     userId: submit.userId,
@@ -254,7 +669,7 @@ async function getChatHistory(projectId) {
       "assistantUsername",
       "createdAt",
     ],
-    limit: 10,
+    limit: ASSISTANT_CONFIG.DB_CHAT_HISTORY_LIMIT,
     order: [["createdAt", "DESC"]],
   });
 
@@ -264,7 +679,7 @@ async function getChatHistory(projectId) {
     if (turn.userContent) {
       history.push({
         role: "user",
-        content: truncateText(turn.userContent, 2000),
+        content: truncateText(turn.userContent, ASSISTANT_CONFIG.TRUNCATE_CHAT_CONTENT),
         username: turn.username,
         createdAt: turn.createdAt,
       });
@@ -273,27 +688,27 @@ async function getChatHistory(projectId) {
     if (turn.assistantContent) {
       history.push({
         role: "assistant",
-        content: truncateText(turn.assistantContent, 2000),
+        content: truncateText(turn.assistantContent, ASSISTANT_CONFIG.TRUNCATE_CHAT_CONTENT),
         username: turn.assistantUsername,
         createdAt: turn.createdAt,
       });
     }
   });
 
-  return history.slice(-20); 
+  return history.slice(-ASSISTANT_CONFIG.CHAT_HISTORY_FINAL_LIMIT);
 }
 
-/* 獲取 30 天內 動作 */
+/* 獲取最近活動摘要 */
 async function getActivitySummary(projectId) {
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - ASSISTANT_CONFIG.ACTIVITY_SUMMARY_DAYS);
 
   const taskChanges = await TaskChangeLog.findAll({
     where: {
       projectId,
-      createdAt: { [Op.gte]: thirtyDaysAgo },
+      createdAt: { [Op.gte]: daysAgo },
     },
-    limit: 200,
+    limit: ASSISTANT_CONFIG.DB_TASK_CHANGES_LIMIT,
     order: [["createdAt", "DESC"]],
   });
 
@@ -416,7 +831,7 @@ function generateBasicSummaries({ kanban, ideaWall, submissions, stageMeta }) {
     stageCompliance: stageMeta ? "階段資訊完整" : "缺少階段資訊",
     riskFactors: dataQualityHints,
     actionableInsights: ["建議使用 LLM 獲得更深度分析"],
-    existingTaskTitles: allTaskTitles.slice(0, 200),
+    existingTaskTitles: allTaskTitles.slice(0, ASSISTANT_CONFIG.BASIC_SUMMARY_TASK_TITLES_LIMIT),
     dataQualityHints,
   };
 }
@@ -589,11 +1004,297 @@ exports.getGuidance = async (req, res) => {
     };
 
     res.status(200).json(response);
+
+    // 審計追蹤：AI 助理指導請求
+    logAudit(req, {
+      action: 'ASSISTANT_GUIDANCE_REQUEST',
+      targetType: 'Project',
+      targetId: projectId,
+      projectId: projectId,
+      metadata: {
+        projectName: projectData.project.name,
+        userMessage: userMessage ? userMessage.substring(0, 100) : null,
+        messageLength: userMessage ? userMessage.length : 0,
+        responseLength: detailedMessage ? detailedMessage.length : 0,
+        degradedMode: projectAnalysis.degradedMode || false,
+        stats: {
+          kanbanColumns: kanbanSnapshot.length,
+          totalTasks: kanbanSnapshot.reduce((sum, col) => sum + col.tasks.length, 0),
+          ideaNodes: ideaWallSnapshot.total,
+          submissions: submissions.length
+        }
+      }
+    }).catch(err => {
+      console.error('❌ [Audit] 記錄 ASSISTANT_GUIDANCE_REQUEST 失敗:', err.message);
+    });
   } catch (error) {
     console.error("Guidance generation failed | 指導建議生成失敗:", error);
     res.status(500).json({
       error: "Failed to generate guidance | 指導建議生成失敗",
       message: "抱歉，暫時無法回應，請稍後再試。",
     });
+  }
+};
+
+/**
+ * 聊天功能（支援 streaming）
+ * POST /api/assistant/chat
+ *
+ * 功能說明：
+ * 1. 接收使用者的問題
+ * 2. 撈取專案的所有資料（看板、想法牆、提交記錄、對話歷史）
+ * 3. 將資料和問題一起傳給 AI
+ * 4. AI 以 streaming 方式回答（逐字傳回）
+ */
+exports.chatWithStreaming = async (req, res) => {
+  try {
+    const { projectId, message, provider = 'gemini', sessionId = 'default' } = req.body;
+    const userId = req.user?.id;
+
+    console.log('🤖 [Assistant Chat] 收到請求:', { projectId, message, provider, userId, sessionId });
+
+    // === 第 1 步：驗證輸入 ===
+    if (!userId) {
+      console.log('❌ [Assistant Chat] 驗證失敗: 未登入');
+      return res.status(401).json({ error: '請先登入' });
+    }
+
+    if (!projectId || !message) {
+      console.log('❌ [Assistant Chat] 驗證失敗: 缺少參數');
+      return res.status(400).json({ error: '需要 projectId 和 message' });
+    }
+
+    // === 第 2 步：取得專案資料和使用者權限 ===
+    console.log('📂 [Assistant Chat] 開始取得專案資料...');
+    const projectData = await getProjectBasicsAndUserRole(projectId, userId);
+
+    if (!projectData) {
+      console.log('❌ [Assistant Chat] 專案不存在或無權限');
+      return res.status(404).json({ error: '找不到專案或沒有權限' });
+    }
+
+    console.log('✅ [Assistant Chat] 專案資料取得成功:', projectData.project.name);
+
+    // === 第 3 步：取得專案資料（v2.0 帶快取優化）===
+    // 取得使用者名字
+    const userName = projectData.user.username || '同學';
+    console.log('👤 [Assistant Chat] 使用者名字:', userName);
+
+    // v2.0: 使用快取系統取得 projectContext（5 分鐘內的連續請求不重複查詢資料庫）
+    // chatHistory 單獨查詢（因為它是動態變化的，不適合快取）
+    const [projectContext, chatHistory] = await Promise.all([
+      getProjectContext(projectId, projectData),
+      getChatHistory(projectId),
+    ]);
+
+    console.log('✅ [Assistant Chat] 所有資料撈取完成');
+
+    // === 第 5 步：初始化 PromptBuilder（v2.0 優化，資料預處理只執行一次）===
+    const promptBuilder = new PromptBuilder({
+      userName,
+      projectContext,
+      chatHistory,
+      chatHistoryLimit: ASSISTANT_CONFIG.PROMPT_CHAT_HISTORY_LIMIT
+    });
+
+    // === 第 6 步：使用 Gemini ===
+    if (provider === 'gemini' || !provider) {
+      // 使用 Gemini（預設）
+      console.log('🚀 [Assistant Chat] 使用 Gemini 開始串流...');
+
+      // ✅ 設定 systemInstruction，強制 Markdown 格式輸出
+      const systemInstruction = `你是專業的專案導師 AI 助手。
+
+**重要格式要求（必須嚴格遵守）**：
+- 必須使用 Markdown 格式回覆
+- 使用 ## 或 ### 標題組織答案結構
+- 使用 **粗體** 標記重要資訊（如任務名稱、階段名稱、關鍵數字）
+- 使用列表（- 或 1.）讓內容更清晰
+- 程式碼或檔名使用 \`反引號\`
+- 需要比較時使用表格格式
+- 使用繁體中文回覆`;
+
+      // 檢查是否啟用 Structured Output（實驗性功能）
+      const useStructuredOutput = process.env.USE_STRUCTURED_OUTPUT === 'true';
+      let result;
+
+      if (useStructuredOutput) {
+        // 🧪 Experimental: 使用 Structured Output（消除 XML 解析，保證結構）
+        console.log('🧪 [Assistant Chat] 啟用 Structured Output 模式');
+
+        try {
+          // 使用簡化 Prompt（不需要 XML 標籤指示）
+          // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
+          const structuredPrompt = promptBuilder.forStructured(message);
+
+          // Token 計數監控
+          const promptTokens = estimateTokenCount(structuredPrompt);
+          const contextSize = JSON.stringify(projectContext).length;
+          console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元 (Structured)`);
+          console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
+          console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
+
+          // 嘗試使用 Structured Output
+          result = await streamGeminiResponseStructured(structuredPrompt, res, {
+            model: 'gemini-2.5-flash',
+            systemInstruction  // ✅ 傳入 Markdown 格式要求
+          });
+          console.log('✅ [Assistant Chat] Structured Output 成功');
+
+        } catch (structuredError) {
+          // Fallback: Structured Output 失敗，使用傳統方法
+          console.warn('⚠️ [Assistant Chat] Structured Output 失敗，fallback 到傳統方法');
+          console.error('  錯誤詳情:', structuredError.message);
+
+          // 使用傳統 Prompt（包含 XML 標籤指示）
+          // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
+          const prompt = promptBuilder.forGemini(message);
+
+          result = await streamGeminiResponse(prompt, res, {
+            model: 'gemini-2.5-flash',
+            systemInstruction  // ✅ 傳入 Markdown 格式要求
+          });
+        }
+
+      } else {
+        // 預設：使用傳統方法（零破壞性）
+        console.log('📝 [Assistant Chat] 使用傳統 XML 解析模式（預設）');
+
+        // 使用傳統 Prompt（包含 XML 標籤指示）
+        // v2.0: 使用 PromptBuilder（資料已預處理，性能提升）
+        const prompt = promptBuilder.forGemini(message);
+
+        // Token 計數監控
+        const promptTokens = estimateTokenCount(prompt);
+        const contextSize = JSON.stringify(projectContext).length;
+        console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元`);
+        console.log(`📊 [Token Monitor] 估算 Token 數: ~${promptTokens} tokens`);
+        console.log(`📊 [Token Monitor] 專案數據: 看板 ${projectContext.看板狀況.總欄位數} 欄/${projectContext.看板狀況.總任務數} 任務, 想法牆 ${projectContext.想法牆.總節點數} 節點, 提交 ${projectContext.最近提交記錄.總數} 筆`);
+
+        // Stream response and get thinking + content
+        result = await streamGeminiResponse(prompt, res, {
+          model: 'gemini-2.5-flash',
+          systemInstruction  // ✅ 傳入 Markdown 格式要求
+        });
+      }
+
+      // Save to database (async, don't block response)
+      if (result && (result.thinkingContent || result.assistantContent)) {
+        ChatTurn.create({
+          projectId: parseInt(projectId, 10),
+          projectName: projectData.project.name,
+          userId: parseInt(userId, 10),
+          username: userName,
+          userContent: message,
+          assistantContent: result.assistantContent || '',
+          thinkingContent: result.thinkingContent || null,
+          assistantUsername: 'AI 導師',
+          sessionId: sessionId || 'default'  // Include sessionId for session management
+        }).catch(err => {
+          console.error('❌ [Assistant Chat] 儲存對話失敗:', err);
+        });
+
+        // 審計追蹤：AI 助理聊天請求 (Gemini)
+        logAudit(req, {
+          action: 'ASSISTANT_CHAT_REQUEST',
+          targetType: 'Project',
+          targetId: parseInt(projectId, 10),
+          projectId: parseInt(projectId, 10),
+          metadata: {
+            projectName: projectData.project.name,
+            provider: 'gemini',
+            sessionId: sessionId || 'default',
+            message: message.substring(0, 100),
+            messageLength: message.length,
+            responseLength: result.assistantContent ? result.assistantContent.length : 0,
+            hasThinking: !!result.thinkingContent,
+            useStructuredOutput: process.env.USE_STRUCTURED_OUTPUT === 'true'
+          }
+        }).catch(err => {
+          console.error('❌ [Audit] 記錄 ASSISTANT_CHAT_REQUEST 失敗:', err.message);
+        });
+      }
+
+    } else {
+      return res.status(400).json({ error: 'provider 必須是 "gemini"' });
+    }
+
+  } catch (error) {
+    console.error('Chat streaming error:', error);
+
+    // 檢查 response 是否已經結束（避免重複寫入）
+    if (res.writableEnded) {
+      console.log('⚠️ Response already ended, skipping error write');
+      return;
+    }
+
+    // 如果還沒開始傳送 SSE，用 JSON 回傳錯誤
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: '發生錯誤',
+        message: '抱歉，AI 服務暫時無法回應，請稍後再試'
+      });
+    } else {
+      // 如果已經開始 streaming，用 SSE 格式傳送錯誤
+      try {
+        res.write(`data: ${JSON.stringify({
+          type: 'error',
+          error: '發生錯誤，請稍後再試'
+        })}\n\n`);
+        res.end();
+      } catch (writeError) {
+        console.error('❌ Error writing to already-ended stream:', writeError.message);
+      }
+    }
+  }
+};
+
+/**
+ * ✅ 取得外部延伸閱讀連結（使用 Gemini Grounding）
+ * POST /api/assistant/grounding
+ */
+exports.getExternalLinks = async (req, res) => {
+  try {
+    const { question } = req.body;
+
+    if (!question || typeof question !== 'string' || !question.trim()) {
+      return res.status(400).json({
+        error: 'question 參數必須是非空字串'
+      });
+    }
+
+    console.log(`🔗 [External Links] 收到請求，問題: "${question}"`);
+
+    // ✅ 呼叫 Gemini Grounding
+    console.log(`[External Links Debug] 開始呼叫 callGeminiGrounding...`);
+    const result = await callGeminiGrounding(question);
+
+    console.log(`[External Links Debug] callGeminiGrounding 返回結果:`, JSON.stringify(result, null, 2));
+    console.log(`✅ [External Links] 成功取得 ${result.externalLinks.length} 個連結`);
+
+    const response = {
+      success: true,
+      externalLinks: result.externalLinks,
+      webSearchQueries: result.webSearchQueries
+    };
+
+    console.log(`[External Links Debug] 準備返回給前端:`, JSON.stringify(response, null, 2));
+
+    res.status(200).json(response);
+
+  } catch (error) {
+    console.error('❌ [External Links] 錯誤:', error);
+    console.error('❌ [External Links] 錯誤堆疊:', error.stack);
+
+    // ✅ 失敗不影響主要功能，返回空陣列
+    const errorResponse = {
+      success: false,
+      externalLinks: [],
+      error: error.message
+    };
+
+    console.log(`[External Links Debug] 錯誤回應:`, JSON.stringify(errorResponse, null, 2));
+
+    res.status(200).json(errorResponse);
   }
 };

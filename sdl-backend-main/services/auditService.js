@@ -1,5 +1,6 @@
 const AuditEvent = require('../models/audit_event');
 const crypto = require('crypto');
+const { classifyAction, calculateExpiresAt } = require('../constants/retentionPolicy');
 
 // Optional dependency; if not installed, fall back to simple diff
 let jsondiffpatch = null;
@@ -152,6 +153,9 @@ async function logAudit(req, payload) {
       userAgent,
       source,
       metadata: meta,
+      // Phase 6: 自動設定保留政策
+      consentLevel: classifyAction(action),
+      expiresAt: calculateExpiresAt(action),
     };
 
     // Drag reorder aggregation: coalesce bursty updates

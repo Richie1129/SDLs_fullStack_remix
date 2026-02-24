@@ -9,7 +9,7 @@ import Swal from 'sweetalert2';
 import { TbSend } from "react-icons/tb";
 
 export default function AskQuestion() {
-    const [currentChat, setCurrentChat] = useState([]);
+    const [currentChat, setCurrentChat] = useState(null);  // ✅ 改為 null，因為它是物件不是陣列
     const [chats, setChats] = useState([]);
     const { projectId } = useParams();
     const [message, setMessage] = useState('');
@@ -33,9 +33,12 @@ export default function AskQuestion() {
             } else if (userRole === 'student') {
                 data = await getUserChatrooms(projectId, localStorage.getItem("id"));
             }
-            setChats(data);
+            // ✅ 確保 data 是陣列，否則設為空陣列
+            setChats(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error('Failed to fetch data:', error);
+            // ✅ 錯誤時設為空陣列，避免 undefined
+            setChats([]);
         }
     };
 
@@ -130,7 +133,7 @@ export default function AskQuestion() {
                 // 如果用戶確認刪除
                 deleteChatroom(questionId).then(() => {
                     fetchChats();  // 刷新聊天室列表
-                    setCurrentChat([]);
+                    setCurrentChat(null);  // ✅ 改為 null
                     Swal.fire(
                         '已刪除！',
                         '聊天室已被刪除。',
@@ -150,11 +153,11 @@ export default function AskQuestion() {
 
     return (
         <div className="flex flex-col h-full w-full bg-gray-50">
-            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden p-4 sm:p-6 gap-4">
-                <div className="w-full lg:w-1/3 bg-gray-100 overflow-auto p-3 rounded-lg lg:min-h-0">
-                    <div className="shadow-md rounded-lg mb-4 p-4 flex justify-between items-center bg-white">
+            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden p-component-base sm:p-component-md-lg gap-stack-sm">
+                <div className="w-full lg:w-1/3 bg-gray-100 overflow-auto p-component-sm rounded-lg lg:min-h-0">
+                    <div className="shadow-md rounded-lg mb-4 p-component-base flex justify-between items-center bg-white">
                         {AddindQuestion ? (
-                            <div className="flex flex-col sm:flex-row gap-2 w-full">
+                            <div className="flex flex-col sm:flex-row gap-stack-xs w-full">
                                 <input
                                     type="text"
                                     value={newTitle}
@@ -163,9 +166,9 @@ export default function AskQuestion() {
                                         console.log(newTitle)
                                     }}
                                     placeholder="輸入新提問標題"
-                                    className="flex-1 border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-[#5BA491]"
+                                    className="flex-1 border border-gray-300 p-component-xs rounded focus:outline-none focus:ring-2 focus:ring-[#5BA491]"
                                 />
-                                <div className="flex gap-2">
+                                <div className="flex gap-stack-xs">
                                     <button
                                         onClick={addNewChatroom}
                                         className="font-bold py-2 px-4 rounded bg-[#5BA491] text-white hover:bg-[#5BA491]/80 transition duration-300"
@@ -174,7 +177,7 @@ export default function AskQuestion() {
                                     </button>
                                     <button
                                         onClick={toggleAddQuiestionInput}
-                                        className="flex items-center justify-center p-2 py-1 hover:bg-gray-200 rounded"
+                                        className="flex items-center justify-center p-component-xs py-1 hover:bg-gray-200 rounded"
                                     >
                                         <RxCross2 />
                                     </button>
@@ -182,7 +185,7 @@ export default function AskQuestion() {
                             </div>
                         ) : (
                             <>
-                                <h1 className="text-xl font-bold" style={{ color: '#5BA491' }}>提問聊天室</h1>
+                                <h1 className="text-h3 font-bold" style={{ color: '#5BA491' }}>提問聊天室</h1>
 
                                 <button
                                     onClick={toggleAddQuiestionInput}
@@ -193,11 +196,11 @@ export default function AskQuestion() {
                             </>
                         )}
                     </div>
-                    {chats.map(chat => (
+                    {Array.isArray(chats) && chats.map(chat => (
                         <div key={chat.id}
-                            className={`p-3 mb-2 rounded shadow flex justify-between items-center cursor-pointer transition duration-300 ${selectedChatId === chat.id ? "bg-[#5BA491]/80 text-white font-semibold" : "bg-white hover:bg-[#5BA491]/50"}`}
+                            className={`p-component-sm mb-2 rounded shadow flex justify-between items-center cursor-pointer transition duration-300 ${selectedChatId === chat.id ? "bg-[#5BA491]/80 text-white font-semibold" : "bg-white hover:bg-[#5BA491]/50"}`}
                             onClick={() => fetchMessages(chat)}>
-                            <span className="flex-1 text-sm sm:text-base truncate pr-2">{chat.title}</span>
+                            <span className="flex-1 text-body-sm sm:text-body truncate pr-2">{chat.title}</span>
                             {selectedChatId === chat.id && (
                                 <button 
                                     onClick={(e) => { e.stopPropagation(); handleDeleteChatroom(chat.id) }} 
@@ -210,33 +213,33 @@ export default function AskQuestion() {
                     ))}
                 </div>
                 <div className="w-full lg:w-2/3 flex flex-col bg-white shadow-lg rounded-lg lg:min-h-0 mt-4 lg:mt-0">
-                    {currentChat.length === 0 ? (
-                        <div className="flex flex-col items-center gap-6 sm:gap-12 justify-center h-full p-4">
+                    {!currentChat ? (
+                        <div className="flex flex-col items-center gap-stack-md sm:gap-12 justify-center h-full p-component-base">
                             <Lottie className="w-48 sm:w-72 lg:w-96 max-w-full" animationData={Select_icon} />
-                            <p className="text-lg sm:text-xl font-bold text-center">請選擇左側聊天室列表</p>
+                            <p className="text-body-lg sm:text-h3 font-bold text-center">請選擇左側聊天室列表</p>
                         </div>
 
                     ) : (
                         <>
-                            <div className="px-4 py-2 text-white text-lg font-semibold rounded-t-lg" style={{ backgroundColor: '#5BA491' }}>
+                            <div className="px-4 py-2 text-white text-body-lg font-semibold rounded-t-lg" style={{ backgroundColor: '#5BA491' }}>
                                 {currentChat.title}
                             </div>
-                            <div className="flex-1 overflow-auto p-3 sm:p-4">
+                            <div className="flex-1 overflow-auto p-component-sm sm:p-component-base">
                                 {currentChat?.messages?.map((m, index) => (
                                     <div key={index} className={`flex items-start mb-3 ${m.author === 'teacher' ? 'justify-start' : 'justify-end'}`}>
-                                        <div className={`max-w-[85%] sm:max-w-[80%] p-3 rounded-lg shadow-sm ${m.author === 'teacher' ? 'bg-blue-100' : 'bg-green-100'}`}>
-                                            <div className="text-sm sm:text-base mb-1">{m.message}</div>
-                                            <small className="text-xs text-gray-600">{m.author}</small>
+                                        <div className={`max-w-[85%] sm:max-w-[80%] p-component-sm rounded-lg shadow-sm ${m.author === 'teacher' ? 'bg-blue-100' : 'bg-green-100'}`}>
+                                            <div className="text-body-sm sm:text-body mb-1">{m.message}</div>
+                                            <small className="text-caption text-gray-600">{m.author}</small>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex p-2 border-t min-h-[60px] gap-2">
+                            <div className="flex p-component-xs border-t min-h-[60px] gap-stack-xs">
                                 <input 
                                     type="text" 
                                     value={message} 
                                     onChange={e => setMessage(e.target.value)}
-                                    className="flex-1 border p-2 rounded transition duration-300 focus:outline-none focus:ring ring-[#5BA491]/60"
+                                    className="flex-1 border p-component-xs rounded transition duration-300 focus:outline-none focus:ring ring-[#5BA491]/60"
                                     placeholder="輸入訊息..."
                                     onKeyDown={e => e.key === 'Enter' && sendMessage()} 
                                 />

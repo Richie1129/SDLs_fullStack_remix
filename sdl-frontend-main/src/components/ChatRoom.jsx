@@ -7,6 +7,7 @@ import { useLocation } from 'react-router-dom';
 import { getChatroomHistory } from '../api/chatroom';  // 引入API函数
 import { formatTime } from '../utils/timeUtils';  // 使用統一的時間格式化函數
 import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
+import { getCurrentUserId } from '../utils/authUtils';
 
 export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
     const [currentMessage, setCurrentMessage] = useState("");
@@ -28,7 +29,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
             const messageData = {
                 room: projectId,
                 author: currentUsername,
-                creator: localStorage.getItem("id"),
+                creator: String(getCurrentUserId()),
                 message: currentMessage.trim(),  // 也可以在这里直接发送去除空格后的消息
                 createdAt: formatTime(new Date(), 'full')  // 使用格式化函数
             };
@@ -79,9 +80,9 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
     }, [socket, chatRoomOpen, projectId]);
 
     return (
-        <div className={`z-50 w-72 sm:w-80 lg:w-96 h-80 sm:h-96 lg:h-[460px] fixed left-2 sm:left-4 bottom-2 sm:bottom-4 border-2 p-0 rounded-lg shadow-xl bg-slate-100 transform transition-all duration-500 ${chatRoomOpen ? "translate-x-0 translate-y-0 visible" : "-translate-x-full translate-y-full invisible"} flex flex-col`}>
-            <div className='h-8 sm:h-9 lg:h-[31px] w-full flex justify-between text-sm sm:text-base font-semibold p-1 rounded-t-lg bg-slate-300 text-slate-600 shrink-0'>
-                <span className='pl-2 text-xs sm:text-sm lg:text-base'>小組討論區</span>
+        <div className={`z-50 w-72 sm:w-80 lg:w-96 h-80 sm:h-96 lg:h-[460px] fixed left-2 sm:left-4 bottom-2 sm:bottom-4 border-2 p-0 rounded-lg shadow-xl bg-slate-100 transform transition-all duration-slow ${chatRoomOpen ? "translate-x-0 translate-y-0 visible" : "-translate-x-full translate-y-full invisible"} flex flex-col`}>
+            <div className='h-8 sm:h-9 lg:h-[31px] w-full flex justify-between text-body-sm sm:text-body font-semibold p-1 rounded-t-lg bg-slate-300 text-slate-600 shrink-0'>
+                <span className='pl-2 text-caption sm:text-body-sm lg:text-body'>小組討論區</span>
                 <button onClick={() => { setChatRoomOpen(false) }} className='cursor-pointer rounded-lg hover:bg-gray-200 '>
                     <GrFormClose size={16} className="sm:w-5 sm:h-5 lg:w-5 lg:h-5" />
                 </button>
@@ -103,7 +104,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                                         <div className={`shadow-md w-fit max-w-[240px] rounded-lg text-white flex items-center break-all px-3 py-2 ${isCurrentUser ? "bg-[#5BA491]" : "bg-sky-700"}`}>
                                             {messages.message}
                                         </div>
-                                        <div className='text-xs mt-1 text-gray-500'>
+                                        <div className='text-caption mt-1 text-gray-500'>
                                             {messages.createdAt} | {messages.author}
                                         </div>
                                     </div>
@@ -140,7 +141,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                     const isCurrentUser = messages.author === currentUsername;
                     if (isNewDay) {
                         acc.elements.push(
-                            <div key={`date-${dateString}`} className="text-center font-semibold py-2 my-1 text-sm">
+                            <div key={`date-${dateString}`} className="text-center font-semibold py-2 my-1 text-body-sm">
                                 {dateString === todayString ? "-今天-" : `- ${dateString} -`}
                             </div>
                         );
@@ -151,10 +152,10 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                             <div className={`flex items-center ${isCurrentUser ? "flex-row-reverse" : "flex-row"}`}>
                                 <img src={currentUserImg ? currentUserImg : userImg} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full mx-1 sm:mx-2" />
                                 <div className={`flex flex-col ${isCurrentUser ? "items-end" : "items-start"}`}>
-                                    <div className={`shadow-md w-fit max-w-[180px] sm:max-w-[240px] lg:max-w-[280px] rounded-lg text-white flex items-center break-all px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm ${isCurrentUser ? "bg-[#5BA491]" : "bg-sky-700"}`}>
+                                    <div className={`shadow-md w-fit max-w-[180px] sm:max-w-[240px] lg:max-w-[280px] rounded-lg text-white flex items-center break-all px-2 sm:px-3 py-1 sm:py-2 text-caption sm:text-body-sm ${isCurrentUser ? "bg-[#5BA491]" : "bg-sky-700"}`}>
                                         {messages.message}
                                     </div>
-                                    <div className='text-xs mt-1 text-gray-500 truncate max-w-[180px] sm:max-w-[240px]'>
+                                    <div className='text-caption mt-1 text-gray-500 truncate max-w-[180px] sm:max-w-[240px]'>
                                         {timePart} | {messages.author}
                                     </div>
                                 </div>
@@ -166,11 +167,11 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
 
                 <div ref={bottomRef} />
             </div>
-            <div className='h-8 sm:h-9 lg:h-[35px] w-full flex justify-between text-sm sm:text-base p-0 border-t-2 bg-slate-50 shrink-0'>
+            <div className='h-8 sm:h-9 lg:h-[35px] w-full flex justify-between text-body-sm sm:text-body p-0 border-t-2 bg-slate-50 shrink-0'>
                 <input
                     type="text"
                     value={currentMessage} // 确保绑定了currentMessage状态
-                    className='w-10/12 outline-none p-1 text-xs sm:text-sm'
+                    className='w-10/12 outline-none p-1 text-caption sm:text-body-sm'
                     placeholder="輸入訊息..."
                     onChange={e => setCurrentMessage(e.target.value)}
                     onKeyDown={e => { e.key === "Enter" && sendMessage() }}

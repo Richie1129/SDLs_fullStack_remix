@@ -8,6 +8,7 @@ const daily_team = require('./daily_team');
 const Question = require('./question');
 const UserProject = require('./user_project');
 const RefreshToken = require('./refresh_token'); 
+const IdeaWallMessage = require('./idea_wall_message');
 
 const User = sequelize.define('user', {
     username: {
@@ -71,5 +72,16 @@ RefreshToken.belongsTo(User, {
     foreignKey: 'userId',
     as: 'user'
 });
+
+User.hasMany(IdeaWallMessage, { foreignKey: 'senderId' });
+IdeaWallMessage.belongsTo(User, { foreignKey: 'senderId' });
+
+const HelpSeekingLog = require('./help_seeking_log');
+User.hasMany(HelpSeekingLog, { foreignKey: 'userId' });
+HelpSeekingLog.belongsTo(User, { foreignKey: 'userId' });
+
+const HelpSeekingAvoidanceRisk = require('./help_seeking_avoidance_risk');
+User.hasMany(HelpSeekingAvoidanceRisk, { foreignKey: 'userId' });
+HelpSeekingAvoidanceRisk.belongsTo(User, { foreignKey: 'userId' });
 
 module.exports = User;

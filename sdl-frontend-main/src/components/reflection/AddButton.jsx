@@ -25,17 +25,17 @@ const AddButton = ({
   const getSizeClasses = () => {
     switch (size) {
       case 'small':
-        return 'px-2 py-1 text-xs';
+        return 'px-btn-x-sm py-btn-y-sm text-caption';
       case 'large':
-        return 'px-6 py-3 text-lg';
+        return 'px-btn-x-lg py-btn-y-lg text-body-lg';
       default:
-        return 'px-2 py-1 sm:px-4 sm:py-2 text-sm sm:text-base';
+        return 'px-btn-x-sm py-btn-y-sm sm:px-btn-x sm:py-btn-y text-body-sm sm:text-body';
     }
   };
 
   const baseClasses = `
-    flex items-center font-semibold rounded-lg min-w-[70px] 
-    transition-colors duration-200 ease-in-out
+    flex items-center font-semibold rounded-lg min-w-[70px]
+    transition-colors duration-fast ease-in-out
     disabled:opacity-50 disabled:cursor-not-allowed
   `.replace(/\s+/g, ' ').trim();
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiAdapter } from "../utils/apiAdapter";
 import { DataNormalizer } from "../utils/DataNormalizer";
+import { getCurrentUserId, getCurrentUserRole } from "../../../utils/authUtils";
 
 /**
  * 學生相關資料的專門 Hook
@@ -29,7 +30,7 @@ export const useStudentData = (projectId, userRole) => {
         setStudentData(prev => ({ ...prev, loading: true, error: null }));
 
         const normalizer = new DataNormalizer();
-        const currentUserId = localStorage.getItem("userId");
+        const currentUserId = getCurrentUserId();
         const isTeacher = userRole === 'teacher';
 
         console.log("🧑‍🎓 開始獲取學生相關資料...", { projectId, userRole });

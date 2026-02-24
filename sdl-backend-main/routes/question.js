@@ -1,12 +1,13 @@
 
 const controller = require('../controllers/question');
 const router = require('express').Router();
+const { validateToken } = require('../middlewares/AuthMiddleware');
 
-router.get('/messages/:questionId', controller.getMessages);
-router.get('/:projectId', controller.getAllChatrooms);
-router.get('/:projectId/:userId', controller.getUserChatrooms);
-router.post('/createChatroom', controller.createChatroom);
-router.post('/createMessage', controller.createMessage)
-router.delete('/chatrooms/:questionId', controller.deleteChatroom);
+router.get('/messages/:questionId', validateToken, controller.getMessages);
+router.get('/:projectId', validateToken, controller.getAllChatrooms);
+router.get('/:projectId/:userId', validateToken, controller.getUserChatrooms);
+router.post('/createChatroom', validateToken, controller.createChatroom);
+router.post('/createMessage', validateToken, controller.createMessage);
+router.delete('/chatrooms/:questionId', validateToken, controller.deleteChatroom);
 
 module.exports = router;

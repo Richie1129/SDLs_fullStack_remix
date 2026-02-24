@@ -1,7 +1,7 @@
 const router = require('express').Router();
-const controller = require('../controllers/chatroom'); // 确保路径正确
+const controller = require('../controllers/chatroom');
+const { validateToken } = require('../middlewares/AuthMiddleware');
 
-// 获取聊天室历史消息
-router.get('/history/:projectId', controller.getChatroomHistory);
+router.get('/history/:projectId', validateToken, controller.getChatroomHistory);
 
 module.exports = router;

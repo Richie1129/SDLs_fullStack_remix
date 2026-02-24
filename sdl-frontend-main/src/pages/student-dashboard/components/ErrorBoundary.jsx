@@ -42,7 +42,7 @@ class ErrorBoundary extends React.Component {
 
       // 預設錯誤 UI
       return (
-        <div className="bg-white p-4 rounded-lg border border-red-200">
+        <div className="bg-white p-component-base rounded-lg border border-red-200">
           <LoadingState
             type="error"
             title="組件發生錯誤"
@@ -52,11 +52,11 @@ class ErrorBoundary extends React.Component {
 
           {/* 開發模式下顯示錯誤詳情 */}
           {process.env.NODE_ENV === 'development' && this.state.error && (
-            <details className="mt-4 p-3 bg-red-50 rounded border border-red-200">
+            <details className="mt-4 p-component-sm bg-red-50 rounded border border-red-200">
               <summary className="text-red-700 font-medium cursor-pointer">
                 錯誤詳情 (開發模式)
               </summary>
-              <div className="mt-2 text-xs text-red-600 font-mono">
+              <div className="mt-2 text-caption text-red-600 font-mono">
                 <p><strong>錯誤:</strong> {this.state.error.toString()}</p>
                 {this.state.errorInfo && (
                   <pre className="mt-2 whitespace-pre-wrap">
@@ -71,7 +71,7 @@ class ErrorBoundary extends React.Component {
           <div className="mt-4 text-center">
             <button
               onClick={this.handleRetry}
-              className="px-4 py-2 bg-customgreen text-white rounded hover:bg-teal-600 transition-colors text-sm"
+              className="px-4 py-2 bg-customgreen text-white rounded hover:bg-teal-600 transition-colors text-body-sm"
             >
               重新載入
             </button>

@@ -3,6 +3,7 @@ const axios = require('axios');
 const https = require('https');
 const config = require('../config');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+const { validateToken } = require('../middlewares/AuthMiddleware');
 
 const router = express.Router();
 
@@ -17,10 +18,9 @@ const agent = new https.Agent({
  */
 
 // 創建 RAGFlow 會話
-router.post('/:chatId/sessions', async (req, res) => {
+router.post('/:chatId/sessions', validateToken, async (req, res) => {
     try {
         const { chatId } = req.params;
-        console.log("RAGFlow 創建會話 - chatId:", chatId, "body:", req.body);
 
         const response = await axios.post(
             `${config.ragflow.baseUrl}/api/v1/chats/${chatId}/sessions`,
@@ -33,8 +33,6 @@ router.post('/:chatId/sessions', async (req, res) => {
                 httpsAgent: agent,
             }
         );
-
-        console.log("RAGFlow 會話創建成功:", response.data);
 
         // 記錄審計日誌
         try {
@@ -55,20 +53,15 @@ router.post('/:chatId/sessions', async (req, res) => {
 
         res.status(200).json(response.data);
     } catch (error) {
-        console.error("RAGFlow 代理請求失敗 (sessions):", error.message);
-        res.status(error.response?.status || 500).json({ 
-            message: "代理請求失敗", 
-            error: error.message,
-            details: error.response?.data 
-        });
+        console.error("RAGFlow 代理請求失敗 (sessions):", error.message, error.response?.data);
+        res.status(error.response?.status || 500).json({ message: "代理請求失敗" });
     }
 });
 
 // RAGFlow 完成請求
-router.post('/:chatId/completions', async (req, res) => {
+router.post('/:chatId/completions', validateToken, async (req, res) => {
     try {
         const { chatId } = req.params;
-        console.log("RAGFlow 完成請求 - chatId:", chatId);
 
         const response = await axios.post(
             `${config.ragflow.baseUrl}/api/v1/chats/${chatId}/completions`,
@@ -101,21 +94,16 @@ router.post('/:chatId/completions', async (req, res) => {
 
         res.status(200).json(response.data);
     } catch (error) {
-        console.error("RAGFlow 代理請求失敗 (completions):", error.message);
-        res.status(error.response?.status || 500).json({ 
-            message: "代理請求失敗", 
-            error: error.message,
-            details: error.response?.data 
-        });
+        console.error("RAGFlow 代理請求失敗 (completions):", error.message, error.response?.data);
+        res.status(error.response?.status || 500).json({ message: "代理請求失敗" });
     }
 });
 
 // 刪除 RAGFlow 會話
-router.delete('/:chatId/sessions/:sessionId', async (req, res) => {
+router.delete('/:chatId/sessions/:sessionId', validateToken, async (req, res) => {
     try {
         const { chatId, sessionId } = req.params;
-        console.log("RAGFlow 刪除會話 - chatId:", chatId, "sessionId:", sessionId);
-        
+
         const response = await axios.delete(
             `${config.ragflow.baseUrl}/api/v1/chats/${chatId}/sessions/${sessionId}`,
             {
@@ -126,9 +114,7 @@ router.delete('/:chatId/sessions/:sessionId', async (req, res) => {
                 httpsAgent: agent,
             }
         );
-        
-        console.log("RAGFlow 會話刪除成功:", response.data);
-        
+
         // 記錄審計日誌
         try {
             await logAudit(req, {
@@ -144,23 +130,36 @@ router.delete('/:chatId/sessions/:sessionId', async (req, res) => {
 
         res.status(200).json(response.data);
     } catch (error) {
-        console.error("RAGFlow 代理請求失敗 (delete sessions):", error.message);
-        res.status(error.response?.status || 500).json({ 
-            message: "代理請求失敗", 
-            error: error.message,
-            details: error.response?.data 
-        });
+        console.error("RAGFlow 代理請求失敗 (delete sessions):", error.message, error.response?.data);
+        res.status(error.response?.status || 500).json({ message: "代理請求失敗" });
     }
 });
 
-// 健康檢查端點
-router.get('/health', (req, res) => {
-    res.status(200).json({
-        status: 'ok',
-        ragflowUrl: config.ragflow.baseUrl,
-        hasApiKey: !!config.apiKeys.ragflow,
-        sslVerify: config.ssl.verify
-    });
+// RAGFlow 檢索請求
+router.post('/retrieval', validateToken, async (req, res) => {
+    try {
+        const response = await axios.post(
+            `${config.ragflow.baseUrl}/api/v1/retrieval`,
+            req.body,
+            {
+                headers: {
+                    Authorization: `Bearer ${config.apiKeys.ragflow}`,
+                    "Content-Type": "application/json",
+                },
+                httpsAgent: agent,
+            }
+        );
+
+        res.status(200).json(response.data);
+    } catch (error) {
+        console.error("RAGFlow 代理請求失敗 (retrieval):", error.message, error.response?.data);
+        res.status(error.response?.status || 500).json({ message: "代理請求失敗" });
+    }
+});
+
+// 健康檢查端點（不需要認證，供 Docker/基礎設施監控使用，不暴露內部配置）
+router.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok' });
 });
 
 module.exports = router;

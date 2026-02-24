@@ -12,6 +12,11 @@ const SocketManager = require('./sockets/socketManager');
 const { httpLogger } = require('./middlewares/logging');
 const { uploadToMinio } = require('./middlewares/minioUploadMiddleware');
 const { logAudit, clampMetadataSize } = require('./services/auditService');
+const { validateToken } = require('./middlewares/AuthMiddleware');
+
+// 安全套件
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 
 // 監控系統 - Phase 2 監控基礎設施
 const PerformanceMonitor = require('./middlewares/performanceMonitor');
@@ -27,13 +32,61 @@ const io = new Server(server, {
 // 初始化 Socket 管理器
 const socketManager = new SocketManager(io);
 
+// Phase 3: 注入 Socket.io 到 Orchestrator
+try {
+    const { setSocketIO } = require('./services/orchestrator');
+    setSocketIO(io);
+} catch (error) {
+    console.warn('Orchestrator Socket.io 注入失敗 (非關鍵):', error.message);
+}
+
 // 基礎中間件設定
 app.set('trust proxy', 1);
 app.set('io', io);
+
+// 安全 HTTP Headers
+app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // 允許跨域圖片載入
+}));
+
+// Rate Limiting
+const loginLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1 分鐘
+    max: 10,                    // 最多 10 次嘗試
+    message: { message: '登入嘗試次數過多，請稍後再試' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const resetLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,  // 1 小時
+    max: 5,
+    message: { message: '密碼重設請求次數過多，請稍後再試' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+const aiLimiter = rateLimit({
+    windowMs: 60 * 1000,       // 1 分鐘
+    max: 30,
+    message: { message: 'AI 請求次數過多，請稍後再試' },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+app.use('/api/users/login', loginLimiter);
+app.use('/api/auth/forgot-password', resetLimiter);
+app.use('/api/auth/reset-password', resetLimiter);
+app.use('/api/llm', aiLimiter);
+app.use('/proxy/api/v1/chats', aiLimiter);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(require('cors')(config.cors));
-app.options('*', require('cors')());
+app.options('*', require('cors')(config.cors)); // 修復：預檢請求也使用相同CORS配置
+
+// Linus: 消除前端錯誤回報的 404 噪音
+app.post('/api/errors', (req, res) => {
+    // 靜默接收前端錯誤，未來可以接上日誌系統
+    res.status(200).json({ status: 'ok' });
+});
 
 // HTTP 日誌
 try {
@@ -101,8 +154,8 @@ try {
 app.use('/api/daily_file', express.static(path.join(__dirname, 'daily_file')));
 console.log('Static file directory:', path.join(__dirname, 'daily_file'));
 
-// 檔案上傳路由 - 使用 MinIO
-app.post('/api/upload', uploadToMinio('files', 10), (req, res) => {
+// 檔案上傳路由 - 使用 MinIO（需要認證）
+app.post('/api/upload', validateToken, uploadToMinio('files', 10), (req, res) => {
     console.log('MinIO uploaded files:', req.uploadedFiles);
     try {
         if (!req.uploadedFiles || req.uploadedFiles.length === 0) {
@@ -167,6 +220,9 @@ app.use('/api/announcements', require('./routes/announcement'));
 app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/llm', require('./routes/llm'));
+app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
+app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
+app.use('/api/teacher/help-seeking', require('./routes/teacherHelpSeeking')); // Teacher Help-Seeking Dashboard
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));
@@ -179,6 +235,12 @@ app.use('/api/auth', require('./routes/passwordReset'));
 // Development: 直接訪問 http://localhost:3000/api/metrics
 // Production: 需要 X-Metrics-Token header
 app.use('/api', require('./routes/metrics'));
+
+// 學習歷程匯出 API
+app.use('/api', require('./routes/export'));
+
+// 個人學習歷程 API
+app.use('/api', require('./routes/studentPortfolio'));
 
 // 統一錯誤處理中間件 - Linus 式簡潔設計
 const { errorHandler, NotFoundError } = require('./utils/errorHandler');
@@ -228,6 +290,24 @@ server.listen(PORT, () => {
     console.log(`📂 所有路由已加載完成`);
     console.log(`🔧 配置模式: ${config.isDevelopment ? '開發' : '生產'}`);
 
+    // Phase 6: 啟動審計事件自動清理排程
+    try {
+        const { startPurgeSchedule } = require('./services/auditPurgeService');
+        startPurgeSchedule();
+        console.log('🧹 審計事件自動清理排程已啟動');
+    } catch (err) {
+        console.warn('⚠️ 審計清理排程啟動失敗 (非關鍵):', err.message);
+    }
+
+    // Help-Seeking 分析排程任務
+    try {
+        const { startHelpSeekingScheduledTasks } = require('./services/helpSeekingScheduler');
+        startHelpSeekingScheduledTasks();
+        console.log('🔍 Help-Seeking 分析排程任務已啟動');
+    } catch (err) {
+        console.warn('⚠️ Help-Seeking 排程啟動失敗 (非關鍵):', err.message);
+    }
+
     // 顯示 Socket 連接統計
     statsIntervalId = setInterval(() => {
         const stats = socketManager.getStats();
@@ -268,6 +348,12 @@ const gracefulShutdown = (signal) => {
     if (stopUsageCleanup) {
         stopUsageCleanup();
     }
+
+    // Phase 6: 停止審計清理排程
+    try {
+        const { stopPurgeSchedule } = require('./services/auditPurgeService');
+        stopPurgeSchedule();
+    } catch (_) {}
 
     // 清理所有 Socket 連線
     if (io) {

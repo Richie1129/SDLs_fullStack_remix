@@ -1,5 +1,36 @@
 const Idea_wall = require('../models/idea_wall');
+const Node = require('../models/node');
+const { generateWallSummary } = require('../services/chatLlmService');
 const { Op } = require("sequelize");
+
+exports.getWallContext = async (req, res) => {
+    const { wallId } = req.params;
+    
+    try {
+        // 1. Fetch Nodes (Limit 30 for summary)
+        const nodes = await Node.findAll({
+            where: { ideaWallId: wallId },
+            attributes: ['id', 'title', 'content', 'owner'],
+            limit: 30,
+            order: [['updatedAt', 'DESC']]
+        });
+
+        // 2. Generate Summary
+        // In a real production system, we should cache this summary in Redis or DB
+        // and only regenerate if nodes have changed or after X minutes.
+        // For MVP, we generate on fly but handle errors gracefully.
+        const summary = await generateWallSummary(nodes);
+
+        res.status(200).json({
+            nodeCount: nodes.length, // Note: this is limited by query limit, ideally count all
+            summary: summary,
+            recentNodes: nodes.slice(0, 5).map(n => n.title)
+        });
+    } catch (error) {
+        console.error('Get Wall Context Error:', error);
+        res.status(500).json({ error: 'Failed to generate context' });
+    }
+};
 
 //to do name change to stage substage
 exports.getIdeaWall = async(req, res) =>{

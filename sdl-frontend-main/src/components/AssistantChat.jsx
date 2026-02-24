@@ -3,6 +3,8 @@ import { getGuidance, createChatTurn, completeChatTurn, getChatHistory } from '.
 import { getKanbanColumns } from '../api/kanban';
 import { socket } from '../utils/socket';
 import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
+import MessageContent from './MessageContent';
+import { getCurrentUserId } from '../utils/authUtils';
 
 export default function AssistantChat({ projectId, currentStage, currentSubStage, autoGreet = true, embedded = false }) {
   const currentUsername = useUsername(); // 取得當前使用者名稱
@@ -68,7 +70,11 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
         setMessages(prev => [...prev, { role: 'assistant', content: data.message, followup: data.followup }]);
         try { await createChatTurn({ projectId, body: { assistantContent: data.message, assistantUsername: 'AI 導師' } }); } catch (_) {}
       } catch (e) {
-        // noop
+        // 自動問候，提供友好的降級體驗
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: '我是 AI 導師，隨時準備回答你的問題！有任何疑惑都可以問我。'
+        }]);
       } finally {
         setIsSubmitting(false);
       }
@@ -116,7 +122,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
       setIsSubmitting(true);
       // create chat turn with user message
       try {
-        const userId = parseInt(localStorage.getItem('id')) || null;
+        const userId = getCurrentUserId();
         const username = currentUsername || '未知';
         const turn = await createChatTurn({ projectId, body: { userId, username, userContent: text } });
         lastTurnIdRef.current = turn?.id || null;
@@ -144,7 +150,16 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
         }
       } catch (_) {}
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，我暫時無法回覆，稍後再試試看。' }]);
+      // 根據錯誤類型提供更具體的反饋
+      let errorMsg = '抱歉，我暫時無法回覆。';
+      if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
+        errorMsg = '回應時間過長，請稍後再試。如果問題持續發生，請嘗試簡化你的問題。';
+      } else if (e.response?.status === 500) {
+        errorMsg = '伺服器暫時出現問題，請稍後再試。';
+      } else if (!navigator.onLine) {
+        errorMsg = '網路連線中斷，請檢查你的網路連線。';
+      }
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
     } finally {
       setIsSubmitting(false);
     }
@@ -157,7 +172,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
       return () => clearInterval(id);
     }, []);
     return (
-      <div className="text-xs text-gray-400" aria-live="polite" aria-busy>
+      <div className="text-caption text-gray-400" aria-live="polite" aria-busy>
         {`正在思考${'.'.repeat(dots)}`}
       </div>
     );
@@ -174,7 +189,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
 
   async function handleCreateTaskFromSuggestion(suggest, preferColumnName = '待處理') {
     try {
-      const userId = parseInt(localStorage.getItem('id')) || null;
+      const userId = getCurrentUserId();
       const username = currentUsername || '未知';
       const kanbanData = await getKanbanColumns(projectId);
       // find column index by name; fallback to first column
@@ -203,24 +218,24 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
 
   return (
     <Container>
-      {!embedded && <div className="px-3 py-2 bg-teal-600 text-white text-sm font-semibold">AI 導師</div>}
+      {!embedded && <div className="px-3 py-2 bg-teal-600 text-white text-body-sm font-semibold">AI 導師</div>}
       <div className="px-3 py-2 border-b">
         {historyMessages.length > 0 && (
           <button
-            className="text-xs text-teal-700 hover:underline"
+            className="text-caption text-teal-700 hover:underline"
             onClick={() => setShowHistory(s => !s)}
           >
             {showHistory ? '隱藏之前對話' : `查看之前對話（${historyMessages.length} 則）`}
           </button>
         )}
       </div>
-      <div ref={chatContainerRef} className={`p-3 space-y-2 ${embedded ? 'flex-1 min-h-0' : 'h-64'} overflow-y-auto`}>
+      <div ref={chatContainerRef} className={`p-component-sm space-y-stack-xs ${embedded ? 'flex-1 min-h-0' : 'h-64'} overflow-y-auto`}>
         {showHistory && historyMessages.length > 0 && (
           <>
             {historyMessages.map((m, idx) => (
-              <div key={`h-${idx}`} className={m.role === 'assistant' ? 'text-sm text-gray-800' : 'text-sm text-right'}>
+              <div key={`h-${idx}`} className={m.role === 'assistant' ? 'text-body-sm text-gray-800' : 'text-body-sm text-right'}>
                 <div className={m.role === 'assistant' ? 'inline-block px-3 py-2 bg-gray-50 border rounded-lg' : 'inline-block px-3 py-2 bg-gray-200 text-gray-800 rounded-lg'}>
-                  {m.content}
+                  {m.role === 'assistant' ? <MessageContent content={m.content} /> : m.content}
                 </div>
               </div>
             ))}
@@ -228,12 +243,12 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           </>
         )}
         {messages.length === 0 && (
-          <div className="text-sm text-gray-500">當你進入新子階段時，我會主動給建議。</div>
+          <div className="text-body-sm text-gray-500">當你進入新子階段時，我會主動給建議。</div>
         )}
         {messages.map((m, idx) => (
-          <div key={idx} className={m.role === 'assistant' ? 'text-sm text-gray-800' : 'text-sm text-right'}>
+          <div key={idx} className={m.role === 'assistant' ? 'text-body-sm text-gray-800' : 'text-body-sm text-right'}>
             <div className={m.role === 'assistant' ? 'inline-block px-3 py-2 bg-gray-100 rounded-lg' : 'inline-block px-3 py-2 bg-teal-600 text-white rounded-lg'}>
-              {m.content}
+              {m.role === 'assistant' ? <MessageContent content={m.content} /> : m.content}
             </div>
           </div>
         ))}
@@ -244,7 +259,7 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           <div className="mt-2">
             <button 
               onClick={() => setShowQuickTasks(!showQuickTasks)}
-              className="w-full flex items-center justify-between text-xs text-gray-600 hover:text-gray-800 p-2 bg-gray-50 hover:bg-gray-100 rounded transition-colors"
+              className="w-full flex items-center justify-between text-caption text-gray-600 hover:text-gray-800 p-component-xs bg-gray-50 hover:bg-gray-100 rounded transition-colors"
             >
               <span>快速建立任務卡</span>
               <span className={`transform transition-transform ${showQuickTasks ? 'rotate-180' : ''}`}>▼</span>
@@ -252,14 +267,14 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
             {showQuickTasks && (
               <div className="mt-1 space-y-1">
                 {(lastData?.suggestedTasks || []).map((t, i) => (
-                  <div key={`t-${i}`} className="flex items-center justify-between gap-2 text-xs p-2 bg-gray-50 border rounded">
+                  <div key={`t-${i}`} className="flex items-center justify-between gap-stack-xs text-caption p-component-xs bg-gray-50 border rounded">
                     <div className="truncate"><span className="font-medium">{t.title}</span></div>
                     <button className="px-2 py-1 bg-teal-600 text-white rounded" onClick={() => handleCreateTaskFromSuggestion(t)}>新增</button>
                   </div>
                 ))}
                 {/* Fallback from suggestions (string) */}
                 {(!lastData?.suggestedTasks || lastData?.suggestedTasks?.length === 0) && (lastData?.suggestions || []).map((s, i) => (
-                  <div key={`s-${i}`} className="flex items-center justify-between gap-2 text-xs p-2 bg-gray-50 border rounded">
+                  <div key={`s-${i}`} className="flex items-center justify-between gap-stack-xs text-caption p-component-xs bg-gray-50 border rounded">
                     <div className="truncate"><span className="font-medium">{typeof s === 'string' ? s.slice(0, 24) : 'AI 建議'}</span></div>
                     <button className="px-2 py-1 bg-teal-600 text-white rounded" onClick={() => handleCreateTaskFromSuggestion({ title: 'AI 建議', content: s })}>新增</button>
                   </div>
@@ -298,17 +313,17 @@ export default function AssistantChat({ projectId, currentStage, currentSubStage
           </div>
         )}
       </div>
-      <form onSubmit={handleFormSubmit} className="p-2 border-t">
-        <div className="flex gap-2">
+      <form onSubmit={handleFormSubmit} className="p-component-xs border-t">
+        <div className="flex gap-stack-xs">
         <input
           ref={inputRef}
-          className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="flex-1 border rounded px-2 py-1 text-body-sm focus:outline-none focus:ring-1 focus:ring-teal-500"
           placeholder="問我下一步怎麼做…"
           defaultValue=""
           autoFocus={embedded}
         />
         <button
-          className="px-3 py-1 bg-teal-600 text-white text-sm rounded disabled:opacity-50"
+          className="px-3 py-1 bg-teal-600 text-white text-body-sm rounded disabled:opacity-50"
           type="submit"
           disabled={isSubmitting}
         >{isSubmitting ? '送出中...' : '送出'}</button>

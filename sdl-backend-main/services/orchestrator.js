@@ -1,0 +1,578 @@
+/**
+ * Orchestrator Service (Phase 2 + Phase 3 - The Silent Brain)
+ * 
+ * Linus 式設計哲學：
+ * "This is the real meat of the system."
+ * 
+ * 職責：
+ * 1. 讀取討論上下文（Sliding Window N=10）
+ * 2. 呼叫 DiscussionAnalyzer 計算指標
+ * 3. 應用決策規則（Rule Engine）
+ * 4. 檢查冷卻機制
+ * 5. 決定是否介入 & 選擇 Agent
+ * 6. Phase 3: 透過 Socket.io 通知前端
+ * 
+ * 零破壞性保證：
+ * - 背景執行，不阻塞使用者操作
+ * - 失敗靜默（不影響正常發文流程）
+ * - 可透過環境變數 ORCHESTRATOR_ENABLED=false 關閉
+ */
+
+const { GoogleGenAI } = require('@google/genai');
+const Node = require('../models/node');
+const IdeaWall = require('../models/idea_wall');
+const IdeaWallMessage = require('../models/idea_wall_message'); // Added for Phase 3
+const User = require('../models/user'); // Added for Phase 4
+const { Op } = require('sequelize');
+const { analyzeDiscussion, classifyDiscussion } = require('./discussionAnalyzer');
+const { getCooldownManager } = require('../utils/cooldownManager');
+const { logAudit, clampMetadataSize } = require('./auditService');
+const { generateChatIntervention } = require('./chatLlmService'); // Phase 4 LLM Service
+
+// 引入 KB Coach 的 Agent Personas（重用 Phase 1 代碼）
+const kbCoachController = require('../controllers/kbCoach');
+
+// Phase 3: Socket.io 通知支援
+let socketIO = null;
+
+// Configuration for IdeaWall Chat
+const CHAT_CONFIG = {
+    COOLING_PERIOD_MINUTES: 10,
+    MIN_MESSAGES_THRESHOLD: 5
+};
+
+/**
+ * 設定 Socket.io 實例（由 server.js 或 controller 注入）
+ * 
+ * @param {Object} io - Socket.io server instance
+ */
+function setSocketIO(io) {
+    socketIO = io;
+    console.log('✅ [Orchestrator] Socket.io instance configured for Phase 3 notifications');
+}
+
+/**
+ * 取得 Socket.io 實例
+ */
+function getSocketIO() {
+    return socketIO;
+}
+
+// 初始化Gemini客戶端
+const genai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
+
+// ============================================================================
+// 配置參數
+// ============================================================================
+const ORCHESTRATOR_ENABLED = process.env.ORCHESTRATOR_ENABLED !== 'false'; // 預設啟用
+const SLIDING_WINDOW_SIZE = 10; // 分析最近 N 篇貼文
+const AUTO_POST_ENABLED = process.env.ORCHESTRATOR_AUTO_POST === 'true'; // 預設不自動發文
+
+/**
+ * 決策規則引擎
+ * 
+ * Linus: "規則引擎聽起來很炫，但其實就是一堆 if-else。別過度設計。"
+ * 
+ * @param {Object} analysis - DiscussionAnalyzer 的分析結果
+ * @param {string} discussionType - classifyDiscussion 的結果
+ * @returns {Object|null} - { action: 'TRIGGER', role: '...', reason: '...' } 或 null
+ */
+function applyDecisionRules(analysis, discussionType) {
+    const { depth, diversity, convergence, raw } = analysis;
+
+    // ========================================================================
+    // 規則 1: 淺層討論 -> Trigger Idea Improver
+    // ========================================================================
+    if (discussionType === 'SHALLOW') {
+        return {
+            action: 'TRIGGER',
+            role: 'IMPROVER',
+            reason: `淺層討論（深度分數: ${depth}，平均長度: ${raw.avgLength}字）- 需要引導深化`
+        };
+    }
+
+    // ========================================================================
+    // 規則 2: 同溫層 -> Trigger Devil's Advocate
+    // ========================================================================
+    if (discussionType === 'ECHO_CHAMBER') {
+        return {
+            action: 'TRIGGER',
+            role: 'DEVIL',
+            reason: `同溫層風險（多樣性: ${diversity}, 收斂度: ${convergence}）- 需要挑戰觀點`
+        };
+    }
+
+    // ========================================================================
+    // 規則 3: 資訊過載 -> Trigger Synthesizer
+    // ========================================================================
+    if (discussionType === 'OVERLOAD') {
+        return {
+            action: 'TRIGGER',
+            role: 'SYNTHESIZER',
+            reason: `資訊過載（${raw.nodeCount}篇貼文，收斂度: ${convergence}）- 需要整合觀點`
+        };
+    }
+
+    // ========================================================================
+    // 規則 4: 健康討論 -> 保持靜默
+    // ========================================================================
+    return {
+        action: 'WAIT',
+        reason: `討論品質良好（深度: ${depth}, 多樣性: ${diversity}）- 暫不介入`
+    };
+}
+
+/**
+ * 主要分析函數：分析討論並決定是否介入
+ * 
+ * @param {number} ideaWallId - 討論串 ID
+ * @param {number} projectId - 專案 ID（用於取得上下文）
+ * @returns {Promise<Object>} - 決策結果
+ */
+async function analyzeAndDecide(ideaWallId, projectId) {
+    try {
+        // ====================================================================
+        // Step 0: 檢查 Orchestrator 是否啟用
+        // ====================================================================
+        if (!ORCHESTRATOR_ENABLED) {
+            return { action: 'DISABLED', reason: 'Orchestrator disabled via config' };
+        }
+
+        // ====================================================================
+        // Step 1: 讀取討論上下文（Sliding Window）
+        // ====================================================================
+        const ideaWalls = await IdeaWall.findAll({
+            where: { projectId: projectId },
+            attributes: ['id']
+        });
+
+        if (ideaWalls.length === 0) {
+            return { action: 'WAIT', reason: 'No idea walls found for this project' };
+        }
+
+        const ideaWallIds = ideaWalls.map(iw => iw.id);
+        
+        const contextNodes = await Node.findAll({
+            where: { 
+                ideaWallId: { [Op.in]: ideaWallIds }
+            },
+            order: [['createdAt', 'DESC']],
+            limit: SLIDING_WINDOW_SIZE,
+            attributes: ['id', 'title', 'content', 'owner', 'createdAt']
+        });
+
+        if (contextNodes.length === 0) {
+            return { action: 'WAIT', reason: 'No nodes to analyze' };
+        }
+
+        const totalNodeCount = await Node.count({
+            where: { ideaWallId: { [Op.in]: ideaWallIds } }
+        });
+
+        // ====================================================================
+        // Step 2: 檢查冷卻機制
+        // ====================================================================
+        const cooldownManager = getCooldownManager();
+        const canIntervene = cooldownManager.canIntervene(ideaWallId, totalNodeCount);
+
+        if (!canIntervene) {
+            const status = cooldownManager.getStatus(ideaWallId);
+            return { 
+                action: 'COOLDOWN', 
+                reason: `仍在冷卻中（剩餘 ${Math.round(status.cooldownRemaining)} 分鐘）`,
+                cooldownStatus: status
+            };
+        }
+
+        // ====================================================================
+        // Step 3: 分析討論品質
+        // ====================================================================
+        const analysis = analyzeDiscussion(contextNodes);
+        const discussionType = classifyDiscussion(analysis);
+
+        // ====================================================================
+        // Step 4: 應用決策規則
+        // ====================================================================
+        const decision = applyDecisionRules(analysis, discussionType);
+
+        // ====================================================================
+        // Step 5: 記錄審計日誌
+        // ====================================================================
+        try {
+            await logAudit(null, {
+                action: 'ORCHESTRATOR_DECISION',
+                targetType: 'idea_wall',
+                targetId: ideaWallId,
+                projectId: projectId,
+                metadata: clampMetadataSize({
+                    decision: decision.action,
+                    role: decision.role || null,
+                    reason: decision.reason,
+                    analysis: {
+                        depth: analysis.depth,
+                        diversity: analysis.diversity,
+                        convergence: analysis.convergence,
+                        nodeCount: analysis.raw.nodeCount
+                    },
+                    discussionType
+                })
+            });
+        } catch (auditError) {
+            console.error('Orchestrator audit logging failed (non-blocking):', auditError);
+        }
+
+        // ====================================================================
+        // Step 6: 如果需要介入，記錄冷卻
+        // ====================================================================
+        if (decision.action === 'TRIGGER') {
+            cooldownManager.recordIntervention(ideaWallId, totalNodeCount);
+        }
+
+        return {
+            ...decision,
+            analysis,
+            discussionType,
+            contextNodeCount: contextNodes.length,
+            totalNodeCount
+        };
+
+    } catch (error) {
+        console.error('Orchestrator analysis failed:', error);
+        return { 
+            action: 'ERROR', 
+            reason: error.message,
+            error: true
+        };
+    }
+}
+
+/**
+ * 自動生成並發布 AI 回應（Phase 2 擴充功能）
+ * 
+ * @param {number} ideaWallId
+ * @param {number} projectId
+ * @param {string} agentRole - 'IMPROVER' | 'SYNTHESIZER' | 'DEVIL'
+ * @param {Array} contextNodes - 上下文節點
+ * @returns {Promise<Object>} - 生成的回應內容
+ */
+async function generateAndPostResponse(ideaWallId, projectId, agentRole, contextNodes) {
+    try {
+        // 建構焦點節點（最新的一篇）
+        const focusNode = contextNodes[0];
+        
+        // 呼叫 KB Coach 的 provideGuidance（重用 Phase 1 代碼）
+        const mockReq = {
+            body: {
+                title: focusNode.title,
+                content: focusNode.content,
+                nodeId: focusNode.id,
+                projectId: projectId,
+                relatedNodes: contextNodes.slice(1, 10).map(n => ({
+                    title: n.title,
+                    content: n.content,
+                    owner: n.owner
+                })),
+                agentType: agentRole
+            }
+        };
+
+        // 模擬 res 物件以接收回應
+        let coachingResult = null;
+        const mockRes = {
+            status: (code) => ({
+                json: (data) => {
+                    coachingResult = data;
+                }
+            })
+        };
+
+        await kbCoachController.provideGuidance(mockReq, mockRes);
+
+        if (!coachingResult) {
+            throw new Error('KB Coach failed to generate response');
+        }
+
+        // ====================================================================
+        // Phase 2: 暫不自動發布，只返回建議內容
+        // 實際發文由 Phase 3 整合前端通知機制
+        // ====================================================================
+        if (AUTO_POST_ENABLED) {
+            // TODO: Phase 3 - 建立新節點
+            console.log('🤖 [Orchestrator] Auto-posting is enabled but not implemented yet (Phase 3)');
+        }
+
+        return {
+            success: true,
+            coaching: coachingResult,
+            autoPosted: false,
+            message: 'AI 建議已生成，等待人工審核或 Phase 3 自動發布機制'
+        };
+
+    } catch (error) {
+        console.error('Orchestrator auto-response failed:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
+/**
+ * 完整的 Orchestrator 工作流程
+ * 
+ * @param {number} ideaWallId
+ * @param {number} projectId
+ * @param {Object} options - { io: Socket.io instance (optional) }
+ * @returns {Promise<Object>}
+ */
+async function orchestrate(ideaWallId, projectId, options = {}) {
+    console.log(`🧠 [Orchestrator] Analyzing ideaWall ${ideaWallId} in project ${projectId}...`);
+
+    // 允許從 options 傳入 io，或使用全域設定的 socketIO
+    const io = options.io || socketIO;
+
+    const decision = await analyzeAndDecide(ideaWallId, projectId);
+
+    console.log(`🧠 [Orchestrator] Decision: ${decision.action} - ${decision.reason}`);
+
+    // ========================================================================
+    // Phase 3: 如果決定介入，透過 Socket.io 通知前端
+    // ========================================================================
+    if (decision.action === 'TRIGGER' && decision.role) {
+        console.log(`🤖 [Orchestrator] Triggering ${decision.role}...`);
+        
+        // Phase 3: 發送 Socket 通知
+        if (io) {
+            // 注意：messageHandler 使用 projectId 作為房間名（不是 `project-${projectId}`）
+            const roomName = String(projectId);
+            
+            // Debug: 檢查房間狀態
+            const room = io.sockets.adapter.rooms.get(roomName);
+            const clientsInRoom = room ? room.size : 0;
+            console.log(`🔍 [Phase 3 Debug] Room "${roomName}" has ${clientsInRoom} clients`);
+            if (room) {
+                console.log(`🔍 [Phase 3 Debug] Client IDs:`, Array.from(room));
+            }
+            
+            io.to(roomName).emit('aiSuggestion', {
+                type: 'AI_COACH_SUGGESTION',
+                timestamp: new Date().toISOString(),
+                projectId,
+                ideaWallId,
+                action: decision.action,
+                role: decision.role,
+                reason: decision.reason,
+                analysis: decision.analysis,
+                discussionType: decision.discussionType
+            });
+            console.log(`📢 [Phase 3] AI suggestion broadcasted to room ${roomName}`);
+        } else {
+            console.log('⚠️ [Phase 3] Socket.io not available, skipping notification');
+        }
+        
+        // 重新取得上下文（因為 analyzeAndDecide 沒有返回完整節點）
+        const ideaWalls = await IdeaWall.findAll({
+            where: { projectId: projectId },
+            attributes: ['id']
+        });
+        const ideaWallIds = ideaWalls.map(iw => iw.id);
+        const contextNodes = await Node.findAll({
+            where: { ideaWallId: { [Op.in]: ideaWallIds } },
+            order: [['createdAt', 'DESC']],
+            limit: SLIDING_WINDOW_SIZE,
+            attributes: ['id', 'title', 'content', 'owner', 'createdAt']
+        });
+
+        const response = await generateAndPostResponse(ideaWallId, projectId, decision.role, contextNodes);
+        
+        return {
+            ...decision,
+            response,
+            notificationSent: !!io
+        };
+    }
+
+    return decision;
+}
+
+module.exports = {
+    orchestrate,
+    analyzeAndDecide,
+    generateAndPostResponse,
+    // Phase 3: Socket.io 配置
+    setSocketIO,
+    getSocketIO,
+    // Phase 3: IdeaWall Chat Orchestration
+    orchestrateChat,
+    // 匯出供測試使用
+    applyDecisionRules,
+    ORCHESTRATOR_ENABLED
+};
+
+/**
+ * Phase 3: IdeaWall Chat Orchestrator
+ * 
+ * @param {Object} newMessage - The message object created by the user
+ */
+async function orchestrateChat(newMessage) {
+    // 1. Ignore AI's own messages to prevent loops
+    if (newMessage.isAiIntervention) {
+        return;
+    }
+
+    const wallId = newMessage.ideaWallId;
+    console.log(`🕵️ [Chat Orchestrator] Analyzing activity in Wall #${wallId}...`);
+
+    try {
+        // 2. Check if we should intervene
+        const should = await shouldInterveneChat(wallId);
+        
+        if (should) {
+            console.log(`🚀 [Chat Orchestrator] DECISION -> INTERVENE in Wall #${wallId}`);
+            // Phase 4 will implement the actual AI generation here.
+            // For Phase 3, we just log it and emit a debug event.
+            triggerChatIntervention(wallId, newMessage.relatedNodeId);
+        } else {
+            console.log(`zzz [Chat Orchestrator] DECISION -> WAIT in Wall #${wallId}`);
+        }
+    } catch (error) {
+        console.error('❌ [Chat Orchestrator] Error:', error);
+    }
+}
+
+/**
+ * The Gatekeeper for Chat: Decides if AI should intervene based on rules
+ * @param {number} wallId 
+ * @returns {Promise<boolean>}
+ */
+async function shouldInterveneChat(wallId) {
+    // Rule 1: Cooling Period
+    // Find the last AI intervention in this wall
+    const lastIntervention = await IdeaWallMessage.findOne({
+        where: {
+            ideaWallId: wallId,
+            isAiIntervention: true
+        },
+        order: [['createdAt', 'DESC']]
+    });
+
+    if (lastIntervention) {
+        const lastTime = new Date(lastIntervention.createdAt).getTime();
+        const now = Date.now();
+        const diffMinutes = (now - lastTime) / (1000 * 60);
+
+        if (diffMinutes < CHAT_CONFIG.COOLING_PERIOD_MINUTES) {
+            console.log(`✋ [Chat Orchestrator] Cooling down (${diffMinutes.toFixed(1)}/${CHAT_CONFIG.COOLING_PERIOD_MINUTES} mins)`);
+            return false;
+        }
+    }
+
+    // Rule 2: Accumulation
+    // Count user messages since the last intervention (or from the beginning)
+    const whereClause = {
+        ideaWallId: wallId,
+        isAiIntervention: false
+    };
+
+    if (lastIntervention) {
+        whereClause.createdAt = {
+            [Op.gt]: lastIntervention.createdAt
+        };
+    }
+
+    const messageCount = await IdeaWallMessage.count({
+        where: whereClause
+    });
+
+    if (messageCount < CHAT_CONFIG.MIN_MESSAGES_THRESHOLD) {
+        console.log(`✋ [Chat Orchestrator] Not enough messages (${messageCount}/${CHAT_CONFIG.MIN_MESSAGES_THRESHOLD})`);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Phase 4: Real Chat Intervention
+ */
+async function triggerChatIntervention(wallId, relatedNodeId) {
+    console.log(`✨ [Chat Orchestrator] Generating AI response for Wall #${wallId}...`);
+
+    try {
+        // 1. Fetch Context (Last 20 messages)
+        const messages = await IdeaWallMessage.findAll({
+            where: { ideaWallId: wallId },
+            order: [['createdAt', 'DESC']],
+            limit: 20,
+            include: [{
+                model: User,
+                attributes: ['username', 'account']
+            }]
+        });
+        
+        // Reverse to chronological order
+        const contextMessages = messages.reverse();
+
+        // 2. Fetch Context Data (Node or Wall Overview)
+        let relatedNode = null;
+        let wallNodes = [];
+
+        if (relatedNodeId) {
+            relatedNode = await Node.findByPk(relatedNodeId);
+        } else {
+            // Global Mode: Fetch all nodes in this wall to provide context
+            // Linus: "Don't fetch everything. Just what you need."
+            wallNodes = await Node.findAll({
+                where: { ideaWallId: wallId },
+                attributes: ['id', 'title', 'content', 'owner'],
+                limit: 30 // Prevent context overflow
+            });
+        }
+
+        // 3. Call LLM Service
+        const aiContent = await generateChatIntervention(contextMessages, relatedNode, wallNodes);
+
+        if (!aiContent) {
+            console.warn('⚠️ [Chat Orchestrator] AI generated empty content. Aborting.');
+            return;
+        }
+
+        // 4. Save AI Message to DB
+        // Note: We need a system user ID for the AI. 
+        // For now, we'll assume ID 0 or 1 is system, or we should find a "Bot" user.
+        // MVP: Use a fixed ID (e.g., 999 or find an admin). 
+        // Better: Create a specific AI User in migration.
+        // Here we assume senderId=1 (Admin) or we need to handle this.
+        // Let's try to find a user with role 'admin' or just use 1.
+        const aiSenderId = 1; // FIXME: Should be a dedicated AI user ID
+
+        const aiMessage = await IdeaWallMessage.create({
+            content: aiContent,
+            senderId: aiSenderId,
+            ideaWallId: wallId,
+            relatedNodeId: relatedNodeId || null,
+            isAiIntervention: true
+        });
+
+        console.log(`✅ [Chat Orchestrator] AI Message Created: ID #${aiMessage.id}`);
+
+        // 5. Emit Socket Event
+        if (socketIO) {
+            // We need to fetch the message again to include User info (even if it's fake/admin)
+            const messageWithSender = await IdeaWallMessage.findByPk(aiMessage.id, {
+                include: [{
+                    model: User,
+                    attributes: ['id', 'username', 'account']
+                }]
+            });
+
+            // Override sender name for display if needed, but frontend handles isAiIntervention
+            socketIO.to(`ideawall_${wallId}`).emit('EVENT_IDEA_WALL_MSG', messageWithSender);
+        }
+
+    } catch (error) {
+        console.error('❌ [Chat Orchestrator] Intervention Failed:', error);
+    }
+}

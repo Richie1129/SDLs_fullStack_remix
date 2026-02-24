@@ -1,10 +1,11 @@
 //frontend api for announcement.js
 import apiClient from './client';
+import { getCurrentUserId } from '../utils/authUtils';
 
 // 獲取公告列表
 export const getAnnouncements = async (projectId) => {
     try {
-        const userId = localStorage.getItem('id');
+        const userId = getCurrentUserId();
         let query = '';
 
         if (projectId) {
@@ -31,6 +32,17 @@ export const createAnnouncement = async (announcementData) => {
         return response.data.announcement;
     } catch (error) {
         console.error("Failed to create announcement | 無法發佈公告:", error);
+        throw error;
+    }
+};
+
+// 刪除公告
+export const deleteAnnouncement = async (announcementId) => {
+    try {
+        const response = await apiClient.delete(`/announcements/${announcementId}`);
+        return response.data;
+    } catch (error) {
+        console.error("Failed to delete announcement | 無法刪除公告:", error);
         throw error;
     }
 };

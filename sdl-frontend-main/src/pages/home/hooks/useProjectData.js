@@ -6,29 +6,38 @@ import {
   updateProject,
   deleteProject
 } from '../../../api/project';
-import { getAllTeachers, getProjectUser, batchGetProjectUsers } from '../../../api/users';
+import { getAllTeachers, batchGetProjectUsers } from '../../../api/users';
 import { getCurrentUsername } from '../../../utils/userUtils';
+import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
+import { userStorage, authStorage } from '../../../services/storageService';
+import { getCurrentSemester } from '../../../utils/semesterUtils';
 
 export const useProjectData = () => {
-  const [teachers, setTeachers] = useState([]);
   const [members, setMembers] = useState([]);
-  const [viewableProjects, setViewableProjects] = useState([]);
   const [classFilter, setClassFilter] = useState('all');
   const [completedSearch, setCompletedSearch] = useState('');
   const [doneSearch, setDoneSearch] = useState('');
+  const [semesterFilter, setSemesterFilter] = useState('all');
 
-  const role = localStorage.getItem("role");
+  const role = getCurrentUserRole();
   const userName = getCurrentUsername();
-  const userClass = localStorage.getItem('class');
+  const userClass = userStorage.get('class');
   const queryClient = useQueryClient();
 
-  // 計算進度百分比
+  // [Option B 隱藏] 計算進度百分比 - 四階段模式（共 12 個子階段）
   const calculateProgress = (currentStage, currentSubStage) => {
-    if (currentStage === 5) {
-      return (12 + currentSubStage) / 17 * 100;
-    } else {
-      return ((currentStage - 1) * 3 + currentSubStage) / 17 * 100;
+    // 向後兼容：Stage 5 視為 100% 完成
+    if (currentStage > 4) {
+      return 100;
     }
+    // Stage 4-3 視為 100% 完成
+    if (currentStage === 4 && currentSubStage >= 3) {
+      return 100;
+    }
+    // 四階段計算：每階段 25%，每子階段約 8.33%
+    const stageProgress = (currentStage - 1) * 25;
+    const subStageProgress = ((currentSubStage - 1) / 3) * 25;
+    return Math.min(100, stageProgress + subStageProgress);
   };
 
   const calculateProgressPercentage = (currentStage, currentSubStage) => {
@@ -36,19 +45,23 @@ export const useProjectData = () => {
     return percentage.toFixed(2);
   };
 
-  // 主要專案查詢 - 根據角色決定
+  // 主要專案查詢 - 根據角色決定，加入學期過濾
   const {
     isLoading,
     isError,
     error,
     data: projectData = []
   } = useQuery(
-    role === "teacher" ? "TeacherProjectDatas" : "projectDatas",
+    role === "teacher"
+      ? ["TeacherProjectDatas", semesterFilter]
+      : ["projectDatas", semesterFilter],
     () => {
       if (role === "teacher") {
-        return getProjectsByMentor(userName);
+        return getProjectsByMentor(userName, semesterFilter);
       } else {
-        return getAllProject({ params: { userId: localStorage.getItem("id") } });
+        return getAllProject({
+          params: { userId: getCurrentUserId(), semester: semesterFilter }
+        });
       }
     },
     {
@@ -57,7 +70,16 @@ export const useProjectData = () => {
     }
   );
 
-  // 分類專案 - 使用 useMemo 避免重複計算
+  const { data: teachers = [] } = useQuery(
+    'teachers',
+    getAllTeachers,
+    {
+      staleTime: 10 * 60 * 1000,
+      select: (data) => data?.user || [],
+    }
+  );
+
+  // [Option B 隱藏] 分類專案 - 使用 useMemo 避免重複計算
   const categorizedProjects = useMemo(() => {
     if (!projectData || !Array.isArray(projectData)) {
       return {
@@ -67,17 +89,32 @@ export const useProjectData = () => {
       };
     }
 
+    // 判斷專案是否已結束（Stage 4-3 完成或 ProjectEnd）
+    const isProjectEnded = (project) => {
+      return project.ProjectEnd === true ||
+             (project.currentStage === 4 && project.currentSubStage >= 3) ||
+             project.currentStage > 4;  // 向後兼容舊的 Stage 5 資料
+    };
+
+    // 判斷專案是否已完成歷程（已生成 AI Portfolio）
+    const isPortfolioCompleted = (project) => {
+      return project.portfolioGenerated === true;
+    };
+
+    // 進行中活動：未達 75% 且未結束
     const ongoing = projectData.filter(project =>
+      !isProjectEnded(project) &&
       calculateProgress(project.currentStage, project.currentSubStage) < 75
     );
 
+    // 已結束活動：已結束（Stage 4-3 或 ProjectEnd）但尚未生成 Portfolio
     const completed = projectData.filter(project =>
-      calculateProgress(project.currentStage, project.currentSubStage) > 75 &&
-      project.ProjectEnd === false
+      isProjectEnded(project) && !isPortfolioCompleted(project)
     );
 
+    // 已完成歷程：已生成 AI Portfolio
     const done = projectData.filter(project =>
-      project.ProjectEnd === true
+      isPortfolioCompleted(project)
     );
 
     return { ongoing, completed, done };
@@ -111,15 +148,6 @@ export const useProjectData = () => {
     };
   }, [categorizedProjects, classFilter, completedSearch, doneSearch, members, role]);
 
-  // 載入教師列表
-  useEffect(() => {
-    getAllTeachers().then(data => {
-      setTeachers(data.user || []);
-    }).catch(error => {
-      console.error('Error fetching teachers:', error);
-    });
-  }, []);
-
   // 載入專案成員 - 使用批次 API 優化
   useEffect(() => {
     if (!role || !projectData?.length) return;
@@ -128,15 +156,7 @@ export const useProjectData = () => {
       try {
         let projectIds = [];
 
-        if (role === "teacher") {
-          const mentorName = getCurrentUsername();
-          if (!mentorName) return;
-
-          const mentorProjects = await getProjectsByMentor(mentorName);
-          projectIds = mentorProjects?.map(project => project.id) || [];
-        } else {
-          projectIds = projectData.map(project => project.id);
-        }
+        projectIds = projectData.map(project => project.id);
 
         if (projectIds.length === 0) return;
 
@@ -165,18 +185,16 @@ export const useProjectData = () => {
     fetchMembers();
   }, [role, projectData]);
 
-  // 載入可觀摩專案 - 僅學生角色
-  useEffect(() => {
-    if (role !== "student" || !userClass) return;
-
-    const fetchViewableProjects = async () => {
+  // 可觀摩專案查詢 - 加入學期過濾
+  const { data: viewableProjectsData = [] } = useQuery(
+    ['viewableProjects', userClass, role, semesterFilter],
+    async () => {
       try {
         const response = await getAllProject({
-          params: { viewable_by: userClass },
-          headers: { 'accessToken': localStorage.getItem('accessToken') }
+          params: { viewable_by: userClass, semester: semesterFilter },
+          headers: { 'accessToken': authStorage.get('accessToken') }
         });
 
-        // 安全地取得專案陣列
         let projects = [];
         if (response?.error) {
           console.warn("getAllProject 回傳錯誤:", response.error);
@@ -186,25 +204,26 @@ export const useProjectData = () => {
           projects = response;
         }
 
-        // 過濾掉使用者自己參與的專案
-        const myId = String(localStorage.getItem('id') || '');
+        const myId = getCurrentUserId();
         const myName = getCurrentUsername() || '';
-        projects = projects.filter(p => {
+        return projects.filter(p => {
           if (!Array.isArray(p?.members)) return true;
           return !p.members.some(m =>
-            String(m?.id ?? '') === myId || (m?.username || '') === myName
+            (m?.id ?? 0) === myId || (m?.username || '') === myName
           );
         });
-
-        setViewableProjects(projects);
       } catch (error) {
         console.error("獲取可觀摩專案失敗:", error);
-        setViewableProjects([]);
+        return [];
       }
-    };
+    },
+    {
+      enabled: role === 'student' && !!userClass,
+      staleTime: 5 * 60 * 1000,
+    }
+  );
 
-    fetchViewableProjects();
-  }, [role, userClass]);
+  const viewableProjects = role === 'student' ? viewableProjectsData : [];
 
   // 返回所有狀態和函數
   return {
@@ -225,6 +244,8 @@ export const useProjectData = () => {
     setCompletedSearch,
     doneSearch,
     setDoneSearch,
+    semesterFilter,
+    setSemesterFilter,
 
     // 查詢狀態
     isLoading,

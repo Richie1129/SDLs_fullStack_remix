@@ -34,10 +34,10 @@ const AIAnalysisHistoryPanel = ({ targetId, title: currentTitle }) => {
   return (
     <div className="mt-2 max-h-[70vh] overflow-auto space-y-3">
       {loading && (
-        <div className="text-sm text-gray-500 p-4 bg-white rounded-lg border border-gray-200">載入中…</div>
+        <div className="text-body-sm text-gray-500 p-component-base bg-white rounded-lg border border-gray-200">載入中…</div>
       )}
       {!loading && items.length === 0 && (
-        <div className="text-sm text-gray-500 p-6 text-center bg-white rounded-lg border border-gray-200">尚無 AI 分析歷史</div>
+        <div className="text-body-sm text-gray-500 p-component-md-lg text-center bg-white rounded-lg border border-gray-200">尚無 AI 分析歷史</div>
       )}
       {!loading && items.map((ev, i) => {
         const md = ev?.metadata || {};
@@ -52,44 +52,44 @@ const AIAnalysisHistoryPanel = ({ targetId, title: currentTitle }) => {
         const R_KEYS = ['reporting','responding','relating','reasoning','reconstructing'];
 
         return (
-          <div key={ev.id || i} className="p-4 bg-white rounded-lg shadow-sm border-2" style={{ borderColor: '#5BA491' }}>
+          <div key={ev.id || i} className="p-component-base bg-white rounded-lg shadow-sm border-2" style={{ borderColor: '#5BA491' }}>
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-3">
-                <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+                <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-caption font-medium text-gray-600">
                   {initial}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-800">{actorName}</span>
-                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-800">AI</span>
-                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-teal-100 text-teal-800">{provider}</span>
+                <div className="flex items-center gap-stack-xs">
+                  <span className="text-body-sm font-medium text-gray-800">{actorName}</span>
+                  <span className="inline-flex items-center px-2 py-0.5 text-caption font-medium rounded-full bg-purple-100 text-purple-800">AI</span>
+                  <span className="inline-flex items-center px-2 py-0.5 text-caption font-medium rounded-full bg-teal-100 text-teal-800">{provider}</span>
                 </div>
               </div>
-              <span className="text-xs text-gray-500" title={formatTime(ts, 'full')}>
+              <span className="text-caption text-gray-500" title={formatTime(ts, 'full')}>
                 {formatTime(ts, 'relative')}
               </span>
             </div>
 
             {/* 標題 */}
             <div className="mb-3">
-              <div className="text-sm text-gray-600 mb-1">日誌標題</div>
-              <div className="text-sm text-gray-800">{currentTitle || '（無標題）'}</div>
+              <div className="text-body-sm text-gray-600 mb-1">日誌標題</div>
+              <div className="text-body-sm text-gray-800">{currentTitle || '（無標題）'}</div>
             </div>
 
             {/* AI 回饋 */}
             <div className="mb-2">
-              <div className="text-sm text-gray-600 mb-1">整體分析</div>
-              <div className="text-sm text-gray-800 whitespace-pre-wrap">{String(fb?.overall || '') || '—'}</div>
+              <div className="text-body-sm text-gray-600 mb-1">整體分析</div>
+              <div className="text-body-sm text-gray-800 whitespace-pre-wrap">{String(fb?.overall || '') || '—'}</div>
             </div>
 
             {/* 對應顯示：每個 R 一個小區塊（內容 vs 分析） */}
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-stack-xs">
               {R_KEYS.map(k => (
                 (input?.[k] || fb?.[k]) ? (
-                  <div key={k} className="text-sm rounded-md border border-gray-200 p-2 bg-gray-50">
-                    <div className="flex items-center gap-2 mb-1">
+                  <div key={k} className="text-body-sm rounded-md border border-gray-200 p-component-xs bg-gray-50">
+                    <div className="flex items-center gap-stack-xs mb-1">
                       <span className="inline-block min-w-[120px] text-gray-700 capitalize">{k}</span>
                       {score(k) != null && (
-                        <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">分數 {score(k)}</span>
+                        <span className="inline-flex items-center px-2 py-0.5 text-caption font-medium rounded-full bg-amber-100 text-amber-800">分數 {score(k)}</span>
                       )}
                     </div>
                     <div className="text-gray-600 mb-0.5">內容:</div>

@@ -41,9 +41,9 @@ const AuditHistoryPanel = ({ targetType, targetId }) => {
   return (
     <div className="mt-3">
       <div className="mt-2 max-h-[70vh] overflow-auto space-y-3">
-        {loading && (<div className="text-sm text-gray-500 p-4 bg-white rounded-lg border border-gray-200">載入中…</div>)}
+        {loading && (<div className="text-body-sm text-gray-500 p-component-base bg-white rounded-lg border border-gray-200">載入中…</div>)}
         {!loading && items.length === 0 && (
-          <div className="text-sm text-gray-500 p-6 text-center bg-white rounded-lg border border-gray-200">尚無變更</div>
+          <div className="text-body-sm text-gray-500 p-component-md-lg text-center bg-white rounded-lg border border-gray-200">尚無變更</div>
         )}
         {!loading && items.map((ev, i) => {
           const meta = ev?.metadata || {};
@@ -97,31 +97,31 @@ const AuditHistoryPanel = ({ targetType, targetId }) => {
           return (
             <div
               key={ev.id || i}
-              className="p-4 bg-white rounded-lg shadow-sm border-2"
+              className="p-component-base bg-white rounded-lg shadow-sm border-2"
               style={{ borderColor: '#5BA491' }}
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">
-                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-600">
+                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-caption font-medium text-gray-600">
                     {actorInitial}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-800">{actorName}</span>
-                    <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-teal-100 text-teal-800">
+                  <div className="flex items-center gap-stack-xs">
+                    <span className="text-body-sm font-medium text-gray-800">{actorName}</span>
+                    <span className="inline-flex items-center px-2 py-0.5 text-caption font-medium rounded-full bg-teal-100 text-teal-800">
                       {formatAuditAction(ev.action)}
                     </span>
                     {show5RsBadge && (
-                      <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800">5Rs</span>
+                      <span className="inline-flex items-center px-2 py-0.5 text-caption font-medium rounded-full bg-blue-100 text-blue-800">5Rs</span>
                     )}
                   </div>
                 </div>
-                <span className="text-xs text-gray-500" title={formatTime(ev.timestamp, 'full')}>
+                <span className="text-caption text-gray-500" title={formatTime(ev.timestamp, 'full')}>
                   {formatTime(ev.timestamp, 'relative')}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-2">
-                <div className="text-sm">
+              <div className="grid grid-cols-1 gap-stack-xs">
+                <div className="text-body-sm">
                   <span className="text-gray-500 mr-2">標題:</span>
                   {titleChanged ? (
                     <span className="text-gray-800">
@@ -134,16 +134,16 @@ const AuditHistoryPanel = ({ targetType, targetId }) => {
                   )}
                 </div>
 
-                <div className="text-sm">
+                <div className="text-body-sm">
                   <span className="text-gray-500 mr-2">內容:</span>
                   <span className="text-gray-800">{contentLine}</span>
                 </div>
 
                 {/* AI 分析歷史（5Rs） */}
                 {ev?.action === 'DAILY_PERSONAL_5RS_AI_ANALYSIS' && (aiFeedback || aiInput) && (
-                  <div className="text-sm mt-2">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-800">AI</span>
+                  <div className="text-body-sm mt-2">
+                    <div className="flex items-center gap-stack-xs mb-1">
+                      <span className="inline-flex items-center px-2 py-0.5 text-caption font-medium rounded-full bg-purple-100 text-purple-800">AI</span>
                       <span className="text-gray-600">AI 分析結果（{aiProvider || '未知提供者'}）</span>
                     </div>
                     {aiTitle && (
@@ -159,18 +159,18 @@ const AuditHistoryPanel = ({ targetType, targetId }) => {
                       </div>
                     )}
                     {/* 對應顯示：每個 R 一個小區塊（內容 vs 分析） */}
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-stack-xs">
                       {R_KEYS.map((k) => {
                         const inputVal = aiInput?.[k];
                         const fbVal = aiFeedback?.[k];
                         if (!inputVal && !fbVal) return null;
                         const score = typeof aiScores?.[k] !== 'undefined' ? aiScores[k] : null;
                         return (
-                          <div key={k} className="rounded-md border border-gray-200 p-2 bg-gray-50">
-                            <div className="flex items-center gap-2 mb-1">
+                          <div key={k} className="rounded-md border border-gray-200 p-component-xs bg-gray-50">
+                            <div className="flex items-center gap-stack-xs mb-1">
                               <span className="text-gray-700 font-medium capitalize">{k}</span>
                               {score != null && (
-                                <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">分數 {score}</span>
+                                <span className="inline-flex items-center px-2 py-0.5 text-caption font-medium rounded-full bg-amber-100 text-amber-800">分數 {score}</span>
                               )}
                             </div>
                             <div className="text-gray-600 mb-0.5">內容:</div>
@@ -191,7 +191,7 @@ const AuditHistoryPanel = ({ targetType, targetId }) => {
                 )}
 
                 {fiveRs && (
-                  <div className="text-sm">
+                  <div className="text-body-sm">
                     <span className="text-gray-500 mr-2">5Rs 欄位:</span>
                     <div className="mt-1 grid grid-cols-1 gap-1">
                       {Object.entries(fiveRs).map(([k, v]) => (
@@ -209,7 +209,7 @@ const AuditHistoryPanel = ({ targetType, targetId }) => {
                 )}
 
                 {fileLine && (
-                  <div className="text-xs text-gray-600">{fileLine}</div>
+                  <div className="text-caption text-gray-600">{fileLine}</div>
                 )}
               </div>
             </div>

@@ -26,3 +26,14 @@ export const postClientAuditEvent = async ({ action, targetType = 'client', targ
   });
   return res?.data;
 };
+
+// Post batch audit events (requires auth) - Used by TrackingProvider
+export const postBatchAuditEvents = async (events = []) => {
+  if (!Array.isArray(events) || events.length === 0) {
+    console.warn('⚠️ postBatchAuditEvents: events 必須是非空陣列');
+    return { ok: false, count: 0 };
+  }
+  
+  const res = await apiClient.post('/audit/batch', { events });
+  return res?.data;
+};

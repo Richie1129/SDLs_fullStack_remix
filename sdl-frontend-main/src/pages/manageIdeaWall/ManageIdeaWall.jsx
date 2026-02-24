@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 
 function ManagePhase() {
     useEffect(() => {
+        if (!window.tableau) {
+            return;
+        }
         // 確保只在組件掛載後執行
         initTableauViz();
     }, []);

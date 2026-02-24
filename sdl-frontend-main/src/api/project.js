@@ -1,5 +1,6 @@
 // front-end API for project
 import apiClient from './client';
+import { authStorage } from '../services/storageService';
 
 export const getProject = async (projectId) => {
     const response = await apiClient.get(`/projects/${projectId}`)
@@ -8,7 +9,7 @@ export const getProject = async (projectId) => {
 
 export const getAllProject = async (config) => {
     // 如果 config 包含 headers，合併認證 token
-    const token = localStorage.getItem('accessToken');
+    const token = authStorage.get('accessToken');
 
     // 構建完整的配置對象
     const fullConfig = {
@@ -24,8 +25,19 @@ export const getAllProject = async (config) => {
     return response.data;
 }
 
-export const getProjectsByMentor = async (mentorName) => {
-    const response = await apiClient.get(`/projects/mentor/${mentorName}`);
+export const getProjectsByMentor = async (mentorName, semester) => {
+    const params = {};
+    if (semester) params.semester = semester;
+    const response = await apiClient.get(`/projects/mentor/${mentorName}`, { params });
+    return response.data;
+};
+
+/**
+ * 取得教師所有專案的可用學期列表
+ * @param {string} mentorName - 教師名稱
+ */
+export const getAvailableSemesters = async (mentorName) => {
+    const response = await apiClient.get(`/projects/mentor/${mentorName}/semesters`);
     return response.data;
 };
 
@@ -59,7 +71,7 @@ export const deleteProject = async (projectId) => {
  * @param {string[]} data.allowed_classes - 可觀摩的班級列表
  */
 export const updateViewingSettings = async (projectId, data) => {
-    const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
+    const token = authStorage.get('accessToken');
     const response = await apiClient.patch(`/projects/${projectId}/viewing-settings`, data, {
         headers: {
             'accessToken': token,
@@ -74,7 +86,7 @@ export const updateViewingSettings = async (projectId, data) => {
  * @param {number} projectId - 專案ID
  */
 export const checkViewingPermission = async (projectId) => {
-    const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
+    const token = authStorage.get('accessToken');
     const response = await apiClient.get(`/projects/${projectId}/viewable`, {
         headers: {
             'accessToken': token,
@@ -87,7 +99,7 @@ export const checkViewingPermission = async (projectId) => {
  * 取得所有可用的班級列表
  */
 export const getAllClasses = async () => {
-    const token = localStorage.getItem('accessToken');
+    const token = authStorage.get('accessToken');
 
     const response = await apiClient.get('/projects/classes/list', {
         headers: {
@@ -103,7 +115,7 @@ export const getAllClasses = async () => {
  */
 // 獲取班級的用戶和專案資料
 export const getClassUsersAndProjects = async (className) => {
-    const token = localStorage.getItem('accessToken');
+    const token = authStorage.get('accessToken');
 
     const response = await apiClient.get(`/projects/classes/${className}/users-projects`, {
         headers: {
@@ -119,7 +131,7 @@ export const getClassUsersAndProjects = async (className) => {
  * @param {string} className - 班級名稱
  */
 export const getViewableProjects = async (className) => {
-    const token = localStorage.getItem('accessToken'); // 修正：使用正確的令牌名稱
+    const token = authStorage.get('accessToken');
     const response = await apiClient.get('/projects', {
         params: { viewable_by: className },
         headers: {
@@ -137,7 +149,7 @@ export const getViewableProjects = async (className) => {
  * @param {string} data.mentorName - 指導老師名稱
  */
 export const batchUpdateViewingSettings = async (data) => {
-    const token = localStorage.getItem('accessToken');
+    const token = authStorage.get('accessToken');
     const response = await apiClient.post('/projects/batch-viewing-settings', data, {
         headers: {
             'accessToken': token,

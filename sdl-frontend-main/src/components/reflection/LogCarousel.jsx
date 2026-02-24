@@ -65,7 +65,7 @@ const LogCarousel = ({
       </motion.div>
       
       {/* Pagination dots */}
-      <div className="mt-4 flex w-full justify-center gap-2">
+      <div className="mt-4 flex w-full justify-center gap-stack-xs">
         {items.map((_, idx) => (
           <button
             key={idx}

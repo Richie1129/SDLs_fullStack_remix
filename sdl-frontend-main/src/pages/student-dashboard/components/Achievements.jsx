@@ -60,26 +60,26 @@ const Achievements = ({ achievements, enhancedStudents, realData }) => {
 
   if (!achievements || (list.length === 0 && (!achievements.team || !achievements.personal))) {
     return (
-      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
-        <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+      <div className="bg-white p-component-base sm:p-component-md-lg rounded-2xl shadow-lg">
+        <h3 className="text-body-lg font-bold text-gray-800 mb-4 flex items-center">
           <FaTrophy className="text-yellow-500 mr-3" />
           近期成就
         </h3>
-        <p className="text-sm text-gray-500 text-center py-4">暫無新成就，繼續努力吧！</p>
+        <p className="text-body-sm text-gray-500 text-center py-4">暫無新成就，繼續努力吧！</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white p-3 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
+    <div className="bg-white p-component-sm sm:p-component-md-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800 flex items-center">
+        <h2 className="text-body-lg sm:text-h3 font-semibold text-gray-800 flex items-center">
           <span className="w-1 h-6 bg-gradient-to-b from-customgreen to-teal-600 rounded-full mr-3"></span>
           <FaTrophy className="text-yellow-500 mr-2" />
           近期成就
         </h2>
         {/* Toggle */}
-        <div className="flex items-center bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg p-1 text-xs shadow-inner">
+        <div className="flex items-center bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg p-1 text-caption shadow-inner">
           <button
             className={`px-2 py-1 rounded transition-all duration-200 ${mode === 'team' ? 'bg-gradient-to-r from-customgreen to-teal-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
             onClick={() => setMode('team')}
@@ -114,15 +114,15 @@ const Achievements = ({ achievements, enhancedStudents, realData }) => {
                 ? `距離${levelLabel(a.nextLevel)}還差 ${Math.max(0, (a.nextTarget || 0) - (a.current || 0))}`
                 : '已達最高等級';
               return (
-                <div key={a.key} className="p-3 rounded-lg border border-teal-100 bg-gradient-to-r from-teal-50/50 to-gray-50 hover:border-teal-200 transition-colors duration-300">
+                <div key={a.key} className="p-component-sm rounded-lg border border-teal-100 bg-gradient-to-r from-teal-50/50 to-gray-50 hover:border-teal-200 transition-colors duration-300">
                   <div className="flex items-start gap-3">
-                    <div className="text-xl sm:text-2xl flex-shrink-0">{typeIcon(a.type)}</div>
+                    <div className="text-h3 sm:text-h2 flex-shrink-0">{typeIcon(a.type)}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-gray-800 text-sm sm:text-base">{a.title}</h3>
-                        <span className={`px-2 py-0.5 text-[10px] sm:text-xs rounded ${style.badge}`}>{levelLabel(a.level)}</span>
+                        <h3 className="font-medium text-gray-800 text-body-sm sm:text-body">{a.title}</h3>
+                        <span className={`px-2 py-0.5 text-[10px] sm:text-caption rounded ${style.badge}`}>{levelLabel(a.level)}</span>
                       </div>
-                      <p className="text-xs text-gray-600 mt-1">{a.description}</p>
+                      <p className="text-caption text-gray-600 mt-1">{a.description}</p>
                       {/* 進度條 */}
                       <div className="mt-2">
                         <div className="w-full h-2 bg-gray-200 rounded">
@@ -131,7 +131,7 @@ const Achievements = ({ achievements, enhancedStudents, realData }) => {
                             style={{ width: `${Math.min(100, a.progressPercent || 0)}%` }}
                           />
                         </div>
-                        <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 mt-1">
+                        <div className="flex justify-between text-[10px] sm:text-caption text-gray-500 mt-1">
                           <span>{a.current} / {totalForGold}</span>
                           <span>{nextTip}</span>
                         </div>
@@ -142,7 +142,7 @@ const Achievements = ({ achievements, enhancedStudents, realData }) => {
               );
             })}
             {list.length === 0 && (
-              <div className="text-xs text-gray-500 text-center py-4">此分類暫無成就，持續努力加油！</div>
+              <div className="text-caption text-gray-500 text-center py-4">此分類暫無成就，持續努力加油！</div>
             )}
           </>
         )}

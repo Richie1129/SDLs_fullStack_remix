@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { getProjectUser } from '../api/users';
 import { getProject } from '../api/project';
 import { getCurrentUsername } from '../utils/userUtils';
+import { getCurrentUserId } from '../utils/authUtils';
+import { projectStorage } from '../services/storageService';
 
 /**
  * 觀摩模式 Hook
@@ -22,8 +24,8 @@ export const useObservationMode = () => {
       // 1) 初步檢查：URL 或 localStorage 是否請求觀摩模式
       const modeParam = searchParams.get('mode');
       const wantsObservation = modeParam === 'observation'
-        || localStorage.getItem(`observationMode_${projectId}`) === 'true'
-        || localStorage.getItem('isObservationMode') === 'true';
+        || projectStorage.getBoolean(`observationMode_${projectId}`)
+        || projectStorage.getBoolean('isObservationMode');
 
       // 2) 若使用者是專案成員或指導老師，強制關閉觀摩模式（即使 URL 夾帶 observation）
       let isMemberOrMentor = false;
@@ -35,7 +37,7 @@ export const useObservationMode = () => {
             getProject(projectId)
           ]);
 
-          const meId = localStorage.getItem('id');
+          const meId = getCurrentUserId();
           const currentUser = getCurrentUsername();
 
           // 檢查是否為專案成員
@@ -56,8 +58,8 @@ export const useObservationMode = () => {
       if (isMemberOrMentor) {
         // 清掉任何觀摩模式標記，避免後續頁面殘留
         setIsObservationMode(false);
-        localStorage.removeItem('isObservationMode');
-        localStorage.removeItem(`observationMode_${projectId}`);
+        projectStorage.remove('isObservationMode');
+        projectStorage.remove(`observationMode_${projectId}`);
         setIsLoading(false);
         return;
       }
@@ -65,7 +67,7 @@ export const useObservationMode = () => {
       // 3) 非成員：才依照 wantsObservation 決定是否觀摩
       setIsObservationMode(!!wantsObservation);
       if (wantsObservation) {
-        localStorage.setItem(`observationMode_${projectId}`, 'true');
+        projectStorage.set(`observationMode_${projectId}`, 'true');
       }
       setIsLoading(false);
     } catch (error) {
@@ -78,21 +80,21 @@ export const useObservationMode = () => {
   // 啟用觀摩模式
   const enableObservationMode = useCallback(() => {
     setIsObservationMode(true);
-    localStorage.setItem('isObservationMode', 'true');
+    projectStorage.set('isObservationMode', 'true');
     if (projectId) {
-      localStorage.setItem(`observationMode_${projectId}`, 'true');
+      projectStorage.set(`observationMode_${projectId}`, 'true');
     }
   }, [projectId]);
 
   // 禁用觀摩模式
   const disableObservationMode = useCallback(() => {
     setIsObservationMode(false);
-    localStorage.removeItem('isObservationMode');
+    projectStorage.remove('isObservationMode');
     if (projectId) {
-      localStorage.removeItem(`observationMode_${projectId}`);
+      projectStorage.remove(`observationMode_${projectId}`);
     }
     // 清除已顯示過觀摩模式提示的標記
-    localStorage.removeItem('observationModeShown');
+    projectStorage.remove('observationModeShown');
   }, [projectId]);
 
   // 監聽項目ID和URL參數變化
@@ -110,10 +112,10 @@ export const useObservationMode = () => {
         enableObservationMode();
         
         // 顯示觀摩模式提示（只顯示一次）
-        const hasShownNotification = localStorage.getItem(`observationModeNotificationShown_${projectId}`);
+        const hasShownNotification = projectStorage.getBoolean(`observationModeNotificationShown_${projectId}`);
         if (!hasShownNotification) {
           // 這裡可以觸發通知
-          localStorage.setItem(`observationModeNotificationShown_${projectId}`, 'true');
+          projectStorage.set(`observationModeNotificationShown_${projectId}`, 'true');
           
           // 派發自定義事件通知其他組件
           window.dispatchEvent(new CustomEvent('observationModeActivated', {

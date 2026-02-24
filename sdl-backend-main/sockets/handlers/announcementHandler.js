@@ -1,5 +1,6 @@
 const { SocketHandlerFactory } = require('../socketHandlers');
 const Announcement = require('../../models/announcement');
+const auditService = require('../../services/auditService');
 
 /**
  * 公告相關 Socket 事件處理器
@@ -22,7 +23,7 @@ class AnnouncementHandler {
      */
     static async handleAnnouncementBroadcast(data) {
         console.log("收到公告廣播請求:", data);
-        const { title, content, author, projectId } = data;
+        const { title, content, author, projectId, userId } = data;
 
         try {
             // 儲存公告至資料庫
@@ -43,6 +44,28 @@ class AnnouncementHandler {
             }
 
             console.log(`✅ 公告廣播成功: ${title}`);
+            
+            // 記錄審計事件（非阻塞）
+            const req = {
+                user: { id: userId || null },
+                ip: this.socket.handshake.address,
+                headers: { 'user-agent': this.socket.handshake.headers['user-agent'] || 'socket-client' }
+            };
+            
+            auditService.logAudit(req, {
+                action: 'SOCKET_ANNOUNCEMENT_EMIT',
+                targetType: 'Announcement',
+                targetId: newAnnouncement.id,
+                result: 'success',
+                metadata: {
+                    title: title,
+                    author: author,
+                    projectId: projectId === 'all' ? 'all' : projectId,
+                    broadcast: projectId === 'all' || !projectId ? 'global' : 'project-specific'
+                }
+            }).catch(auditError => {
+                console.error('記錄審計事件失敗（公告廣播）:', auditError);
+            });
 
         } catch (error) {
             console.error("公告儲存或廣播失敗:", error.message);

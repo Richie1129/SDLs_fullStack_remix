@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { socket } from "../../../../../utils/socket";
 import {
   getUserSessions,
@@ -6,15 +6,35 @@ import {
   testConnection,
   deleteSession,
   deleteSessionMessages,
-  createNewSessionInDB
+  createNewSessionInDB,
+  generateSessionTitle
 } from "../../../../../api/rag";
 import { getCurrentUsername } from "../../../../../utils/userUtils";
+import { getCurrentUserId } from "../../../../../utils/authUtils";
+import storageService, { authStorage, projectStorage } from "../../../../../services/storageService";
 
-const API_URL = "/proxy/api/v1/chats/a159fe08e2d411efb3910242ac120004";
+const RAGFLOW_CHAT_ID = import.meta.env.VITE_RAGFLOW_CHAT_ID;
+const API_URL = `/proxy/api/v1/chats/${RAGFLOW_CHAT_ID}`;
 const OPENING_MESSAGE = "嗨！我是一位專門輔導高中生科學探究與實作的自然科學導師。我會用適合高中生的語言，保持專業的同時，幫助你探索自然科學的奧秘，並引導你選擇一個有興趣的科展主題，以及更深入了解你的研究問題。什麼可以幫到你的嗎？";
 
-const headers = {
+const getHeaders = () => ({
   "Content-Type": "application/json",
+  "accessToken": authStorage.get('accessToken') || authStorage.get('token') || "",
+});
+
+/**
+ * ✅ 輔助函數：取得當前專案 ID（0破壞性）
+ * 優先從 projectStorage 取得，如果沒有則從 URL 解析
+ */
+const getCurrentProjectId = () => {
+  let projectIdRaw = projectStorage.get('projectId');
+
+  if (!projectIdRaw) {
+    const m = window.location.pathname.match(/\/project\/(\d+)/);
+    if (m && m[1]) projectIdRaw = m[1];
+  }
+
+  return projectIdRaw ? Number(projectIdRaw) : null;
 };
 
 export const useChatSession = () => {
@@ -26,7 +46,23 @@ export const useChatSession = () => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✅ 外部連結開關狀態（從 storageService 讀取，預設關閉）
+  const [enableExternalLinks, setEnableExternalLinks] = useState(() => {
+    const saved = storageService.get('science-assistant-external-links');
+    return saved === 'true';
+  });
+
   const chatEndRef = useRef(null);
+
+  // ✅ 當開關狀態改變時，儲存到 storageService
+  useEffect(() => {
+    storageService.set('science-assistant-external-links', enableExternalLinks);
+  }, [enableExternalLinks]);
+
+  // ✅ 切換開關函數
+  const toggleExternalLinks = () => {
+    setEnableExternalLinks(prev => !prev);
+  };
 
   // 初始化歷史記錄為開場白
   useEffect(() => {
@@ -49,15 +85,17 @@ export const useChatSession = () => {
   }, [currentChatId]);
 
   // 獲取歷史對話列表
-  const fetchChatSessions = async () => {
+  // ✅ v2.0: 加入專案隔離（0破壞性）
+  const fetchChatSessions = useCallback(async () => {
     if (isLoadingSessions) return;
 
     try {
       setIsLoadingSessions(true);
       console.log("正在獲取對話列表...");
 
-      const userId = localStorage.getItem('id') || '1';
-      console.log("獲取用戶 ID:", userId);
+      const userId = getCurrentUserId() || 1;
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log("獲取用戶 ID:", userId, "專案 ID:", projectId || '未指定');
 
       // 先測試 API 連接
       try {
@@ -68,21 +106,24 @@ export const useChatSession = () => {
         throw new Error("無法連接到後端 API");
       }
 
-      const sessions = await getUserSessions(userId);
+      // ✅ 傳遞 projectId 參數（如果存在）
+      const sessions = await getUserSessions(userId, projectId);
       console.log("獲取到的對話數據:", sessions);
 
       if (sessions.length === 0) {
         console.log("沒有歷史對話，顯示空狀態");
         setChatSessions([]);
-        if (history.length === 0) {
-          setHistory([{ question: null, answer: OPENING_MESSAGE }]);
-        }
+        setHistory(prev => prev.length === 0 ? [{ question: null, answer: OPENING_MESSAGE }] : prev);
       } else {
         console.log(`找到 ${sessions.length} 個歷史對話`);
 
         const formattedSessions = sessions.map((session, index) => {
-          let displayName;
+          // 優先使用 AI 生成的摘要標題
+          if (session.sessionTitle) {
+            return { id: session.sessionId, name: session.sessionTitle };
+          }
 
+          let displayName;
           if (session.userName && session.userName !== '未知用戶') {
             displayName = session.userName;
           } else if (session.userId) {
@@ -106,15 +147,14 @@ export const useChatSession = () => {
       console.error("獲取對話列表失敗:", error);
       console.error("錯誤詳情:", error.response?.data || error.message);
       setChatSessions([]);
-      if (history.length === 0) {
-        setHistory([{ question: null, answer: OPENING_MESSAGE }]);
-      }
+      setHistory(prev => prev.length === 0 ? [{ question: null, answer: OPENING_MESSAGE }] : prev);
     } finally {
       setIsLoadingSessions(false);
     }
-  };
+  }, [isLoadingSessions, currentChatId]); // 只依賴真正需要的狀態
 
   // 載入單一對話歷史訊息
+  // ✅ v2.0: 加入專案隔離（0破壞性）
   const loadChatHistory = async (sessionId) => {
     if (isLoadingHistory) return;
 
@@ -122,10 +162,12 @@ export const useChatSession = () => {
       setIsLoadingHistory(true);
       console.log(`正在載入對話歷史，Session ID: ${sessionId}`);
 
-      const userId = localStorage.getItem('id') || '1';
-      console.log("使用用戶 ID:", userId);
+      const userId = getCurrentUserId() || 1;
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log("使用用戶 ID:", userId, "專案 ID:", projectId || '未指定');
 
-      const messages = await getRagMessageBySession(userId, sessionId);
+      // ✅ 傳遞 projectId 參數（如果存在）
+      const messages = await getRagMessageBySession(userId, sessionId, projectId);
       console.log("獲取到的對話歷史:", messages);
 
       const conversationHistory = [];
@@ -138,7 +180,10 @@ export const useChatSession = () => {
           if (message.input_message && message.response_message) {
             conversationHistory.push({
               question: message.input_message,
-              answer: message.response_message
+              answer: message.response_message,
+              // ✅ 從資料庫載入 reference 和 externalLinks
+              reference: message.reference_data || null,
+              externalLinks: message.external_links || []
             });
           } else if (message.input_message && !message.response_message) {
             conversationHistory.push({
@@ -175,7 +220,7 @@ export const useChatSession = () => {
 
       const response = await fetch(`${API_URL}/sessions`, {
         method: "POST",
-        headers,
+        headers: getHeaders(),
         body: JSON.stringify(sessionPayload),
       });
 
@@ -218,7 +263,7 @@ export const useChatSession = () => {
       setChatSessions(prevSessions => [newSession, ...prevSessions]);
 
       try {
-        const userId = localStorage.getItem('id') || '1';
+        const userId = getCurrentUserId() || 1;
         const userName = getCurrentUsername() || '未知用戶';
 
         await createNewSessionInDB(userId, newSessionId, userName);
@@ -244,9 +289,13 @@ export const useChatSession = () => {
   const handleSubmit = async (question, projectId) => {
     if (!question.trim()) return;
 
+    // 記錄是否為使用者在此 session 的第一則訊息（history 只有開場白），用於觸發標題生成
+    const isFirstUserMessage = history.length === 1 && history[0].question === null;
+    // 保留舊變數名稱以相容後續邏輯（原判斷 history.length === 0 實際上永遠不成立）
+    const isFirstMessage = isFirstUserMessage;
+
     setIsSubmitting(true);
     let currentSessionId = currentChatId;
-    let isNewSession = false;
 
     const userQuestion = question;
     setHistory((prevHistory) => [...prevHistory, { question: userQuestion, answer: "正在思考中..." }]);
@@ -254,7 +303,6 @@ export const useChatSession = () => {
     try {
       if (!currentSessionId) {
         currentSessionId = await createSession();
-        isNewSession = true;
       }
 
       const payload = {
@@ -265,29 +313,111 @@ export const useChatSession = () => {
 
       console.log("發送問題到 RAGFlow，使用 session ID:", currentSessionId, "問題:", userQuestion);
 
-      const response = await fetch(`${API_URL}/completions`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
+      // ✅ 聲明變數（解決作用域問題）
+      let answer;
+      let reference;
+      let externalLinks = [];
 
-      const data = await response.json();
-      const answer = data?.data?.answer || "無法取得回答";
+      // ✅ 根據開關決定是否平行呼叫 Gemini Grounding
+      if (enableExternalLinks) {
+        console.log("🔗 外部連結開關已開啟，將平行呼叫 RAGFlow 和 Gemini Grounding");
 
-      setHistory((prevHistory) => {
-        const newHistory = [...prevHistory];
-        const lastIndex = newHistory.length - 1;
-        if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
-          newHistory[lastIndex] = { question: userQuestion, answer };
+        // ✅ 取得認證令牌（優先使用 accessToken）
+        const token = authStorage.get('accessToken') || authStorage.get('token');
+
+        const [ragflowResponse, geminiResponse] = await Promise.allSettled([
+          // RAGFlow API 呼叫
+          fetch(`${API_URL}/completions`, {
+            method: "POST",
+            headers: getHeaders(),
+            body: JSON.stringify(payload),
+          }).then(res => res.json()),
+
+          // Gemini Grounding API 呼叫（✅ 加入 accessToken header）
+          fetch('/api/assistant/grounding', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'accessToken': token // ✅ 後端期望 accessToken header
+            },
+            body: JSON.stringify({ question: userQuestion }),
+          }).then(res => res.json())
+        ]);
+
+        // 處理 RAGFlow 回應（必須成功）
+        if (ragflowResponse.status === 'rejected') {
+          throw new Error('RAGFlow API 呼叫失敗');
         }
-        return newHistory;
-      });
+        const data = ragflowResponse.value;
+        answer = data?.data?.answer || "無法取得回答";
+        reference = data?.data?.reference || null;
+
+        // 🔍 Debug: 檢查 reference 內容
+        console.log('🔍 [Debug] RAGFlow reference:', JSON.stringify(reference, null, 2));
+        console.log('🔍 [Debug] reference.doc_aggs 存在:', !!reference?.doc_aggs);
+        console.log('🔍 [Debug] reference.doc_aggs 長度:', reference?.doc_aggs?.length || 0);
+
+        // 處理 Gemini 回應（失敗不影響主功能）
+        console.log('🔍 [Debug] Gemini Response 完整資料:', geminiResponse);
+        console.log('🔍 [Debug] Gemini Response status:', geminiResponse.status);
+        console.log('🔍 [Debug] Gemini Response value:', JSON.stringify(geminiResponse.value, null, 2));
+
+        if (geminiResponse.status === 'fulfilled' && geminiResponse.value?.success) {
+          externalLinks = geminiResponse.value.externalLinks || [];
+          console.log(`✅ 成功取得 ${externalLinks.length} 個外部連結`);
+          console.log('🔍 [Debug] externalLinks 詳細資料:', JSON.stringify(externalLinks, null, 2));
+        } else {
+          console.warn('⚠️ Gemini Grounding 呼叫失敗，但不影響主要功能');
+          console.warn('🔍 [Debug] 失敗原因 (reason):', geminiResponse.reason);
+          console.warn('🔍 [Debug] 失敗回應 (value):', geminiResponse.value);
+          console.warn('🔍 [Debug] 錯誤訊息:', geminiResponse.value?.error);
+        }
+
+        // 更新歷史記錄
+        setHistory((prevHistory) => {
+          const newHistory = [...prevHistory];
+          const lastIndex = newHistory.length - 1;
+          if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
+            newHistory[lastIndex] = {
+              question: userQuestion,
+              answer,
+              reference,
+              externalLinks // ✅ 儲存外部連結
+            };
+          }
+          return newHistory;
+        });
+
+      } else {
+        // ✅ 開關關閉，只呼叫 RAGFlow（原有邏輯，0 破壞性）
+        const response = await fetch(`${API_URL}/completions`, {
+          method: "POST",
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+        answer = data?.data?.answer || "無法取得回答";
+        reference = data?.data?.reference || null; // ✅ 提取 RAGFlow 參考文獻
+
+        setHistory((prevHistory) => {
+          const newHistory = [...prevHistory];
+          const lastIndex = newHistory.length - 1;
+          if (lastIndex >= 0 && newHistory[lastIndex].question === userQuestion) {
+            newHistory[lastIndex] = {
+              question: userQuestion,
+              answer,
+              reference // ✅ 儲存參考文獻
+            };
+          }
+          return newHistory;
+        });
+      }
 
       // Socket 事件處理
-      const userIdRaw = localStorage.getItem('id') ?? localStorage.getItem('userId');
-      const userId = Number(userIdRaw);
+      const userId = getCurrentUserId();
       const userName = getCurrentUsername() || '未知用戶';
-      let projectIdRaw = localStorage.getItem('projectId');
+      let projectIdRaw = projectStorage.get('projectId');
 
       if (!projectIdRaw) {
         const m = window.location.pathname.match(/\/project\/(\d+)/);
@@ -317,6 +447,9 @@ export const useChatSession = () => {
 
       socket.once("input_stored", (storedData) => {
         const payloadResponse = {
+          // ✅ 新增欄位：儲存 reference 和 externalLinks
+          reference,
+          externalLinks,
           messageType: "response",
           message: answer,
           author: "科學助手",
@@ -329,8 +462,24 @@ export const useChatSession = () => {
         };
         socket.emit("rag_message", payloadResponse);
 
-        if (isNewSession) {
-          console.log("檢測到新會話，3秒後自動更新對話歷史列表");
+        // 第一則訊息後重整側邊欄 session 列表（涵蓋兩種情境）：
+        // A. 直接發訊：由 createSession() 隱性建立新 session
+        // B. 點選「新增對話」後首次發訊：session 已預建，但側邊欄尚未顯示
+        if (isFirstMessage) {
+          // 使用 Gemini 生成對話摘要標題（非同步，失敗不影響主功能）
+          generateSessionTitle(currentSessionId, userId, userQuestion, Number.isFinite(projectIdNum) ? projectIdNum : null)
+            .then(result => {
+              if (result?.title) {
+                console.log("對話標題已生成:", result.title);
+                setChatSessions(prevSessions =>
+                  prevSessions.map(s =>
+                    s.id === currentSessionId ? { ...s, name: result.title } : s
+                  )
+                );
+              }
+            })
+            .catch(() => {});
+
           setTimeout(() => {
             refreshChatSessions();
           }, 3000);
@@ -367,6 +516,7 @@ export const useChatSession = () => {
   };
 
   // 刪除對話功能
+  // ✅ v2.0: 加入專案隔離（0破壞性）
   const handleDeleteSession = async (sessionId, sessionName, showSwalWithCorrectZIndex) => {
     const result = await showSwalWithCorrectZIndex({
       title: `確定要刪除「${sessionName}」這個對話嗎？`,
@@ -381,8 +531,9 @@ export const useChatSession = () => {
     if (!result.isConfirmed) return;
 
     try {
-      const userId = localStorage.getItem('id') || '1';
-      console.log(`正在刪除對話: ${sessionId}`);
+      const userId = getCurrentUserId() || 1;
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log(`正在刪除對話: ${sessionId}`, "專案 ID:", projectId || '未指定');
 
       let ragflowDeleteSuccess = false;
       try {
@@ -399,7 +550,8 @@ export const useChatSession = () => {
 
       let dbDeleteSuccess = false;
       try {
-        await deleteSessionMessages(userId, sessionId);
+        // ✅ 傳遞 projectId 參數（如果存在）
+        await deleteSessionMessages(userId, sessionId, projectId);
         console.log("已從資料庫刪除會話訊息");
         dbDeleteSuccess = true;
       } catch (dbError) {
@@ -446,16 +598,25 @@ export const useChatSession = () => {
   };
 
   // 刷新對話歷史列表
+  // ✅ v2.0: 加入專案隔離（0破壞性）
   const refreshChatSessions = async () => {
     try {
       console.log("正在刷新對話歷史列表...");
 
-      const userId = localStorage.getItem('id') || '1';
-      const sessions = await getUserSessions(userId);
+      const userId = getCurrentUserId() || 1;
+      const projectId = getCurrentProjectId(); // ✅ 取得當前專案 ID
+      console.log("刷新對話列表，專案 ID:", projectId || '未指定');
+
+      // ✅ 傳遞 projectId 參數（如果存在）
+      const sessions = await getUserSessions(userId, projectId);
 
       const formattedSessions = sessions.map((session, index) => {
-        let displayName;
+        // 優先使用 AI 生成的摘要標題
+        if (session.sessionTitle) {
+          return { id: session.sessionId, name: session.sessionTitle };
+        }
 
+        let displayName;
         if (session.userName && session.userName !== '未知用戶') {
           displayName = session.userName;
         } else if (session.userId) {
@@ -498,5 +659,8 @@ export const useChatSession = () => {
     handleDeleteSession,
     createNewSession,
     refreshChatSessions,
+    // ✅ 外部連結開關
+    enableExternalLinks,
+    toggleExternalLinks,
   };
 };

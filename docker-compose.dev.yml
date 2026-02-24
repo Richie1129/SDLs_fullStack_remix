@@ -1,0 +1,191 @@
+name: sdl_dev
+
+services:
+  nginx:
+    image: nginx
+    restart: always
+    ports:
+      - 8080:80  # 開發環境用 8080，避免與主分支的 80 衝突    
+    volumes:
+      - "./nginx.conf:/etc/nginx/nginx.conf"
+    depends_on:
+      - api
+      - front
+    networks:
+      - agent_network
+
+  api:
+    build:
+      context: ./sdl-backend-main
+      # dockerfile: dockerfile
+    image: stone881129/sdl-api:latest     # <--- 加這行
+    expose:
+      - 3000
+    environment:
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_NAME=${PG_NAME}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
+      - RAGFLOW_API_KEY=${RAGFLOW_API_KEY}
+      - RAGFLOW_BASE_URL=${RAGFLOW_BASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - METRICS_TOKEN=${METRICS_TOKEN}
+      # MinIO 環境變數
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      # Email 環境變數
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - FRONTEND_URL=${FRONTEND_URL}
+      # vLLM 環境變數
+      - HSUEH_VLLM_BASE_URL=${HSUEH_VLLM_BASE_URL}
+      - HSUEH_VLLM_MODEL_NAME=${HSUEH_VLLM_MODEL_NAME}
+      - HSUEH_VLLM_API_KEY=${HSUEH_VLLM_API_KEY}
+      - VLLM_BASE_URL=${VLLM_BASE_URL}
+      - VLLM_MODEL_NAME=${VLLM_MODEL_NAME}
+      - VLLM_API_KEY=${VLLM_API_KEY}
+    volumes:
+      - "./sdl-backend-main:/sdl-backend-main"
+      - "/sdl-backend-main/node_modules"
+      - "./sdl-backend-main/daily_file:/sdl-backend-main/daily_file"
+    networks:
+      - agent_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  front:
+    build:
+      context: ./sdl-frontend-main
+      # dockerfile: dockerfile
+    image: stone881129/sdl-front:latest
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5174:5173"  # 開發環境映射到 5174（5173 可能被主分支佔用）
+    volumes:
+      - "./sdl-frontend-main:/sdl-frontend-main"
+      - "/sdl-frontend-main/node_modules"
+    networks:
+      - agent_network
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${PG_NAME:-postgres}
+      - POSTGRES_USER=${PG_USER:-postgres}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-postgres}
+    ports:
+      - "5433:5432"  # 開發環境用 5433
+    networks:
+      - agent_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data  # 開發環境專用資料庫
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9002:9000"  # 開發環境 API port
+      - "9003:9001"  # 開發環境 Console port
+    networks:
+      - agent_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
+    networks:
+      - agent_network
+    entrypoint: >
+      /bin/sh -c "
+      echo '🚀 初始化 MinIO...';
+      /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY;
+      if /usr/bin/mc ls myminio/$$MINIO_BUCKET_NAME > /dev/null 2>&1; then
+        echo '✅ Bucket 已存在: $$MINIO_BUCKET_NAME';
+      else
+        echo '📦 創建 bucket: $$MINIO_BUCKET_NAME';
+        /usr/bin/mc mb myminio/$$MINIO_BUCKET_NAME;
+        echo '✅ Bucket 創建成功';
+      fi;
+      echo '🎉 MinIO 初始化完成！';
+      "
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@localhost}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "5556:80"  # 開發環境用 5556
+    networks:
+      - agent_network
+
+  # Refresh Token 清理任務 - 每 6 小時執行一次
+  token-cleanup:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - PGPASSWORD=${PG_PASSWORD:-postgres}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_NAME=${PG_NAME:-postgres}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - agent_network
+    entrypoint: >
+      /bin/sh -c "
+      echo '🧹 Token 清理服務已啟動，每 6 小時執行一次';
+      while true; do
+        sleep 21600;
+        echo '⏰ [$(date)] 開始清理過期 tokens...';
+        DELETED=$$(psql -h postgres -U $$PG_USER -d $$PG_NAME -t -c \"DELETE FROM refresh_tokens WHERE \\\"expiresAt\\\" < NOW(); SELECT ROW_COUNT();\");
+        echo '✅ [$(date)] 已刪除 '$${DELETED}' 個過期 tokens';
+      done
+      "
+
+networks:
+  agent_network:
+
+volumes:
+  postgres_data_dev:  # 開發環境專用資料庫
+  minio_data:
+  pgadmin_data:

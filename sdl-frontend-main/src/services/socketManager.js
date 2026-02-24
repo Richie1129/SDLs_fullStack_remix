@@ -1,5 +1,6 @@
 import { io } from "socket.io-client";
 import errorReportingService from './errorReportingService';
+import { authStorage } from './storageService';
 
 /**
  * Socket 連接管理器 - Linus式可靠性設計
@@ -147,7 +148,7 @@ class SocketManager {
     this.isConnecting = true;
 
     // 更新認證資訊
-    const token = localStorage.getItem('accessToken');
+    const token = authStorage.get('accessToken');
     if (token) {
       this.socket.auth = { token };
       this.socket.io.opts.extraHeaders = { 'accesstoken': token };

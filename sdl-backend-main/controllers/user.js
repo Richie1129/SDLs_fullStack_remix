@@ -7,6 +7,7 @@ const {sign} = require('jsonwebtoken');
 const crypto = require('crypto');
 const sequelize = require('../util/database'); // 引入 Sequelize 實例以支援事務
 const config = require('../config');
+const { logAudit } = require('../services/auditService');
 
 //get all users
 exports.getUsers = (req, res) =>{
@@ -60,6 +61,15 @@ exports.getCurrentUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
         
+        // 記錄用戶查看個人資料
+        logAudit(req, {
+            action: 'USER_VIEW_PROFILE',
+            targetType: 'user',
+            targetId: userId,
+            actorId: userId,
+            metadata: { role: user.role }
+        }).catch(err => console.error('Audit log error:', err));
+        
         res.status(200).json(user);
     } catch (error) {
         console.error('Error fetching current user:', error);
@@ -85,6 +95,13 @@ exports.loginUser = async (req, res) => {
 
         // 用戶不存在
         if (!user) {
+            // 記錄登入失敗 (用戶不存在)
+            logAudit(req, {
+                action: 'USER_LOGIN_FAILED',
+                targetType: 'user',
+                targetId: null,
+                metadata: { reason: 'user_not_found', account }
+            }).catch(() => {});
             return res.status(401).json({ message: '帳號或密碼錯誤' });
         }
 
@@ -92,12 +109,19 @@ exports.loginUser = async (req, res) => {
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
+            // 記錄登入失敗 (密碼錯誤)
+            logAudit(req, {
+                action: 'USER_LOGIN_FAILED',
+                targetType: 'user',
+                targetId: user.id,
+                metadata: { reason: 'invalid_password', account }
+            }).catch(() => {});
             return res.status(401).json({ message: '帳號或密碼錯誤' });
         }
 
         // 生成 Access Token
         const accessToken = sign(
-            { account: user.account, id: user.id, role: user.role },
+            { account: user.account, id: user.id, role: user.role, username: user.username },
             config.jwt.secret,
             { expiresIn: config.jwt.expiresIn }
         );
@@ -113,6 +137,15 @@ exports.loginUser = async (req, res) => {
             token: refreshToken,
             expiresAt
         });
+
+        // 記錄登入成功
+        logAudit(req, {
+            action: 'USER_LOGIN_SUCCESS',
+            targetType: 'user',
+            targetId: user.id,
+            actorId: user.id,
+            metadata: { account, role: user.role }
+        }).catch(() => {});
 
         // 返回用戶資料（不包含密碼）
         res.status(200).json({
@@ -142,13 +175,14 @@ exports.registerUser = (req, res) => {
     const role = req.body.role;
     const classField = req.body.class;
     const seatNumber = req.body.seatNumber;
-    console.log("Received username:", username);
-    console.log("Received account:", account);
-    console.log("Received email:", email);
-    console.log("Received password:", password);
-    console.log("Received role:", role);
-    console.log("Received class:", classField);
-    console.log("Received seatNumber:", seatNumber);
+    
+    const logger = require('../config/logger');
+    logger.info({ 
+        account, 
+        email, 
+        role, 
+        class: classField 
+    }, '收到註冊請求');
 
     // 檢查用戶是否已經存在
     User.findOne({
@@ -179,11 +213,23 @@ exports.registerUser = (req, res) => {
                     .then(result => {
                         const account = result.account;
                         const id = result.id;
+                        const username = result.username;
+                        const roleValue = result.role;
                         const accessToken = sign(
-                            { account: account, id: id },
+                            { account: account, id: id, role: roleValue, username: username },
                             config.jwt.secret,
                             { expiresIn: config.jwt.expiresIn }
                         );
+                        
+                        // 記錄用戶註冊
+                        logAudit(req, {
+                            action: 'USER_REGISTER',
+                            targetType: 'user',
+                            targetId: id,
+                            actorId: id,
+                            metadata: { account, role, email }
+                        }).catch(() => {});
+                        
                         console.log(result);
                         res.status(201).json({ accessToken, account, id });
                     })
@@ -271,6 +317,18 @@ exports.updateUserProfile = async (req, res) => {
             }
         }
 
+        // 記錄個人資料更新
+        logAudit(req, {
+            action: 'PROFILE_UPDATE',
+            targetType: 'user',
+            targetId: userId,
+            metadata: {
+                usernameChanged: oldUsername !== newUsername,
+                oldUsername,
+                newUsername
+            }
+        }).catch(() => {});
+
         // 返回更新後的用戶資料
         const updatedUser = await User.findByPk(userId, {
             attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber']
@@ -338,6 +396,14 @@ exports.updateUserPassword = async (req, res) => {
         if (updatedRowsCount === 0) {
             return res.status(404).json({ message: '密碼更新失敗' });
         }
+
+        // 記錄密碼更新
+        logAudit(req, {
+            action: 'PASSWORD_UPDATE',
+            targetType: 'user',
+            targetId: userId,
+            metadata: { updatedAt: new Date().toISOString() }
+        }).catch(() => {});
 
         res.status(200).json({ message: '密碼更新成功' });
 

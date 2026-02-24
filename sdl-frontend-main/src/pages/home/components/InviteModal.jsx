@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../../../components/Modal';
-import { GrFormClose } from "react-icons/gr";
+import { X } from 'lucide-react';
 
 const InviteModal = ({
   isOpen,
@@ -34,11 +34,11 @@ const InviteModal = ({
         onClick={handleClose}
         className='absolute top-1 right-1 rounded-lg bg-white hover:bg-slate-200'
       >
-        <GrFormClose className='w-6 h-6' />
+        <X className='w-6 h-6' />
       </button>
 
-      <form onSubmit={handleSubmit} className='flex flex-col p-3'>
-        <h3 className='font-bold text-base mb-3'>活動邀請碼</h3>
+      <form onSubmit={handleSubmit} className='flex flex-col p-component-sm'>
+        <h3 className='font-bold text-body mb-3'>活動邀請碼</h3>
 
         <input
           className="rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
@@ -54,7 +54,10 @@ const InviteModal = ({
         <div className='flex justify-end'>
           <button
             type="submit"
-            className="w-1/4 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-sm text-white disabled:opacity-50"
+            data-track
+            data-track-action="HOME_INVITE_SUBMIT"
+            data-track-type="project"
+            className="w-1/4 h-7 mb-2 bg-customgreen rounded font-bold text-caption sm:text-body-sm text-white disabled:opacity-50"
             disabled={isLoading || !referralCode.trim()}
           >
             {isLoading ? "加入中..." : "加入"}

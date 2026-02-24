@@ -25,7 +25,7 @@ const SideNav = () => {
 
   return (
     // NOTE: In prod, you'd likely set height to h-screen and fix to the viewport
-    <nav className="h-[500px] w-fit bg-slate-950 p-4 flex flex-col items-center gap-2">
+    <nav className="h-[500px] w-fit bg-slate-950 p-component-base flex flex-col items-center gap-stack-xs">
       {/* Temp logo from https://logoipsum.com/ */}
       <svg
         width="40"
@@ -64,7 +64,7 @@ const SideNav = () => {
 const NavItem = ({ children, selected, id, setSelected }) => {
   return (
     <motion.button
-      className="p-3 text-xl bg-slate-800 hover:bg-slate-700 rounded-md transition-colors relative"
+      className="p-component-sm text-h3 bg-slate-800 hover:bg-slate-700 rounded-md transition-colors relative"
       onClick={() => setSelected(id)}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}

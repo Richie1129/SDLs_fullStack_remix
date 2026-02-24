@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiTool } from 'react-icons/fi';
 import errorReportingService from '../../services/errorReportingService';
 
 /**
@@ -82,7 +83,7 @@ class GlobalErrorBoundary extends React.Component {
       // 預設全域錯誤 UI
       return (
         <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center px-4">
-          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6 text-center">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-component-md-lg text-center">
             {/* 錯誤圖示 */}
             <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
               <svg className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -92,7 +93,7 @@ class GlobalErrorBoundary extends React.Component {
             </div>
 
             {/* 錯誤標題 */}
-            <h1 className="text-xl font-semibold text-gray-900 mb-2">
+            <h1 className="text-h3 font-semibold text-gray-900 mb-2">
               糟糕，出現了一個問題
             </h1>
 
@@ -121,7 +122,7 @@ class GlobalErrorBoundary extends React.Component {
             {/* 錯誤ID - 用於技術支援 */}
             {this.state.errorId && (
               <div className="mt-6 pt-4 border-t border-gray-200">
-                <p className="text-xs text-gray-500">
+                <p className="text-caption text-gray-500">
                   錯誤ID: <code className="bg-gray-100 px-1 rounded">{this.state.errorId}</code>
                 </p>
               </div>
@@ -129,14 +130,14 @@ class GlobalErrorBoundary extends React.Component {
 
             {/* 開發模式下顯示錯誤詳情 */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-6 p-3 bg-red-50 rounded border border-red-200 text-left">
-                <summary className="text-red-700 font-medium cursor-pointer text-sm">
-                  🔧 開發模式 - 錯誤詳情
+              <details className="mt-6 p-component-sm bg-red-50 rounded border border-red-200 text-left">
+                <summary className="text-red-700 font-medium cursor-pointer text-body-sm">
+                  <FiTool className="w-4 h-4 inline mr-1" /> 開發模式 - 錯誤詳情
                 </summary>
-                <div className="mt-2 text-xs text-red-600 font-mono">
+                <div className="mt-2 text-caption text-red-600 font-mono">
                   <p><strong>錯誤:</strong> {this.state.error.toString()}</p>
                   {this.state.errorInfo && (
-                    <pre className="mt-2 whitespace-pre-wrap text-xs overflow-auto max-h-40">
+                    <pre className="mt-2 whitespace-pre-wrap text-caption overflow-auto max-h-40">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   )}

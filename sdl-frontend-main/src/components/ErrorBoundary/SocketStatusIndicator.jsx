@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiCircle, FiWifiOff } from 'react-icons/fi';
 import { socket } from '../../services/socketManager';
 
 /**
@@ -37,7 +38,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
       return {
         color: 'bg-gray-500',
         text: '離線',
-        icon: '📴',
+        icon: <FiWifiOff className="w-4 h-4 text-gray-500" />,
         pulse: false
       };
     }
@@ -46,7 +47,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
       return {
         color: 'bg-green-500',
         text: '已連接',
-        icon: '🟢',
+        icon: <FiCircle className="w-3 h-3 fill-green-500 text-green-500" />,
         pulse: false
       };
     }
@@ -55,7 +56,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
       return {
         color: 'bg-yellow-500',
         text: '連接中',
-        icon: '🟡',
+        icon: <FiCircle className="w-3 h-3 fill-yellow-500 text-yellow-500" />,
         pulse: true
       };
     }
@@ -63,7 +64,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
     return {
       color: 'bg-red-500',
       text: '斷線',
-      icon: '🔴',
+      icon: <FiCircle className="w-3 h-3 fill-red-500 text-red-500" />,
       pulse: true
     };
   };
@@ -99,18 +100,18 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
         <div className={`w-3 h-3 rounded-full ${config.color} ${config.pulse ? 'animate-pulse' : ''}`} />
 
         {showDetails && (
-          <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px] text-sm">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-component-sm min-w-[200px] text-body-sm">
+            <div className="flex items-center gap-stack-xs mb-2">
               <span>{config.icon}</span>
               <span className="font-medium">{config.text}</span>
             </div>
             {status.queueLength > 0 && (
-              <p className="text-gray-600 text-xs">
+              <p className="text-gray-600 text-caption">
                 隊列中: {status.queueLength} 條消息
               </p>
             )}
             {status.reconnectAttempts > 0 && (
-              <p className="text-gray-600 text-xs">
+              <p className="text-gray-600 text-caption">
                 重連嘗試: {status.reconnectAttempts} 次
               </p>
             )}
@@ -122,18 +123,18 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
 
   return (
     <div className={`fixed ${getPositionClasses()} z-50`}>
-      <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[250px]">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-component-sm min-w-[250px]">
         {/* 狀態標題 */}
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-stack-xs">
             <div className={`w-3 h-3 rounded-full ${config.color} ${config.pulse ? 'animate-pulse' : ''}`} />
-            <span className="font-medium text-sm">{config.text}</span>
+            <span className="font-medium text-body-sm">{config.text}</span>
           </div>
 
           {/* 最小化按鈕 */}
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-gray-400 hover:text-gray-600 text-xs"
+            className="text-gray-400 hover:text-gray-600 text-caption"
           >
             {showDetails ? '−' : '+'}
           </button>
@@ -143,7 +144,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
         {showDetails && (
           <>
             {/* 狀態詳情 */}
-            <div className="space-y-1 text-xs text-gray-600 mb-3">
+            <div className="space-y-1 text-caption text-gray-600 mb-3">
               <div className="flex justify-between">
                 <span>網路:</span>
                 <span>{status.online ? '在線' : '離線'}</span>
@@ -165,11 +166,11 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
             </div>
 
             {/* 操作按鈕 */}
-            <div className="flex gap-2">
+            <div className="flex gap-stack-xs">
               {!status.connected && status.online && (
                 <button
                   onClick={handleReconnect}
-                  className="flex-1 px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                  className="flex-1 px-3 py-1 bg-blue-500 text-white rounded text-caption hover:bg-blue-600 transition-colors"
                 >
                   重連
                 </button>
@@ -177,7 +178,7 @@ const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) =
 
               <button
                 onClick={handleReset}
-                className="flex-1 px-3 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600 transition-colors"
+                className="flex-1 px-3 py-1 bg-gray-500 text-white rounded text-caption hover:bg-gray-600 transition-colors"
               >
                 重置
               </button>

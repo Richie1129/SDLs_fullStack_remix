@@ -38,16 +38,15 @@ services:
     environment:
       - PG_HOST=postgres
       - PG_PORT=5432
-      - PG_USER=postgres
-      - PG_PASSWORD=postgres
-      - PG_NAME=sdls_fullstack_postgres1
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_NAME=${PG_NAME}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
       # MinIO 環境變數
       - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
     volumes:
       - "./sdl-backend-main/daily_file:/sdl-backend-main/daily_file"
@@ -76,9 +75,9 @@ services:
     image: postgres:latest
     restart: always
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${PG_NAME}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
     expose:
       - 5432
     networks:
@@ -96,11 +95,11 @@ services:
     restart: always
     command: server /data --console-address ":9001"
     environment:
-      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    expose:
+      - "9000"
+      - "9001"
     networks:
       - agent_network
     healthcheck:
@@ -117,14 +116,14 @@ services:
       minio:
         condition: service_healthy
     environment:
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
     networks:
       - agent_network
     entrypoint: >
       /bin/sh -c "
-      echo '🚀 初始化 MinIO...';
+      echo '初始化 MinIO...';
       /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY;
       if /usr/bin/mc ls myminio/$$MINIO_BUCKET_NAME > /dev/null 2>&1; then
         echo '✅ Bucket 已存在: $$MINIO_BUCKET_NAME';
@@ -140,12 +139,12 @@ services:
     image: dpage/pgadmin4
     restart: unless-stopped
     environment:
-      - PGADMIN_DEFAULT_EMAIL=wulab@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=ytwu35415
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
       - PGADMIN_CONFIG_CONSOLE_LOG_LEVEL=40
       - GUNICORN_ACCESS_LOGFILE=/dev/null
-    ports:
-      - "5555:80"
+    expose:
+      - "80"
     networks:
       - agent_network
 networks:

@@ -1,6 +1,7 @@
 // controller for rag_message
 const Rag_message = require('../models/rag_message');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+const axios = require('axios');
 
 // 根據 userId 取得所有 RAG 訊息歷史
 exports.getRagMessageHistory = async (req, res) => {
@@ -23,19 +24,24 @@ exports.getRagMessageHistory = async (req, res) => {
 };
 
 // 根據 userId 和 sessionId 取得特定會話的訊息歷史
+// ✅ v2.0: 支援 projectId 過濾（可選，0破壞性）
 exports.getRagMessageBySession = async (req, res) => {
     const { userId, sessionId } = req.params;
-    console.log("取得特定會話的 RAG 訊息，userId:", userId, "sessionId:", sessionId);
+    const { projectId } = req.query; // ✅ 從 query parameter 讀取 projectId（可選）
+
+    console.log("取得特定會話的 RAG 訊息，userId:", userId, "sessionId:", sessionId, "projectId:", projectId || '未指定');
 
     try {
         // 先嘗試取得基本欄位
-        let attributes = ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt'];
-        
+        let attributes = ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt','reference_data', 'external_links'];
+
         // 檢查是否存在 ragflow_session_id 欄位
         try {
             const tableDescription = await Rag_message.describe();
             if (tableDescription.ragflow_session_id) {
                 attributes.push('ragflow_session_id');
+                attributes.push('reference_data');
+                attributes.push('external_links');
                 console.log("已包含 ragflow_session_id 欄位");
             } else {
                 console.log("ragflow_session_id 欄位尚未存在，使用基本欄位");
@@ -44,12 +50,21 @@ exports.getRagMessageBySession = async (req, res) => {
             console.log("無法檢查表結構，使用基本欄位:", describeError.message);
         }
 
+        // ✅ 建構 where 條件（向後相容）
+        const whereCondition = {
+            userId: userId,
+            sessionId: sessionId
+        };
+
+        // ✅ 如果有 projectId，加入專案隔離（0破壞性：沒有 projectId 時不影響查詢）
+        if (projectId) {
+            whereCondition.project_id = parseInt(projectId, 10);
+            console.log("✅ 啟用專案隔離，project_id:", whereCondition.project_id);
+        }
+
         const messages = await Rag_message.findAll({
             attributes: attributes,
-            where: { 
-                userId: userId,
-                sessionId: sessionId 
-            },
+            where: whereCondition,
             order: [['createdAt', 'ASC']]
         });
 
@@ -62,18 +77,30 @@ exports.getRagMessageBySession = async (req, res) => {
 };
 
 // 根據 userId 取得所有不同的 sessionId（用於顯示會話列表）
+// ✅ v2.0: 支援 projectId 過濾（可選，0破壞性）
 exports.getUserSessions = async (req, res) => {
     const userId = req.params.userId;
-    console.log("取得用戶的所有會話列表，userId:", userId);
+    const { projectId } = req.query; // ✅ 從 query parameter 讀取 projectId（可選）
+
+    console.log("取得用戶的所有會話列表，userId:", userId, "projectId:", projectId || '未指定');
 
     try {
+        // ✅ 建構 where 條件（向後相容）
+        const whereCondition = {
+            userId: userId,
+            sessionId: { [require('sequelize').Op.not]: null }
+        };
+
+        // ✅ 如果有 projectId，加入專案隔離（0破壞性）
+        if (projectId) {
+            whereCondition.project_id = parseInt(projectId, 10);
+            console.log("✅ 啟用專案隔離，project_id:", whereCondition.project_id);
+        }
+
         // 先獲取所有該用戶的訊息，然後在 JavaScript 中處理去重
         const messages = await Rag_message.findAll({
-            attributes: ['sessionId', 'userName', 'project_id', 'createdAt'],
-            where: { 
-                userId: userId,
-                sessionId: { [require('sequelize').Op.not]: null }
-            },
+            attributes: ['sessionId', 'userName', 'project_id', 'createdAt', 'session_title'],
+            where: whereCondition,
             order: [['createdAt', 'DESC']]
         });
 
@@ -92,8 +119,12 @@ exports.getUserSessions = async (req, res) => {
                     sessionId: message.sessionId,
                     userName: displayName,
                     userId: userId,
-                    lastActivity: message.createdAt
+                    lastActivity: message.createdAt,
+                    sessionTitle: message.session_title || null
                 });
+            } else if (message.session_title && !sessionMap.get(message.sessionId).sessionTitle) {
+                // 如果舊記錄有標題，補上（因為 DESC 排序，最新訊息可能沒標題）
+                sessionMap.get(message.sessionId).sessionTitle = message.session_title;
             }
         });
 
@@ -163,47 +194,138 @@ exports.getRagflowSessionId = async (req, res) => {
 };
 
 // 新增：根據 userId 和 sessionId 刪除特定會話的所有訊息
+// ✅ v2.0: 支援 projectId 過濾（可選，0破壞性）
 exports.deleteSessionMessages = async (req, res) => {
     const { userId, sessionId } = req.params;
-    console.log("刪除會話訊息，userId:", userId, "sessionId:", sessionId);
+    const { projectId } = req.query; // ✅ 從 query parameter 讀取 projectId（可選）
+
+    console.log("刪除會話訊息，userId:", userId, "sessionId:", sessionId, "projectId:", projectId || '未指定');
 
     try {
+        // ✅ 建構 where 條件（向後相容）
+        const whereCondition = {
+            userId: userId,
+            sessionId: sessionId
+        };
+
+        // ✅ 如果有 projectId，加入專案隔離（0破壞性：確保只刪除該專案的訊息）
+        if (projectId) {
+            whereCondition.project_id = parseInt(projectId, 10);
+            console.log("✅ 啟用專案隔離刪除，project_id:", whereCondition.project_id);
+        }
+
         // 刪除該會話的所有訊息
         const deletedCount = await Rag_message.destroy({
-            where: { 
-                userId: userId,
-                sessionId: sessionId 
-            }
+            where: whereCondition
         });
 
         console.log("已刪除的訊息數量:", deletedCount);
-        
+
         if (deletedCount > 0) {
             // Audit: delete assistant session messages
             await logAudit(req, {
                 action: 'ASSISTANT_SESSION_MESSAGES_DELETE',
                 targetType: 'assistant_session',
                 targetId: sessionId,
-                projectId: null,
+                projectId: projectId ? parseInt(projectId, 10) : null,
                 actorId: parseInt(userId, 10) || undefined,
-                metadata: clampMetadataSize({ userId, sessionId, deletedCount })
+                metadata: clampMetadataSize({ userId, sessionId, projectId, deletedCount })
             });
-            res.status(200).json({ 
-                message: "會話訊息已成功刪除", 
-                deletedCount: deletedCount 
+            res.status(200).json({
+                message: "會話訊息已成功刪除",
+                deletedCount: deletedCount
             });
         } else {
-            res.status(404).json({ 
-                message: "未找到要刪除的會話訊息" 
+            res.status(404).json({
+                message: "未找到要刪除的會話訊息"
             });
         }
     } catch (err) {
         console.error("刪除會話訊息錯誤:", err);
-        res.status(500).json({ 
-            error: '無法刪除會話訊息', 
-            details: err.message 
+        res.status(500).json({
+            error: '無法刪除會話訊息',
+            details: err.message
         });
     }
+};
+
+// 新增：使用 vLLM 生成對話摘要標題，並儲存回該 session 的所有訊息
+// Fallback 順序：GPT-OSS-20B (Hsueh) → Gemma-3-27B (earth)
+exports.generateSessionTitle = async (req, res) => {
+    const { sessionId } = req.params;
+    const { userId, firstMessage, projectId } = req.body;
+
+    console.log("生成對話標題（vLLM），sessionId:", sessionId, "userId:", userId);
+
+    if (!firstMessage || !firstMessage.trim()) {
+        return res.status(200).json({ title: null });
+    }
+
+    const systemPrompt = '你是對話標題生成助手。根據使用者的問題，輸出一個簡短標題（不超過12個中文字）。只輸出標題文字，不加引號、標點或說明。';
+    const userPrompt = `使用者問題：${firstMessage.slice(0, 200)}\n\n請輸出對話標題：`;
+
+    const VLLM_ENDPOINTS = [
+        {
+            baseURL: process.env.HSUEH_VLLM_BASE_URL || 'https://vllm-210.hsueh.tw/v1',
+            modelName: process.env.HSUEH_VLLM_MODEL_NAME || 'openai/gpt-oss-20b',
+            displayName: 'GPT-OSS-20B',
+            apiKey: process.env.HSUEH_VLLM_API_KEY || 'dummy',
+        },
+        {
+            baseURL: process.env.VLLM_BASE_URL || 'https://earth-vllmapi.agenticgrader.com/v1',
+            modelName: process.env.VLLM_MODEL_NAME || 'ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g',
+            displayName: 'Gemma-3-27B',
+            apiKey: process.env.VLLM_API_KEY || '',
+        }
+    ];
+
+    let title = null;
+    for (const endpoint of VLLM_ENDPOINTS) {
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (endpoint.apiKey && endpoint.apiKey !== 'dummy') {
+                headers['Authorization'] = `Bearer ${endpoint.apiKey}`;
+            }
+
+            const response = await axios.post(
+                `${endpoint.baseURL}/chat/completions`,
+                {
+                    model: endpoint.modelName,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 30,
+                },
+                { timeout: 15000, headers }
+            );
+
+            const raw = response.data?.choices?.[0]?.message?.content?.trim();
+            if (raw) {
+                title = raw.replace(/^[「"'【\[「『\n]+|[」"'】\]」』\n]+$/g, '').trim().slice(0, 15);
+                console.log(`[${endpoint.displayName}] 對話標題生成成功:`, title);
+                break;
+            }
+        } catch (err) {
+            console.warn(`[${endpoint.displayName}] 標題生成失敗，嘗試備援:`, err.message);
+        }
+    }
+
+    if (title) {
+        const whereCondition = { sessionId };
+        if (userId) whereCondition.userId = parseInt(userId, 10);
+        if (projectId) whereCondition.project_id = parseInt(projectId, 10);
+
+        await Rag_message.update(
+            { session_title: title },
+            { where: whereCondition }
+        ).catch(err => console.error('儲存標題失敗:', err.message));
+
+        console.log("對話標題已儲存:", title, "sessionId:", sessionId);
+    }
+
+    res.status(200).json({ title: title || null });
 };
 
 // 新增：創建新會話並保存開場白

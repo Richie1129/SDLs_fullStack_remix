@@ -62,6 +62,18 @@ const AuditEvent = sequelize.define('audit_event', {
     type: DataTypes.JSONB,
     allowNull: true,
   },
+  expiresAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null,
+    comment: '自動過期時間，null 代表永久保留',
+  },
+  consentLevel: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    defaultValue: 'functional',
+    comment: '同意等級: essential | functional | analytics | full',
+  },
 }, {
   timestamps: true,
 });

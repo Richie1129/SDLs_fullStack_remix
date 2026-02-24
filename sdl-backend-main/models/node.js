@@ -1,6 +1,7 @@
 const { DataTypes} = require('sequelize');
 const sequelize = require('../util/database');
 const NodeRelation = require('./node_relation');
+const IdeaWallMessage = require('./idea_wall_message');
 
 const Node = sequelize.define('node', {
     title: {
@@ -41,5 +42,8 @@ Node.belongsToMany(Node, {
     foreignKey: 'to_id',
     otherKey: 'from_id'
 });
+
+Node.hasMany(IdeaWallMessage, { foreignKey: 'relatedNodeId' });
+IdeaWallMessage.belongsTo(Node, { foreignKey: 'relatedNodeId' });
 
 module.exports = Node;

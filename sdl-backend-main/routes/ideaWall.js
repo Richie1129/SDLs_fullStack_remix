@@ -1,4 +1,5 @@
 const controller = require('../controllers/ideaWall');
+const messageController = require('../controllers/ideaWallMessage');
 const router = require('express').Router();
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const { checkProjectViewingPermission, checkWritePermission } = require('../middlewares/projectViewingMiddleware');
@@ -44,6 +45,11 @@ const optionalProjectPermission = async (req, res, next) => {
         next();
     }
 };
+
+// IdeaWall Message Routes (Specific routes first)
+router.post('/:wallId/messages', validateToken, messageController.createMessage);
+router.get('/:wallId/messages', validateToken, messageController.getMessages);
+router.get('/:wallId/context', validateToken, controller.getWallContext); // New Context Route
 
 // 只讀路由 - 允許觀摩者存取
 router.get('/:projectId/:stage', optionalAuth, optionalProjectPermission, controller.getIdeaWall); // 向後相容

@@ -34,7 +34,6 @@ class Config {
     get apiKeys() {
         return {
             ragflow: process.env.RAGFLOW_API_KEY,
-            openai: process.env.OPENAI_API_KEY,
             gemini: process.env.GEMINI_API_KEY,
             gemini2: process.env.GEMINI_API_KEY_2
         };

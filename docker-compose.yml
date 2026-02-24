@@ -20,12 +20,11 @@ services:
     expose:
       - 3000
     environment:
-      - PG_HOST=postgres
-      - PG_PORT=5432
-      - PG_USER=postgres
-      - PG_PASSWORD=postgres
-      - PG_NAME=postgres
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_NAME=${PG_NAME}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
       - RAGFLOW_API_KEY=${RAGFLOW_API_KEY}
@@ -34,17 +33,24 @@ services:
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
       - METRICS_TOKEN=${METRICS_TOKEN}
       # MinIO 環境變數
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
-      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
       # Email 環境變數
-      - EMAIL_HOST=${EMAIL_HOST:-smtp.gmail.com}
-      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_PASS=${EMAIL_PASS}
       - EMAIL_FROM=${EMAIL_FROM}
       - FRONTEND_URL=${FRONTEND_URL}
+      # vLLM 環境變數
+      - HSUEH_VLLM_BASE_URL=${HSUEH_VLLM_BASE_URL}
+      - HSUEH_VLLM_MODEL_NAME=${HSUEH_VLLM_MODEL_NAME}
+      - HSUEH_VLLM_API_KEY=${HSUEH_VLLM_API_KEY}
+      - VLLM_BASE_URL=${VLLM_BASE_URL}
+      - VLLM_MODEL_NAME=${VLLM_MODEL_NAME}
+      - VLLM_API_KEY=${VLLM_API_KEY}
     volumes:
       - "./sdl-backend-main:/sdl-backend-main"
       - "/sdl-backend-main/node_modules"
@@ -76,9 +82,9 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${PG_NAME:-postgres}
+      - POSTGRES_USER=${PG_USER:-postgres}
+      - POSTGRES_PASSWORD=${PG_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     networks:
@@ -140,8 +146,8 @@ services:
     image: dpage/pgadmin4
     restart: unless-stopped
     environment:
-      - PGADMIN_DEFAULT_EMAIL=wulab@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=ytwu35415
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@localhost}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     ports:
@@ -154,7 +160,9 @@ services:
     image: postgres:16
     restart: unless-stopped
     environment:
-      - PGPASSWORD=postgres
+      - PGPASSWORD=${PG_PASSWORD:-postgres}
+      - PG_USER=${PG_USER:-postgres}
+      - PG_NAME=${PG_NAME:-postgres}
     depends_on:
       postgres:
         condition: service_healthy
@@ -166,7 +174,7 @@ services:
       while true; do
         sleep 21600;
         echo '⏰ [$(date)] 開始清理過期 tokens...';
-        DELETED=$$(psql -h postgres -U postgres -d postgres -t -c \"DELETE FROM refresh_tokens WHERE \\\"expiresAt\\\" < NOW(); SELECT ROW_COUNT();\");
+        DELETED=$$(psql -h postgres -U $$PG_USER -d $$PG_NAME -t -c \"DELETE FROM refresh_tokens WHERE \\\"expiresAt\\\" < NOW(); SELECT ROW_COUNT();\");
         echo '✅ [$(date)] 已刪除 '$${DELETED}' 個過期 tokens';
       done
       "

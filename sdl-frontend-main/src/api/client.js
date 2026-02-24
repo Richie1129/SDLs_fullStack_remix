@@ -1,4 +1,5 @@
 import axios from 'axios';
+import storageService, { authStorage } from '../services/storageService';
 
 // Base URL from env, fallback to '/api'
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -6,12 +7,13 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 const apiClient = axios.create({
   baseURL,
   withCredentials: true,
+  timeout: 30000, // 30秒全局超時，避免請求永久掛起
 });
 
 // Attach token on every request
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = authStorage.get('accessToken');
     if (token) {
       // Keep backward-compatibility with backend expecting 'accessToken'
       config.headers['accessToken'] = token;
@@ -34,12 +36,12 @@ apiClient.interceptors.response.use(
     if (status === 401 && !currentPath.includes('/login') && !error.config.__isRetry) {
       error.config.__isRetry = true;  // 防止無限重試
 
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = authStorage.get('refreshToken');
 
       if (!refreshToken) {
         // 無 refresh token，清除並跳轉登入
         try {
-          localStorage.clear();
+          storageService.clear();
         } catch {}
         if (typeof window !== 'undefined') {
           window.location.assign('/login');
@@ -54,7 +56,7 @@ apiClient.interceptors.response.use(
         });
 
         const newAccessToken = response.data.accessToken;
-        localStorage.setItem('accessToken', newAccessToken);
+        authStorage.set('accessToken', newAccessToken);
         error.config.headers['accessToken'] = newAccessToken;
         error.config.headers['Authorization'] = `Bearer ${newAccessToken}`;
 
@@ -64,7 +66,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         // Refresh 失敗，清除並跳轉登入
         try {
-          localStorage.clear();
+          storageService.clear();
         } catch {}
         if (typeof window !== 'undefined') {
           window.location.assign('/login');

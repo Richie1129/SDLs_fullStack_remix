@@ -8,6 +8,8 @@ const ColumnHandler = require('./handlers/columnHandler');
 const MessageHandler = require('./handlers/messageHandler');
 const NodeHandler = require('./handlers/nodeHandler');
 const AnnouncementHandler = require('./handlers/announcementHandler');
+const IdeaWallMessageHandler = require('./handlers/ideaWallMessageHandler');
+const AiCoachHandler = require('./handlers/aiCoachHandler'); // Phase 3
 
 /**
  * Socket.IO 管理器 - 統一管理所有 Socket 事件和認證
@@ -27,25 +29,27 @@ class SocketManager {
         this.io.use(async (socket, next) => {
             try {
                 const token = socket.handshake.auth.token || socket.handshake.headers.accesstoken;
-                
+
                 if (!token) {
-                    console.log('Socket connection without token');
-                    return next(); // 允許連接但標記為未認證
+                    return next(new Error('Authentication required'));
                 }
 
                 const validToken = verify(token, config.jwt.secret);
-                
-                if (validToken) {
-                    const user = await User.findByPk(validToken.id);
-                    socket.userId = validToken.id;
-                    socket.user = user;
-                    console.log(`Socket authenticated for user: ${user?.username} (ID: ${validToken.id})`);
+
+                if (!validToken) {
+                    return next(new Error('Invalid authentication token'));
                 }
-                
+
+                const user = await User.findByPk(validToken.id);
+                if (!user) {
+                    return next(new Error('User not found'));
+                }
+
+                socket.userId = validToken.id;
+                socket.user = user;
                 next();
             } catch (error) {
-                console.log('Socket authentication error:', error.message);
-                next(); // 允許連接但標記為未認證
+                return next(new Error('Invalid authentication token'));
             }
         });
     }
@@ -88,6 +92,12 @@ class SocketManager {
             
             // 公告相關事件
             AnnouncementHandler.registerEvents(this.io, socket);
+
+            // IdeaWall 訊息相關事件
+            IdeaWallMessageHandler.registerEvents(this.io, socket);
+            
+            // AI Coach 相關事件 (Phase 3)
+            AiCoachHandler.registerEvents(this.io, socket);
 
             console.log(`✅ 所有事件處理器已註冊完成 for ${socket.id}`);
 

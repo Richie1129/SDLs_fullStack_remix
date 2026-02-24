@@ -1,73 +1,60 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Modal from '../../components/Modal';
-import IdeaWallSideBar from './components/IdeaWallSideBar';
-import TopBar from '../../components/TopBar';
-import { Network } from 'vis-network';
-import { visNetworkOptions as option } from '../../utils/visNetworkOptions'
-import svgConvertUrl from '../../utils/svgConvertUrl';
+import React, { useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
-import { getIdeaWall, createIdeaWall } from '../../api/ideaWall';
-import { getNodes, getNodeRelation, getProjectNodes, getProjectNodeRelation } from '../../api/nodes';
-import { getProject } from '../../api/project';
-import { socket } from '../../utils/socket';
-import { getNodeChangeLogs } from '../../api/kanban';
-import { formatTime } from '../../utils/timeUtils';
-import SideBar from '../../components/SideBar';
 import toast, { Toaster } from 'react-hot-toast';
 import Lottie from "lottie-react";
-import Adding_icon from "../../assets/AnimationAddingNode.json";
+import { HiLink, HiX } from 'react-icons/hi';
+
+// API
+import { getIdeaWall, createIdeaWall } from '../../api/ideaWall';
+import { getProjectNodes, getProjectNodeRelation } from '../../api/nodes';
+import { getProject } from '../../api/project';
+import { getNodeChangeLogs } from '../../api/kanban';
+
+// Components
+import Modal from '../../components/Modal';
 import Timer from './components/Timer';
-import Idea_development from './components/Idea_development';
-import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
-import { recordObservationEvent } from '../../api/usage';
-import { getCurrentUsername, isCurrentUser } from '../../utils/userUtils'; // 引入用戶資訊工具
+import KB_Coach from './components/KB_Coach';
+// import OrchestratorMonitor from './components/OrchestratorMonitor';
+import IdeaWallChatPanel from '../../components/IdeaWall/IdeaWallChatPanel';
+import CreateNodeModal from './components/modals/CreateNodeModal';
+import UpdateNodeModal from './components/modals/UpdateNodeModal';
+import CreateOptionMenu from './components/modals/CreateOptionMenu';
+
+// Hooks
+import { useIdeaWallState } from './hooks/useIdeaWallState';
+import { useNodeOperations } from './hooks/useNodeOperations';
+import { useIdeaWallSocket } from './hooks/useIdeaWallSocket.jsx';
+import { useVisNetwork } from './hooks/useVisNetwork';
+import useObservationMode from '../../hooks/useObservationMode';
+
+// Utils
+import svgConvertUrl from '../../utils/svgConvertUrl';
+import { getCurrentUsername, isCurrentUser } from '../../utils/userUtils';
+import { socket } from '../../utils/socket';
+
+// Constants
+import { NODE_COLORS } from './constants/ideaWallConstants';
+
+// Assets
+import Adding_icon from "../../assets/AnimationAddingNode.json";
 
 export default function IdeaWall() {
     const container = useRef(null);
-    const url = svgConvertUrl("node");
     const { projectId } = useParams();
-    const currentUsername = getCurrentUsername(); // 取得當前使用者名稱
+    const currentUsername = getCurrentUsername();
+    const { isObservationMode } = useObservationMode();
 
-    // 計算節點建立者顯示名稱（如果是當前用戶，顯示最新名稱；否則顯示資料庫中的名稱）
+    // 使用狀態管理 hook
+    const state = useIdeaWallState(projectId);
+
+    // 計算節點建立者顯示名稱
     const getDisplayNodeOwnerName = (owner) => {
-        // 如果節點建立者就是當前用戶，使用最新的username
         if (isCurrentUser(owner) || owner === currentUsername) {
             return currentUsername;
         }
-        return owner; // 其他用戶顯示資料庫中的名稱
+        return owner;
     };
-
-    const [nodes, setnodes] = useState([]);
-    const [nodeData, setNodeData] = useState({});
-    const [edges, setEdges] = useState([]);
-    const [createOptionModalOpen, setCreateOptionModalOpen] = useState(false);
-    const [buildOnOptionModalOpen, setBuildOnOptionModalOpen] = useState(false);
-    const [createNodeModalOpen, setCreateNodeModalOpen] = useState(false);
-    const [updateNodeModalOpen, setUpdateNodeModalOpen] = useState(false);
-    const [canvasPosition, setCanvasPosition] = useState({});
-    const [ideaWallInfo, setIdealWallInfo] = useState({ id: "", name: "", type: "" })
-    const [selectNodeInfo, setSelectNodeInfo] = useState({ id: "", title: "", content: "", owner: "", createdAt: "", ideaWallId: "", projectId: projectId });
-    const [buildOnNodeId, setBuildOnId] = useState("")
-    const [tempid, setTempId] = useState("")
-    const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
-    const [hovering, setHovering] = useState(false);
-
-    const [title, setTitle] = useState('');
-    const [content, setContent] = useState('');
-    const userId = localStorage.getItem("id");
-    const colors = [
-        "#5BA491", "#26547C", "#F25757", "#AF7A6D", "#183446", "#9395D3", "#FF6542", "#78290F", "#DEA47E", "#9DACFF", "#2F3061", "#FFD166"
-    ];
-
-    const [aiDevelopmentModalOpen, setAiDevelopmentModalOpen] = useState(false);
-    const [showNodeChangeHistory, setShowNodeChangeHistory] = useState(false);
-
-    // 使用觀摩模式 hook
-    const { isObservationMode } = useObservationMode();
-    const [nodeChangeLogs, setNodeChangeLogs] = useState([]);
-    const [currentStage, setCurrentStage] = useState("1");
-    const [currentSubStage, setCurrentSubStage] = useState("1");
 
     // 首先獲取專案信息以得到當前階段
     const projectInfoQuery = useQuery(
@@ -76,8 +63,8 @@ export default function IdeaWall() {
         {
             onSuccess: (data) => {
                 if (data) {
-                    setCurrentStage(data.currentStage ? String(data.currentStage) : "1");
-                    setCurrentSubStage(data.currentSubStage ? String(data.currentSubStage) : "1");
+                    state.setCurrentStage(data.currentStage ? String(data.currentStage) : "1");
+                    state.setCurrentSubStage(data.currentSubStage ? String(data.currentSubStage) : "1");
                 }
             },
             refetchOnMount: false,
@@ -85,11 +72,10 @@ export default function IdeaWall() {
         }
     );
 
-    // 簡化：不再需要複雜的想法牆查詢邏輯，每個專案只有一個想法牆
+    // 獲取想法牆信息
     const ideaWallInfoQuery = useQuery(
         ['ideaWallInfo', projectId],
         async () => {
-            // 使用新的API，不需要stage參數
             const ideaWall = await getIdeaWall(projectId);
             return ideaWall;
         },
@@ -97,713 +83,350 @@ export default function IdeaWall() {
             enabled: !!projectId,
             onSuccess: (data) => {
                 console.log(`🎯 想法牆信息設置完成:`, data);
-                setIdealWallInfo(data)
+                state.setIdeaWallInfo(data);
                 if (data) {
-                    const { id } = data
-                    setTempId(id)
+                    state.setTempId(data.id);
                 }
             },
             refetchOnMount: false,
             refetchOnWindowFocus: false,
         }
-    )
+    );
+
+    // 獲取節點資料並轉換為 SVG
     const getNodesQuery = useQuery({
         queryKey: ['projectNodes', projectId],
         queryFn: () => getProjectNodes(projectId),
-        onSuccess: setnodes,
+        onSuccess: (nodes) => {
+            // 在設置 nodes 時就轉換為 SVG，避免在 useEffect 中反覆修改
+            const processedNodes = nodes.map((item) => {
+                // 如果有 colorindex 就用 colorindex（用戶 ID）
+                // 沒有的話，用 owner 名字生成穩定的顏色索引
+                let colorIndex;
+                if (item.colorindex) {
+                    colorIndex = item.colorindex;
+                } else {
+                    // 根據 owner 名字生成穩定的數字（同名同色）
+                    const hash = item.owner.split('').reduce((acc, char) => {
+                        return char.charCodeAt(0) + ((acc << 5) - acc);
+                    }, 0);
+                    colorIndex = Math.abs(hash) % NODE_COLORS.length + 1;
+                }
+                const nodeColor = NODE_COLORS[(colorIndex - 1) % NODE_COLORS.length];
+
+                // 創建新對象，不修改原對象
+                return {
+                    ...item,
+                    image: svgConvertUrl(item.title, item.owner, item.createdAt, nodeColor, item.content),
+                    shape: "image"
+                };
+            });
+            state.setNodes(processedNodes);
+        },
         enabled: !!projectId,
         retryOnMount: false
     });
 
+    // 獲取節點關係
     const getNodeRelationQuery = useQuery({
         queryKey: ['projectNodeRelations', projectId],
         queryFn: () => getProjectNodeRelation(projectId),
-        onSuccess: setEdges,
+        onSuccess: state.setEdges,
         enabled: !!projectId,
         retryOnMount: false
     });
 
-    // convert node to svg
-    useEffect(() => {
-        const temp = [];
-        nodes.map((item) => {
-            const nodeColor = colors[item.colorindex - 1 % colors.length]; // Use modulo to cycle through colors if index exceeds array length
+    // 移除了轉換節點為 SVG 的 useEffect（已在 onSuccess 中處理）
 
-            item.image = svgConvertUrl(item.title, item.owner, item.createdAt, nodeColor);
-
-
-            item.shape = "image";
-            temp.push(item);
-        });
-    }, [nodes]);
-
-    // socket
-    useEffect(() => {
-        function nodeUpdateEvent(data) {
-            console.log("收到節點更新事件:", data);
-            // 無論資料為何都重新載入節點 - 確保UI與資料庫同步
-            getNodesQuery.refetch();
-            getNodeRelationQuery.refetch();
-        }
-
-        socket.connect();
-        socket.emit("join_project", projectId);
-
-        // 確保事件監聽器只被添加一次
-        socket.off("nodeUpdated", nodeUpdateEvent);
-        socket.on("nodeUpdated", nodeUpdateEvent);
-
-        // 錯誤處理事件：建立/更新/刪除節點失敗
-        const handleNodeError = (err) => {
-            console.warn('節點操作失敗:', err);
-            // 統一錯誤提示
-            if (err?.code === 'READ_ONLY_MODE') {
-                toast.error('觀摩模式下無法編輯或建立節點');
-            } else if (err?.message) {
-                toast.error(err.message);
-            } else {
-                toast.error('節點操作失敗，請稍後再試');
-            }
-        };
-
-        // 成功處理事件：節點操作成功
-        const handleNodeSuccess = (result) => {
-            console.log('節點操作成功:', result);
-            // Show success message only after server confirmation
-            if (result?.code === 'NODE_DELETE_SUCCESS') {
-                toast.success(`✅ ${result.nodeTitle || '節點'} 刪除成功！`);
-            } else if (result?.message) {
-                toast.success(result.message);
-            }
-        };
-
-        socket.off('nodeCreateError', handleNodeError);
-        socket.off('nodeUpdateError', handleNodeError);
-        socket.off('nodeDeleteError', handleNodeError);
-        socket.on('nodeCreateError', handleNodeError);
-        socket.on('nodeUpdateError', handleNodeError);
-        socket.on('nodeDeleteError', handleNodeError);
-        
-        // 監聽成功事件
-        socket.off('nodeCreateSuccess', handleNodeSuccess);
-        socket.off('nodeUpdateSuccess', handleNodeSuccess);
-        socket.off('nodeDeleteSuccess', handleNodeSuccess);
-        socket.on('nodeCreateSuccess', handleNodeSuccess);
-        socket.on('nodeUpdateSuccess', handleNodeSuccess);
-        socket.on('nodeDeleteSuccess', handleNodeSuccess);
-
-        return () => {
-            socket.off("nodeUpdated", nodeUpdateEvent);
-            socket.off('nodeCreateError', handleNodeError);
-            socket.off('nodeUpdateError', handleNodeError);
-            socket.off('nodeDeleteError', handleNodeError);
-            socket.off('nodeCreateSuccess', handleNodeSuccess);
-            socket.off('nodeUpdateSuccess', handleNodeSuccess);
-            socket.off('nodeDeleteSuccess', handleNodeSuccess);
-        }
-    }, [socket, projectId, getNodesQuery, getNodeRelationQuery]);
-
-    // vis network
-    useEffect(() => {
-        const network =
-            container.current &&
-            new Network(container.current, { nodes, edges }, option);
-
-        network?.on("click", () => {
-            setCreateOptionModalOpen(false);
-            setBuildOnOptionModalOpen(false);
-        })
-
-        network?.on("doubleClick", () => {
-        })
-
-        network?.on("oncontext", (properties) => {
-            // 觀摩模式下禁用右鍵創建功能
-            if (isObservationMode) {
-                return;
-            }
-            
-            const { pointer, event, nodes } = properties;
-            event.preventDefault();
-            const x_coordinate = pointer.DOM.x;
-            const y_coordinate = pointer.DOM.y;
-            const oncontextSelectNode = network.getNodeAt({ x: x_coordinate, y: y_coordinate })
-            if (oncontextSelectNode) {
-                setBuildOnOptionModalOpen(true);
-                setBuildOnId(oncontextSelectNode)
-            } else {
-                setCreateOptionModalOpen(true);
-            }
-            setCanvasPosition({ x: x_coordinate, y: y_coordinate })
-        })
-
-        network?.on("selectNode", ({ nodes: selectNodes }) => {
-            setUpdateNodeModalOpen(true);
-            let nodeId = selectNodes[0];
-            let nodeInfo = nodes.filter(item => item.id === nodeId);
-            const info = nodeInfo && nodeInfo[0];
-            // Record observation click without blocking UI
-            if (isObservationMode && nodeId) {
-                try {
-                    recordObservationEvent({
-                        targetType: 'IDEA_WALL_NODE',
-                        targetId: nodeId,
-                        targetName: info?.title,
-                        projectId,
-                    });
-                } catch (_) { /* noop */ }
-            }
-            setSelectNodeInfo(info)
-        })
-
-        return () => {
-            network?.off("click", ({ event }) => {
-                console.log(event);
-            })
-            network?.off("selectNode", ({ event }) => {
-                console.log(event);
-            })
-        }
-    }, [container, nodes, edges]);
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-
-        if (name === "title") {
-            setTitle(value);
-        } else if (name === "content") {
-            setContent(value);
-        }
-
-
-        // 只有當 ideaWallInfo.id 有效時才設置 nodeData
-        if (ideaWallInfo?.id && ideaWallInfo.id !== "") {
-            setNodeData((prevData) => ({
-                ...prevData,
-                [name]: value,
-                ideaWallId: ideaWallInfo.id,
-                owner: currentUsername,
-                from_id: buildOnNodeId,
-                projectId: projectId,
-                colorindex: userId
-            }));
-        } else {
-            console.warn('ideaWallInfo 尚未載入，跳過設置 nodeData');
-        }
-    };
-
-    const handleUpdataChange = (e) => {
-        const { name, value } = e.target;
-        // 只有當 ideaWallInfo.id 有效時才更新 ideaWallId
-        const updatedData = {
-            ...selectNodeInfo,
-            [name]: value,
-            owner: currentUsername,
+    // 完成連線 - 必須在 useVisNetwork 之前定義
+    const handleLinkingComplete = (fromId, toId) => {
+        socket.emit('createNodeRelation', {
+            from_id: fromId,
+            to_id: toId,
             projectId: projectId,
-            colorindex: userId
-        };
+            ideaWallId: state.ideaWallInfo?.id,
+            user: {
+                username: getCurrentUsername(),
+                id: parseInt(localStorage.getItem('id')) || null,
+            },
+        });
+
+        // 重置連線模式
+        state.setIsLinkingMode(false);
+        state.setLinkingSourceNode(null);
         
-        // 只有在 ideaWallInfo 有效時才設置 ideaWallId
-        if (ideaWallInfo?.id && ideaWallInfo.id !== "") {
-            updatedData.ideaWallId = ideaWallInfo.id;
-        }
-        
-        setSelectNodeInfo(updatedData);
+        toast.success('連線建立成功！');
     };
 
-    const handleCreateSubmit = async (e) => {
-        e.preventDefault();
-        if (title.trim() !== "" && content.trim() !== "") {
-            if (!projectId) {
-                toast.error('專案資訊尚未載入，請稍後再試');
-                return;
-            }
+    // 取消連線模式 - 必須在 useVisNetwork 之前定義
+    const handleCancelLinking = () => {
+        state.setIsLinkingMode(false);
+        state.setLinkingSourceNode(null);
+        toast('已取消連線模式');
+    };
 
-            // 確保有有效的 ideaWallId：優先使用既有狀態，否則即時抓取/建立
-            let wallId = ideaWallInfo?.id;
-            if (!wallId || wallId === "") {
-                try {
-                    // 以專案目前階段格式嘗試（若後端忽略，仍會回此專案第一個牆）
-                    const stageFormat = `${currentStage}-${currentSubStage}`;
-                    let wall = null;
-                    try {
-                        wall = await getIdeaWall(projectId, stageFormat);
-                    } catch (_) { /* ignore and fallback */ }
-                    if (!wall || !wall.id) {
-                        wall = await createIdeaWall({ projectId, stage: stageFormat, name: '' });
-                    }
-                    if (wall && wall.id) {
-                        wallId = wall.id;
-                        setIdealWallInfo(wall);
-                    }
-                } catch (err) {
-                    console.warn('即時取得/建立想法牆失敗:', err);
-                }
-            }
-
-            if (!wallId) {
-                toast.error('想法牆資訊尚未載入完成，請稍後再試');
-                return;
-            }
-
-            setCreateNodeModalOpen(false);
-
-            // 保存完整節點資料供活動流使用
-            const completeNodeData = {
-                ...nodeData,
-                title,
-                content,
-                ideaWallId: wallId,
-                projectId,
-                from_id: buildOnNodeId,
-                owner: currentUsername,
-                colorindex: userId
-            };
-
-            // 立即觸發活動流更新
-            const activityData = {
-                type: 'create',
-                source: 'node',
-                nodeId: Date.now(),
-                nodeTitle: title,
-                nodeType: buildOnNodeId ? 'extension' : 'idea',
-                nodeData: completeNodeData,
-                user: currentUsername || 'Unknown',
-                timestamp: new Date().toISOString(),
-                projectId: projectId
-            };
-            window.dispatchEvent(new CustomEvent('nodeCreated', { detail: activityData }));
-
-            // 送出建立節點（帶上 ideaWallId + projectId）
-            socket.emit('nodeCreate', {
-                ...nodeData,
-                title,
-                content,
-                ideaWallId: wallId,
-                projectId,
-                from_id: buildOnNodeId,
-                owner: currentUsername,
-                colorindex: userId,
+    // 刪除連線 - 必須在 useVisNetwork 之前定義
+    const handleDeleteRelation = (fromId, toId) => {
+        if (window.confirm('確定要取消此連結嗎？')) {
+            socket.emit('deleteNodeRelation', {
+                from_id: fromId,
+                to_id: toId,
+                projectId: projectId,
                 user: {
-                    username: currentUsername,
+                    username: getCurrentUsername(),
                     id: parseInt(localStorage.getItem('id')) || null,
                 },
             });
-            setBuildOnId("");
-        } else {
-            toast.error("標題及內容請填寫完整!");
+            
+            toast.success('連線已取消！');
         }
     };
-    
-    const handleUpdateSubmit = (e) => {
-        e.preventDefault()
-        if (selectNodeInfo.title.trim() !== "" && selectNodeInfo.content.trim() !== "") {
-            setUpdateNodeModalOpen(false)
-            
-            // 立即觸發活動流更新
-            const activityData = {
-                type: 'update',
-                source: 'node',
-                nodeId: selectNodeInfo.id,
-                nodeTitle: selectNodeInfo.title,
-                nodeData: selectNodeInfo,
-                user: currentUsername || 'Unknown',
-                timestamp: new Date().toISOString(),
-                projectId: projectId,
-                // 簡化的變更資訊
-                changes: [{
-                    fieldName: 'title',
-                    newValue: selectNodeInfo.title
-                }]
-            };
-            
-            // 觸發自定義事件
-            window.dispatchEvent(new CustomEvent('nodeUpdated', {
-                detail: activityData
-            }));
-            
-            socket.emit('nodeUpdate', { 
-                ...selectNodeInfo, 
-                owner: currentUsername,
-                projectId,
-                user: {
-                    username: currentUsername,
-                    id: parseInt(localStorage.getItem('id')) || null,
-                },
-            })
-        } else {
-            toast.error("標題及內容請填寫完整!");
-        }
-    }
 
-    const handleDelete = (e) => {
-        e.preventDefault()
-        setUpdateNodeModalOpen(false)
+    // 計算當前節點連結到的其他節點
+    const getConnectedNodes = (nodeId) => {
+        if (!nodeId || !state.edges || !state.nodes) return [];
         
-        // 立即觸發活動流更新
-        const activityData = {
-            type: 'delete',
-            source: 'node',
-            nodeId: selectNodeInfo.id,
-            nodeTitle: selectNodeInfo.title,
-            nodeType: 'unknown', // 我們可能需要從節點資料中取得類型
-            nodeData: selectNodeInfo,
-            user: currentUsername || 'Unknown',
-            timestamp: new Date().toISOString(),
-            projectId: projectId
-        };
+        // 找出從當前節點連出去的邊
+        const connectedEdges = state.edges.filter(edge => edge.from === nodeId);
         
-        // 觸發自定義事件
-        window.dispatchEvent(new CustomEvent('nodeDeleted', {
-            detail: activityData
-        }));
-        
-        socket.emit('nodeDelete', { 
-            ...selectNodeInfo, 
-            owner: currentUsername,
-            title: selectNodeInfo.title,
-            projectId,
-            user: {
-                username: currentUsername,
-                id: parseInt(localStorage.getItem('id')) || null,
-            },
-        })
-    }
-
-    const handleMouseEnter = () => {
-        setHovering(true);
+        // 找出目標節點的詳細資訊
+        return connectedEdges.map(edge => {
+            const targetNode = state.nodes.find(node => node.id === edge.to);
+            return targetNode ? {
+                id: targetNode.id,
+                title: targetNode.title,
+                owner: targetNode.owner
+            } : null;
+        }).filter(node => node !== null);
     };
 
-    const handleMouseLeave = () => {
-        setHovering(false);
+    // 使用 Socket 事件處理 hook
+    useIdeaWallSocket({
+        projectId,
+        getNodesQuery,
+        getNodeRelationQuery,
+        setAiSuggestion: state.setAiSuggestion,
+        setSuggestedAgentType: state.setSuggestedAgentType,
+        setKbCoachModalOpen: state.setKbCoachModalOpen,
+    });
+
+    // 使用 Vis Network 互動 hook
+    useVisNetwork({
+        container,
+        nodes: state.nodes,
+        edges: state.edges,
+        projectId,
+        isObservationMode,
+        setCreateOptionModalOpen: state.setCreateOptionModalOpen,
+        setBuildOnOptionModalOpen: state.setBuildOnOptionModalOpen,
+        setUpdateNodeModalOpen: state.setUpdateNodeModalOpen,
+        setCanvasPosition: state.setCanvasPosition,
+        setBuildOnNodeId: state.setBuildOnNodeId,
+        setSelectNodeInfo: state.setSelectNodeInfo,
+        isLinkingMode: state.isLinkingMode,
+        linkingSourceNode: state.linkingSourceNode,
+        onLinkingComplete: handleLinkingComplete,
+    });
+
+    // 使用節點操作 hook
+    const operations = useNodeOperations({
+        projectId,
+        ideaWallInfo: state.ideaWallInfo,
+        setIdeaWallInfo: state.setIdeaWallInfo,
+        currentStage: state.currentStage,
+        currentSubStage: state.currentSubStage,
+        nodeData: state.nodeData,
+        setNodeData: state.setNodeData,
+        title: state.title,
+        setTitle: state.setTitle,
+        content: state.content,
+        setContent: state.setContent,
+        buildOnNodeId: state.buildOnNodeId,
+        setBuildOnNodeId: state.setBuildOnNodeId,
+        selectNodeInfo: state.selectNodeInfo,
+        setSelectNodeInfo: state.setSelectNodeInfo,
+        setCreateNodeModalOpen: state.setCreateNodeModalOpen,
+        setUpdateNodeModalOpen: state.setUpdateNodeModalOpen,
+    });
+
+    // UI 互動處理函式
+    const handleMouseEnter = () => state.setHovering(true);
+    const handleMouseLeave = () => state.setHovering(false);
+    const handleKbCoach = () => state.setKbCoachModalOpen(true);
+
+    // 建立想法按鈕處理
+    const handleCreateIdeaClick = () => {
+        state.setNodeData({});
+        state.setTitle("");
+        state.setContent("");
+        state.setCreateOptionModalOpen(false);
+        state.setCreateNodeModalOpen(true);
     };
 
-    const handleAiDevelopment = () => {
-        setAiDevelopmentModalOpen(true);
+    // 延伸想法按鈕處理
+    const handleExtendIdeaClick = () => {
+        state.setNodeData({});
+        state.setTitle("");
+        state.setContent("");
+        state.setBuildOnOptionModalOpen(false);
+        state.setCreateNodeModalOpen(true);
     };
 
-    const handleNewNodeFromAI = (nodeData) => {
-        console.log("發送新節點數據:", nodeData);
-        socket.emit('nodeCreate', {
-            ...nodeData,
-            projectId,
-            user: {
-                username: currentUsername,
-                id: parseInt(localStorage.getItem('id')) || null,
-            },
+    // 從 UpdateModal 延伸想法
+    const handleExtendFromUpdate = () => {
+        state.setBuildOnNodeId(state.selectNodeInfo.id);
+        state.setNodeData({});
+        state.setTitle("");
+        state.setContent("");
+        state.setUpdateNodeModalOpen(false);
+        state.setCreateNodeModalOpen(true);
+    };
+
+    // 開始連線模式
+    const handleStartLinking = () => {
+        state.setLinkingSourceNode(state.selectNodeInfo);
+        state.setIsLinkingMode(true);
+        state.setUpdateNodeModalOpen(false);
+        toast.success('請點擊要連結的目標節點', {
+            duration: 4000,
         });
+    };
+
+    // 處理變更歷史標籤切換
+    const handleTabChange = (showHistory) => {
+        state.setShowNodeChangeHistory(showHistory);
+        if (showHistory) {
+            getNodeChangeLogs(state.selectNodeInfo.id)
+                .then(state.setNodeChangeLogs)
+                .catch(console.error);
+        }
     };
 
     return (
         <div className="h-full w-full relative">
             <div ref={container} className="h-full w-full" />
-            {/* create option */}
-            {!isObservationMode && (
-                <Modal open={createOptionModalOpen} onClose={() => setCreateOptionModalOpen(false)} opacity={false} modalCoordinate={canvasPosition} custom={"w-25 h-12"}>
-                    <div>
-                        <button onClick={() => {
-                            setNodeData({}) // 重置 nodeData 状态
-                            setTitle("")
-                            setContent("")
-                            setCreateOptionModalOpen(false)
-                            setCreateNodeModalOpen(true)
-                        }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                            建立想法
-                        </button>
-                        <button onClick={() => setCreateOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                            取消
-                        </button>
+
+            {/* 連線模式提示 UI */}
+            {state.isLinkingMode && state.linkingSourceNode && (
+                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-4 animate-bounce">
+                    <HiLink className="w-6 h-6 flex-shrink-0" />
+                    <div className="flex-1">
+                        <p className="font-bold text-lg">連線模式</p>
+                        <p className="text-sm">從「{state.linkingSourceNode.title}」連結到...</p>
                     </div>
-                </Modal>
-            )}
-            {/* build on */}
-            {!isObservationMode && (
-                <Modal open={buildOnOptionModalOpen} onClose={() => setBuildOnOptionModalOpen(false)} opacity={false} modalCoordinate={canvasPosition} custom={"w-30 h-15"}>
-                    <div>
-                        <button onClick={() => {
-                            setNodeData({}) // 重置 nodeData 状态
-                            setTitle("")
-                            setContent("")
-                            setBuildOnOptionModalOpen(false)
-                            setCreateNodeModalOpen(true)
-                        }} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                            延伸想法
-                        </button>
-                        <button onClick={() => setBuildOnOptionModalOpen(false)} className='w-full h-full p-2 rounded-md bg-white hover:bg-slate-100 text-sm'>
-                            取消
-                        </button>
-                    </div>
-                </Modal>
-            )}
-            {/* create modal */}
-            {!isObservationMode && (
-                <Modal open={createNodeModalOpen} onClose={() => setCreateNodeModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                    <div className='flex flex-col p-3'>
-                        <h3 className=' font-bold text-base mb-3'>建立想法</h3>
-                    <p className=' font-bold text-base mb-3'>標題</p>
-                    <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
-                        type="text"
-                        placeholder="標題"
-                        name='title'
-                        value={title}
-                        onChange={handleChange}
-                    />
-                    <p className=' font-bold text-base mb-3'>內容</p>
-                    <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
-                        rows={5}
-                        placeholder="內容"
-                        name='content'
-                        value={content}
-                        onChange={handleChange}
-                    />
-                </div>
-                <div className='flex justify-end m-2'>
-                    <button onClick={() => setCreateNodeModalOpen(false)} className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-xs sm:text-sm text-black/60 mr-2" >
+                    <button
+                        data-track
+                        data-track-action="IDEAWALL_LINKING_CANCEL"
+                        data-track-type="node"
+                        onClick={handleCancelLinking}
+                        className="ml-4 px-4 py-2 bg-white text-blue-500 rounded-md hover:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                    >
+                        <HiX className="w-4 h-4" />
                         取消
                     </button>
-                    <button onClick={handleCreateSubmit} style={{ backgroundColor: "#5BA491" }} className="mx-auto w-full h-7 mb-2  rounded font-bold text-xs sm:text-sm text-white">
-                        新增
-                    </button>
-
                 </div>
-                </Modal>
             )}
-            {/* update modal */}
-            {
-                selectNodeInfo && (
-                <Modal open={updateNodeModalOpen} onClose={() => setUpdateNodeModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                    <div className='flex flex-col w-full'>
-                        {/* 標籤頁導航 */}
-                        <div className='flex border-b border-gray-200 mb-4'>
-                            <button
-                                onClick={() => setShowNodeChangeHistory(false)}
-                                className={`px-4 py-2 font-medium text-sm ${
-                                    !showNodeChangeHistory 
-                                        ? 'text-customgreen border-b-2 border-customgreen' 
-                                        : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                            >
-                                編輯節點
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setShowNodeChangeHistory(true);
-                                    // 取得變更記錄
-                                    getNodeChangeLogs(selectNodeInfo.id).then(setNodeChangeLogs).catch(console.error);
-                                }}
-                                className={`px-4 py-2 font-medium text-sm ${
-                                    showNodeChangeHistory 
-                                        ? 'text-customgreen border-b-2 border-customgreen' 
-                                        : 'text-gray-500 hover:text-gray-700'
-                                }`}
-                            >
-                                變更歷史
-                            </button>
-                        </div>
 
-                        {/* 編輯節點內容 */}
-                        {!showNodeChangeHistory && (
-                            <div className='flex flex-col p-3'>
-                                <h3 className=' font-bold text-base mb-3'>檢視便利貼</h3>
-                                <p className=' font-bold text-base mb-3'>標題</p>
-                                <input className=" rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"
-                                    type="text"
-                                    placeholder="標題"
-                                    name='title'
-                                    value={selectNodeInfo.title}
-                                    onChange={handleUpdataChange}
-                                    disabled={isObservationMode || currentUsername !== selectNodeInfo.owner}
-                                />
-                                <p className=' font-bold text-base mb-3'>內容</p>
-                                <textarea className=" rounded outline-none ring-2 ring-customgreen w-full p-1 resize-none overflow-auto"
-                                    rows={5}
-                                    placeholder="內容"
-                                    name='content'
-                                    value={selectNodeInfo.content}
-                                    onChange={handleUpdataChange}
-                                    disabled={isObservationMode || currentUsername !== selectNodeInfo.owner}
-                                />
-                                <div className='flex justify-between items-center mt-3'>
-                                    <p className=' font-bold text-base'>建立者: {getDisplayNodeOwnerName(selectNodeInfo.owner)}</p>
-                                    {selectNodeInfo.createdAt && (
-                                        <p className='text-sm text-gray-500' title={formatTime(selectNodeInfo.createdAt, 'full')}>
-                                            建立時間: {formatTime(selectNodeInfo.createdAt, 'relative')}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 變更歷史 */}
-                        {showNodeChangeHistory && (
-                            <div className='max-h-96 overflow-y-auto p-3'>
-                                <div className='flex items-center mb-4'>
-                                    <h4 className='text-lg font-medium text-gray-700'>變更歷史</h4>
-                                </div>
-                                
-                                {nodeChangeLogs.length === 0 ? (
-                                    <div className='text-center py-8 text-gray-500'>
-                                        <p>尚無變更記錄</p>
-                                    </div>
-                                ) : (
-                                    <div className='space-y-3'>
-                                        {nodeChangeLogs.map((log, index) => (
-                                            <div 
-                                                key={log.id || index} 
-                                                className='bg-gray-50 rounded-lg p-3 border-l-4 border-purple-400'
-                                            >
-                                                <div className='flex items-center justify-between mb-2'>
-                                                    <div className='flex items-center'>
-                                                        <span className='text-sm font-medium text-gray-700'>
-                                                            {log.changedBy}
-                                                        </span>
-                                                    </div>
-                                                    <span className='text-xs text-gray-500'>
-                                                        {formatTime(log.createdAt, 'full')}
-                                                    </span>
-                                                </div>
-                                                
-                                                <p className='text-sm text-gray-600 mb-2'>
-                                                    {log.description}
-                                                </p>
-                                                
-                                                {log.fieldName && (
-                                                    <div className='text-xs text-gray-500'>
-                                                        <span className='font-medium'>欄位：</span>
-                                                        {log.fieldName}
-                                                        {log.oldValue && log.newValue && (
-                                                            <div className='mt-1'>
-                                                                <span className='text-red-600'>舊值：{log.oldValue}</span>
-                                                                <br />
-                                                                <span className='text-green-600'>新值：{log.newValue}</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                
-                                                <div className='flex items-center mt-2'>
-                                                    <span className={`
-                                                        px-2 py-1 rounded-full text-xs font-medium
-                                                        ${log.changeType === 'create' ? 'bg-green-100 text-green-700' : ''}
-                                                        ${log.changeType === 'update' ? 'bg-blue-100 text-blue-700' : ''}
-                                                        ${log.changeType === 'delete' ? 'bg-red-100 text-red-700' : ''}
-                                                    `}>
-                                                        {log.changeType === 'create' && '創建'}
-                                                        {log.changeType === 'update' && '更新'}
-                                                        {log.changeType === 'delete' && '刪除'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                    {/* 按鈕區域 */}
-                    {!showNodeChangeHistory ? (
-                        currentUsername === selectNodeInfo.owner ? (
-                            <div className='flex flex-row justify-between m-2'>
-                                {/* 刪除按鈕 - 觀摩模式隱藏 */}
-                                {!isObservationMode && (
-                                    <button onClick={handleDelete} className="w-16 h-7 bg-red-500 rounded font-bold text-sm sm:text-bas text-white mr-2">
-                                        刪除
-                                    </button>
-                                )}
-                                <div className='flex'>
-                                    {/* <button
-                                        onClick={handleAiDevelopment}
-                                        className="w-32 h-7 bg-purple-500 rounded font-bold text-sm sm:text-base text-white mr-2"
-                                    >
-                                        AI 輔助發展
-                                    </button> */}
-                                    {/* 延伸想法按鈕 - 觀摩模式隱藏 */}
-                                    {!isObservationMode && (
-                                        <button
-                                            onClick={() => {
-                                                setBuildOnId(selectNodeInfo.id);
-                                                setNodeData({});
-                                                setTitle("");
-                                                setContent("");
-                                                setUpdateNodeModalOpen(false);
-                                                setCreateNodeModalOpen(true);
-                                            }}
-                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white mr-2"
-                                        >
-                                            延伸想法
-                                        </button>
-                                    )}
-                                    <button onClick={() => setUpdateNodeModalOpen(false)} className="w-16 h-7 bg-customgray rounded font-bold text-sm sm:text-bas text-black/60 mr-2">
-                                        取消
-                                    </button>
-                                    {/* 儲存按鈕 - 觀摩模式隱藏 */}
-                                    {!isObservationMode && (
-                                        <button onClick={handleUpdateSubmit} className="w-16 h-7 bg-customgreen rounded font-bold text-sm sm:text-bas text-white">
-                                            儲存
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className='flex justify-end m-2'>
-                                <button onClick={() => setUpdateNodeModalOpen(false)} className="mx-auto w-1/3 h-7 mb-2 bg-customgreen rounded font-bold text-xs sm:text-base text-white mr-2" >
-                                    關閉
-                                </button>
-                                {/* 延伸想法按鈕 - 觀摩模式隱藏 */}
-                                {!isObservationMode && (
-                                    <div className='flex justify-start'>
-                                        <button
-                                            onClick={() => {
-                                                setBuildOnId(selectNodeInfo.id);
-                                                setNodeData({});
-                                                setTitle("");
-                                                setContent("");
-                                                setUpdateNodeModalOpen(false);
-                                                setCreateNodeModalOpen(true);
-                                            }}
-                                            className="w-32 h-7 bg-blue-500 rounded font-bold text-sm sm:text-base text-white"
-                                        >
-                                            延伸想法
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    ) : (
-                        <div className='flex justify-end m-2'>
-                            <button 
-                                onClick={() => setUpdateNodeModalOpen(false)} 
-                                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors duration-200"
-                            >
-                                關閉
-                            </button>
-                        </div>
-                    )}
-                </Modal>
-            )}
+            {/* 右鍵選單 */}
             {!isObservationMode && (
-                <Modal open={aiDevelopmentModalOpen} onClose={() => setAiDevelopmentModalOpen(false)} opacity={false} position={"justify-center items-center"}>
-                    <Idea_development
-                        nodeInfo={selectNodeInfo}
-                        onClose={() => setAiDevelopmentModalOpen(false)}
-                        onNewNode={handleNewNodeFromAI}
+                <CreateOptionMenu
+                    createOptionOpen={state.createOptionModalOpen}
+                    buildOnOptionOpen={state.buildOnOptionModalOpen}
+                    onCloseCreateOption={() => state.setCreateOptionModalOpen(false)}
+                    onCloseBuildOnOption={() => state.setBuildOnOptionModalOpen(false)}
+                    onCreateIdea={handleCreateIdeaClick}
+                    onExtendIdea={handleExtendIdeaClick}
+                    canvasPosition={state.canvasPosition}
+                />
+            )}
+
+            {/* 建立節點 Modal */}
+            {!isObservationMode && (
+                <CreateNodeModal
+                    open={state.createNodeModalOpen}
+                    onClose={() => state.setCreateNodeModalOpen(false)}
+                    title={state.title}
+                    content={state.content}
+                    onChange={operations.handleChange}
+                    onSubmit={operations.handleCreateSubmit}
+                    onContentChange={state.setContent}
+                />
+            )}
+
+            {/* 更新節點 Modal */}
+            {state.selectNodeInfo && (
+                <UpdateNodeModal
+                    open={state.updateNodeModalOpen}
+                    onClose={() => state.setUpdateNodeModalOpen(false)}
+                    selectNodeInfo={state.selectNodeInfo}
+                    isObservationMode={isObservationMode}
+                    showNodeChangeHistory={state.showNodeChangeHistory}
+                    nodeChangeLogs={state.nodeChangeLogs}
+                    onTabChange={handleTabChange}
+                    onChange={operations.handleUpdateChange}
+                    onContentChange={(newContent) => state.setSelectNodeInfo({
+                        ...state.selectNodeInfo,
+                        content: newContent
+                    })}
+                    onSubmit={operations.handleUpdateSubmit}
+                    onDelete={operations.handleDelete}
+                    onKbCoach={handleKbCoach}
+                    onExtendIdea={handleExtendFromUpdate}
+                    onStartLinking={handleStartLinking}
+                    onDeleteRelation={handleDeleteRelation}
+                    connectedNodes={getConnectedNodes(state.selectNodeInfo.id)}
+                    getDisplayNodeOwnerName={getDisplayNodeOwnerName}
+                />
+            )}
+
+            {/* KB Coach Modal */}
+            {!isObservationMode && (
+                <Modal 
+                    open={state.kbCoachModalOpen} 
+                    onClose={() => {
+                        state.setKbCoachModalOpen(false);
+                        state.setSuggestedAgentType(null);
+                    }} 
+                    opacity={false} 
+                    position={"justify-center items-center"}
+                >
+                    <KB_Coach
+                        nodeInfo={state.selectNodeInfo}
+                        nodes={state.nodes}
+                        onClose={() => {
+                            state.setKbCoachModalOpen(false);
+                            state.setSuggestedAgentType(null);
+                        }}
+                        onNewNode={operations.handleNewNodeFromAI}
+                        suggestedAgent={state.suggestedAgentType}
                     />
                 </Modal>
             )}
+
+            {/* Timer */}
             <Timer />
+
+            {/* Phase 2 Orchestrator 監控面板 */}
+            {/* {!isObservationMode && state.ideaWallInfo?.id && (
+                <div className="absolute top-4 right-4 w-80 z-40">
+                    <OrchestratorMonitor
+                        ideaWallId={state.ideaWallInfo.id}
+                        projectId={parseInt(projectId)}
+                    />
+                </div>
+            )} */}
+
+            {/* 新增節點按鈕 */}
             {!isObservationMode && (
                 <button
+                    data-track
+                    data-track-action="IDEAWALL_NODE_CREATE_OPEN"
+                    data-track-type="node"
                     onMouseEnter={handleMouseEnter}
                     onMouseLeave={handleMouseLeave}
-                    onClick={() => {
-                        setNodeData({});  // 重置 nodeData 状态
-                        setTitle("");
-                        setContent("");
-                        setCreateOptionModalOpen(false);
-                        setCreateNodeModalOpen(true);
-                    }}
+                    onClick={handleCreateIdeaClick}
                     aria-label="新增節點"
-                    className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-2xl transition duration-300 z-50 ${hovering ?"scale-110" : "scale-100" } `}
+                    className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-h2 transition-opacity duration-normal z-50 ${state.hovering ? "opacity-80" : "opacity-100"}`}
                 >
                     <Lottie
                         className="w-28"
@@ -813,7 +436,40 @@ export default function IdeaWall() {
                     />
                 </button>
             )}
+
+            {/* Phase 2: IdeaWall Chat Panel */}
+            {!isObservationMode && (
+                <>
+                    {state.isChatPanelOpen ? (
+                        <IdeaWallChatPanel 
+                            ideaWallId={state.ideaWallInfo.id} 
+                            selectedNodeId={state.selectNodeInfo.id} 
+                            nodes={state.nodes}
+                            onClose={() => state.setIsChatPanelOpen(false)} 
+                        />
+                    ) : (
+                        <button 
+                            data-track
+                            data-track-action="IDEAWALL_CHAT_OPEN"
+                            data-track-type="ideawall"
+                            onClick={() => state.setIsChatPanelOpen(true)}
+                            className="fixed right-0 bottom-48 bg-white text-gray-600 border border-gray-200 shadow-lg rounded-l-xl py-4 px-1 z-40 hover:bg-gray-50 transition-all duration-300 flex flex-col items-center gap-1"
+                            title="開啟討論室"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                            <div className="flex flex-col items-center text-caption font-medium leading-tight space-y-1">
+                                <span>討</span>
+                                <span>論</span>
+                                <span>室</span>
+                            </div>
+                        </button>
+                    )}
+                </>
+            )}
+
             <Toaster />
         </div>
-    )
+    );
 }

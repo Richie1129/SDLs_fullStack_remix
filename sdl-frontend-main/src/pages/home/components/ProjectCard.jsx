@@ -1,14 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaEye } from 'react-icons/fa';
+import { Eye } from 'lucide-react';
 import dateFormat from 'dateformat';
+import { getSemesterLabel } from '../../../utils/semesterUtils';
 
 const Tooltip = ({ children, content }) => {
   return (
     <div className='relative group'>
       {children}
       <div className='absolute top-full mb-2 hidden group-hover:block'>
-        <div className='bg-gray-700 text-white text-xs rounded-lg py-1 px-2 whitespace-normal overflow-wrap: break-word'>
+        <div className='bg-gray-700 text-white text-caption rounded-lg py-1 px-2 whitespace-normal overflow-wrap: break-word'>
           {content}
         </div>
       </div>
@@ -21,7 +22,7 @@ const ProgressTooltip = ({ children, content }) => {
     <div className='relative group'>
       {children}
       <div className='absolute bottom-full mb-2 hidden group-hover:block'>
-        <div className='bg-gray-700 text-white text-xs rounded-lg py-1 px-2 whitespace-nowrap'>
+        <div className='bg-gray-700 text-white text-caption rounded-lg py-1 px-2 whitespace-nowrap'>
           {content}
         </div>
       </div>
@@ -112,10 +113,14 @@ export default function ProjectCard({
     if (type === 'viewable') {
       return (
         <button
-          className='mt-2 bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 transition duration-200 ease-in-out font-semibold flex items-center justify-center'
+          data-track
+          data-track-action="HOME_PROJECT_OBSERVE"
+          data-track-type="project"
+          data-track-id={project.id}
+          className='mt-2 bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 transition duration-fast ease-in-out font-semibold flex items-center justify-center'
           onClick={() => navigate(`/project/${project.id}/kanban?mode=observation`)}
         >
-          <FaEye className='mr-2' />
+          <Eye className='mr-2 h-4 w-4' />
           觀摩專案
         </button>
       );
@@ -124,11 +129,15 @@ export default function ProjectCard({
     if (type === 'done') {
       return (
         <div className='flex justify-between items-center'>
-          <button className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold mr-2'
+          <button className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold mr-2'
+                  data-track
+                  data-track-action="HOME_PROJECT_VIEW_HISTORY"
+                  data-track-type="project"
+                  data-track-id={project.id}
                   onClick={() => navigate(`/project/${project.id}/kanban`)}>
             查看學習歷程
           </button>
-          <button className='bg-[#5BA491] text-white px-3 font-bold py-1 rounded hover:bg-[#5BA491]/80 transition duration-150 ease-in-out'>
+          <button className='bg-[#5BA491] text-white px-3 font-bold py-1 rounded hover:bg-[#5BA491]/80 transition duration-fast ease-in-out'>
             匯出
           </button>
         </div>
@@ -137,7 +146,11 @@ export default function ProjectCard({
 
     if (type === 'completed') {
       return (
-        <button className='mt-2 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold'
+        <button className='mt-2 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold'
+                data-track
+                data-track-action="HOME_PROJECT_MAKE_PORTFOLIO"
+                data-track-type="project"
+                data-track-id={project.id}
                 onClick={() => navigate(`/project/${project.id}/kanban`)}>
           製作學習歷程
         </button>
@@ -147,34 +160,54 @@ export default function ProjectCard({
     // 預設（進行中專案）
     if (role === "teacher") {
       return (
-        <div className='flex justify-between gap-2 mt-2'>
+        <div className='flex justify-between gap-stack-xs mt-2'>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_EDIT"
+            data-track-type="project"
+            data-track-id={project.id}
             onClick={() => onEdit(project)}
-            className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold">
+            className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold">
             編輯活動
           </button>
           <button
-            className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold'
+            data-track
+            data-track-action="HOME_PROJECT_VIEW"
+            data-track-type="project"
+            data-track-id={project.id}
+            className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold'
             onClick={() => navigate(`/project/${project.id}/kanban`)}>
             查看活動
           </button>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_DELETE"
+            data-track-type="project"
+            data-track-id={project.id}
             onClick={() => onDelete(project.id)}
-            className="flex-1 bg-[#FF0000]/80 text-white rounded-lg px-4 py-2 transition duration-200 ease-in-out font-semibold">
+            className="flex-1 bg-[#FF0000]/80 text-white rounded-lg px-4 py-2 transition duration-fast ease-in-out font-semibold">
             刪除活動
           </button>
         </div>
       );
     } else {
       return (
-        <div className='flex justify-between gap-2 mt-2'>
+        <div className='flex justify-between gap-stack-xs mt-2'>
           <button
+            data-track
+            data-track-action="HOME_PROJECT_EDIT"
+            data-track-type="project"
+            data-track-id={project.id}
             onClick={() => onEdit(project)}
-            className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold">
+            className="flex-1 bg-customgreen text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold">
             編輯活動
           </button>
           <button
-            className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-200 ease-in-out font-semibold'
+            data-track
+            data-track-action="HOME_PROJECT_VIEW"
+            data-track-type="project"
+            data-track-id={project.id}
+            className='flex-1 bg-[#5BA491] text-white rounded-lg px-4 py-2 hover:bg-[#5BA491]/80 transition duration-fast ease-in-out font-semibold'
             onClick={() => navigate(`/project/${project.id}/kanban`)}>
             查看活動
           </button>
@@ -192,19 +225,19 @@ export default function ProjectCard({
   };
 
   return (
-    <div className={`${getCardStyle()} w-full rounded-lg shadow-lg hover:shadow-lg p-4 flex flex-col space-y-3 hover:scale-105 transition-transform duration-200 ease-out`}>
+    <div className={`${getCardStyle()} w-full rounded-lg shadow-lg hover:shadow-xl p-component-sm flex flex-col space-y-3 transition-shadow duration-fast ease-out`}>
       {/* 標題區域 */}
       <div className='flex items-center justify-between'>
         <div className='flex items-center flex-1'>
-          {type === 'viewable' && <FaEye className='text-blue-600 mr-2' />}
-          <h3 className={`text-xl font-bold ${getTitleColor()}`}>{project.name}</h3>
+          {type === 'viewable' && <Eye className='text-blue-600 mr-2 h-4 w-4' />}
+          <h3 className={`text-h3 font-bold ${getTitleColor()}`}>{project.name}</h3>
           {type === 'completed' && (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 ml-2 text-[#5BA491]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           )}
           {type === 'done' && (
-            <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
+            <span className='ml-2 text-caption px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200'>已完成</span>
           )}
         </div>
       </div>
@@ -215,27 +248,27 @@ export default function ProjectCard({
       </Tooltip>
 
       {/* 專案資訊 */}
-      <div className='text-sm text-gray-500 font-bold'>
+      <div className='text-body-sm text-gray-500 font-bold'>
         目前階段：{project.currentStage}-{project.currentSubStage}
       </div>
 
-      <div className='text-sm text-gray-500'>指導老師：{project.mentor}</div>
+      <div className='text-body-sm text-gray-500'>指導老師：{project.mentor}</div>
 
       {type !== 'viewable' && (
-        <div className='text-sm text-gray-500'>邀請碼：{project.referral_code}</div>
+        <div className='text-body-sm text-gray-500'>邀請碼：{project.referral_code}</div>
       )}
 
-      <div className='text-sm text-gray-500'>
+      <div className='text-body-sm text-gray-500'>
         成員：{type === 'viewable' ? getViewableProjectMembers() : getProjectMembers()}
       </div>
 
-      <div className='text-sm text-gray-500'>
+      <div className='text-body-sm text-gray-500'>
         所屬班級：{type === 'viewable' ? getViewableProjectClasses() : getProjectClasses()}
       </div>
 
       {/* 觀摩權限資訊 - 僅教師可見且非觀摩模式 */}
       {role === "teacher" && type !== 'viewable' && (
-        <div className='text-sm text-gray-500'>
+        <div className='text-body-sm text-gray-500'>
           {project.is_open_for_viewing ? (
             <span className='flex items-center'>
               <span className='text-green-600 mr-1'>✓</span>
@@ -250,8 +283,15 @@ export default function ProjectCard({
         </div>
       )}
 
-      {/* 時間資訊 */}
-      <div className='flex justify-between text-sm text-gray-500'>
+      {/* 學期與時間資訊 */}
+      {project.semester && (
+        <div className='text-body-sm text-gray-500'>
+          <span className='inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-caption'>
+            {getSemesterLabel(project.semester)}
+          </span>
+        </div>
+      )}
+      <div className='flex justify-between text-body-sm text-gray-500'>
         <span className='flex items-center'>
           {type !== 'viewable' && (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -274,7 +314,7 @@ export default function ProjectCard({
       <ProgressTooltip children={type === 'viewable' ? "專案進度" : "活動進度"} content={`已完成${calculateProgressPercentage(project.currentStage, project.currentSubStage)}%`}>
         <div className='w-full bg-gray-200 rounded-full h-2.5'>
           <div
-            className={`${type === 'viewable' ? 'bg-blue-500' : 'bg-[#5BA491]'} h-2.5 rounded-full transition-all duration-300 ease-in-out`}
+            className={`${type === 'viewable' ? 'bg-blue-500' : 'bg-[#5BA491]'} h-2.5 rounded-full transition-all duration-normal ease-in-out`}
             style={{ width: getProgressWidth() }}
           ></div>
         </div>

@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { useNavigate } from 'react-router-dom';
 import { FaTimes, FaCog, FaSearch, FaFilter } from 'react-icons/fa';
+import { FiStar } from 'react-icons/fi';
 import TopBar from '../../components/TopBar';
-import SideBar from '../../components/SideBar';
-import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings } from '../../api/project';
+import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings, getAvailableSemesters } from '../../api/project';
 import { getProjectUser } from '../../api/users';
 import Swal from 'sweetalert2';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
+import { getCurrentUserRole } from '../../utils/authUtils';
+import { getCurrentSemester, getSemesterLabel } from '../../utils/semesterUtils';
 
 /**
  * 專案分享與權限管理頁面
@@ -32,12 +34,15 @@ const ClassObservationPage = () => {
     const [showBatchModal, setShowBatchModal] = useState(false);
     const [selectedSourceClass, setSelectedSourceClass] = useState('');
     const [selectedTargetClasses, setSelectedTargetClasses] = useState([]);
+
+    // 學期篩選
+    const [semesterFilter, setSemesterFilter] = useState('all');
     
     // 取得當前用戶資訊和指導老師名稱
     useEffect(() => {
         // 教師直接用自己的名稱作為指導老師
         const userName = getCurrentUsername();
-        const userRole = localStorage.getItem('role');
+        const userRole = getCurrentUserRole(); // 使用 userStorage namespace 正確讀取
         
         if (userRole === 'teacher') {
             setMentorName(userName);
@@ -70,15 +75,25 @@ const ClassObservationPage = () => {
         }
     );
 
-    // 取得指導老師的所有專案
-    const { 
-        data: mentorProjects, 
-        isLoading: isLoadingProjects, 
+    // 取得可用學期列表
+    const { data: semesterData } = useQuery(
+        ['availableSemesters', mentorName],
+        () => getAvailableSemesters(mentorName),
+        {
+            enabled: !!mentorName,
+            staleTime: 10 * 60 * 1000,
+        }
+    );
+
+    // 取得指導老師的所有專案（加入學期過濾）
+    const {
+        data: mentorProjects,
+        isLoading: isLoadingProjects,
         error: projectsError,
-        refetch: refetchProjects 
+        refetch: refetchProjects
     } = useQuery(
-        ['mentorProjects', mentorName],
-        () => mentorName ? getProjectsByMentor(mentorName) : Promise.resolve([]),
+        ['mentorProjects', mentorName, semesterFilter],
+        () => mentorName ? getProjectsByMentor(mentorName, semesterFilter) : Promise.resolve([]),
         {
             enabled: !!mentorName,
             onError: (error) => {
@@ -171,7 +186,8 @@ const ClassObservationPage = () => {
             const result = await batchUpdateViewingSettings({
                 sourceClass: selectedSourceClass,
                 targetClasses: selectedTargetClasses,
-                mentorName: mentorName
+                mentorName: mentorName,
+                semester: semesterFilter
             });
 
             setShowBatchModal(false);
@@ -236,33 +252,30 @@ const ClassObservationPage = () => {
     return (
         <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-col">
             <TopBar />
-
-            <div className="flex flex-1 min-h-0 overflow-hidden">
-                <SideBar />
-                <main className="flex-1 flex flex-col min-h-0">
+            <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 overflow-y-auto">
                         <div className='px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 py-10'>
                             {/* 頁面標題 */}
                             <div className='mb-8'>
                                 <div className='flex items-center space-x-3 mb-4'>
-                                    <FaCog className='text-3xl text-blue-600' />
-                                    <h1 className='text-3xl font-bold text-gray-800'>專案分享與權限管理</h1>
+                                    <FaCog className='text-h1 text-blue-600' />
+                                    <h1 className='text-h1 font-bold text-gray-800'>專案分享與權限管理</h1>
                                 </div>
-                                <p className='text-gray-600 text-lg'>
+                                <p className='text-gray-600 text-body-lg'>
                                     管理您指導的專案，設定開放給其他班級觀摩的權限。支援同班組間觀摩功能。
                                 </p>
                             </div>
 
                             {/* 專案列表：以教師自己的專案為核心 */}
-                            <div className='bg-white rounded-lg shadow-md p-6 mb-8'>
-                                <div className='flex flex-col gap-4 mb-4'>
+                            <div className='bg-white rounded-lg shadow-md p-component-md-lg mb-8'>
+                                <div className='flex flex-col gap-stack-sm mb-4'>
                                     <div className='flex items-center justify-between'>
-                                        <h2 className='text-xl font-semibold text-gray-800'>
+                                        <h2 className='text-h3 font-semibold text-gray-800'>
                                             您指導的專案
                                         </h2>
                                         <button
                                             onClick={handleOpenBatchModal}
-                                            className='px-4 py-2 bg-customgreen text-white text-sm rounded hover:bg-customgreen/80 transition-colors'
+                                            className='px-4 py-2 bg-customgreen text-white text-body-sm rounded hover:bg-customgreen/80 transition-colors'
                                         >
                                             班級觀摩
                                         </button>
@@ -290,7 +303,7 @@ const ClassObservationPage = () => {
                                             )}
                                         </div>
                                         {/* 狀態過濾 */}
-                                        <div className='flex items-center gap-2'>
+                                        <div className='flex items-center gap-stack-xs'>
                                             <FaFilter className='text-gray-500' />
                                             <select
                                                 value={filterStatus}
@@ -313,6 +326,21 @@ const ClassObservationPage = () => {
                                                 {ownedClassOptions.map((cls) => (
                                                     <option key={cls} value={cls}>{cls}</option>
                                                 ))}
+                                            </select>
+                                        </div>
+                                        {/* 學期過濾 */}
+                                        <div>
+                                            <select
+                                                value={semesterFilter}
+                                                onChange={(e) => setSemesterFilter(e.target.value)}
+                                                className='w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                            >
+                                                {[...new Set([getCurrentSemester(), ...(semesterData?.semesters || [])])].sort().reverse().map(sem => (
+                                                    <option key={sem} value={sem}>
+                                                        {getSemesterLabel(sem)}{sem === getCurrentSemester() ? ' (目前)' : ''}
+                                                    </option>
+                                                ))}
+                                                <option value="all">所有學期</option>
                                             </select>
                                         </div>
                                     </div>
@@ -350,45 +378,51 @@ const ClassObservationPage = () => {
                                             const isOpen = project.is_open_for_viewing && allowed.length > 0;
                                             const statusText = isOpen ? `開放給 ${allowed.length} 個班級` : '未開放';
                                             return (
-                                                <div key={project.id} className='bg-white rounded-lg p-4 shadow-sm border border-gray-200'>
+                                                <div key={project.id} className='bg-white rounded-lg p-component-base shadow-sm border border-gray-200'>
                                                     <div className='flex items-start justify-between'>
                                                         <div className='flex-1 min-w-0'>
-                                                            <div className='flex items-center gap-2'>
+                                                            <div className='flex items-center gap-stack-xs'>
                                                                 <h3 className='font-medium text-gray-900 truncate'>{project.name}</h3>
-                                                                <span className={`text-xs px-2 py-0.5 rounded ${isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
+                                                                <span className={`text-caption px-2 py-0.5 rounded ${isOpen ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'}`}>
                                                                     {statusText}
                                                                 </span>
                                                             </div>
-                                                            <p className='text-sm text-gray-600 mt-1'>{project.describe || '未提供描述'}</p>
+                                                            <p className='text-body-sm text-gray-600 mt-1'>{project.describe || '未提供描述'}</p>
                                                             {/* 專案成員 */}
                                                             {(projectMembersMap[project.id] || []).length > 0 && (
-                                                                <div className='text-xs text-gray-600 mt-2'>
+                                                                <div className='text-caption text-gray-600 mt-2'>
                                                                     成員：{(projectMembersMap[project.id] || []).map(u => u.username).join(', ')}
                                                                 </div>
                                                             )}
                                                             {/* 所屬班級 */}
                                                             {(projectClassMap[project.id] || []).length > 0 && (
-                                                                <div className='text-xs text-gray-500 mt-1'>
+                                                                <div className='text-caption text-gray-500 mt-1'>
                                                                     所屬班級：{(projectClassMap[project.id] || []).join(', ')}
                                                                 </div>
                                                             )}
+                                                            {/* 學期 */}
+                                                            {project.semester && (
+                                                                <div className='text-caption text-gray-400 mt-1'>
+                                                                    學期：{getSemesterLabel(project.semester)}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                        <div className='ml-4 flex-shrink-0 flex gap-2'>
+                                                        <div className='ml-4 flex-shrink-0 flex gap-stack-xs'>
                                                             <button
                                                                 onClick={() => handleOpenViewingSettings(project)}
-                                                                className='px-3 py-2 bg-customgreen text-white text-sm rounded hover:bg-customgreen/80 transition-colors'
+                                                                className='px-3 py-2 bg-customgreen text-white text-body-sm rounded hover:bg-customgreen/80 transition-colors'
                                                             >
                                                                 設定觀摩權限
                                                             </button>
                                                             <button
                                                                 onClick={() => handleProjectClick(project.id)}
-                                                                className='px-3 py-2 bg-gray-100 text-gray-800 text-sm rounded hover:bg-gray-200 transition-colors'
+                                                                className='px-3 py-2 bg-gray-100 text-gray-800 text-body-sm rounded hover:bg-gray-200 transition-colors'
                                                             >
                                                                 檢視專案
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    <div className='text-xs text-gray-500 mt-2'>
+                                                    <div className='text-caption text-gray-500 mt-2'>
                                                         {isOpen && allowed.length > 0
                                                             ? `已開放班級：${allowed.join(', ')}`
                                                             : '尚未開放給任何班級觀摩'}
@@ -405,23 +439,23 @@ const ClassObservationPage = () => {
                                 <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
                                     <div className='bg-white rounded-lg shadow-xl max-w-md w-full mx-4'>
                                         <div className='px-6 py-4 border-b border-gray-200'>
-                                            <h3 className='text-lg font-semibold text-gray-800'>
+                                            <h3 className='text-body-lg font-semibold text-gray-800'>
                                                 設定專案觀摩權限
                                             </h3>
-                                            <p className='text-sm text-gray-600 mt-1'>
+                                            <p className='text-body-sm text-gray-600 mt-1'>
                                                 專案：{selectedProjectForSetting.name}
                                             </p>
                                         </div>
-                                        <div className='p-6'>
+                                        <div className='p-component-md-lg'>
                                             {/* 已選定班級 */}
                                             <div className='mb-4'>
-                                                <div className='text-sm font-medium text-gray-700 mb-2'>已選定班級</div>
+                                                <div className='text-body-sm font-medium text-gray-700 mb-2'>已選定班級</div>
                                                 {allowedClasses.length === 0 ? (
-                                                    <div className='text-xs text-gray-500'>尚未選擇任何班級</div>
+                                                    <div className='text-caption text-gray-500'>尚未選擇任何班級</div>
                                                 ) : (
-                                                    <div className='flex flex-wrap gap-2'>
+                                                    <div className='flex flex-wrap gap-stack-xs'>
                                                         {allowedClasses.map((cls) => (
-                                                            <span key={cls} className='inline-flex items-center bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded'>
+                                                            <span key={cls} className='inline-flex items-center bg-blue-100 text-blue-800 text-caption px-2 py-1 rounded'>
                                                                 {cls}
                                                                 <button
                                                                     onClick={() => removeClassForViewing(cls)}
@@ -441,14 +475,14 @@ const ClassObservationPage = () => {
                                             {/* 可選班級清單 + 搜尋 */}
                                             <div>
                                                 <div className='flex items-center justify-between mb-2'>
-                                                    <div className='text-sm font-medium text-gray-700'>所有可選班級</div>
+                                                    <div className='text-body-sm font-medium text-gray-700'>所有可選班級</div>
                                                     <div className='relative'>
                                                         <input
                                                             type='text'
                                                             placeholder='搜尋班級...'
                                                             value={classSearch}
                                                             onChange={(e) => setClassSearch(e.target.value)}
-                                                            className='text-sm px-3 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
+                                                            className='text-body-sm px-3 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
                                                         />
                                                         {classSearch && (
                                                             <button
@@ -469,9 +503,9 @@ const ClassObservationPage = () => {
                                                         .filter(c => c.toLowerCase().includes(classSearch.toLowerCase()));
 
                                                     return (
-                                                        <div className='space-y-2 max-h-48 overflow-y-auto'>
+                                                        <div className='space-y-stack-xs max-h-48 overflow-y-auto'>
                                                             {available.length === 0 ? (
-                                                                <div className='text-xs text-gray-500'>沒有可加入的班級</div>
+                                                                <div className='text-caption text-gray-500'>沒有可加入的班級</div>
                                                             ) : (
                                                                 available.map((c) => (
                                                                     <button
@@ -479,8 +513,8 @@ const ClassObservationPage = () => {
                                                                         onClick={() => addClassForViewing(c)}
                                                                         className='w-full flex items-center justify-between px-3 py-2 text-left border border-gray-200 rounded hover:bg-gray-50'
                                                                     >
-                                                                        <span className='text-sm text-gray-700'>{c}</span>
-                                                                        <span className='text-xs text-gray-400'>加入</span>
+                                                                        <span className='text-body-sm text-gray-700'>{c}</span>
+                                                                        <span className='text-caption text-gray-400'>加入</span>
                                                                     </button>
                                                                 ))
                                                             )}
@@ -512,17 +546,17 @@ const ClassObservationPage = () => {
                                 <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
                                     <div className='bg-white rounded-lg shadow-xl max-w-lg w-full mx-4'>
                                         <div className='px-6 py-4 border-b border-gray-200'>
-                                            <h3 className='text-lg font-semibold text-gray-800'>
+                                            <h3 className='text-body-lg font-semibold text-gray-800'>
                                                 班級觀摩設定
                                             </h3>
-                                            <p className='text-sm text-gray-600 mt-1'>
+                                            <p className='text-body-sm text-gray-600 mt-1'>
                                                 讓目標班級觀摩來源班級的所有專案（支援同班組間觀摩）
                                             </p>
                                         </div>
-                                        <div className='p-6'>
+                                        <div className='p-component-md-lg'>
                                             {/* 來源班級選擇 */}
                                             <div className='mb-6'>
-                                                <div className='text-sm font-medium text-gray-700 mb-2'>來源班級</div>
+                                                <div className='text-body-sm font-medium text-gray-700 mb-2'>來源班級</div>
                                                 <select
                                                     value={selectedSourceClass}
                                                     onChange={(e) => setSelectedSourceClass(e.target.value)}
@@ -533,20 +567,20 @@ const ClassObservationPage = () => {
                                                         <option key={cls} value={cls}>{cls}</option>
                                                     ))}
                                                 </select>
-                                                <div className='text-xs text-gray-500 mt-1'>
+                                                <div className='text-caption text-gray-500 mt-1'>
                                                     這個班級的專案將被開放觀摩（設定為同班時可實現組間觀摩）
                                                 </div>
                                             </div>
 
                                             {/* 目標班級選擇 */}
                                             <div className='mb-4'>
-                                                <div className='text-sm font-medium text-gray-700 mb-2'>目標班級</div>
+                                                <div className='text-body-sm font-medium text-gray-700 mb-2'>目標班級</div>
                                                 {selectedTargetClasses.length === 0 ? (
-                                                    <div className='text-xs text-gray-500 mb-2'>尚未選擇任何目標班級</div>
+                                                    <div className='text-caption text-gray-500 mb-2'>尚未選擇任何目標班級</div>
                                                 ) : (
-                                                    <div className='flex flex-wrap gap-2 mb-2'>
+                                                    <div className='flex flex-wrap gap-stack-xs mb-2'>
                                                         {selectedTargetClasses.map((cls) => (
-                                                            <span key={cls} className='inline-flex items-center bg-green-100 text-green-800 text-xs px-2 py-1 rounded'>
+                                                            <span key={cls} className='inline-flex items-center bg-green-100 text-green-800 text-caption px-2 py-1 rounded'>
                                                                 {cls}
                                                                 <button
                                                                     onClick={() => removeTargetClass(cls)}
@@ -559,12 +593,12 @@ const ClassObservationPage = () => {
                                                         ))}
                                                     </div>
                                                 )}
-                                                <div className='text-xs text-gray-500 mb-2'>
+                                                <div className='text-caption text-gray-500 mb-2'>
                                                     這些班級將能觀摩來源班級的專案（選擇同班級時學生只能看到其他組的專案）
                                                 </div>
 
                                                 {/* 可選班級清單 */}
-                                                <div className='space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded p-2'>
+                                                <div className='space-y-stack-xs max-h-32 overflow-y-auto border border-gray-200 rounded p-component-xs'>
                                                     {(() => {
                                                         const all = classesData?.classes || [];
                                                         const available = all.filter(c =>
@@ -572,7 +606,7 @@ const ClassObservationPage = () => {
                                                         );
 
                                                         return available.length === 0 ? (
-                                                            <div className='text-xs text-gray-500'>沒有可選的班級</div>
+                                                            <div className='text-caption text-gray-500'>沒有可選的班級</div>
                                                         ) : (
                                                             available.map((c) => {
                                                                 const isSameClass = c === selectedSourceClass;
@@ -583,14 +617,14 @@ const ClassObservationPage = () => {
                                                                         className='w-full flex items-center justify-between px-2 py-1 text-left border border-gray-100 rounded hover:bg-gray-50'
                                                                     >
                                                                         <div className='flex flex-col items-start'>
-                                                                            <span className='text-sm text-gray-700'>{c}</span>
+                                                                            <span className='text-body-sm text-gray-700'>{c}</span>
                                                                             {isSameClass && (
-                                                                                <span className='text-xs text-blue-600 font-medium'>
-                                                                                    ✨ 組間觀摩：同學只會看到其他組的專案
+                                                                                <span className='text-caption text-blue-600 font-medium'>
+                                                                                    <FiStar className="w-3 h-3 inline mr-1" />組間觀摩：同學只會看到其他組的專案
                                                                                 </span>
                                                                             )}
                                                                         </div>
-                                                                        <span className='text-xs text-gray-400'>加入</span>
+                                                                        <span className='text-caption text-gray-400'>加入</span>
                                                                     </button>
                                                                 );
                                                             })
@@ -619,7 +653,6 @@ const ClassObservationPage = () => {
                         </div>
                     </div>
                 </main>
-            </div>
         </div>
     );
 };

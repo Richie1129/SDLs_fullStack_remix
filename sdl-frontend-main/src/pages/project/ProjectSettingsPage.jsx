@@ -41,8 +41,8 @@ const ProjectSettingsPage = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">{project.name} - 專案設定</h1>
-                            <p className="mt-1 text-sm text-gray-500">管理專案的各項設定與權限</p>
+                            <h1 className="text-h2 font-bold text-gray-900">{project.name} - 專案設定</h1>
+                            <p className="mt-1 text-body-sm text-gray-500">管理專案的各項設定與權限</p>
                         </div>
                     </div>
                 </div>
@@ -52,20 +52,20 @@ const ProjectSettingsPage = () => {
                 <div className="lg:grid lg:grid-cols-12 lg:gap-x-8">
                     {/* 側邊欄選單 */}
                     <div className="lg:col-span-3">
-                        <nav className="space-y-1 bg-white rounded-lg shadow p-4">
+                        <nav className="space-y-1 bg-white rounded-lg shadow p-component-base">
                             {tabs.map((tab) => {
                                 const Icon = tab.icon;
                                 return (
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
-                                        className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                                        className={`w-full flex items-center px-3 py-2 text-body-sm font-medium rounded-md transition-colors ${
                                             activeTab === tab.id
                                                 ? 'bg-blue-100 text-blue-700 border-r-2 border-blue-600'
                                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                         }`}
                                     >
-                                        <Icon className="mr-3 text-lg" />
+                                        <Icon className="mr-3 text-body-lg" />
                                         {tab.name}
                                     </button>
                                 );
@@ -78,14 +78,14 @@ const ProjectSettingsPage = () => {
                         <div className="bg-white rounded-lg shadow">
                             {/* 觀摩權限設定頁籤 */}
                             {activeTab === 'viewing' && (
-                                <div className="p-6">
+                                <div className="p-component-md-lg">
                                     <div className="mb-6">
-                                        <h2 className="text-lg font-semibold text-gray-900 mb-2">觀摩權限管理</h2>
+                                        <h2 className="text-body-lg font-semibold text-gray-900 mb-2">觀摩權限管理</h2>
                                         <p className="text-gray-600">設定哪些班級可以觀摩此專案的內容</p>
                                     </div>
 
                                     {/* 目前觀摩狀態 */}
-                                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                                    <div className="bg-gray-50 rounded-lg p-component-base mb-6">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center space-x-3">
                                                 <div className={`w-4 h-4 rounded-full ${project.is_open_for_viewing ? 'bg-green-400' : 'bg-gray-400'}`}></div>
@@ -93,7 +93,7 @@ const ProjectSettingsPage = () => {
                                                     <h3 className="font-medium">
                                                         {project.is_open_for_viewing ? '已開放觀摩' : '未開放觀摩'}
                                                     </h3>
-                                                    <p className="text-sm text-gray-600">
+                                                    <p className="text-body-sm text-gray-600">
                                                         {project.is_open_for_viewing 
                                                             ? `${project.allowed_classes?.length || 0} 個班級可觀摩`
                                                             : '目前僅限專案成員可見'
@@ -118,10 +118,10 @@ const ProjectSettingsPage = () => {
                                                 {project.allowed_classes.map((className, index) => (
                                                     <div
                                                         key={index}
-                                                        className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center"
+                                                        className="bg-blue-50 border border-blue-200 rounded-lg p-component-sm text-center"
                                                     >
                                                         <div className="text-blue-800 font-medium">{className}</div>
-                                                        <div className="text-blue-600 text-sm">可觀摩</div>
+                                                        <div className="text-blue-600 text-body-sm">可觀摩</div>
                                                     </div>
                                                 ))}
                                             </div>
@@ -129,9 +129,9 @@ const ProjectSettingsPage = () => {
                                     )}
 
                                     {/* 觀摩功能說明 */}
-                                    <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-component-base">
                                         <h4 className="font-medium text-blue-900 mb-2">觀摩功能說明</h4>
-                                        <ul className="text-sm text-blue-800 space-y-1">
+                                        <ul className="text-body-sm text-blue-800 space-y-1">
                                             <li>• 觀摩者可以瀏覽專案的所有內容模組</li>
                                             <li>• 觀摩者無法編輯、留言或進行任何修改</li>
                                             <li>• 觀摩權限可隨時開啟或關閉</li>
@@ -143,22 +143,22 @@ const ProjectSettingsPage = () => {
 
                             {/* 其他頁籤內容 */}
                             {activeTab === 'general' && (
-                                <div className="p-6">
-                                    <h2 className="text-lg font-semibold mb-4">基本設定</h2>
+                                <div className="p-component-md-lg">
+                                    <h2 className="text-body-lg font-semibold mb-4">基本設定</h2>
                                     {/* 基本設定內容 */}
                                 </div>
                             )}
 
                             {activeTab === 'members' && (
-                                <div className="p-6">
-                                    <h2 className="text-lg font-semibold mb-4">成員管理</h2>
+                                <div className="p-component-md-lg">
+                                    <h2 className="text-body-lg font-semibold mb-4">成員管理</h2>
                                     {/* 成員管理內容 */}
                                 </div>
                             )}
 
                             {activeTab === 'analytics' && (
-                                <div className="p-6">
-                                    <h2 className="text-lg font-semibold mb-4">數據分析</h2>
+                                <div className="p-component-md-lg">
+                                    <h2 className="text-body-lg font-semibold mb-4">數據分析</h2>
                                     {/* 數據分析內容 */}
                                 </div>
                             )}

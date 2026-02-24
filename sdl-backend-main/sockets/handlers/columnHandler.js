@@ -6,6 +6,7 @@ const Project = require('../../models/project');
 const { logColumnChange, logColumnReorder } = require('../../utils/columnChangeLogger');
 const { Op } = require('sequelize');
 const { buildKanbanData } = require('../../utils/kanbanHelper');
+const { invalidateProjectCache } = require('../../controllers/assistant');
 
 /**
  * 欄位(列表)相關 Socket 事件處理器
@@ -90,8 +91,16 @@ class ColumnHandler {
                 req: data._reqContext
             });
 
-            // 廣播創建成功事件
-            this.broadcastToProject(projectId, "ColumnCreatedSuccess", kanbanRow);
+            // 廣播創建成功事件（包含新列表資訊）
+            this.broadcastToProject(projectId, "ColumnCreatedSuccess", {
+                kanbanRow,
+                newColumn: {
+                    id: newColumn.id,
+                    name: newColumn.name,
+                    task: newColumn.task,
+                    order: kanbanRow.column.length - 1
+                }
+            });
 
             // 廣播活動更新
             this.broadcastToProject(projectId, "activityUpdate", {
@@ -101,11 +110,14 @@ class ColumnHandler {
                 description: `建立了新列表「${newGroupName}」`
             });
 
+            // 🗑️ 清除快取：看板資料已變更
+            invalidateProjectCache(projectId);
+
             console.log(`✅ 列表創建成功: ${newColumn.id} - ${newGroupName}`);
 
         } catch (error) {
             console.error("處理欄位創建時出錯：", error);
-            this.emitError('columnCreate', { 
+            this.emitError('columnCreate', {
                 message: '創建列表時發生錯誤',
                 code: 'COLUMN_CREATE_ERROR'
             });
@@ -162,11 +174,14 @@ class ColumnHandler {
                 description: `調整了列表順序`
             });
 
+            // 🗑️ 清除快取：看板資料已變更
+            invalidateProjectCache(roomProjectId);
+
             console.log("✅ 欄位順序更新成功");
 
         } catch (error) {
             console.error("欄位順序變更錯誤:", error);
-            this.emitError('columnOrderChange', { 
+            this.emitError('columnOrderChange', {
                 message: '變更列表順序時發生錯誤',
                 code: 'COLUMN_ORDER_ERROR'
             });
@@ -268,17 +283,20 @@ class ColumnHandler {
             });
 
             // 廣播刪除事件
-            this.broadcastToProject(kanbanId, "columnDeleted", { 
-                kanbanId, 
-                updatedColumns, 
-                deletedColumnId: columnData.id 
+            this.broadcastToProject(kanbanId, "columnDeleted", {
+                kanbanId,
+                updatedColumns,
+                deletedColumnId: columnData.id
             });
+
+            // 🗑️ 清除快取：看板資料已變更
+            invalidateProjectCache(kanbanId);
 
             console.log(`✅ 欄位和其任務刪除成功: ${columnData.name}`);
 
         } catch (error) {
             console.error("處理欄位刪除錯誤:", error);
-            this.emitError('columnDelete', { 
+            this.emitError('columnDelete', {
                 message: '刪除列表時發生錯誤',
                 code: 'COLUMN_DELETE_ERROR'
             });

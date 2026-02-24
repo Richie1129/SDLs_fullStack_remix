@@ -12,8 +12,8 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         // 支援的檔案類型
         const allowedTypes = [
-            // 圖片
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/svg+xml',
+            // 圖片（SVG 已移除：可包含內嵌 JavaScript，構成 XSS 攻擊向量）
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp',
             // 文件
             'application/pdf', 'application/msword',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -54,18 +54,13 @@ const uploadToMinio = (fieldName, maxCount = 10) => {
         uploadHandler(req, res, async (err) => {
             if (err) {
                 console.error('Multer 錯誤:', err);
-                
-                // Linus: 提供有用的錯誤訊息，而不是只說 "Error"
-                let message = '檔案上傳失敗';
-                let detail = err.message;
-
+                // Linus: 改進錯誤回報
                 if (err.code === 'LIMIT_FILE_SIZE') {
-                    message = '檔案過大';
-                    detail = `單一檔案大小不能超過 100MB`;
-                } else if (err.message && err.message.includes('不支援的檔案類型')) {
-                    message = '檔案格式不支援';
+                     return res.status(400).json({ 
+                        message: '檔案過大 (超過 100MB)', 
+                        code: 'LIMIT_FILE_SIZE' 
+                    });
                 }
-
                 return res.status(400).json({ 
                     message: message, 
                     error: detail,

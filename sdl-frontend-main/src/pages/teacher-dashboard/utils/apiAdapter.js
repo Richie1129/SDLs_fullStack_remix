@@ -10,6 +10,7 @@ import { getProjectsByMentor } from "../../../api/project";
 import { getUsageSummary } from "../../../api/usage";
 import { getRagMessageHistory } from "../../../api/rag";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils';
+import { getCurrentUserId } from '../../../utils/authUtils';
 
 /**
  * API 適配器 - 統一處理所有API呼叫
@@ -261,7 +262,7 @@ export class ApiAdapter {
     }
 
     // 獲取當前使用者資訊
-    const currentUserId = localStorage.getItem("userId");
+    const currentUserId = getCurrentUserId();
     const currentUsername = getCurrentUsername();
     const isTeacher = userRole === 'teacher';
 

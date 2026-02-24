@@ -11,6 +11,11 @@ const Daily_team = sequelize.define('daily_team', {
         type: DataTypes.TEXT,
         allowNull:false,
     },
+    stage: {
+        type: DataTypes.STRING(10),
+        allowNull: true,
+        comment: '關聯階段 (例如: 1-1, 2-2, 空值表示通用反思)'
+    },
     fileData:{
         type: DataTypes.BLOB,
         allowNull:true,

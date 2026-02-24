@@ -36,7 +36,7 @@ export default function ProjectLayout() {
           <div
             className={
               inKanBan
-                ? "flex-1 min-h-0 min-w-0 overflow-hidden md:overflow-x-auto md:overflow-y-hidden"
+                ? "flex-1 h-full min-h-0 min-w-0 overflow-hidden md:overflow-x-auto md:overflow-y-hidden"
                 : "flex-1 overflow-y-auto"
             }
           >

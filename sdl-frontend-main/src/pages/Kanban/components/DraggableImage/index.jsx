@@ -33,6 +33,9 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
     handleDeleteSession,
     createNewSession,
     refreshChatSessions,
+    // ✅ 外部連結開關
+    enableExternalLinks,
+    toggleExternalLinks,
   } = useChatSession();
 
   const {
@@ -83,23 +86,35 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
 
   return (
     <>
-      {/* 拖拽頭像 */}
-      <DraggableAvatar
-        position={position}
-        isDragging={isDragging}
-        imgRef={imgRef}
-        onMouseDown={handleMouseDown}
-        onClick={handleAvatarClick}
-      />
-
-      {/* 提示氣泡 */}
-      {showMessage && (
+      {/* 手機 Bottom Sheet 背景遮罩 */}
+      {isMobile && showChat && (
         <div
-          className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-[1001] max-w-[300px] font-medium animate-fade-in"
+          className="fixed inset-0 bg-black/40 z-[1001] transition-opacity duration-normal"
+          onClick={closeChat}
+          aria-label="關閉科學助手"
+        />
+      )}
+
+      {/* 拖拽頭像：手機開啟聊天時隱藏 FAB */}
+      {!(isMobile && showChat) && (
+        <DraggableAvatar
+          position={position}
+          isDragging={isDragging}
+          imgRef={imgRef}
+          onMouseDown={handleMouseDown}
+          onClick={handleAvatarClick}
+          isMobile={isMobile}
+        />
+      )}
+
+      {/* 提示氣泡：手機開啟聊天時不顯示 */}
+      {showMessage && !(isMobile && showChat) && (
+        <div
+          className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-body-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-[1001] max-w-[300px] font-medium animate-fade-in"
           style={computeMessagePosition(position)}
           onClick={handleImageClick}
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-stack-xs">
             <span>有什麼問題需要我幫你解答的嗎？</span>
             <button
               type="button"
@@ -144,6 +159,9 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
         createNewSession={createNewSession}
         refreshChatSessions={refreshChatSessions}
         showSwalWithCorrectZIndex={showSwalWithCorrectZIndex}
+        // ✅ 外部連結開關
+        enableExternalLinks={enableExternalLinks}
+        toggleExternalLinks={toggleExternalLinks}
         // Other props
         projectId={projectId}
         currentStage={currentStage}

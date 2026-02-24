@@ -1,334 +1,114 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { FiPlus } from "react-icons/fi";
-import { v4 as uuidv4 } from 'uuid';
-import Carditem from './components/Carditem';
-import TaskHint from './components/TaskHint';
+import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../../components/Loader';
 import { FaPlus } from "react-icons/fa";
 import { RxCross2 } from "react-icons/rx";
-import { DragDropContext, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext } from 'react-beautiful-dnd';
 import { StrictModeDroppable as Droppable } from '../../utils/StrictModeDroppable';
-import SubStageComponent from '../../components/SubStageBar';
 import Swal from 'sweetalert2';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { getKanbanColumns, getKanbanTasks, addCardItem } from '../../api/kanban';
+import { useQueryClient, useQuery } from 'react-query';
 import { getProject } from '../../api/project';
-import { getSubStage } from '../../api/stage';
+import { getProjectUser } from '../../api/users';
 import { socket } from '../../utils/socket';
-import DraggableImage from "./components/DraggableImage"; // 確保路徑正確
-import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
+import DraggableImage from "./components/DraggableImage";
+import useObservationMode from '../../hooks/useObservationMode';
 import { useStageIndex, useSubStageIndex } from '../../hooks/useStageIndex';
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import KanbanErrorBoundary from '../../components/ErrorBoundary/KanbanErrorBoundary';
-// AI 導師已整合到科學助手(DraggableImage)內部的可切換分頁中
-
-
+import { useKanbanData } from './hooks/useKanbanData';
+import { useKanbanView } from './hooks/useKanbanView';
+import KanbanColumn from './components/KanbanColumn';
+import { PHASE_TEMPLATES, PHASES, COLUMN_ICON_MAP } from '../../config/kanbanTemplates';
+import { setStageInfo } from '../../utils/authUtils';
 
 /**
- * Kanban Component with Optimistic Updates
+ * Kanban Component (Refactored)
  * 
- * This component implements optimistic updates to solve the race condition issue
- * that occurs when users interact with the board before socket room subscription is complete.
- * 
- * How it works:
- * 1. User actions (add column/card) immediately update the local UI state
- * 2. Socket events are emitted to the server for persistence and real-time sync
- * 3. Server responses replace temporary IDs with real IDs and ensure data consistency
- * 4. Error scenarios trigger rollback by refreshing data from server
- * 
- * This ensures immediate UI feedback regardless of socket connection timing.
+ * Uses useKanbanData for data management and useKanbanView for presentation logic.
+ * Decoupled from direct socket/api calls.
  */
 export default function Kanban() {
-  const [kanbanData, setKanbanData] = useState([]);
-  const [newCard, setNewCard] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [selectedcolumn, setSelectedcolumn] = useState(0);
   const { projectId } = useParams();
-  const [searchParams] = useSearchParams();
-  const [stageInfo, setStageInfo] = useState({ name: "", description: "" });
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [showAddGroupInput, setShowAddGroupInput] = useState(false); // 新增狀態
+  const queryClient = useQueryClient();
+  
+  // --- Hooks ---
+  const { 
+    kanbanData, 
+    isLoading: kanbanIsLoading, 
+    isError: kanbansIsError, 
+    actions 
+  } = useKanbanData(projectId);
+
+  const [viewConfig, setViewConfig] = useState({
+    filter: { keyword: '', assignee: [], label: '', assigneeLogic: 'OR' }, // assigneeLogic: 'OR' | 'AND'
+    groupBy: 'status', // 'status' | 'assignee'
+    sortBy: null
+  });
+
+  const renderedData = useKanbanView(kanbanData, viewConfig);
+
+  // --- Local UI State ---
+  const [showAddGroupInput, setShowAddGroupInput] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
+  const [selectedTemplatePhase, setSelectedTemplatePhase] = useState(null);
+  const [selectedTemplateColumns, setSelectedTemplateColumns] = useState([]);
+  const [showMemberFilter, setShowMemberFilter] = useState(false); // 控制成員篩選下拉選單
+  
+  // --- Stage Management ---
   const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
   const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
   const currentStage = currentStageIndex;
   const currentSubStage = currentSubStageIndex;
-  
-  // 使用觀摩模式 hook
+
   const { isObservationMode } = useObservationMode();
+  const kanbanContainerRef = useRef(null);
 
-  // Helper: on small screens, lists expand naturally (page scroll);
-  // on md+, lists fill remaining height and scroll internally.
-  const getCardListStyle = (isDraggingOver) => {
-    const base = 'flex flex-col px-4 pb-1 overflow-visible md:flex-1 md:min-h-0 md:overflow-y-auto scrollbar-thin';
-    const bg = isDraggingOver ? 'bg-customgreen/10' : 'bg-slate-50';
-    return `${base} ${bg}`.trim();
-  };
-
-
-  const {
-    isLoading: kanbanIsLoading,
-    isError: kanbansIsError,
-    error: KanbansError,
-    data: KanbansData,
-  } = useQuery(
-    ['kanbanDatas', projectId],
-    () => getKanbanColumns(projectId),
+  // --- Fetch Project Members ---
+  const { data: projectMembers = [], isLoading: membersLoading } = useQuery(
+    ['projectMembers', projectId],
+    () => getProjectUser(projectId),
     {
-      enabled: !!projectId, // Only run query if projectId exists
-      staleTime: 0, // Consider data stale immediately to ensure fresh data
-      cacheTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
-      refetchOnWindowFocus: true, // Refetch when window regains focus
-      refetchOnMount: true, // Always refetch on mount
-      retry: 3, // Retry failed requests 3 times
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      enabled: !!projectId,
+      staleTime: 5 * 60 * 1000, // 5 minutes
       onSuccess: (data) => {
-        console.log('✅ Kanban data loaded successfully:', data.length, 'columns');
-        setKanbanData(data);
-        
-        // 印出列表名稱和其擁有的卡片
-        console.log('=== Kanban 列表資料 ===');
-        data.forEach((column, index) => {
-          console.log(`列表 ${index + 1}: ${column.name}`);
-          console.log(`列表 ID: ${column.id}`);
-          if (Array.isArray(column.task) && column.task.length > 0) {
-            console.log(`卡片數量: ${column.task.length}`);
-            column.task.forEach((task, taskIndex) => {
-              // 檢查 task 是否存在且不為 null
-              if (task && task.id) {
-                console.log(`  卡片 ${taskIndex + 1}:`);
-                console.log(`    ID: ${task.id}`);
-                console.log(`    標題: ${task.title}`);
-                console.log(`    內容: ${task.content || '無內容'}`);
-                console.log(`    標籤: ${task.labels ? JSON.stringify(task.labels) : '無標籤'}`);
-                console.log(`    指派人員: ${task.assignees ? JSON.stringify(task.assignees) : '無指派人員'}`);
-              } else {
-                console.log(`  卡片 ${taskIndex + 1}: 無效的任務資料`);
-              }
-            });
-          } else {
-            console.log('  此列表沒有卡片');
-          }
-          console.log('---');
-        });
-        console.log('=== 結束 ===');
+        console.log('🔍 專案成員列表:', data);
       },
       onError: (error) => {
-        console.error('❌ Failed to load Kanban data:', error);
+        console.error('❌ 獲取專案成員失敗:', error);
       }
     }
   );
-  // 在Kanban组件中
-  useEffect(() => {
-    socket.on('refreshKanban', (data) => {
-      console.log('Refreshing Kanban board for project:', data.projectId);
-      // 使用react-query的invalidateQueries方法刷新数据
-      queryClient.invalidateQueries(['kanbanDatas', data.projectId]);
-    });
 
-    return () => {
-      // socket.off('refreshKanban');
-    };
-  }, [socket, queryClient]);
-
-  // 初次載入 Kanban 時，同步一次專案進度到 Context/localStorage，確保導師階段正確
-  useEffect(() => {
-    (async () => {
-      try {
-        const proj = await getProject(projectId);
-        if (proj?.currentStage && proj?.currentSubStage) {
-          localStorage.setItem('currentStage', proj.currentStage);
-          localStorage.setItem('currentSubStage', proj.currentSubStage);
-          setCurrentStageIndex(proj.currentStage);
-          setCurrentSubStageIndex(proj.currentSubStage);
-        }
-      } catch (e) {
-        // ignore
-      }
-    })();
-  }, [projectId, setCurrentStageIndex, setCurrentSubStageIndex]);
-
-  // ✅ Linus Fix: 用 useCallback 包裝事件處理器，避免每次 render 都重新註冊
-  // Stable event handlers using useCallback (prevents re-registration on every render)
-  const KanbanUpdateEvent = useCallback((data) => {
-    if (data) {
-      console.log("KanbanUpdateEvent:", data);
-      queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(error => {
-        console.error("Failed to invalidate kanban queries:", error);
-      });
+  // --- Derived State ---
+  const allAssignees = React.useMemo(() => {
+    // 優先使用專案成員列表
+    if (projectMembers && projectMembers.length > 0) {
+      return projectMembers;
     }
-  }, [projectId]); // ✅ 只依賴 projectId，不依賴 queryClient
-
-  const kanbanDragEvent = useCallback((data) => {
-    if (data) {
-      console.log("Drag event data received from server:", data);
-
-      // ✅ 使用 setKanbanData callback 來獲取最新狀態，避免依賴 kanbanData
-      setKanbanData(currentData => {
-        const currentDataString = JSON.stringify(currentData);
-        const serverDataString = JSON.stringify(data);
-
-        if (currentDataString !== serverDataString) {
-          console.log("服務器數據與本地數據不同，更新本地狀態");
-          setTimeout(() => {
-            queryClient.setQueryData(['kanbanDatas', projectId], data);
-          }, 50);
-          return data; // 更新狀態
-        } else {
-          console.log("服務器數據與本地數據相同，跳過更新");
-          return currentData; // 保持不變
-        }
+    
+    // 回退：從任務 assignees 中提取（向下兼容）
+    if (!kanbanData) return [];
+    const assignees = new Map();
+    kanbanData.forEach(col => {
+      col.task?.forEach(task => {
+        task.assignees?.forEach(a => {
+          if (a.username && !assignees.has(a.username)) {
+            assignees.set(a.username, a);
+          }
+        });
       });
-
-      console.log('=== 服務器確認的拖拽後列表資料 ===');
-      data.forEach((column, index) => {
-        console.log(`列表 ${index + 1}: ${column.name} (ID: ${column.id})`);
-        if (Array.isArray(column.task) && column.task.length > 0) {
-          console.log(`卡片數量: ${column.task.length}`);
-          column.task.forEach((task, taskIndex) => {
-            if (task && task.id) {
-              console.log(`  卡片 ${taskIndex + 1}: ${task.title} (ID: ${task.id})`);
-            }
-          });
-        } else {
-          console.log('  此列表沒有卡片');
-        }
-      });
-      console.log('=== 結束 ===');
-    }
-  }, [projectId]); // ✅ 移除 kanbanData 依賴
-
-  const handleColumnCreated = useCallback((serverData) => {
-    console.log("🔄 Server confirmed column creation:", serverData);
-    queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
-      console.log("✅ Column creation confirmed by server, data synchronized");
-    }).catch(error => {
-      console.error("❌ Failed to sync column creation:", error);
     });
-  }, [projectId]);
+    return Array.from(assignees.values());
+  }, [projectMembers, kanbanData]);
 
-  const handleTaskItemCreated = useCallback((serverData) => {
-    console.log("🔄 Server confirmed task creation:", serverData);
-    queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
-      console.log("✅ Task creation confirmed by server, data synchronized");
-    }).catch(error => {
-      console.error("❌ Failed to sync task creation:", error);
-    });
-  }, [projectId]);
-
-  const handleCreationError = useCallback((errorData) => {
-    console.error("❌ Server creation failed:", errorData);
-    queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
-      console.log("🔄 Rolled back optimistic update due to server error");
-    }).catch(error => {
-      console.error("❌ Failed to rollback optimistic update:", error);
-    });
-  }, [projectId]);
-
-  const handleColumnDeleted = useCallback((serverData) => {
-    console.log("🗑️ Server confirmed column deletion:", serverData);
-    Swal.fire({
-      title: '已刪除！',
-      text: '看板列表已被刪除。',
-      icon: 'success',
-      timer: 2000,
-      showConfirmButton: false
-    });
-    queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
-      console.log("✅ Column deletion confirmed by server, data synchronized");
-    }).catch(error => {
-      console.error("❌ Failed to sync column deletion:", error);
-    });
-  }, [projectId]);
-
-  const handleColumnDeleteError = useCallback((errorData) => {
-    console.error("❌ Server column deletion failed:", errorData);
-    Swal.fire({
-      title: '刪除失敗',
-      text: errorData.message || '刪除列表時發生錯誤，請重試。',
-      icon: 'error',
-      confirmButtonColor: '#5BA491'
-    });
-    queryClient.invalidateQueries(['kanbanDatas', projectId]).then(() => {
-      console.log("🔄 Rolled back column deletion due to server error");
-    }).catch(error => {
-      console.error("❌ Failed to rollback column deletion:", error);
-    });
-  }, [projectId]);
-
-  const handleTaskDeleted = useCallback((data) => {
-    try {
-      console.log('🗑️ 成功刪除卡片，ID:', data?.taskId);
-      Swal.fire({
-        title: '已刪除！',
-        text: '卡片已刪除。',
-        icon: 'success',
-        timer: 1800,
-        showConfirmButton: false
-      });
-    } catch (_) {}
-    queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(() => {});
-  }, [projectId]);
-
-  // ✅ Socket 監聽器設置 - 現在所有 handler 都是穩定的
-  useEffect(() => {
-    if (!socket.connected) {
-      socket.connect();
-    }
-
-    socket.emit("join_project", projectId);
-    console.log(`Joined project room: ${projectId}`);
-
-    // 註冊所有事件監聽器
-    socket.on("taskItems", KanbanUpdateEvent);
-    socket.on("taskItem", KanbanUpdateEvent);
-    socket.on("taskItemCreated", handleTaskItemCreated);
-    socket.on("taskDeleted", handleTaskDeleted);
-    socket.on("dragtaskItem", kanbanDragEvent);
-    socket.on("columnOrderUpdated", kanbanDragEvent);
-    socket.on("ColumnCreatedSuccess", handleColumnCreated);
-    socket.on("columnDeleted", handleColumnDeleted);
-    socket.on("cardUpdated", KanbanUpdateEvent);
-    socket.on("ColumnCreatedError", handleCreationError);
-    socket.on("columnCreateError", handleCreationError);
-    socket.on("columnDeleteError", handleColumnDeleteError);
-    socket.on("ColumnDeleteError", handleColumnDeleteError);
-    socket.on("taskItemCreatedError", handleCreationError);
-    socket.on("error", handleCreationError);
-
-    // 清理函數
-    return () => {
-      socket.off('taskItems', KanbanUpdateEvent);
-      socket.off('taskItem', KanbanUpdateEvent);
-      socket.off("taskItemCreated", handleTaskItemCreated);
-      socket.off("dragtaskItem", kanbanDragEvent);
-      socket.off("taskDeleted", handleTaskDeleted);
-      socket.off("columnOrderUpdated", kanbanDragEvent);
-      socket.off('ColumnCreatedSuccess', handleColumnCreated);
-      socket.off('columnDeleted', handleColumnDeleted);
-      socket.off('cardUpdated', KanbanUpdateEvent);
-      socket.off("ColumnCreatedError", handleCreationError);
-      socket.off("columnCreateError", handleCreationError);
-      socket.off("columnDeleteError", handleColumnDeleteError);
-      socket.off("ColumnDeleteError", handleColumnDeleteError);
-      socket.off("taskItemCreatedError", handleCreationError);
-      socket.off("error", handleCreationError);
-      console.log("Socket listeners cleaned up");
-    };
-  }, [socket, projectId, KanbanUpdateEvent, kanbanDragEvent, handleColumnCreated,
-      handleTaskItemCreated, handleCreationError, handleColumnDeleted,
-      handleColumnDeleteError, handleTaskDeleted]); // ✅ 所有 handler 現在都是穩定的
-
-  // 當收到提交事件時，重新抓取專案進度並更新 Context 與 localStorage，讓導師自動切換子階段
+  // --- Effects (Stage Sync) ---
   useEffect(() => {
     const onTaskSubmitted = async (_payload) => {
       try {
         const proj = await getProject(projectId);
         if (proj?.currentStage && proj?.currentSubStage) {
-          localStorage.setItem('currentStage', proj.currentStage);
-          localStorage.setItem('currentSubStage', proj.currentSubStage);
+          setStageInfo(proj.currentStage, proj.currentSubStage);
           setCurrentStageIndex(proj.currentStage);
           setCurrentSubStageIndex(proj.currentSubStage);
         }
@@ -340,20 +120,101 @@ export default function Kanban() {
     return () => socket.off('taskSubmitted', onTaskSubmitted);
   }, [socket, projectId, setCurrentStageIndex, setCurrentSubStageIndex]);
 
-  // useEffect(() => {
-  //   if (!currentStage || !currentSubStage) {
-  //     navigate(0);
-  //   }
-  // }, [currentStage, currentSubStage, navigate])
+  useEffect(() => {
+    (async () => {
+      try {
+        const proj = await getProject(projectId);
+        if (proj?.currentStage && proj?.currentSubStage) {
+          setStageInfo(proj.currentStage, proj.currentSubStage);
+          setCurrentStageIndex(proj.currentStage);
+          setCurrentSubStageIndex(proj.currentSubStage);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [projectId, setCurrentStageIndex, setCurrentSubStageIndex]);
 
+  // --- Handlers ---
+
+  const handleAddTemplate = (phaseKey) => {
+    if (isObservationMode) return;
+    const template = PHASE_TEMPLATES[phaseKey];
+    if (!template) return;
+
+    // Open Selection Modal
+    setSelectedTemplatePhase(phaseKey);
+    // Default select all columns
+    setSelectedTemplateColumns(template.columns.map((_, idx) => idx));
+    setShowTemplateMenu(false);
+  };
+
+  const handleConfirmTemplate = () => {
+    if (!selectedTemplatePhase) return;
+    const template = PHASE_TEMPLATES[selectedTemplatePhase];
+    
+    // Filter columns based on selection
+    const columnsToAdd = template.columns.filter((_, idx) => selectedTemplateColumns.includes(idx));
+    
+    if (columnsToAdd.length > 0) {
+      if (actions.addPhaseTemplate) {
+        actions.addPhaseTemplate(columnsToAdd);
+      } else {
+        // Fallback
+        columnsToAdd.forEach(col => actions.addColumn(col.title));
+      }
+    }
+    
+    // Reset
+    setSelectedTemplatePhase(null);
+    setSelectedTemplateColumns([]);
+  };
+
+  const toggleTemplateColumnSelection = (index) => {
+    setSelectedTemplateColumns(prev => {
+      if (prev.includes(index)) {
+        return prev.filter(i => i !== index);
+      } else {
+        return [...prev, index];
+      }
+    });
+  };
+
+  const toggleMemberSelection = (username) => {
+    setViewConfig(prev => {
+      const currentAssignees = prev.filter?.assignee || [];
+      const isSelected = currentAssignees.includes(username);
+      
+      return {
+        ...prev,
+        filter: {
+          ...prev.filter,
+          assignee: isSelected
+            ? currentAssignees.filter(u => u !== username)
+            : [...currentAssignees, username]
+        }
+      };
+    });
+  };
+
+  const clearMemberFilter = () => {
+    setViewConfig(prev => ({
+      ...prev,
+      filter: { ...prev.filter, assignee: [] }
+    }));
+  };
 
   const onDragEnd = useCallback((result) => {
-    // 觀摩模式下禁止任何拖拽操作
     if (isObservationMode) {
       console.warn('觀摩模式下禁止拖拽操作');
       return;
     }
     
+    // Disable DnD for non-status views
+    if (viewConfig.groupBy !== 'status') {
+      return;
+    }
+
     const { destination, source, type } = result;
     if (!destination) return;
     if (
@@ -362,233 +223,31 @@ export default function Kanban() {
     ) {
       return;
     }
+
     if (type === 'COLUMN') {
-      const newKanbanData = Array.from(kanbanData);
-      const [reorderedColumn] = newKanbanData.splice(source.index, 1);
-      newKanbanData.splice(destination.index, 0, reorderedColumn);
-
-      // Optimistic UI update
-      setKanbanData(newKanbanData);
-      queryClient.setQueryData(['kanbanDatas', projectId], newKanbanData);
-
-      // Emit minimal payload: projectId + columnOrder
-      const columnOrder = newKanbanData.map(col => col.id.toString());
-      socket.emit('columnOrderChanged', {
-        projectId,
-        columnOrder,
-        user: {
-          username: getCurrentUsername(),
-          id: parseInt(localStorage.getItem('id')) || null,
-        },
-      });
-
-        } else if (type === 'CARD') {
-      console.log('🔄 開始處理卡片拖拉:', { source, destination });
-      
-      // 使用 column ID 而不是索引來找到對應的列表
-      const sourceColumnId = parseInt(source.droppableId);
-      const destColumnId = parseInt(destination.droppableId);
-      
-      console.log('拖拉列表ID:', { sourceColumnId, destColumnId });
-      
-      // 找到對應的列表索引
-      const sourceColumnIndex = kanbanData.findIndex(col => col.id === sourceColumnId);
-      const destColumnIndex = kanbanData.findIndex(col => col.id === destColumnId);
-      
-      if (sourceColumnIndex === -1 || destColumnIndex === -1) {
-        console.error('❌ 找不到對應的列表:', { sourceColumnId, destColumnId, sourceColumnIndex, destColumnIndex });
-        return;
-      }
-      
-      console.log('對應的列表索引:', { sourceColumnIndex, destColumnIndex });
-      
-      const newKanbanData = Array.from(kanbanData);
-      const sourceColumn = { ...newKanbanData[sourceColumnIndex] };
-      const destColumn = sourceColumnIndex === destColumnIndex 
-        ? sourceColumn 
-        : { ...newKanbanData[destColumnIndex] };
-      
-      // 從源列表移除卡片
-      const sourceTasks = Array.from(sourceColumn.task || []);
-      const [movedTask] = sourceTasks.splice(source.index, 1);
-      
-      if (!movedTask) {
-        console.error('❌ 找不到要移動的卡片:', { sourceColumnIndex, sourceIndex: source.index });
-        return;
-      }
-      
-      console.log('移動的卡片:', movedTask.title, '從', sourceColumn.name, '到', destColumn.name);
-      
-      sourceColumn.task = sourceTasks;
-      
-      // 添加卡片到目標列表
-      const destTasks = Array.from(destColumn.task || []);
-      destTasks.splice(destination.index, 0, movedTask);
-      destColumn.task = destTasks;
-      
-      // 更新 kanbanData
-      newKanbanData[sourceColumnIndex] = sourceColumn;
-      if (sourceColumnIndex !== destColumnIndex) {
-        newKanbanData[destColumnIndex] = destColumn;
-      }
-      
-      // 立即更新本地狀態
-      setKanbanData(newKanbanData);
-      
-      // 更新 React Query 緩存
-      queryClient.setQueryData(['kanbanDatas', projectId], newKanbanData);
-      
-      console.log('✅ 本地狀態已更新，準備發送到服務器');
-      
-      // Emit minimal payload for card move
-      socket.emit('cardItemDragged', {
-        eventType: 'taskDrag',
-        projectId,
-        taskId: movedTask.id,
-        source: { columnId: sourceColumnId, index: source.index },
-        destination: { columnId: destColumnId, index: destination.index },
-        user: {
-          username: getCurrentUsername(),
-          id: parseInt(localStorage.getItem('id')) || null,
-        },
-      });
-      
-      console.log('📡 已發送拖拉事件到服務器');
+      actions.reorderColumn(source.index, destination.index);
+    } else if (type === 'CARD') {
+      actions.moveCard(source, destination);
     }
-  }, [kanbanData]);
-
-  const handleChange = (e) => {
-    setNewCard(e.target.value);
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // 觀摩模式下禁止新增卡片
-    if (isObservationMode) {
-      console.warn('觀摩模式下禁止新增卡片');
-      return;
-    }
-    
-    if (newCard.length === 0) {
-      setShowForm(false);
-      return;
-    }
-
-    const username = getCurrentUsername();
-    const userId = localStorage.getItem("id"); // 獲取用戶ID，注意是 "id" 不是 "userId"
-    console.log("🚀 Optimistically creating new task:", newCard, "in column:", selectedcolumn);
-
-    // 1. Create optimistic task data
-    const optimisticTask = {
-      id: `temp-${Date.now()}`, // Temporary ID until server responds
-      title: newCard.trim(),
-      content: "",
-      labels: [],
-      assignees: [],
-      createdAt: new Date().toISOString(),
-      createdBy: username
-    };
-
-    // 2. Optimistically update UI immediately
-    const updatedKanbanData = kanbanData.map((column, index) => {
-      if (index === selectedcolumn) {
-        return {
-          ...column,
-          task: [...(column.task || []), optimisticTask]
-        };
-      }
-      return column;
-    });
-
-    // 3. Update local state
-    setKanbanData(updatedKanbanData);
-    
-    // 4. Update React Query cache optimistically
-    queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
-
-    // 5. Send to server (will broadcast to other users)
-    socket.emit("taskItemCreated", {
-      eventType: 'taskItemCreated',
-      selectedcolumn,
-      item: {
-        title: newCard.trim(),
-        content: "",
-        labels: [],
-        assignees: []
-      },
-      kanbanData: kanbanData, // Send original data
-      projectId,
-      user: { 
-        username: username,
-        id: parseInt(userId) || null
-      }
-    });
-
-    // 6. Clear form immediately
-    setShowForm(false);
-    setNewCard("");
-    
-    console.log("✅ Task added optimistically, server sync in progress...");
-  }
+  }, [isObservationMode, actions, viewConfig.groupBy]);
 
   const toggleAddGroupInput = () => {
-    setShowAddGroupInput(!showAddGroupInput); // 切換輸入框的顯示狀態
+    setShowAddGroupInput(!showAddGroupInput);
   };
 
-  // 新增列表 - With Optimistic Updates
   const handleAddGroup = (e) => {
     e.preventDefault();
-    
-    // 防止觀摩模式下的操作
-    if (isObservationMode) {
-      console.log("🚫 Add group blocked: Observation mode");
-      return;
-    }
+    if (isObservationMode) return;
     
     if (newGroupName.trim() !== '') {
-      console.log(`🚀 Optimistically creating new column: ${newGroupName}`);
-      
-      // 1. Create optimistic column data
-      const optimisticColumn = {
-        id: `temp-${Date.now()}`, // Temporary ID until server responds
-        name: newGroupName.trim(),
-        task: [], // Empty task array for new column
-        order: kanbanData.length // Place at the end
-      };
-
-      // 2. Optimistically update UI immediately
-      const updatedKanbanData = [...kanbanData, optimisticColumn];
-      setKanbanData(updatedKanbanData);
-      
-      // 3. Update React Query cache optimistically
-      queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
-
-      // 4. Send to server (will broadcast to other users)
-      // Include user info for backend permission checks
-      socket.emit("ColumnCreated", {
-        eventType: 'columnCreate',
-        projectId,
-        newGroupName: newGroupName.trim(),
-        user: {
-          username: getCurrentUsername(),
-          id: parseInt(localStorage.getItem("id")) || null
-        }
-      });
-
-      // 5. Clear form immediately
+      actions.addColumn(newGroupName);
       setNewGroupName('');
       setShowAddGroupInput(false);
-      
-      console.log("✅ Column added optimistically, server sync in progress...");
     }
   };
+
   const handleDeleteColumn = (columnData) => {
-    // 防止觀摩模式下的操作
-    if (isObservationMode) {
-      console.log("🚫 Delete column blocked: Observation mode");
-      return;
-    }
+    if (isObservationMode) return;
     
     Swal.fire({
       title: "刪除",
@@ -601,58 +260,10 @@ export default function Kanban() {
       cancelButtonText: "取消"
     }).then((result) => {
       if (result.isConfirmed) {
-        console.log(`🗑️ Optimistically deleting column: ${columnData.name}`);
-        
-        // 保存完整的列表資料，包括任務數量等詳細資訊
-        const completeColumnData = {
-          ...columnData,
-          taskCount: columnData.task ? columnData.task.length : 0
-        };
-        
-        // 立即觸發活動流更新 - 在樂觀更新時就顯示
-        const activityData = {
-          type: 'delete',
-          source: 'column',
-          columnId: columnData.id,
-          columnName: columnData.name,
-          columnData: completeColumnData,
-          user: getCurrentUsername() || 'Unknown',
-          timestamp: new Date().toISOString(),
-          projectId: projectId
-        };
-        
-        console.log("📡 Dispatching immediate column deletion activity:", activityData);
-        
-        // 立即派發活動事件，不等服務器確認
-        const event = new CustomEvent('columnDeleted', { 
-          detail: activityData 
-        });
-        window.dispatchEvent(event);
-        
-        // 1. 樂觀更新：立即從本地狀態移除列表
-        const updatedKanbanData = kanbanData.filter(column => column.id !== columnData.id);
-        setKanbanData(updatedKanbanData);
-        
-        // 2. 更新 React Query 緩存
-        queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
-        
-        // 3. 發送到服務器
-        socket.emit("ColumnDelete", {
-          eventType: 'columnDelete',
-          columnData: completeColumnData,
-          kanbanId: projectId,
-          user: {
-            username: getCurrentUsername(),
-            id: parseInt(localStorage.getItem('id')) || null
-          }
-        });
-        
-        console.log("✅ Column deleted optimistically, server sync in progress...");
+        actions.deleteColumn(columnData);
       }
     });
   }
-
-  const kanbanContainerRef = useRef(null);
 
   const handleKanbanError = (error, errorInfo, errorId) => {
     console.error('Kanban 錯誤處理:', { error, errorInfo, errorId });
@@ -676,8 +287,82 @@ export default function Kanban() {
       onDataReload={handleDataReload}
     >
       <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
-      {/* AI 導師聊天已內嵌於科學助手中 */}
-      {/* 觀摩模式隱藏科學助手 */}
+      
+      {/* Template Selection Modal */}
+      {selectedTemplatePhase && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+              <h3 className="text-body-lg font-medium text-gray-900">
+                選擇要新增的列表 ({PHASE_TEMPLATES[selectedTemplatePhase].label})
+              </h3>
+              <button 
+                onClick={() => setSelectedTemplatePhase(null)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <RxCross2 className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+              <p className="text-body-sm text-gray-500 mb-4">
+                {PHASE_TEMPLATES[selectedTemplatePhase].description || 
+                  "勾選您想要加入看板的列表。每個列表都會建立為空白欄位，您可以開始新增卡片。"}
+              </p>
+              <div className="space-y-3">
+                {PHASE_TEMPLATES[selectedTemplatePhase].columns.map((col, idx) => (
+                  <label key={idx} className={`flex items-start space-x-3 p-component-sm border rounded-md hover:bg-gray-50 cursor-pointer transition-colors ${
+                    col.recommended ? 'border-[#5BA491] bg-[#5BA491]/5' : ''
+                  }`}>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-[#5BA491] focus:ring-[#5BA491] border-gray-300 rounded mt-1"
+                      checked={selectedTemplateColumns.includes(idx)}
+                      onChange={() => toggleTemplateColumnSelection(idx)}
+                    />
+                    <div className="flex-1">
+                      <span className="block text-body-sm font-medium text-gray-900 flex items-center gap-1.5">
+                        {col.icon && COLUMN_ICON_MAP[col.icon]}{col.title}
+                        {col.recommended && (
+                          <span className="ml-1 px-1.5 py-0.5 text-[10px] font-medium bg-[#5BA491] text-white rounded">
+                            推薦
+                          </span>
+                        )}
+                      </span>
+                      {col.description && (
+                        <span className="block text-caption text-gray-500 mt-1">
+                          {col.description}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
+              <button
+                onClick={() => setSelectedTemplatePhase(null)}
+                className="px-4 py-2 text-body-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5BA491]"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleConfirmTemplate}
+                disabled={selectedTemplateColumns.length === 0}
+                className={`px-4 py-2 text-body-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5BA491] ${
+                  selectedTemplateColumns.length === 0
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-[#5BA491] hover:bg-[#5BA491]/90'
+                }`}
+              >
+                確認新增
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!isObservationMode && (
         <DraggableImage 
           containerRef={kanbanContainerRef}
@@ -687,9 +372,8 @@ export default function Kanban() {
         />
       )}
       
-      {/* 觀摩模式提示 */}
       {isObservationMode && (
-        <div className="bg-blue-100 border-l-4 border-blue-500 p-4 m-4 rounded-lg">
+        <div className="bg-blue-100 border-l-4 border-blue-500 p-component-base m-4 rounded-lg">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
@@ -697,7 +381,7 @@ export default function Kanban() {
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm text-blue-700">
+              <p className="text-body-sm text-blue-700">
                 <strong>觀摩模式</strong> - 您正在瀏覽其他班級的專案，無法進行編輯操作
               </p>
             </div>
@@ -705,29 +389,297 @@ export default function Kanban() {
         </div>
       )}
       
-      <div className="flex-1 min-h-0 p-4 sm:p-6 lg:p-8 overflow-visible md:overflow-hidden ">
+      <div className="flex-1 min-h-0 p-component-base sm:p-component-md-lg lg:p-component-lg overflow-visible md:overflow-hidden flex flex-col">
+        
+        {/* View Controls Toolbar - 改良版 */}
+        <div className="flex items-center justify-between mb-stack-sm">
+          {/* 左側: 分組 Tab */}
+          <div className="flex items-center gap-stack-xs bg-white border border-gray-200 rounded-lg p-1 shadow-sm">
+            <button
+              data-track
+              data-track-action="KANBAN_TAB_SWITCH"
+              data-track-type="kanban"
+              data-track-meta-tab="status"
+              onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'status' }))}
+              className={`px-2 sm:px-btn-x py-1.5 sm:py-2 rounded-md text-sm sm:text-ui font-medium transition-colors duration-fast whitespace-nowrap ${
+                viewConfig.groupBy === 'status'
+                  ? 'bg-customgreen text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              依狀態
+            </button>
+            <button
+              data-track
+              data-track-action="KANBAN_TAB_SWITCH"
+              data-track-type="kanban"
+              data-track-meta-tab="assignee"
+              onClick={() => setViewConfig(prev => ({ ...prev, groupBy: 'assignee' }))}
+              className={`px-2 sm:px-btn-x py-1.5 sm:py-2 rounded-md text-sm sm:text-ui font-medium transition-colors duration-fast whitespace-nowrap ${
+                viewConfig.groupBy === 'assignee'
+                  ? 'bg-customgreen text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              依負責人
+            </button>
+          </div>
+
+          {/* 右側: 搜尋與篩選工具 */}
+          <div className="flex items-center gap-stack-xs">
+            {/* 搜尋框 */}
+            <div className="relative">
+              <svg 
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                data-track
+                data-track-action="KANBAN_SEARCH"
+                data-track-type="kanban"
+                type="text"
+                placeholder="搜尋任務..."
+                className="pl-9 pr-3 py-2 w-48 border border-gray-300 rounded-lg text-ui bg-white focus:outline-none focus:ring-2 focus:ring-customgreen focus:border-transparent transition-shadow duration-fast placeholder:text-gray-400"
+                value={viewConfig.filter?.keyword || ''}
+                onChange={(e) => setViewConfig(prev => ({
+                  ...prev,
+                  filter: { ...prev.filter, keyword: e.target.value }
+                }))}
+              />
+              {viewConfig.filter?.keyword && (
+                <button
+                  onClick={() => setViewConfig(prev => ({
+                    ...prev,
+                    filter: { ...prev.filter, keyword: '' }
+                  }))}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* 成員篩選按鈕 */}
+            <div className="relative">
+              <button
+                data-track
+                data-track-action="KANBAN_FILTER_MEMBER_TOGGLE"
+                data-track-type="kanban"
+                onClick={() => setShowMemberFilter(!showMemberFilter)}
+                className={`relative px-3 py-2 border rounded-lg text-ui font-medium transition-all duration-fast flex items-center gap-2 ${
+                  viewConfig.filter?.assignee?.length > 0
+                    ? 'border-customgreen bg-customgreen/10 text-customgreen'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                成員
+                {viewConfig.filter?.assignee?.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-customgreen text-white text-caption rounded-full font-semibold min-w-[20px] text-center">
+                    {viewConfig.filter.assignee.length}
+                  </span>
+                )}
+              </button>
+              
+              {showMemberFilter && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowMemberFilter(false)}
+                  />
+                  
+                  <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-lg shadow-xl z-20 border border-gray-200 overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-ui font-semibold text-gray-800">
+                          篩選成員
+                        </span>
+                        {viewConfig.filter?.assignee?.length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearMemberFilter();
+                            }}
+                            className="text-caption text-customgreen hover:text-customgreen/80 font-medium"
+                          >
+                            清除全部
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* AND/OR 切換 - 只在選擇多個成員時顯示 */}
+                      {viewConfig.filter?.assignee?.length > 1 && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-caption text-gray-600">篩選邏輯:</span>
+                          <div className="flex bg-white border border-gray-200 rounded p-0.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewConfig(prev => ({
+                                  ...prev,
+                                  filter: { ...prev.filter, assigneeLogic: 'OR' }
+                                }));
+                              }}
+                              className={`px-2 py-1 rounded text-caption font-medium transition-colors duration-fast ${
+                                viewConfig.filter?.assigneeLogic === 'OR'
+                                  ? 'bg-customgreen text-white'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                              }`}
+                            >
+                              OR（任一）
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewConfig(prev => ({
+                                  ...prev,
+                                  filter: { ...prev.filter, assigneeLogic: 'AND' }
+                                }));
+                              }}
+                              className={`px-2 py-1 rounded text-caption font-medium transition-colors duration-fast ${
+                                viewConfig.filter?.assigneeLogic === 'AND'
+                                  ? 'bg-customgreen text-white'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                              }`}
+                            >
+                              AND（所有）
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {allAssignees.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-ui text-gray-500">
+                        暫無成員資料
+                      </div>
+                    ) : (
+                      <div className="py-2 max-h-80 overflow-y-auto">
+                        {allAssignees.map(member => (
+                          <label
+                            key={member.id}
+                            className="flex items-center px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors duration-fast"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 text-customgreen focus:ring-customgreen border-gray-300 rounded cursor-pointer"
+                              checked={viewConfig.filter?.assignee?.includes(member.username) || false}
+                              onChange={() => toggleMemberSelection(member.username)}
+                            />
+                            <span className="ml-3 text-ui text-gray-700">
+                              {member.username}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 清除所有篩選按鈕 - 只在有篩選時顯示 */}
+            {(viewConfig.filter?.keyword || viewConfig.filter?.assignee?.length > 0) && (
+              <button
+                data-track
+                data-track-action="KANBAN_FILTER_CLEAR"
+                data-track-type="kanban"
+                onClick={() => setViewConfig(prev => ({
+                  ...prev,
+                  filter: { keyword: '', assignee: [], label: '', assigneeLogic: 'OR' }
+                }))}
+                className="px-3 py-2 text-ui text-gray-600 hover:text-gray-800 font-medium transition-colors duration-fast flex items-center gap-1"
+                title="清除所有篩選"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                清除篩選
+              </button>
+            )}
+          </div>
+        </div>
+
         <DragDropContext onDragEnd={isObservationMode ? () => {} : onDragEnd}>
           
-          <Droppable droppableId="all-droppables" type='COLUMN' direction="horizontal">
+          <Droppable 
+            droppableId="all-droppables" 
+            type='COLUMN' 
+            direction="horizontal"
+            isDropDisabled={viewConfig.groupBy !== 'status'}
+          >
             {(provided) => (
               <div
                 {...provided.droppableProps}
                 ref={provided.innerRef}
                 className="w-full h-full overflow-x-hidden md:overflow-x-auto overflow-y-visible md:overflow-y-hidden"
               >
-                {/* Small screens: wrap and stack vertically; md+: single row with horizontal scroll */}
-                <div className="flex flex-row flex-wrap items-start gap-4 h-auto md:inline-flex md:flex-nowrap md:space-x-4 md:gap-0 md:h-full ">
-                {!showAddGroupInput && !isObservationMode && (
-                  <button className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full md:w-60 h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-4 md:p-7" onClick={toggleAddGroupInput}>
-                    <FaPlus className="text-white mr-2 md:m-3" />
-                    <b className="text-sm md:text-base text-white">
-                      新增列表
-                    </b>
-                  </button>
+                <div className="flex flex-row flex-wrap items-start gap-stack-sm h-auto md:inline-flex md:flex-nowrap md:space-x-stack-sm md:gap-0 md:h-full ">
+                
+                {/* Add Column & Add Template Buttons */}
+                {viewConfig.groupBy === 'status' && !showAddGroupInput && !isObservationMode && (
+                  <div className="flex flex-col gap-stack-sm w-full md:w-60 shrink-0">
+                    <button 
+                      data-track
+                      data-track-action="KANBAN_COLUMN_CREATE_OPEN"
+                      data-track-type="column"
+                      className="bg-[#5BA491] hover:bg-[#5BA491]/90 w-full h-20 md:h-24 flex flex-row items-center justify-center rounded-lg border-none p-component-base md:p-7" 
+                      onClick={toggleAddGroupInput}
+                    >
+                      <FaPlus className="text-white mr-2 md:m-3" />
+                      <b className="text-body-sm md:text-body text-white">
+                        新增列表
+                      </b>
+                    </button>
 
-
+                    <div className="relative w-full h-20 md:h-24">
+                      <button 
+                        data-track
+                        data-track-action="KANBAN_TEMPLATE_MENU_TOGGLE"
+                        data-track-type="kanban"
+                        className="w-full h-full bg-white border-2 border-dashed border-gray-300 hover:border-[#5BA491] hover:text-[#5BA491] text-gray-500 flex flex-col items-center justify-center rounded-lg p-component-base transition-colors"
+                        onClick={() => setShowTemplateMenu(!showTemplateMenu)}
+                      >
+                        <span className="text-h2 mb-1">+</span>
+                        <b className="text-body-sm md:text-body">
+                          從範例新增
+                        </b>
+                      </button>
+                      
+                      {showTemplateMenu && (
+                        <div className="absolute top-full left-0 mt-2 w-60 bg-white rounded-md shadow-lg z-50 border border-gray-200 py-1">
+                          <div className="px-4 py-2 text-caption font-semibold text-gray-400 uppercase tracking-wider">
+                            選擇階段範例
+                          </div>
+                          {PHASES.map(phaseKey => (
+                            <button
+                              data-track
+                              data-track-action="KANBAN_TEMPLATE_SELECT"
+                              data-track-type="kanban"
+                              data-track-meta-phase={phaseKey}
+                              key={phaseKey}
+                              onClick={() => handleAddTemplate(phaseKey)}
+                              className="block w-full text-left px-4 py-2 text-body-sm text-gray-700 hover:bg-gray-100 hover:text-[#5BA491]"
+                            >
+                              {PHASE_TEMPLATES[phaseKey].label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
-                {showAddGroupInput && !isObservationMode && (
+                
+                {viewConfig.groupBy === 'status' && showAddGroupInput && !isObservationMode && (
                   <form onSubmit={handleAddGroup} className="group-container w-full md:w-60">
                     <div className="flex flex-col store-container w-full md:w-60 h-auto md:h-24 bg-slate-100 px-4 py-3 rounded-lg">
                       <input
@@ -735,19 +687,18 @@ export default function Kanban() {
                         placeholder="輸入列表標題..."
                         value={newGroupName}
                         onChange={(e) => setNewGroupName(e.target.value)}
-                        className="text-sm border border-gray-300 p-2 w-full md:w-52 rounded-md mb-2"
+                        className="text-body-sm border border-gray-300 p-component-xs w-full md:w-52 rounded-md mb-2"
                       />
                       <div className='flex justify-start items-center'>
                         <button
                           type="submit"
-                          className="bg-[#5BA491] hover:bg-[#5BA491]/80 p-2 text-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
+                          className="bg-[#5BA491] hover:bg-[#5BA491]/80 p-component-xs text-body-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
                         >
                           新增列表
                         </button>
                         <button
-
                           onClick={toggleAddGroupInput}
-                          className="flex-center p-2 py-1"
+                          className="flex-center p-component-xs py-1"
                         >
                           <RxCross2 />
                         </button>
@@ -755,117 +706,19 @@ export default function Kanban() {
                     </div>
                   </form>
                 )}
+                
                 {
                   kanbanIsLoading ? <Loader /> :
-                    kanbansIsError ? <p className=' font-bold text-2xl'>{kanbansIsError.message}</p> :
-                      kanbanData.map((column, columnIndex) => (
-                        <Draggable draggableId={`column-${column.id.toString()}`}
-                          index={columnIndex}
+                    kanbansIsError ? <p className=' font-bold text-h2'>{kanbansIsError.message}</p> :
+                      renderedData.map((column, columnIndex) => (
+                        <KanbanColumn
                           key={column.id.toString()}
-                          isDragDisabled={isObservationMode}>
-                          {(provided) => (
-                            <div
-                              {...provided.draggableProps}
-                              ref={provided.innerRef}
-                              className="group-container w-full md:w-60 h-auto md:shrink-0 md:max-h-full md:min-h-0 flex flex-col bg-slate-50 rounded-lg shadow-lg"
-                            >
-                              <div
-                                {...(!isObservationMode ? provided.dragHandleProps : {})}
-                                className={`store-container p-3 rounded-lg ${!isObservationMode ? 'cursor-move' : 'cursor-default'} flex justify-between items-center`}
-                              >
-                                <h3 style={{ color: "#5BA491" }} className="text-lg font-semibold">
-                                  {column.name}
-                                </h3>
-                                {!isObservationMode && (
-                                  <button
-                                    onClick={() => handleDeleteColumn(column)}
-                                    className="text-[#494b4a] hover:text-[#494b4a]/60"
-                                    title="删除列"
-                                  >
-                                    <RxCross2 size={20} />
-                                  </button>
-                                )}
-                              </div>
-                              {
-                                <Droppable droppableId={column.id.toString()} type='CARD'>
-                                  {(provided,snapshot) => {
-                                    return (
-                                      <div 
-                                        {...provided.droppableProps} 
-                                        ref={provided.innerRef}
-                                        className={getCardListStyle(snapshot.isDraggingOver)}
-                                      >
-                                        <div className="items-container">
-                                        {Array.isArray(column.task) && column.task.length > 0 &&
-                                          column.task
-                                            .filter(item => item && item.id) // 過濾掉 null 或 undefined
-                                            .map((item, index) => (
-                                              <Carditem
-                                                key={item.id.toString()} // Ensure key is string for both temp and real IDs
-                                                index={index}
-                                                data={{
-                                                  ...item,
-                                                  // Add indicator for optimistic updates
-                                                  isOptimistic: item.id.toString().startsWith('temp-')
-                                                }}
-                                                columnIndex={column.id}
-                                              />
-                                            ))
-                                        }
-                                          {provided.placeholder}
-                                        </div>
-                                      </div>
-                                    );
-                                  }}
-                                </Droppable>
-
-                              }
-                              {
-                                showForm && selectedcolumn === columnIndex && !isObservationMode ? (
-                                  <form onSubmit={handleSubmit} className='flex flex-col store-container rounded-lg px-4 pt-1 pb-2'>
-                                    <input
-                                      className='text-sm border border-gray-300 p-2 w-52 rounded-md mb-2'
-                                      rows={3}
-                                      placeholder="輸入卡片標題..."
-                                      onChange={handleChange}
-                                      value={newCard}
-                                    />
-                                    <div className='flex justify-start items-center'>
-                                      <button
-                                        type="submit"
-                                        style={{ backgroundColor: "#5BA491" }}
-                                        className='p-2 text-sm text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300'
-                                      >
-                                        新增
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="flex-center p-2 py-1"
-                                        onClick={() => { setShowForm(false); }}
-                                      >
-                                        <RxCross2 />
-                                      </button>
-                                    </div>
-                                  </form>
-
-                                ) : (
-                                  !isObservationMode && (
-                                    <div className="flex justify-start px-4 pt-1 pb-2">
-                                      <button
-                                        onClick={() => { setSelectedcolumn(columnIndex); setShowForm(true); }}
-                                        className="bg-[#5BA491] hover:bg-[#5BA491]/80 text-sm p-2 mb-2 text-white font-bold py-1 px-4 rounded transition ease-in-out duration-300"
-                                      >
-                                        新增卡片
-                                      </button>
-                                    </div>
-                                  )
-
-                                )
-                              }
-
-                            </div>
-                          )}
-                        </Draggable>
+                          column={column}
+                          index={columnIndex}
+                          isObservationMode={isObservationMode || viewConfig.groupBy !== 'status'}
+                          onDelete={handleDeleteColumn}
+                          onAddCard={actions.addCard}
+                        />
                       ))}
                 {provided.placeholder}
                 </div>

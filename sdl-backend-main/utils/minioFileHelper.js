@@ -71,26 +71,36 @@ const batchDeleteMinioFiles = async (fileNames) => {
     let successCount = 0;
     let failedCount = 0;
     
-    for (const fileName of fileNames) {
-        try {
-            await deleteFileFromMinio(fileName);
-            results.push({
-                fileName,
-                success: true,
-                message: '刪除成功'
-            });
-            successCount++;
-            console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
-        } catch (error) {
-            results.push({
-                fileName,
-                success: false,
-                message: error.message
-            });
-            failedCount++;
-            console.error(`❌ MinIO 檔案刪除失敗: ${fileName}`, error.message);
-        }
+    // 使用並發控制，避免同時發送過多請求
+    const CONCURRENCY_LIMIT = 5;
+    
+    for (let i = 0; i < fileNames.length; i += CONCURRENCY_LIMIT) {
+        const chunk = fileNames.slice(i, i + CONCURRENCY_LIMIT);
+        const chunkPromises = chunk.map(async (fileName) => {
+            try {
+                await deleteFileFromMinio(fileName);
+                console.log(`✅ MinIO 檔案刪除成功: ${fileName}`);
+                return {
+                    fileName,
+                    success: true,
+                    message: '刪除成功'
+                };
+            } catch (error) {
+                console.error(`❌ MinIO 檔案刪除失敗: ${fileName}`, error.message);
+                return {
+                    fileName,
+                    success: false,
+                    message: error.message
+                };
+            }
+        });
+        
+        const chunkResults = await Promise.all(chunkPromises);
+        results.push(...chunkResults);
     }
+    
+    successCount = results.filter(r => r.success).length;
+    failedCount = results.filter(r => !r.success).length;
     
     console.log(`🏁 批量刪除完成: ${successCount} 成功, ${failedCount} 失敗`);
     

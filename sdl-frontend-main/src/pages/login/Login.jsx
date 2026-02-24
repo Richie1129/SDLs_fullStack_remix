@@ -7,11 +7,14 @@ import { userLogin } from '../../api/users';
 import Login_icon from "../../assets/Animation-login.json";
 import Lottie from "lottie-react";
 import Swal from 'sweetalert2';
+import storageService, { authStorage, userStorage } from '../../services/storageService';
+import { useTracking } from '../../providers/TrackingProvider';
 
 export default function Login() {
   const [userContext, setUserContext] = useContext(AuthContext);
   const [userData, setUserData] = useState({});
   const navigate = useNavigate();
+  const { track } = useTracking();
 
   const handleChange = (e) =>{
       const { name, value } = e.target
@@ -49,18 +52,25 @@ export default function Login() {
       },
       onSuccess: (res) => {
         console.log(res);
-        localStorage.setItem("accessToken", res.data.accessToken);
-        localStorage.setItem("refreshToken", res.data.refreshToken);  // 新增 refreshToken
-        localStorage.setItem("account", res.data.account);
-        localStorage.setItem("email", res.data.email);
-        localStorage.setItem("id", res.data.id);
-        localStorage.setItem("username", res.data.username);
-        localStorage.setItem("role", res.data.role);
+        
+        // 使用 StorageService 統一管理
+        authStorage.set('accessToken', res.data.accessToken);
+        authStorage.set('refreshToken', res.data.refreshToken);
+        
+        userStorage.setMultiple({
+          id: res.data.id,
+          account: res.data.account,
+          email: res.data.email,
+          username: res.data.username,
+          role: res.data.role
+        });
+        
+        // 可選資料
         if (res.data.class) {
-          localStorage.setItem("class", res.data.class);
+          userStorage.set('class', res.data.class);
         }
         if (res.data.seatNumber) {
-          localStorage.setItem("seatNumber", res.data.seatNumber);
+          userStorage.set('seatNumber', res.data.seatNumber);
         }
 
         setUserContext( prev =>{
@@ -90,6 +100,13 @@ export default function Login() {
 
   const handleSubmit = (e) =>{
     e.preventDefault()
+    
+    // 記錄登入嘗試
+    track('LOGIN_SUBMIT', 'user', null, {
+      account: userData.account,
+      timestamp: new Date().toISOString()
+    });
+    
     userLoginMutation.mutate(userData)
   } 
 
@@ -109,15 +126,15 @@ export default function Login() {
                   wrapper="span"
                   cursor={true}
                   repeat={Infinity}
-                  className="mx-auto font-press-start font-semibold text-2xl md:text-3xl lg:text-4xl mb-10 md:mb-20 text-center px-4"
+                  className="mx-auto font-press-start font-semibold text-h2 md:text-h1 lg:text-display mb-10 md:mb-20 text-center px-4"
                 />
           <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
         </div>
       </div>
       <div className="bg-white w-full md:max-w-md lg:max-w-full md:mx-auto md:w-1/2 xl:w-1/2 h-screen lg:px-36 xl:px-40 flex items-center justify-center">
-        <div className="bg-white w-full h-100 rounded-lg p-8 shadow-2xl">
-          <h1 className="text-lg font-bold mb-6 flex items-center justify-center">歡迎來到 <span style= { {color:"#5BA491" } } className="ml-2"> SDLS</span></h1>
-          <h1 className="text-4xl font-bold mb-6 flex items-center justify-center">登入</h1>
+        <div className="bg-white w-full h-100 rounded-lg p-component-lg shadow-2xl">
+          <h1 className="text-body-lg font-bold mb-6 flex items-center justify-center">歡迎來到 <span style= { {color:"#5BA491" } } className="ml-2"> SDLS</span></h1>
+          <h1 className="text-display font-bold mb-6 flex items-center justify-center">登入</h1>
             {/* <button type="button" className="w-full block bg-white hover:bg-gray-100 focus:bg-gray-100 text-gray-900 font-semibold rounded-lg px-4 py-3 border-2 border-customgreen">
               <div className="flex items-center justify-center">
                   <span className="ml-4 ">Login with Wulab</span>
@@ -126,17 +143,17 @@ export default function Login() {
           <hr className="my-6 border-gray-300 w-full" /> */}
           <form className="mt-6">
             <div>
-              <label className="block text-gray-700 text-base">帳號</label>
-              <input type="text" name="account" placeholder="請輸入帳號" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
+              <label className="block text-gray-700 text-body">帳號</label>
+              <input type="text" name="account" placeholder="請輸入帳號" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" autoFocus required />
             </div>
             <div className="mt-4">
-              <label className="block text-gray-700 text-base">密碼</label>
-              <input type="password" name="password" placeholder="請輸入密碼" minLength="6" onChange={handleChange} className=" text-base w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
+              <label className="block text-gray-700 text-body">密碼</label>
+              <input type="password" name="password" placeholder="請輸入密碼" minLength="6" onChange={handleChange} className=" text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
             </div>
             {/* <p className='text-gray-400 bg-white flex items-center justify-center'><hr className="my-6 border-gray-300 w-1/2" />or<hr className="my-6 border-gray-300 w-1/2" /></p>
             <button className=''><button className=''><button className=''>Google</button>FB</button>Apple</button> */}
 
-            <button type="submit" onClick={handleSubmit} style= { {backgroundColor:"#5BA491" } } className="w-full block  text-white font-semibold rounded-lg px-4 py-3 mt-6 text-base">登入</button>
+            <button type="submit" onClick={handleSubmit} style= { {backgroundColor:"#5BA491" } } className="w-full block  text-white font-semibold rounded-lg px-4 py-3 mt-6 text-body">登入</button>
           </form>
           <div className="mt-8 flex flex-row justify-between items-center">
             <p className="text-gray-400">

@@ -2,19 +2,74 @@ const Node = require('../models/node');
 const Node_relation = require('../models/node_relation');
 const NodeChangeLog = require('../models/node_change_log');
 const { Op } = require('sequelize');
+const { logAudit } = require('../services/auditService');
+
+// Phase 2: Orchestrator 整合
+const IdeaWall = require('../models/idea_wall');
+const { orchestrate } = require('../services/orchestrator');
 
 exports.createNode = async(req, res) => {
     const title = req.body.title;
     const content = req.body.content;
     const ideaWallId = req.body.ideaWallId;
-    await Node.create({
-        title:title,
-        content:content,
-        ideaWallId:ideaWallId
-    }, { req }).then(result =>{
-        res.status(200).json(result)
-    })
-    .catch(err => console.log(err));
+    
+    // Phase 3: 預先取得 io 實例（在 res.json 之前）
+    const io = req.app.get('io');
+    
+    try {
+        // 建立節點
+        const result = await Node.create({
+            title: title,
+            content: content,
+            ideaWallId: ideaWallId
+        }, { req });
+        
+        // 立即回應使用者（不阻塞）
+        res.status(200).json(result);
+        
+        // Audit: Record node creation (non-blocking)
+        setImmediate(async () => {
+            try {
+                const ideaWall = await IdeaWall.findByPk(ideaWallId);
+                await logAudit(req, {
+                    action: 'NODE_CREATE',
+                    targetType: 'idea_wall_node',
+                    targetId: result.id,
+                    projectId: ideaWall?.projectId || null,
+                    metadata: {
+                        ideaWallId,
+                        hasTitle: !!title,
+                        hasContent: !!content
+                    }
+                }).catch(() => {});
+            } catch (auditError) {
+                console.error('Audit log failed (non-blocking):', auditError.message);
+            }
+        });
+        
+        // ================================================================
+        // Phase 2 Hook: 非同步觸發 Orchestrator 分析
+        // Linus 原則：「零破壞性 - 失敗不影響正常流程」
+        // Phase 3: 傳入 io 實例以支援 Socket 通知
+        // ================================================================
+        setImmediate(async () => {
+            try {
+                // 取得 projectId
+                const ideaWall = await IdeaWall.findByPk(ideaWallId);
+                if (ideaWall && ideaWall.projectId) {
+                    console.log(`🔔 [Hook] New node created, triggering Orchestrator...`);
+                    await orchestrate(ideaWallId, ideaWall.projectId, { io });
+                }
+            } catch (orchError) {
+                // 靜默失敗，不影響使用者體驗
+                console.error('Orchestrator hook failed (non-blocking):', orchError.message);
+            }
+        });
+        
+    } catch (err) {
+        console.error('createNode error:', err);
+        res.status(500).json({ error: err.message });
+    }
 }
 
 exports.getNodes = async(req, res) => {
@@ -190,6 +245,28 @@ exports.createNodeRelation = async (req, res) => {
         }
 
         const result = await Node_relation.create({ from_id, to_id });
+        
+        // Audit: Record node relation creation (non-blocking)
+        setImmediate(async () => {
+            try {
+                const fromNode = await Node.findByPk(from_id, { include: [IdeaWall] });
+                const projectId = fromNode?.IdeaWall?.projectId || null;
+                
+                await logAudit(req, {
+                    action: 'NODE_RELATION_CREATE',
+                    targetType: 'node_relation',
+                    targetId: result.id,
+                    projectId,
+                    metadata: {
+                        fromNodeId: from_id,
+                        toNodeId: to_id
+                    }
+                }).catch(() => {});
+            } catch (auditError) {
+                console.error('Audit log failed (non-blocking):', auditError.message);
+            }
+        });
+        
         res.status(200).json(result);
     } catch (err) {
         console.error('createNodeRelation 錯誤:', err);

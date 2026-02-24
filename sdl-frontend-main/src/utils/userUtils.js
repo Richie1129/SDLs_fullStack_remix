@@ -1,31 +1,40 @@
 /**
  * 全域用戶資訊工具
  * 提供統一的用戶資訊獲取和監聽功能
+ * 
+ * ⚠️ DEPRECATED: 這個文件中的許多函式已被 authUtils.js 取代
+ * 新代碼應該使用 authUtils.js 中的函式
+ * 這個文件保留是為了向後兼容
  */
+
+import { getCurrentUserId as getIdFromAuth, getCurrentUserRole as getRoleFromAuth } from './authUtils';
+import { userStorage } from '../services/storageService';
 
 // 獲取當前用戶名稱（即時更新）
 export const getCurrentUsername = () => {
-  return localStorage.getItem('username') || '';
+  return userStorage.get('username', '');
 };
 
 // 獲取當前用戶 ID
+// ⚠️ DEPRECATED: 請使用 authUtils.getCurrentUserId()
 export const getCurrentUserId = () => {
-  return parseInt(localStorage.getItem('id')) || null;
+  return getIdFromAuth();
 };
 
 // 獲取當前用戶帳號
 export const getCurrentUserAccount = () => {
-  return localStorage.getItem('account') || '';
+  return userStorage.get('account', '');
 };
 
 // 獲取當前用戶角色
+// ⚠️ DEPRECATED: 請使用 authUtils.getCurrentUserRole()
 export const getCurrentUserRole = () => {
-  return localStorage.getItem('role') || '';
+  return getRoleFromAuth();
 };
 
 // 獲取當前用戶班級
 export const getCurrentUserClass = () => {
-  return localStorage.getItem('class') || '';
+  return userStorage.get('class', '');
 };
 
 // 獲取用戶顯示名稱（優先順序：有效用戶名 > 用戶ID > null）

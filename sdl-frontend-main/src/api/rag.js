@@ -20,8 +20,16 @@ export const getRagMessageHistory = async (userId) => {
 }
 
 // 根據 userId 和 sessionId 取得特定會話的訊息歷史
-export const getRagMessageBySession = async (userId, sessionId) => {
-    const response = await apiClient.get(`/rag_message/session/${userId}/${sessionId}`);
+// ✅ v2.0: 支援 projectId 參數（可選，0破壞性）
+export const getRagMessageBySession = async (userId, sessionId, projectId = null) => {
+    let url = `/rag_message/session/${userId}/${sessionId}`;
+
+    // ✅ 如果有 projectId，加入 query parameter
+    if (projectId) {
+        url += `?projectId=${projectId}`;
+    }
+
+    const response = await apiClient.get(url);
     return response.data;
 }
 
@@ -32,8 +40,16 @@ export const getRagflowSessionId = async (userId, sessionId) => {
 }
 
 // 根據 userId 取得所有會話列表
-export const getUserSessions = async (userId) => {
-    const response = await apiClient.get(`/rag_message/sessions/${userId}`);
+// ✅ v2.0: 支援 projectId 參數（可選，0破壞性）
+export const getUserSessions = async (userId, projectId = null) => {
+    let url = `/rag_message/sessions/${userId}`;
+
+    // ✅ 如果有 projectId，加入 query parameter
+    if (projectId) {
+        url += `?projectId=${projectId}`;
+    }
+
+    const response = await apiClient.get(url);
     return response.data;
 }
 
@@ -44,8 +60,16 @@ export const deleteSession = async (sessionId) => {
 }
 
 // 新增：從後端資料庫刪除會話相關的訊息記錄
-export const deleteSessionMessages = async (userId, sessionId) => {
-    const response = await apiClient.delete(`/rag_message/session/${userId}/${sessionId}`);
+// ✅ v2.0: 支援 projectId 參數（可選，0破壞性）
+export const deleteSessionMessages = async (userId, sessionId, projectId = null) => {
+    let url = `/rag_message/session/${userId}/${sessionId}`;
+
+    // ✅ 如果有 projectId，加入 query parameter
+    if (projectId) {
+        url += `?projectId=${projectId}`;
+    }
+
+    const response = await apiClient.delete(url);
     return response.data;
 }
 
@@ -55,6 +79,16 @@ export const createNewSessionInDB = async (userId, sessionId, userName, projectI
         userId,
         sessionId,
         userName,
+        projectId
+    });
+    return response.data;
+}
+
+// 新增：使用 Gemini 生成對話摘要標題
+export const generateSessionTitle = async (sessionId, userId, firstMessage, projectId = null) => {
+    const response = await apiClient.post(`/rag_message/generate-title/${sessionId}`, {
+        userId,
+        firstMessage,
         projectId
     });
     return response.data;

@@ -51,14 +51,15 @@ export const useResponsive = () => {
 
     // 垂直方向也做夾取，避免超出上下邊界
     let top = position.y - 200;
-    const maxTop = viewH - containerH - padding;
-    if (maxTop < padding) {
-      top = padding;
-    } else {
-      top = Math.min(
-        Math.max(padding, top),
-        maxTop
-      );
+    
+    // Linus: 修復小螢幕計算錯誤
+    // 1. 絕對優先：Top 必須 >= padding (保證標題列可見)
+    top = Math.max(padding, top);
+
+    // 2. 只有在螢幕高度足夠時，才考慮底部邊界
+    // 如果 viewH < containerH，這個檢查會被忽略，top 維持在 padding
+    if (viewH > containerH + padding * 2) {
+      top = Math.min(top, viewH - containerH - padding);
     }
 
     return { left, top };
@@ -67,10 +68,24 @@ export const useResponsive = () => {
   // 計算氣泡提示位置，避免被裁切
   const computeMessagePosition = (position) => {
     const padding = 8;
-    const bubbleW = 300;
-    const imgW = 80;
     const viewW = window.innerWidth;
 
+    // 手機：FAB 固定在右下角 (right:16, bottom:96)，氣泡對齊 FAB 左側
+    // 使用 right 定位，避免計算 position.x 時 SideBar 重疊問題
+    if (viewW < 768) {
+      const bubbleW = Math.min(240, viewW - 80); // 手機氣泡縮小，確保不超出螢幕
+      return {
+        right: 16,          // 對齊 FAB 右邊
+        bottom: 160,        // FAB bottom:96 + avatar height 56 + gap
+        left: 'auto',
+        top: 'auto',
+        maxWidth: bubbleW,
+      };
+    }
+
+    // 桌面：依頭像位置計算
+    const bubbleW = 300;
+    const imgW = 80;
     let left;
     const preferLeft = position.x - (bubbleW - 20);
     const canPlaceLeft = preferLeft >= padding;
@@ -85,7 +100,6 @@ export const useResponsive = () => {
       left = Math.min(Math.max(padding, preferLeft), viewW - bubbleW - padding);
     }
 
-    // 垂直位置維持靠近圖示下方
     const top = position.y + 165;
     return { left, top };
   };
