@@ -132,14 +132,15 @@ jobs:
               
               echo "🔗 使用網路: ${NETWORK_NAME}"
               # 傳入環境變數，確保臨時容器能讀到 .env 裡的 DB 連線資訊
-              docker-compose -f "$compose_file" run --rm --no-deps --network "$NETWORK_NAME" \
+              # 注意：舊版 docker-compose run 不支援 --network，改用 docker run 直接啟動
+              docker run --rm --network "$NETWORK_NAME" \
                 -e PG_HOST=postgres \
                 -e PG_PORT=5432 \
-                -e PG_USER \
-                -e PG_PASSWORD \
-                -e PG_NAME \
+                -e PG_USER=$(grep '^PG_USER=' .env | cut -d '=' -f2) \
+                -e PG_PASSWORD=$(grep '^PG_PASSWORD=' .env | cut -d '=' -f2) \
+                -e PG_NAME=$(grep '^PG_NAME=' .env | cut -d '=' -f2) \
                 -e NODE_ENV=production \
-                api npx sequelize-cli db:migrate || {
+                stone881129/sdl-api:${NEW_TAG} npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
                 exit 1
               }
