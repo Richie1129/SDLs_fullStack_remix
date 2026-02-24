@@ -125,20 +125,28 @@ jobs:
               # --no-deps：不啟動/重建依賴服務，postgres 已在運行中
               # 容器仍會加入 compose 定義的網路，可連到 postgres
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
-              # 取得專案名稱 (通常是目錄名稱的小寫，例如 sdls_fullstack_remix_v3_lazyinwork)
-              PROJECT_NAME=$(basename "$deploy_dir" | tr '[:upper:]' '[:lower:]')
-              # 組合出網路名稱 (專案名稱_agent_network)
-              NETWORK_NAME="${PROJECT_NAME}_agent_network"
-              
+              # 從目前運行中的 postgres 容器反查實際網路，避免以目錄名推測失準
+              POSTGRES_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q postgres | head -1)
+              if [ -z "$POSTGRES_CONTAINER_ID" ]; then
+                echo "❌ 找不到 postgres 容器，無法執行 migration"
+                docker-compose -f "$compose_file" ps
+                exit 1
+              fi
+
+              NETWORK_NAME=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{range $k, $v := .NetworkSettings.Networks}}{{printf "%s\n" $k}}{{end}}' | head -1)
+              if [ -z "$NETWORK_NAME" ]; then
+                echo "❌ 無法取得 postgres 所屬網路"
+                docker inspect "$POSTGRES_CONTAINER_ID" --format '{{json .NetworkSettings.Networks}}'
+                exit 1
+              fi
+
               echo "🔗 使用網路: ${NETWORK_NAME}"
-              # 傳入環境變數，確保臨時容器能讀到 .env 裡的 DB 連線資訊
+              # 傳入 .env 及必要覆蓋值，確保臨時容器能讀到正確 DB 連線資訊
               # 注意：舊版 docker-compose run 不支援 --network，改用 docker run 直接啟動
               docker run --rm --network "$NETWORK_NAME" \
+                --env-file .env \
                 -e PG_HOST=postgres \
                 -e PG_PORT=5432 \
-                -e PG_USER=$(grep '^PG_USER=' .env | cut -d '=' -f2) \
-                -e PG_PASSWORD=$(grep '^PG_PASSWORD=' .env | cut -d '=' -f2) \
-                -e PG_NAME=$(grep '^PG_NAME=' .env | cut -d '=' -f2) \
                 -e NODE_ENV=production \
                 stone881129/sdl-api:${NEW_TAG} npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
