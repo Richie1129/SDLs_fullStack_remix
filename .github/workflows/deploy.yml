@@ -88,7 +88,6 @@ jobs:
 
             # 定義部署目標
             DEPLOY_TARGETS=(
-              "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
               "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
             )
 
@@ -123,13 +122,11 @@ jobs:
               docker-compose -f "$compose_file" pull
 
               # ── Migration 安全防護 ──────────────────────────────────
-              # --no-deps：只啟動臨時 api 容器，不重啟/重建已在線的 postgres 等依賴
-              # --network：明確加入 postgres 所在網路，確保 hostname 解析正常
+              # docker-compose run --rm：啟動臨時 api 容器執行 migration
+              # 不加 --no-deps：讓 compose 自動加入正確網路，確保連得到 postgres
+              # 依賴服務 (postgres) 已在運行中，不會被重建或重啟
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
-              POSTGRES_CONTAINER=$(docker-compose -f "$compose_file" ps -q postgres 2>/dev/null | head -1)
-              COMPOSE_NETWORK=$(docker inspect "$POSTGRES_CONTAINER" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>/dev/null)
-              echo "🔗 使用網路: ${COMPOSE_NETWORK}"
-              docker-compose -f "$compose_file" run --rm --no-deps --network "$COMPOSE_NETWORK" api npx sequelize-cli db:migrate || {
+              docker-compose -f "$compose_file" run --rm api npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
                 exit 1
               }
@@ -165,7 +162,6 @@ jobs:
           script: |
             # 驗證部署目標 (復用相同數據結構)
             VERIFY_TARGETS=(
-              "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
               "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
             )
 
