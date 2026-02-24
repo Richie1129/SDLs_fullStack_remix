@@ -36,7 +36,7 @@ const ClassObservationPage = () => {
     const [selectedTargetClasses, setSelectedTargetClasses] = useState([]);
 
     // 學期篩選
-    const [semesterFilter, setSemesterFilter] = useState(getCurrentSemester());
+    const [semesterFilter, setSemesterFilter] = useState('all');
     
     // 取得當前用戶資訊和指導老師名稱
     useEffect(() => {

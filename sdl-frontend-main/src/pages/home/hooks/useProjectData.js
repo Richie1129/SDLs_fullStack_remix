@@ -17,7 +17,7 @@ export const useProjectData = () => {
   const [classFilter, setClassFilter] = useState('all');
   const [completedSearch, setCompletedSearch] = useState('');
   const [doneSearch, setDoneSearch] = useState('');
-  const [semesterFilter, setSemesterFilter] = useState(getCurrentSemester());
+  const [semesterFilter, setSemesterFilter] = useState('all');
 
   const role = getCurrentUserRole();
   const userName = getCurrentUsername();
