@@ -123,9 +123,10 @@ jobs:
               docker-compose -f "$compose_file" pull
 
               # ── Migration 安全防護 ──────────────────────────────────
-              # 用臨時容器執行 migration，失敗則立刻中斷，保護線上舊服務
+              # --no-deps：只啟動臨時 api 容器，不重啟/重建已在線的 postgres 等依賴
+              # 避免 docker-compose run 嘗試重建依賴導致 postgres healthcheck 失敗
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
-              docker-compose -f "$compose_file" run --rm api npx sequelize-cli db:migrate || {
+              docker-compose -f "$compose_file" run --rm --no-deps api npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
                 exit 1
               }
