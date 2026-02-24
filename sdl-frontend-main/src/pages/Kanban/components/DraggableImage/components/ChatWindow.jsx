@@ -72,7 +72,7 @@ const ChatWindow = ({
   // 桌面：浮動視窗（依頭像位置計算）
   let containerClassName, containerStyle;
   if (isFullscreen) {
-    containerClassName = 'chat-container fixed w-screen h-screen rounded-none shadow-none z-[9999] bg-white flex flex-col transition-all duration-normal ease-in-out';
+    containerClassName = 'chat-container fixed w-screen h-screen rounded-none shadow-none z-[9999] bg-white flex flex-row transition-all duration-normal ease-in-out';
     containerStyle = { left: 0, top: 0 };
   } else if (isMobileView) {
     containerClassName = `chat-container fixed z-[1002] bg-white flex flex-col rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.18)] overflow-hidden transition-all duration-normal ease-in-out ${isMinimized ? 'h-[60px]' : 'h-[85vh]'}`;
