@@ -58,7 +58,7 @@ class Config {
     // SSL 配置
     get ssl() {
         return {
-            verify: true 
+            verify: process.env.SSL_VERIFY !== 'false'
         };
     }
 

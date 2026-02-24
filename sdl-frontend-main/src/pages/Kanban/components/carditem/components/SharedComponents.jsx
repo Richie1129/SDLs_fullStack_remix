@@ -1,5 +1,6 @@
 import React from 'react';
 import { BsFillPersonFill } from "react-icons/bs";
+import AuthImage from '@/components/AuthImage';
 
 /**
  * 共享組件 - 小型 UI 組件集合
@@ -18,7 +19,7 @@ const personImg = [
  */
 export const CardImage = ({ image, onClick, additionalCount }) => (
   <div className="relative w-full h-40 group">
-    <img
+    <AuthImage
       src={image}
       alt="Card Background"
       className="w-full h-full object-contain rounded-t-lg cursor-pointer bg-gray-50"

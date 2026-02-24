@@ -5,7 +5,8 @@ import { AiOutlinePaperClip, AiOutlineLike, AiFillLike } from "react-icons/ai";
 import { fetchComments, createComment, toggleCommentLike, updateComment as updateCommentApi, deleteComment as deleteCommentApi } from '../../../../../api/comments';
 import { formatTime } from '../../../../../utils/timeUtils';
 import { formatUserDisplay } from '../../../../../utils/userDisplayUtils';
-import { buildFileImageUrl, buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileImageUrl, buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
+import AuthImage from '@/components/AuthImage';
 import { CommentErrorBoundary } from '../../../../../components/ErrorBoundary';
 import { getCurrentUserId } from '../../../../../utils/authUtils';
 
@@ -158,9 +159,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
 
   const handleCommentAttachmentDownload = async (attachment) => {
     try {
-      const fileName = attachment.fileName;
-      const url = buildFileDownloadUrl(fileName);
-      window.open(url, '_blank');
+      await downloadFileWithAuth(attachment.fileName, attachment.originalName);
     } catch (err) {
       console.error('下載附件失敗:', err);
       toast.error('下載附件失敗');
@@ -201,7 +200,7 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                           const imgUrl = buildFileImageUrl(a.fileName);
                           return (
                             <div key={i}>
-                              <img
+                              <AuthImage
                                 src={imgUrl}
                                 alt={a.originalName}
                                 className='max-h-40 rounded border cursor-pointer'
@@ -210,12 +209,9 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
                             </div>
                           );
                         }
-                        const dlUrl = buildFileDownloadUrl(a.fileName);
                         return (
                           <div key={i} className='text-caption flex items-center gap-stack-xs'>
-                            <a href={dlUrl} target='_blank' rel='noreferrer' className='text-blue-600 hover:underline'>
-                              {a.originalName}
-                            </a>
+                            <span className='text-blue-600 truncate'>{a.originalName}</span>
                             <span className='text-gray-400'>{a.mimeType}</span>
                             <button
                               onClick={() => handleCommentAttachmentDownload(a)}

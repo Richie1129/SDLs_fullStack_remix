@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { FiChevronDown, FiChevronUp, FiMessageCircle, FiClock, FiUser } from 'react-icons/fi';
 import { AiOutlineRobot } from 'react-icons/ai';
 import { format5RsForDisplay } from '@/utils/5RsUtils.js';
-import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 
 const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = false, record = null }) => {
   const [expandedSections, setExpandedSections] = useState({});
@@ -25,7 +25,7 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
     if (!record) return;
 
     if (record.fileName) {
-      window.open(buildFileDownloadUrl(record.fileName), "_blank");
+      downloadFileWithAuth(record.fileName, record.originalName || record.filename);
     } else if (record.fileData && record.fileData.data) {
       const buffer = new Uint8Array(record.fileData.data);
       const blob = new Blob([buffer], { type: "application/octet-stream" });

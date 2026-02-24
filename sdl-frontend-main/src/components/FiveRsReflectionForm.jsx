@@ -4,7 +4,7 @@ import { FiChevronDown, FiHelpCircle, FiCheck, FiRefreshCw, FiCpu, FiZap, FiSlid
 import { AiOutlineRobot } from 'react-icons/ai';
 import { FIVE_R_FRAMEWORK, build5RsContent, validate5RsData } from '@/utils/5RsUtils.js';
 import { analyze5RsReflection } from '@/api/llm5Rs.js';
-import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 import StageSelector from '@/components/reflection/StageSelector';
 import StageReflectionGuide from '@/components/reflection/StageReflectionGuide';
 import toast from 'react-hot-toast';
@@ -387,10 +387,12 @@ const FiveRsReflectionForm = ({
               </div>
               <div className="flex gap-2 shrink-0">
                 <a
-                  href={existingRecord.fileName ? buildFileDownloadUrl(existingRecord.fileName) : undefined}
-                  onClick={(e) => {
-                    if (!existingRecord.fileName && existingRecord.fileData) {
-                      e.preventDefault();
+                  href="#"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    if (existingRecord.fileName) {
+                      await downloadFileWithAuth(existingRecord.fileName, existingRecord.originalName || existingRecord.filename);
+                    } else if (existingRecord.fileData) {
                       const buffer = new Uint8Array(existingRecord.fileData.data);
                       const blob = new Blob([buffer], { type: "application/octet-stream" });
                       import('js-file-download').then(({ default: FileDownload }) => {

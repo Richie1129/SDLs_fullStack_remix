@@ -14,7 +14,8 @@ import {
 import { deleteProjectCommentAttachment } from '../api/projectComments';
 import Modal from './Modal';
 import { formatUserDisplay } from '../utils/userDisplayUtils';
-import { buildFileDownloadUrl, buildFileImageUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileDownloadUrl, buildFileImageUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
+import AuthImage from '@/components/AuthImage';
 import { getCurrentUserId } from '../utils/authUtils';
 
 const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
@@ -193,9 +194,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   // Download (aligned with Carditem.jsx logic)
   const handleAttachmentDownload = async (attachment) => {
     try {
-      const fileName = attachment.fileName;
-      const url = buildFileDownloadUrl(fileName);
-      window.open(url, '_blank');
+      await downloadFileWithAuth(attachment.fileName, attachment.originalName);
     } catch (err) {
       console.error('下載附件失敗:', err);
     }
@@ -254,7 +253,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
           <div className="grid grid-cols-3 gap-stack-xs">
             {imgs.map(a => (
               <div key={a.id} className="relative group">
-                <img
+                <AuthImage
                   src={buildFileImageUrl(a.fileName)}
                   alt={a.originalName}
                   className="w-full h-24 object-cover rounded border cursor-pointer"
@@ -282,15 +281,13 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
                 <span className="mr-2">
                   {pickFileIcon(a.mimeType)}
                 </span>
-                <a
-                  href={buildFileDownloadUrl(a.fileName)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="truncate text-blue-600 hover:underline"
+                <button
+                  onClick={() => handleAttachmentDownload(a)}
+                  className="truncate text-blue-600 hover:underline text-body-sm text-left"
                   title={a.originalName}
                 >
                   {a.originalName}
-                </a>
+                </button>
                 {a.size && (
                   <span className="ml-2 text-caption text-gray-500">({Math.round(a.size/1024)} KB)</span>
                 )}
@@ -520,7 +517,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
               <FiX className="w-6 h-6" />
             </button>
             <div className="relative max-w-4xl w-full">
-              <img src={commentImageList[selectedCommentImageIndex]} alt="Comment Attachment" className="w-full h-auto" />
+              <AuthImage src={commentImageList[selectedCommentImageIndex]} alt="Comment Attachment" className="w-full h-auto" />
               {commentImageList.length > 1 && (
                 <>
                   <button onClick={prevCommentImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-component-xs rounded-full">‹</button>

@@ -1,3 +1,6 @@
+import apiClient from '@/api/client';
+import FileDownload from 'js-file-download';
+
 /**
  * 獲取 API 基礎 URL
  * @returns {string} API 基礎 URL（開發環境：/api，生產環境：環境變數）
@@ -33,4 +36,17 @@ export const buildFileDownloadUrl = (fileName) => {
  */
 export const buildFileImageUrl = (fileName) => {
   return buildApiUrl(`/file/image/${fileName}`);
+};
+
+/**
+ * 使用 accessToken 認證下載 MinIO 檔案
+ * 解決 window.open / <a href> 無法帶 token 的問題
+ * @param {string} fileName - MinIO 儲存的檔案名稱
+ * @param {string} [originalName] - 下載後的顯示名稱（選填）
+ */
+export const downloadFileWithAuth = async (fileName, originalName) => {
+  const response = await apiClient.get(`/file/direct/${fileName}`, {
+    responseType: 'blob',
+  });
+  FileDownload(response.data, originalName || fileName);
 };

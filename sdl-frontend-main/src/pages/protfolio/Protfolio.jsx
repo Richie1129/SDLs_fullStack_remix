@@ -17,7 +17,7 @@ import { formatTime } from '../../utils/timeUtils';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
-import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 
 export default function Protfolio() {
     const [currentStageIndex] = useStageIndex();
@@ -171,8 +171,8 @@ export default function Protfolio() {
     const downloadFile = () => {
         // 檢查是否有 MinIO 檔案資訊
         if (modalData.fileName) {
-            // 使用後端 API 代理下載
-            window.open(buildFileDownloadUrl(modalData.fileName), '_blank');
+            // 使用後端 API 代理下載（帶 accessToken）
+            downloadFileWithAuth(modalData.fileName, modalData.originalName);
         } else if (modalData.fileData && modalData.fileData.data) {
             // 向後相容：處理舊的 BLOB 資料
             const buffer = new Uint8Array(modalData.fileData.data);
@@ -533,7 +533,7 @@ export default function Protfolio() {
                                                         <button
                                                             onClick={() => {
                                                                 if (modalData.fileName) {
-                                                                    window.open(buildFileDownloadUrl(modalData.fileName), '_blank');
+                                                                    downloadFileWithAuth(modalData.fileName, modalData.originalName);
                                                                 } else if (modalData.fileData && modalData.fileData.data) {
                                                                     const buffer = new Uint8Array(modalData.fileData.data);
                                                                     const blob = new Blob([buffer], { type: "application/octet-stream" });

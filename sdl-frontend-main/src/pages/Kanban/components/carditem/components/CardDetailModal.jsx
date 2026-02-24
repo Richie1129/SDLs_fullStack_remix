@@ -15,6 +15,7 @@ import { CommentSection } from './CommentSection';
 import { ChangeHistory } from './ChangeHistory';
 import { MemberAssignment } from './SharedComponents';
 import { buildFileImageUrl } from '@/utils/fileUrlBuilder.js';
+import AuthImage from '@/components/AuthImage';
 
 /**
  * CardDetailModal - 卡片詳情模態框
@@ -381,7 +382,7 @@ export function CardDetailModal({
             <AiOutlineCloudDownload className="w-6 h-6 text-gray-700" />
           </button>
           <div className="relative max-w-4xl w-full">
-            <img
+            <AuthImage
               src={cardData.images[selectedImageIndex]}
               alt="Selected"
               className="w-full h-auto"
@@ -409,7 +410,7 @@ export function CardDetailModal({
                         index === selectedImageIndex ? 'ring-2 ring-customgreen' : ''
                       }`}
                     >
-                      <img
+                      <AuthImage
                         src={image}
                         alt={`Thumbnail ${index + 1}`}
                         className="w-full h-full object-cover"
@@ -434,7 +435,7 @@ export function CardDetailModal({
             <GrFormClose className="w-6 h-6" />
           </button>
           <div className="relative max-w-4xl w-full">
-            <img
+            <AuthImage
               src={commentImageList[selectedCommentImageIndex]}
               alt="Comment Attachment"
               className="w-full h-auto"

@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { FaMedal } from 'react-icons/fa';
+import AuthImage from '@/components/AuthImage';
 import { generateStudentActivityStats, calculateCreatorStats } from '../utils';
 import {
   getSafeArrayData,
@@ -592,13 +593,13 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                         </td>
                         <td className="border p-component-xs text-center">
                           {task.images?.length > 0 ? (
-                            <img 
+                            <AuthImage 
                               src={task.images[0]} 
                               alt="任務圖片" 
                               className="w-8 h-8 object-cover rounded mx-auto"
                             />
                           ) : task.image ? (
-                            <img 
+                            <AuthImage 
                               src={task.image} 
                               alt="任務圖片" 
                               className="w-8 h-8 object-cover rounded mx-auto"

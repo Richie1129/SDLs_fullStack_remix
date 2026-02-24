@@ -5,7 +5,7 @@ import { GrFormClose } from "react-icons/gr";
 import Modal from '../../../components/Modal';
 import Loader from '../../../components/Loader';
 import Swal from 'sweetalert2';
-import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 
 export default function FolderModal({folderModalOpen, setFolderModalOpen, modalData}) {
     const { id, content, filename, fileName, originalName, fileUrl } = modalData; 
@@ -13,11 +13,11 @@ export default function FolderModal({folderModalOpen, setFolderModalOpen, modalD
     const handleDownload = () => {
         // 檢查是否有 MinIO 檔案資訊
         if (fileName) {
-            // 使用後端 API 代理下載
-            window.open(buildFileDownloadUrl(fileName), '_blank');
+            // 使用後端 API 代理下載（帶 accessToken）
+            downloadFileWithAuth(fileName, originalName);
         } else if (filename) {
             // 向後相容：使用舊的檔案名稱
-            window.open(buildFileDownloadUrl(filename), '_blank');
+            downloadFileWithAuth(filename, originalName);
         } else {
             Swal.fire({
                 icon: 'warning',
