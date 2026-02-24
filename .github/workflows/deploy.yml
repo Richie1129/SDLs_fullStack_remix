@@ -125,7 +125,8 @@ jobs:
               # --no-deps：不啟動/重建依賴服務，postgres 已在運行中
               # 容器仍會加入 compose 定義的網路，可連到 postgres
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
-              # 從目前運行中的 postgres 容器反查實際網路，避免以目錄名推測失準
+              # 確保 postgres 已啟動，再取得容器 ID
+              docker-compose -f "$compose_file" up -d postgres > /dev/null
               POSTGRES_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q postgres | head -1)
               if [ -z "$POSTGRES_CONTAINER_ID" ]; then
                 echo "❌ 找不到 postgres 容器，無法執行 migration"
@@ -133,29 +134,13 @@ jobs:
                 exit 1
               fi
 
-              NETWORK_NAME=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{range $k, $v := .NetworkSettings.Networks}}{{printf "%s\n" $k}}{{end}}' | grep 'agent_network' | head -1)
-              if [ -z "$NETWORK_NAME" ]; then
-                NETWORK_NAME=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{range $k, $v := .NetworkSettings.Networks}}{{printf "%s\n" $k}}{{end}}' | head -1)
-              fi
-              if [ -z "$NETWORK_NAME" ]; then
-                echo "❌ 無法取得 postgres 所屬網路"
-                docker inspect "$POSTGRES_CONTAINER_ID" --format '{{json .NetworkSettings.Networks}}'
-                exit 1
-              fi
-
-              POSTGRES_IP=$(docker inspect "$POSTGRES_CONTAINER_ID" --format "{{(index .NetworkSettings.Networks \"$NETWORK_NAME\").IPAddress}}")
-              if [ -z "$POSTGRES_IP" ]; then
-                echo "❌ 無法取得 postgres 容器 IP"
-                docker inspect "$POSTGRES_CONTAINER_ID" --format '{{json .NetworkSettings.Networks}}'
-                exit 1
-              fi
-
-              echo "🔗 使用網路: ${NETWORK_NAME}, postgres IP: ${POSTGRES_IP}"
+              echo "🔗 共用 postgres 網路命名空間: ${POSTGRES_CONTAINER_ID}"
               # 傳入 .env 及必要覆蓋值，確保臨時容器能讀到正確 DB 連線資訊
               # 注意：舊版 docker-compose run 不支援 --network，改用 docker run 直接啟動
-              docker run --rm --network "$NETWORK_NAME" \
+              # 使用 --network container:<postgres_id> 避免 DNS/IP 解析問題
+              docker run --rm --network "container:${POSTGRES_CONTAINER_ID}" \
                 --env-file .env \
-                -e PG_HOST="$POSTGRES_IP" \
+                -e PG_HOST=127.0.0.1 \
                 -e PG_PORT=5432 \
                 -e NODE_ENV=production \
                 stone881129/sdl-api:${NEW_TAG} npx sequelize-cli db:migrate || {
