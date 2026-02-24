@@ -134,6 +134,36 @@ jobs:
                 exit 1
               fi
 
+              # 等待 postgres 進入穩定狀態（running/healthy）
+              echo "⏳ 等待 postgres 容器穩定啟動..."
+              READY=false
+              for i in $(seq 1 30); do
+                STATUS=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{.State.Status}}' 2>/dev/null || echo "unknown")
+                HEALTH=$(docker inspect "$POSTGRES_CONTAINER_ID" --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null || echo "unknown")
+
+                # 無 healthcheck: 只要 running 即可；有 healthcheck: 需 healthy
+                if [ "$STATUS" = "running" ] && { [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "none" ]; }; then
+                  READY=true
+                  echo "✅ postgres 已就緒 (status=$STATUS, health=$HEALTH)"
+                  break
+                fi
+
+                if [ "$STATUS" = "exited" ] || [ "$STATUS" = "dead" ]; then
+                  echo "❌ postgres 非正常狀態 (status=$STATUS, health=$HEALTH)"
+                  break
+                fi
+
+                echo "...等待中 (attempt $i/30, status=$STATUS, health=$HEALTH)"
+                sleep 2
+              done
+
+              if [ "$READY" != "true" ]; then
+                echo "❌ postgres 未能在時間內穩定啟動"
+                docker-compose -f "$compose_file" ps
+                docker-compose -f "$compose_file" logs --tail=80 postgres
+                exit 1
+              fi
+
               echo "🔗 共用 postgres 網路命名空間: ${POSTGRES_CONTAINER_ID}"
               # 傳入 .env 及必要覆蓋值，確保臨時容器能讀到正確 DB 連線資訊
               # 注意：舊版 docker-compose run 不支援 --network，改用 docker run 直接啟動
