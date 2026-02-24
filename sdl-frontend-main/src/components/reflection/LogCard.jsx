@@ -7,7 +7,7 @@ import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.j
 import FileDownload from 'js-file-download';
 import { getAuditEvents } from '@/api/audit.js';
 import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
-import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 import { getCurrentUserId, getCurrentUserRole, isTeacher as checkIsTeacher } from '../../utils/authUtils';
 import { STAGE_NAMES } from '@/pages/submit/config/guidedQuestionsConfig';
 
@@ -44,8 +44,8 @@ const LogCard = ({
   
   const handleDownload = () => {
     if (item.fileName) {
-      // 使用後端 API 代理下載（支援 MinIO）
-      window.open(buildFileDownloadUrl(item.fileName), "_blank");
+      // 使用後端 API 代理下載（帶 accessToken）
+      downloadFileWithAuth(item.fileName, item.originalName || item.filename);
     } else if (item.fileData && item.fileData.data) {
       // 向後相容：處理舊的 BLOB 資料
       const buffer = new Uint8Array(item.fileData.data);

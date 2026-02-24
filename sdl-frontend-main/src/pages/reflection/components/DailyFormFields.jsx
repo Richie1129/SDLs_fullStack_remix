@@ -1,6 +1,6 @@
 import React from "react";
 import { FiInfo } from 'react-icons/fi';
-import { buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 import StageSelector from '@/components/reflection/StageSelector';
 import StageReflectionGuide from '@/components/reflection/StageReflectionGuide';
 
@@ -80,10 +80,12 @@ export function DailyFormFields({
           </div>
           <div className="flex gap-stack-xs">
             <a
-              href={currentRecord.fileName ? buildFileDownloadUrl(currentRecord.fileName) : undefined}
-              onClick={(e) => {
-                if (!currentRecord.fileName && currentRecord.fileData) {
-                  e.preventDefault();
+              href="#"
+              onClick={async (e) => {
+                e.preventDefault();
+                if (currentRecord.fileName) {
+                  await downloadFileWithAuth(currentRecord.fileName, currentRecord.originalName || currentRecord.filename);
+                } else if (currentRecord.fileData) {
                   const buffer = new Uint8Array(currentRecord.fileData.data);
                   const blob = new Blob([buffer], { type: "application/octet-stream" });
                   import('js-file-download').then(({ default: FileDownload }) => {
