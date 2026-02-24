@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import { useState, useRef, useLayoutEffect } from 'react';
 import { BarChart3, ChevronDown, ChevronUp, Eye } from 'lucide-react';
 import ProjectCard from './ProjectCard';
 
@@ -23,15 +23,20 @@ const ProjectSection = ({
   // 篩選組件
   filterComponent,
   // 空狀態配置
-  emptyStateConfig
+  emptyStateConfig,
+  // 常駐展示模式（不使用 Accordion）
+  alwaysExpanded = false,
+  // 在常駐模式下是否顯示區塊標題（在 Tab 內部使用時設為 false）
+  showSectionTitle = true
 }) => {
   const [height, setHeight] = useState(0);
   const contentRef = useRef(null);
-  const isActive = index === activeIndex;
+  const isActive = alwaysExpanded || index === activeIndex;
   const minContentHeight = 240;
 
-  // 計算手風琴高度
+  // 計算手風琴高度（alwaysExpanded 模式不需要）
   useLayoutEffect(() => {
+    if (alwaysExpanded) return;
     if (!isActive || !contentRef.current) {
       setHeight(0);
       return;
@@ -43,9 +48,10 @@ const ProjectSection = ({
     });
 
     return () => cancelAnimationFrame(frame);
-  }, [isActive, projects.length]);
+  }, [isActive, projects.length, alwaysExpanded]);
 
   const handleToggle = () => {
+    if (alwaysExpanded) return;
     setActiveIndex(isActive ? null : index);
     if (!isActive && contentRef.current) {
       setHeight(Math.max(contentRef.current.scrollHeight, minContentHeight));
@@ -135,6 +141,67 @@ const ProjectSection = ({
     }
     return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-3 gap-stack-sm';
   };
+
+  // 常駐展示模式（不使用 Accordion）
+  if (alwaysExpanded) {
+    return (
+      <div className="bg-customgreen/5 rounded-lg p-component-md">
+        {/* 標題列 + 操作按鈕同排（在 Tab 內時隱藏標題） */}
+        <div className="flex flex-wrap items-center justify-between gap-stack-xs mb-4">
+          {showSectionTitle && <h2 className="text-h2 font-bold text-gray-800">{title}</h2>}
+          <div className="flex items-center gap-stack-xs">
+            {showCreateButton && (
+              <button
+                data-track
+                data-track-action="HOME_PROJECT_CREATE_OPEN"
+                data-track-type="project"
+                onClick={onCreateProject}
+                className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-btn-x-lg py-btn-y-lg shadow-md transition-shadow duration-fast ease-in-out hover:shadow-lg"
+                data-tour={role === "teacher" ? "create-project" : undefined}
+              >
+                <BarChart3 className="mr-2 h-5 w-5" /> 建立活動
+              </button>
+            )}
+            {showJoinButton && (
+              <button
+                data-track
+                data-track-action="HOME_PROJECT_JOIN_OPEN"
+                data-track-type="project"
+                onClick={onJoinProject}
+                className="flex items-center justify-center bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-semibold rounded-lg px-btn-x-lg py-btn-y-lg shadow-md transition-shadow duration-fast ease-in-out hover:shadow-lg"
+              >
+                <BarChart3 className="mr-2 h-5 w-5" /> 加入活動
+              </button>
+            )}
+            {filterComponent}
+          </div>
+        </div>
+
+        {/* 專案網格 */}
+        <div className={getGridClasses()}>
+          {projects.length > 0 ? (
+            projects
+              .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map((project, projectIndex) => (
+                <ProjectCard
+                  key={projectIndex}
+                  project={project}
+                  type={type}
+                  members={members}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                  calculateProgress={calculateProgress}
+                  calculateProgressPercentage={calculateProgressPercentage}
+                  role={role}
+                />
+              ))
+          ) : (
+            renderEmptyState()
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="">

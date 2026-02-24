@@ -6,6 +6,7 @@ import { toast, Toaster } from 'react-hot-toast';
 // 組件
 import TopBar from '../../components/TopBar';
 import ProjectSection from './components/ProjectSection';
+import TabbedSections from './components/TabbedSections';
 import ProjectModal from './components/ProjectModal';
 import InviteModal from './components/InviteModal';
 import SearchAndFilter from './components/SearchAndFilter';
@@ -21,7 +22,6 @@ import storageService from '../../services/storageService';
 
 export default function HomePage() {
   // 狀態管理
-  const [activeIndex, setActiveIndex] = useState(0);
   const [createProjectModalOpen, setCreateProjectModalOpen] = useState(false);
   const [editProjectModalOpen, setEditProjectModalOpen] = useState(false);
   const [inviteProjectModalOpen, setInviteProjectModalOpen] = useState(false);
@@ -75,6 +75,11 @@ export default function HomePage() {
     completed: completed,
     done: done
   }), [viewableProjects, ongoing, completed, done]);
+
+  // 學生可用學期清單（從已載入的專案資料推導）
+  const studentAvailableSemesters = useMemo(() => (
+    [...new Set(projectData.map(p => p.semester).filter(Boolean))]
+  ), [projectData]);
 
   // 檢查是否是第一次使用
   useEffect(() => {
@@ -232,6 +237,48 @@ export default function HomePage() {
     });
   };
 
+  // 建立篩選元件（依區塊設定）
+  const buildFilterComponent = (sectionConfig) => {
+    if (!sectionConfig.showFilter) return null;
+    const searchValue = sectionConfig.type === 'completed' ? completedSearch : doneSearch;
+    const setSearchValue = sectionConfig.type === 'completed' ? setCompletedSearch : setDoneSearch;
+    return (
+      <SearchAndFilter
+        role={role}
+        classFilter={sectionConfig.showClassFilter ? classFilter : 'all'}
+        setClassFilter={sectionConfig.showClassFilter ? setClassFilter : () => {}}
+        searchValue={searchValue}
+        setSearchValue={setSearchValue}
+        classes={availableClasses}
+      />
+    );
+  };
+
+  // 建立 ProjectSection 所需 props（依區塊設定）
+  const buildSectionProps = (sectionConfig) => ({
+    index: sectionConfig.index,
+    title: sectionConfig.title,
+    projects: projectDataMap[sectionConfig.type] || [],
+    type: sectionConfig.type,
+    members,
+    onEdit: hasPermission(role, 'canEdit') ? handleEditProject : undefined,
+    onDelete: hasPermission(role, 'canDelete') ? handleDeleteProject : undefined,
+    calculateProgress,
+    calculateProgressPercentage,
+    role,
+    showCreateButton: sectionConfig.showCreateButton,
+    showJoinButton: sectionConfig.showJoinButton,
+    onCreateProject: () => setCreateProjectModalOpen(true),
+    onJoinProject: () => setInviteProjectModalOpen(true),
+    filterComponent: buildFilterComponent(sectionConfig),
+  });
+
+  // 分組：常駐區塊 vs Tab 群組
+  const permanentSections = roleConfiguration.sections.filter(s => s.alwaysExpanded);
+  const tabbedSections = roleConfiguration.sections
+    .filter(s => s.inTabGroup)
+    .sort((a, b) => a.tabOrder - b.tabOrder);
+
   if (isLoading) {
     return (
       <div className='min-w-full min-h-screen bg-gray-100 flex items-center justify-center'>
@@ -248,63 +295,38 @@ export default function HomePage() {
       <TopBar />
 
       <div className='flex flex-col my-10 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 2xl:px-40 py-10 w-full items-center'>
-        <div className='flex flex-col w-full'>
-          {/* 學期選擇器 - 教師可切換學期 */}
-          {role === 'teacher' && (
-            <div className="mb-6 flex justify-end">
-              <SemesterSelector
-                currentSemester={semesterFilter}
-                onSemesterChange={setSemesterFilter}
-                mentorName={userName}
-              />
-            </div>
+        <div className='flex flex-col w-full gap-stack-md'>
+          {/* 學期選擇器 - 教師與學生皆可切換 */}
+          <div className="flex justify-end">
+            <SemesterSelector
+              currentSemester={semesterFilter}
+              onSemesterChange={setSemesterFilter}
+              mentorName={role === 'teacher' ? userName : undefined}
+              semesters={role === 'student' ? studentAvailableSemesters : undefined}
+            />
+          </div>
+
+          {/* 進行中活動：常駐展示 */}
+          {permanentSections.map((sectionConfig) => (
+            <ProjectSection
+              key={sectionConfig.index}
+              {...buildSectionProps(sectionConfig)}
+              alwaysExpanded={true}
+              showSectionTitle={true}
+            />
+          ))}
+
+          {/* Tab 群組：可觀摩 / 待完成歷程 / 已完成歷程 */}
+          {tabbedSections.length > 0 && (
+            <TabbedSections
+              tabs={tabbedSections.map((sectionConfig) => ({
+                title: sectionConfig.title,
+                showBadge: sectionConfig.showBadge,
+                badgeCount: projectDataMap[sectionConfig.type]?.length || 0,
+                sectionProps: buildSectionProps(sectionConfig),
+              }))}
+            />
           )}
-
-          {/* 根據角色配置動態渲染區塊 */}
-          {roleConfiguration.sections.map((sectionConfig) => {
-            const projects = projectDataMap[sectionConfig.type] || [];
-
-            // 處理篩選組件
-            let filterComponent = null;
-            if (sectionConfig.showFilter) {
-              const searchValue = sectionConfig.type === 'completed' ? completedSearch : doneSearch;
-              const setSearchValue = sectionConfig.type === 'completed' ? setCompletedSearch : setDoneSearch;
-
-              filterComponent = (
-                <SearchAndFilter
-                  role={role}
-                  classFilter={sectionConfig.showClassFilter ? classFilter : 'all'}
-                  setClassFilter={sectionConfig.showClassFilter ? setClassFilter : () => {}}
-                  searchValue={searchValue}
-                  setSearchValue={setSearchValue}
-                  classes={availableClasses}
-                />
-              );
-            }
-
-            return (
-              <ProjectSection
-                key={sectionConfig.index}
-                index={sectionConfig.index}
-                title={sectionConfig.title}
-                projects={projects}
-                type={sectionConfig.type}
-                activeIndex={activeIndex}
-                setActiveIndex={setActiveIndex}
-                members={members}
-                onEdit={hasPermission(role, 'canEdit') ? handleEditProject : undefined}
-                onDelete={hasPermission(role, 'canDelete') ? handleDeleteProject : undefined}
-                calculateProgress={calculateProgress}
-                calculateProgressPercentage={calculateProgressPercentage}
-                role={role}
-                showCreateButton={sectionConfig.showCreateButton}
-                showJoinButton={sectionConfig.showJoinButton}
-                onCreateProject={() => setCreateProjectModalOpen(true)}
-                onJoinProject={() => setInviteProjectModalOpen(true)}
-                filterComponent={filterComponent}
-              />
-            );
-          })}
         </div>
       </div>
 

@@ -3,18 +3,19 @@ import { useQuery } from 'react-query';
 import { getAvailableSemesters } from '../../../api/project';
 import { getCurrentSemester, getSemesterLabel } from '../../../utils/semesterUtils';
 
-const SemesterSelector = ({ currentSemester, onSemesterChange, mentorName }) => {
+const SemesterSelector = ({ currentSemester, onSemesterChange, mentorName, semesters: semestersOverride }) => {
   const { data: semesterData } = useQuery(
     ['availableSemesters', mentorName],
     () => getAvailableSemesters(mentorName),
     {
-      enabled: !!mentorName,
+      enabled: !!mentorName && !semestersOverride,
       staleTime: 10 * 60 * 1000,
     }
   );
 
   const currentSem = getCurrentSemester();
-  const semesters = semesterData?.semesters || [currentSem];
+  // 若外部直接傳入 semesters（學生端用），優先使用；否則從 API 取得
+  const semesters = semestersOverride || semesterData?.semesters || [currentSem];
 
   // 確保當前學期在列表中
   const uniqueSemesters = [...new Set([currentSem, ...semesters])].sort().reverse();
