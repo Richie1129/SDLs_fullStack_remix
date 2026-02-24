@@ -117,16 +117,15 @@ jobs:
               fi
               echo "✅ .env IMAGE_TAG 已更新為 ${NEW_TAG}"
 
-              # 確保 Compose 同步到最新映像版本
-              echo "🔄 同步 $service_name Compose 映像..."
-              docker-compose -f "$compose_file" pull
+              # 只拉取 api 和 front 映像，不動 postgres/minio 避免觸發重建
+              echo "🔄 同步 $service_name Compose 映像 (api + front)..."
+              docker-compose -f "$compose_file" pull api front
 
               # ── Migration 安全防護 ──────────────────────────────────
-              # docker-compose run --rm：啟動臨時 api 容器執行 migration
-              # 不加 --no-deps：讓 compose 自動加入正確網路，確保連得到 postgres
-              # 依賴服務 (postgres) 已在運行中，不會被重建或重啟
+              # --no-deps：不啟動/重建依賴服務，postgres 已在運行中
+              # 容器仍會加入 compose 定義的網路，可連到 postgres
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
-              docker-compose -f "$compose_file" run --rm api npx sequelize-cli db:migrate || {
+              docker-compose -f "$compose_file" run --rm --no-deps api npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
                 exit 1
               }
