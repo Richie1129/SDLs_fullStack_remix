@@ -13,9 +13,13 @@ const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = n
   const [error, setError] = useState(false);
   const prevBlobUrl = useRef(null);
 
-  const isApiImage = src && (
-    src.includes('/api/file/image/') ||
-    src.includes('/file/image/')
+  const normalizedSrc = typeof src === 'string'
+    ? src.trim().replace(/^\{?"/, '').replace(/"\}?$/, '')
+    : src;
+
+  const isApiImage = normalizedSrc && (
+    normalizedSrc.includes('/api/file/image/') ||
+    normalizedSrc.includes('/file/image/')
   );
 
   useEffect(() => {
@@ -28,11 +32,21 @@ const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = n
     // 從 src 中取出相對路徑部分（去除 baseURL 前綴）
     // 例：/api/file/image/xxx → /file/image/xxx
     const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-    let path = src;
-    if (src.startsWith(apiBaseUrl)) {
-      path = src.slice(apiBaseUrl.length);
-    } else if (src.startsWith('/api/')) {
-      path = src.slice(4); // 移除 '/api' 前綴
+    let path = normalizedSrc;
+
+    // 完整網址（例如 https://science.../api/file/image/...）轉成 pathname
+    if (/^https?:\/\//i.test(path)) {
+      try {
+        path = new URL(path).pathname;
+      } catch {
+        path = normalizedSrc;
+      }
+    }
+
+    if (path.startsWith(apiBaseUrl)) {
+      path = path.slice(apiBaseUrl.length);
+    } else if (path.startsWith('/api/')) {
+      path = path.slice(4); // 移除 '/api' 前綴
     }
 
     apiClient
@@ -54,7 +68,7 @@ const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = n
     return () => {
       cancelled = true;
     };
-  }, [src, isApiImage]);
+  }, [normalizedSrc, isApiImage]);
 
   // 元件卸載時釋放 blob URL
   useEffect(() => {
@@ -69,7 +83,7 @@ const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = n
   if (!isApiImage) {
     return (
       <img
-        src={src}
+        src={normalizedSrc}
         alt={alt}
         className={className}
         style={style}

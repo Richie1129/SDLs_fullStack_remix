@@ -2,6 +2,7 @@ import React from 'react';
 import { GrFormClose } from "react-icons/gr";
 import { AiOutlineCloudDownload } from "react-icons/ai";
 import { FiInfo } from 'react-icons/fi';
+import AuthImage from '@/components/AuthImage';
 
 /**
  * FileManager - 文件管理組件
@@ -77,7 +78,7 @@ export function FileManager({
             <div className='grid grid-cols-2 gap-stack-xs'>
               {cardData.images.map((image, index) => (
                 <div key={index} className='relative aspect-square group'>
-                  <img
+                     <AuthImage
                     src={image}
                     alt={`Uploaded ${index + 1}`}
                     className='w-full h-full object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-fast bg-gray-50'

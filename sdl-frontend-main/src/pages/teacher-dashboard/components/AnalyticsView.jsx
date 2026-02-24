@@ -651,7 +651,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
               </div>
               {(task.images?.length > 0 || task.image) && (
                 <div className="mt-2">
-                  <img 
+                  <AuthImage 
                     src={task.images?.[0] || task.image} 
                     alt="任務圖片" 
                     className="w-16 h-16 object-cover rounded"

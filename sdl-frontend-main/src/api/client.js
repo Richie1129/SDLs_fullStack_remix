@@ -13,7 +13,7 @@ const apiClient = axios.create({
 // Attach token on every request
 apiClient.interceptors.request.use(
   (config) => {
-    const token = authStorage.get('accessToken');
+    const token = authStorage.get('accessToken') || authStorage.get('token');
     if (token) {
       // Keep backward-compatibility with backend expecting 'accessToken'
       config.headers['accessToken'] = token;
