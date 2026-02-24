@@ -5,17 +5,28 @@ on:
     branches:
       - rwd-layout-clean
 
+# 併發控制：同一分支同時只允許一個部署流程執行
+# cancel-in-progress: false → 排隊等待，不中斷進行中的 migration/部署
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
   SERVER_HOST: ${{ secrets.SERVER_HOST }}
   SERVER_USER: ${{ secrets.SERVER_USER }}
   SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+  # 動態映像標籤：使用 Git commit SHA 作為唯一版號
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  build-and-deploy:
+  # ────────────────────────────────────────────────────────────────
+  # Job 1：建構並推送 Docker 映像檔
+  # ────────────────────────────────────────────────────────────────
+  build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -35,7 +46,10 @@ jobs:
           context: ./sdl-backend-main
           file: ./sdl-backend-main/Dockerfile.prod
           push: true
-          tags: stone881129/sdl-api:sdls-v3
+          # 雙標籤：精確 SHA 版本 + sdls-v3 備用/最新標籤
+          tags: |
+            stone881129/sdl-api:${{ env.IMAGE_TAG }}
+            stone881129/sdl-api:sdls-v3
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -45,10 +59,21 @@ jobs:
           context: ./sdl-frontend-main
           file: ./sdl-frontend-main/Dockerfile.prod
           push: true
-          tags: stone881129/sdl-front:sdls-v3
+          # 雙標籤：精確 SHA 版本 + sdls-v3 備用/最新標籤
+          tags: |
+            stone881129/sdl-front:${{ env.IMAGE_TAG }}
+            stone881129/sdl-front:sdls-v3
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ────────────────────────────────────────────────────────────────
+  # Job 2：SSH 進伺服器部署（依賴 build 成功才執行）
+  # ────────────────────────────────────────────────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
       - name: 🚀 Deploy to server
         uses: appleboy/ssh-action@master
         with:
@@ -56,22 +81,26 @@ jobs:
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
           command_timeout: 300s
+          # 將 IMAGE_TAG 傳入 SSH 環境，腳本直接以 $NEW_TAG 使用
+          envs: IMAGE_TAG
           script: |
+            NEW_TAG="${IMAGE_TAG}"
+
             # 定義部署目標
             DEPLOY_TARGETS=(
               "/home/hsueh/SDLs_fullStack_remix_v3|docker-compose.v3.yml|main"
               "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
             )
 
-            # 全域拉取映像檔一次即可
-            echo "📦 拉取最新映像檔..."
-            docker pull stone881129/sdl-api:sdls-v3
-            docker pull stone881129/sdl-front:sdls-v3
+            # ── 全域拉取精確版本映像檔 ──────────────────────────────
+            echo "📦 全域拉取映像檔 (tag: ${NEW_TAG})..."
+            docker pull stone881129/sdl-api:${NEW_TAG}
+            docker pull stone881129/sdl-front:${NEW_TAG}
 
             # 遍歷部署目標
             for target in "${DEPLOY_TARGETS[@]}"; do
               IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
-              
+
               echo "🎯 部署 $service_name 到 $deploy_dir"
               cd "$deploy_dir" || { echo "❌ 目錄 $deploy_dir 不存在"; exit 1; }
 
@@ -81,32 +110,47 @@ jobs:
                 echo "✅ 已備份 $service_name .env 檔案"
               fi
 
-              # 停止舊服務
-              echo "🛑 停止 $service_name 舊服務..."
-              docker-compose -f "$compose_file" down || true
+              # 將 IMAGE_TAG 寫入 .env（有則更新，無則新增）
+              if grep -q "^IMAGE_TAG=" .env 2>/dev/null; then
+                sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${NEW_TAG}|" .env
+              else
+                echo "IMAGE_TAG=${NEW_TAG}" >> .env
+              fi
+              echo "✅ .env IMAGE_TAG 已更新為 ${NEW_TAG}"
 
-              # 啟動新服務
-              echo "🚀 啟動 $service_name 新服務..."
-              docker-compose -f "$compose_file" up -d
+              # 確保 Compose 同步到最新映像版本
+              echo "🔄 同步 $service_name Compose 映像..."
+              docker-compose -f "$compose_file" pull
 
-              # 等待啟動
-              echo "⏳ 等待 $service_name 服務啟動..."
-              sleep 30
-
-              # 執行 migration
-              echo "🧬 執行 $service_name Sequelize migration..."
-              docker-compose -f "$compose_file" exec -T api npx sequelize-cli db:migrate || { 
-                echo "❌ $service_name Migration 失敗"; 
-                exit 1; 
+              # ── Migration 安全防護 ──────────────────────────────────
+              # 用臨時容器執行 migration，失敗則立刻中斷，保護線上舊服務
+              echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
+              docker-compose -f "$compose_file" run --rm api npx sequelize-cli db:migrate || {
+                echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
+                exit 1
               }
+              echo "✅ $service_name Migration 成功"
+              # ────────────────────────────────────────────────────────
+
+              # 無停機替換：直接 up -d，Docker 自動重啟變更的容器
+              echo "🚀 啟動 $service_name 新服務（零停機替換）..."
+              docker-compose -f "$compose_file" up -d
 
               echo "✅ $service_name 部署完成！"
             done
 
-            # 統一清理映像檔
+            # 統一清理舊映像檔
             echo "🧹 清理舊映像檔..."
             docker image prune -f
 
+  # ────────────────────────────────────────────────────────────────
+  # Job 3：驗證部署結果（依賴 deploy 成功才執行）
+  # ────────────────────────────────────────────────────────────────
+  verify:
+    runs-on: ubuntu-latest
+    needs: deploy
+
+    steps:
       - name: 🎯 Verify deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -124,7 +168,10 @@ jobs:
             # 遍歷驗證每個服務
             for target in "${VERIFY_TARGETS[@]}"; do
               IFS='|' read -r deploy_dir compose_file service_name <<< "$target"
-              
+
+              echo "⏳ 等待 10 秒讓 $service_name 容器穩定啟動..."
+              sleep 10
+
               echo "🔍 驗證 $service_name 部署狀態..."
               cd "$deploy_dir" || { echo "❌ 無法進入 $deploy_dir"; exit 1; }
 
