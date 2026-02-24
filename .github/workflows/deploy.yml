@@ -124,9 +124,12 @@ jobs:
 
               # ── Migration 安全防護 ──────────────────────────────────
               # --no-deps：只啟動臨時 api 容器，不重啟/重建已在線的 postgres 等依賴
-              # 避免 docker-compose run 嘗試重建依賴導致 postgres healthcheck 失敗
+              # --network：明確加入 postgres 所在網路，確保 hostname 解析正常
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
-              docker-compose -f "$compose_file" run --rm --no-deps api npx sequelize-cli db:migrate || {
+              POSTGRES_CONTAINER=$(docker-compose -f "$compose_file" ps -q postgres 2>/dev/null | head -1)
+              COMPOSE_NETWORK=$(docker inspect "$POSTGRES_CONTAINER" --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>/dev/null)
+              echo "🔗 使用網路: ${COMPOSE_NETWORK}"
+              docker-compose -f "$compose_file" run --rm --no-deps --network "$COMPOSE_NETWORK" api npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
                 exit 1
               }
