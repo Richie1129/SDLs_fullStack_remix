@@ -239,6 +239,7 @@ export default function Protfolio() {
                         <div className="flex items-center justify-between mb-3">
                             <h2 className="text-h3 font-bold text-gray-800">學習歷程</h2>
                         </div>
+                        {!isObservationMode && (
                         <button
                             data-track
                             data-track-action="PORTFOLIO_EXPORT_PDF"
@@ -249,6 +250,7 @@ export default function Protfolio() {
                             <AiOutlineCloudDownload className="text-h3" />
                             <span>匯出學習歷程 PDF</span>
                         </button>
+                        )}
                     </div>
 
                     {/* Navigation Content */}
