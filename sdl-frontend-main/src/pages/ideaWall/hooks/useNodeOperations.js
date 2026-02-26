@@ -25,6 +25,7 @@ export function useNodeOperations({
     setSelectNodeInfo,
     setCreateNodeModalOpen,
     setUpdateNodeModalOpen,
+    setAiCoachingNote,
 }) {
     const currentUsername = getCurrentUsername();
     const userId = localStorage.getItem("id");
@@ -236,7 +237,15 @@ export function useNodeOperations({
     // 處理來自 AI 的新節點建議
     const handleNewNodeFromAI = (nodeDataFromAI) => {
         console.log("AI建議開啟新節點:", nodeDataFromAI);
-        
+
+        // 先關閉節點詳情 Modal，避免與新增節點 Modal 同時開著
+        setUpdateNodeModalOpen(false);
+
+        // 儲存 AI 建議內容，供 CreateNodeModal 顯示為參考
+        if (setAiCoachingNote) {
+            setAiCoachingNote(nodeDataFromAI.aiCoachingNote || null);
+        }
+
         setNodeData({
             ...nodeDataFromAI,
             ideaWallId: ideaWallInfo?.id,

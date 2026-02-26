@@ -247,6 +247,7 @@ export default function IdeaWall() {
         setSelectNodeInfo: state.setSelectNodeInfo,
         setCreateNodeModalOpen: state.setCreateNodeModalOpen,
         setUpdateNodeModalOpen: state.setUpdateNodeModalOpen,
+        setAiCoachingNote: state.setAiCoachingNote,
     });
 
     // UI 互動處理函式
@@ -344,12 +345,13 @@ export default function IdeaWall() {
             {!isObservationMode && (
                 <CreateNodeModal
                     open={state.createNodeModalOpen}
-                    onClose={() => state.setCreateNodeModalOpen(false)}
+                    onClose={() => { state.setCreateNodeModalOpen(false); state.setAiCoachingNote(null); }}
                     title={state.title}
                     content={state.content}
                     onChange={operations.handleChange}
                     onSubmit={operations.handleCreateSubmit}
                     onContentChange={state.setContent}
+                    aiCoachingNote={state.aiCoachingNote}
                 />
             )}
 
@@ -393,6 +395,7 @@ export default function IdeaWall() {
                     <KB_Coach
                         nodeInfo={state.selectNodeInfo}
                         nodes={state.nodes}
+                        isOwner={getCurrentUsername() === state.selectNodeInfo?.owner}
                         onClose={() => {
                             state.setKbCoachModalOpen(false);
                             state.setSuggestedAgentType(null);

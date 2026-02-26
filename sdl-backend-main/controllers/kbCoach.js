@@ -89,33 +89,44 @@ const AGENT_PERSONAS = {
 /**
  * Generic Output Schema
  * 適用於所有 Agent 的通用結構
+ * 第一層：isCoachable 判斷（false 時其他欄位可為空）
+ * 第二層：正式回應內容（isCoachable 為 true 時才有意義）
  */
 const AGENT_OUTPUT_SCHEMA = {
   type: 'object',
   properties: {
+    isCoachable: {
+      type: 'boolean',
+      description: '這個想法是否有足夠的實質內容讓 AI 提供有意義的引導。只有在內容完全空白、純亂碼或完全無法理解時才設為 false。判斷標準要寬鬆——哪怕只是一個半成形的想法，也應該設為 true。'
+    },
+    uncoachableReason: {
+      type: 'string',
+      description: '（僅在 isCoachable 為 false 時填寫）用友善的語氣說明為什麼無法提供引導，並具體建議學生可以補充什麼讓想法更完整。'
+    },
     thinkingProcess: {
       type: 'string',
-      description: '你的思考過程 (Chain of Thought)。解釋你觀察到了什麼，以及為什麼決定這樣回應。'
+      description: '（isCoachable 為 true 時必填）你的逐步思考過程，必須使用繁體中文。格式：「步驟1：我觀察到... → 步驟2：因此我判斷... → 步驟3：所以我決定...」。說明你觀察到什麼、為何這樣判斷、以及為何選擇這種回應方式。'
     },
     content: {
       type: 'string',
-      description: '你要發布給學生的具體回應內容。請使用 Markdown 格式。'
+      description: '（isCoachable 為 true 時必填）你要發布給學生的具體回應內容。請使用 Markdown 格式。'
     },
     suggestedActions: {
       type: 'array',
-      description: '建議學生採取的後續行動',
+      description: '（isCoachable 為 true 時必填）建議學生採取的後續行動，必須提供至少 3 個不同類型的行動建議',
+      minItems: 3,
       items: {
         type: 'object',
         properties: {
-          label: { type: 'string', description: '按鈕文字' },
+          label: { type: 'string', description: '按鈕文字（簡短具體，例如：「補充環境限制」、「加入反例」）' },
           actionType: { type: 'string', enum: ['REPLY', 'CREATE_NEW', 'READ_MORE'] },
-          payload: { type: 'string', description: '行動的參數或預填內容' }
+          payload: { type: 'string', description: '行動的預填內容，讓學生可以直接延伸撰寫' }
         },
         required: ['label', 'actionType']
       }
     }
   },
-  required: ['thinkingProcess', 'content', 'suggestedActions']
+  required: ['isCoachable']
 };
 
 /**
@@ -180,29 +191,57 @@ function buildSystemPrompt(agentType) {
 你的角色是：${persona.role}
 你的語氣：${persona.tone}
 你的任務描述：${persona.description}
+
+**第一步：判斷這個想法是否有足夠內容讓你提供有意義的引導（isCoachable 判斷）**
+
+判斷標準（非常寬鬆，只在以下極端情況才設為 false）：
+1. 標題與內容加起來完全空白或只有空白字元
+2. 內容是純亂碼、無意義符號或隨機數字，完全無法理解
+3. 標題和內容都完全無法辨識是任何語言的詞彙
+
+**重要：標準要非常寬鬆。一個字、一個片語、一個半成形的想法，都應該設 isCoachable: true。只有真正「什麼都沒有」才設 false。**
+
+若判斷為 false：在 uncoachableReason 用友善語氣說明，並具體建議學生補充什麼（例如：「試著寫下你在思考什麼？你的核心論點是什麼？」），其他欄位留空。
+
+**第二步（僅在 isCoachable 為 true 時執行）：**
+
 ${persona.prompt}
 
 通用規則：
 1. **引用**：如果參考了上下文中的特定想法，請明確引用（例如：「正如 @Alice 在 [標題] 中提到的...」）。
 2. **簡潔**：回應要精簡有力，不要長篇大論。
-3. **繁體中文**：始終使用繁體中文回應。
+3. **繁體中文**：所有欄位（包含 thinkingProcess、content、suggestedActions 的 label 與 payload）一律使用繁體中文，禁止使用英文。
+4. **思考過程**：thinkingProcess 必須是逐步的推理，格式為「步驟1：... → 步驟2：... → 步驟3：...」，說明你觀察到什麼、如何判斷、以及為何選擇這樣回應。
+5. **建議行動**：必須提供恰好 3 個不同方向的 suggestedActions，label 要具體（點名要做什麼），payload 要預填有實質內容的文字讓學生可以直接延伸，不要留空。
 
 **重要：你必須嚴格按照以下 JSON Schema 格式輸出，不要包含任何額外的說明文字：**
 \`\`\`json
 {
-  "thinkingProcess": "你的思考過程 (Chain of Thought)。解釋你觀察到了什麼，以及為什麼決定這樣回應。",
-  "content": "你要發布給學生的具體回應內容。請使用 Markdown 格式。",
+  "isCoachable": true 或 false,
+  "uncoachableReason": "（isCoachable 為 false 時填寫，否則省略此欄位）",
+  "thinkingProcess": "（isCoachable 為 true 時填寫）逐步思考過程，必須用繁體中文，格式如：步驟1：我注意到... → 步驟2：因為... → 步驟3：所以我選擇...",
+  "content": "（isCoachable 為 true 時填寫）你要發布給學生的回應。請使用 Markdown 格式。",
   "suggestedActions": [
     {
-      "label": "按鈕文字",
-      "actionType": "REPLY 或 CREATE_NEW 或 READ_MORE",
-      "payload": "行動的參數或預填內容（可選）"
+      "label": "按鈕文字1（具體行動，例如：補充某個論點）",
+      "actionType": "CREATE_NEW",
+      "payload": "預填的想法內容，讓學生可以直接延伸"
+    },
+    {
+      "label": "按鈕文字2（不同方向的行動）",
+      "actionType": "REPLY",
+      "payload": "預填的回應內容"
+    },
+    {
+      "label": "按鈕文字3（再另一個角度的行動）",
+      "actionType": "CREATE_NEW",
+      "payload": "預填的想法內容"
     }
   ]
 }
 \`\`\`
 
-所有欄位都是必填的，請確保輸出是有效的 JSON 格式。`;
+isCoachable 是必填欄位，請確保輸出是有效的 JSON 格式。`;
 }
 
 /**
@@ -341,7 +380,12 @@ async function callAIWithFallback(agentType, userPrompt) {
 exports.provideGuidance = async (req, res) => {
   const startTime = Date.now();
   try {
-    const { title, content, nodeId, relatedNodes = [], projectId, agentType = 'IMPROVER' } = req.body;
+    const {
+      title, content, nodeId, relatedNodes = [], projectId, agentType = 'IMPROVER',
+      helpSeekingIntent = null,
+      triggerSource = 'manual',
+      isOwner = true
+    } = req.body;
     const userId = req.user?.id || req.body.userId || null;
 
     // 驗證 agentType
@@ -401,15 +445,37 @@ exports.provideGuidance = async (req, res) => {
       userPrompt += `\n\n最近的討論上下文 (Sliding Window N=10)：\n${relatedContext}`;
     }
 
+    // 根據求助意圖調整 AI 回應策略
+    if (helpSeekingIntent === 'stuck') {
+      userPrompt += '\n\n【學生求助意圖提示】這位學生表示目前感到卡住，不確定如何繼續發展想法。請以更循序漸進、引導式的方式提問，優先幫助他釐清問題所在，避免過度挑戰或給出太多同步的批評。';
+    }
+
+    // 根據是否為節點擁有者調整 AI 角色定位
+    if (!isOwner) {
+      userPrompt += '\n\n【角色提示】查看此節點的使用者不是節點的作者，而是社群中的其他學習者。請幫助他：(1) 理解這個想法的核心論點、(2) 思考它與自己既有知識或社群其他想法的關係、(3) 形成一個有建設性的回應觀點。建議行動應以 REPLY（回應這個節點）為主，有助推進社群知識討論。';
+    }
+
     // 呼叫 AI with Fallback (GPT-OSS → Gemma-3 → Gemini)
     const { data: coaching, model: usedModel } = await callAIWithFallback(agentType, userPrompt);
     const responseTimeMs = Date.now() - startTime;
     const sessionId = `${Date.now()}-${nodeId || 'no-node'}`;
 
+    // isCoachable 第一層判斷：內容不足時直接返回，不進行 history 儲存
+    if (coaching.isCoachable === false) {
+      return res.status(200).json({
+        isCoachable: false,
+        uncoachableReason: coaching.uncoachableReason || '這個想法目前內容還不夠完整，AI 無法提供有意義的引導。'
+      });
+    }
+
+    // 修正 vLLM 雙重跳脫問題：將字面上的 \n 轉換為真正的換行符號
+    const sanitizeNewlines = (str) => (str || '').replace(/\\n/g, '\n');
+
     const responseData = {
+      isCoachable: true,
       agentType,
-      thinkingProcess: coaching.thinkingProcess,
-      content: coaching.content,
+      thinkingProcess: sanitizeNewlines(coaching.thinkingProcess),
+      content: sanitizeNewlines(coaching.content),
       suggestedActions: coaching.suggestedActions || [],
       metadata: {
         nodeId,
@@ -435,7 +501,9 @@ exports.provideGuidance = async (req, res) => {
         suggestedActions: coaching.suggestedActions || [],
         contextCount: contextNodes.length,
         responseTimeMs: responseTimeMs,
-        sessionId: sessionId
+        sessionId: sessionId,
+        helpSeekingIntent: helpSeekingIntent,
+        triggerSource: triggerSource
       });
     } catch (historyError) {
       console.error('Failed to save KB Coach history (non-blocking):', historyError);

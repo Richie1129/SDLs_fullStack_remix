@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Modal from '../../../../components/Modal';
 import KnowledgeForumScaffolds from '../KnowledgeForumScaffolds';
+import ReactMarkdown from 'react-markdown';
 
 /**
  * 建立節點 Modal 元件
@@ -13,11 +14,33 @@ export default function CreateNodeModal({
     onChange,
     onSubmit,
     onContentChange,
+    aiCoachingNote = null,
 }) {
+    const [isNoteExpanded, setIsNoteExpanded] = useState(false);
+
     return (
         <Modal open={open} onClose={onClose} opacity={false} position={"justify-center items-center"}>
             <div className='flex flex-col p-component-sm'>
                 <h3 className=' font-bold text-body mb-3'>建立想法</h3>
+
+                {/* AI 建議參考（來自 KB Coach 建議行動） */}
+                {aiCoachingNote && (
+                    <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <p className="text-caption font-semibold text-blue-700 mb-1 flex items-center gap-1">
+                            💡 AI 建議參考
+                        </p>
+                        <div className={`text-caption text-blue-600 prose prose-sm max-w-none prose-blue ${isNoteExpanded ? '' : 'line-clamp-4'}`}>
+                            <ReactMarkdown>{aiCoachingNote}</ReactMarkdown>
+                        </div>
+                        <button
+                            onClick={() => setIsNoteExpanded(prev => !prev)}
+                            className="mt-1 text-caption text-blue-500 hover:text-blue-700"
+                        >
+                            {isNoteExpanded ? '▲ 收合' : '▼ 顯示全部'}
+                        </button>
+                    </div>
+                )}
+
                 <p className=' font-bold text-body mb-3'>標題</p>
                 <input 
                     className="rounded outline-none ring-2 p-1 ring-customgreen w-full mb-3"

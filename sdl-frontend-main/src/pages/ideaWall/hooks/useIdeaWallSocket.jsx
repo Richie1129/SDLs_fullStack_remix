@@ -103,9 +103,20 @@ export function useIdeaWallSocket({
             });
         };
 
+        // 加入專案房間的處理函式（確保 socket 已連線後才 emit）
+        const joinProject = () => {
+            socket.emit("join_project", projectId);
+        };
+
         // 連接 socket 並加入專案房間
-        socket.connect();
-        socket.emit("join_project", projectId);
+        if (socket.connected) {
+            // 已連線：直接 emit
+            joinProject();
+        } else {
+            // 未連線：等待連線完成後再 emit，避免在 CLOSING 狀態時發送造成錯誤
+            socket.once('connect', joinProject);
+            socket.connect();
+        }
 
         // 註冊事件監聽器（先移除舊的避免重複）
         socket.off("nodeUpdated", nodeUpdateEvent);
@@ -134,7 +145,10 @@ export function useIdeaWallSocket({
             if (refetchTimeoutRef.current) {
                 clearTimeout(refetchTimeoutRef.current);
             }
-            
+
+            // 若 socket 尚未連線就已卸載，移除待執行的 joinProject 監聽
+            socket.off('connect', joinProject);
+
             socket.off("nodeUpdated", nodeUpdateEvent);
             socket.off('nodeCreateError', handleNodeError);
             socket.off('nodeUpdateError', handleNodeError);

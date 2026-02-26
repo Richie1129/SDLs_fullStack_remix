@@ -7,13 +7,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { FiCpu, FiTool, FiLink, FiPlusCircle, FiThumbsUp, FiThumbsDown, FiLoader, FiClock, FiX, FiCheck } from 'react-icons/fi';
+import { FiCpu, FiTool, FiLink, FiPlusCircle, FiThumbsUp, FiThumbsDown, FiLoader, FiClock, FiX, FiCheck, FiRefreshCw } from 'react-icons/fi';
 import { FaGavel } from 'react-icons/fa';
 import apiClient from '../../../api/client';
 import ReactMarkdown from 'react-markdown';
 import { socket } from '../../../utils/socket';
 
-const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = null }) => {
+const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = null, isOwner = true }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [activeAgent, setActiveAgent] = useState(null); // 'IMPROVER', 'SYNTHESIZER', 'DEVIL'
     const [coaching, setCoaching] = useState(null);
@@ -94,6 +94,15 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
     };
 
     /**
+     * 解析思考過程字串為步驟陣列（按 → 分割）
+     */
+    const parseThinkingSteps = (text) => {
+        if (!text) return [];
+        const parts = text.split(/\s*→\s*/).filter(s => s.trim());
+        return parts.map(step => step.replace(/^步驟\d+[：:]\s*/, '').trim());
+    };
+
+    /**
      * 觸發特定 Agent
      */
     const triggerAgent = async (agentType) => {
@@ -103,20 +112,31 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
             setCoaching(null); // 清除舊結果
 
             const related = getRelatedNodes();
+            const triggerSource = suggestedAgent ? 'orchestrator' : 'manual';
+
             const response = await apiClient.post('/kb-coach/guidance', {
                 title: nodeInfo.title,
                 content: nodeInfo.content,
                 nodeId: nodeInfo.id,
                 projectId: nodeInfo.projectId,
                 relatedNodes: related,
-                agentType: agentType
+                agentType: agentType,
+                helpSeekingIntent: null,
+                triggerSource: triggerSource,
+                isOwner: isOwner
             });
 
             if (response.data) {
-                setCoaching(response.data);
-                setResponseId(Date.now().toString()); // 用於追蹤此次回應
-                setFeedbackGiven(false); // 重置回饋狀態
-                toast.success(`${agentType} 分析完成！`);
+                if (response.data.isCoachable === false) {
+                    // 內容不足，AI 判定無法引導
+                    setCoaching({ _uncoachable: true, uncoachableReason: response.data.uncoachableReason });
+                    setActiveAgent(null);
+                } else {
+                    setCoaching(response.data);
+                    setResponseId(Date.now().toString());
+                    setFeedbackGiven(false);
+                    toast.success(`${agentType} 分析完成！`);
+                }
             }
         } catch (error) {
             console.error('Error getting KB guidance:', error);
@@ -133,12 +153,13 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
         if (action.actionType === 'CREATE_NEW' || action.actionType === 'REPLY') {
             const newNodeData = {
                 title: action.actionType === 'REPLY' ? `[回覆] ${nodeInfo.title}` : `[回應] ${nodeInfo.title}`,
-                content: action.payload || '',
+                content: '',
                 from_id: nodeInfo.id,
                 ideaWallId: nodeInfo.ideaWallId,
                 owner: localStorage.getItem("username") || "學生",
                 projectId: nodeInfo.projectId,
-                colorindex: localStorage.getItem("id")
+                colorindex: localStorage.getItem("id"),
+                aiCoachingNote: coaching?.content || null
             };
             
             // 先關閉 KB Coach 視窗
@@ -156,16 +177,20 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
      */
     const handleFeedback = async (feedbackType) => {
         try {
-            // 發送 Socket 事件
-            socket.emit('aiCoachFeedback', {
-                projectId: nodeInfo.projectId,
-                ideaWallId: nodeInfo.ideaWallId,
-                nodeId: nodeInfo.id,
-                agentType: activeAgent,
-                feedbackType: feedbackType, // 'helpful' or 'not_helpful'
-                responseId: responseId,
-                userId: localStorage.getItem("id")
-            });
+            // 只在 socket 已連線時才發送事件，避免 "WebSocket is already in CLOSING or CLOSED state" 錯誤
+            if (socket.connected) {
+                socket.emit('aiCoachFeedback', {
+                    projectId: nodeInfo.projectId,
+                    ideaWallId: nodeInfo.ideaWallId,
+                    nodeId: nodeInfo.id,
+                    agentType: activeAgent,
+                    feedbackType: feedbackType, // 'helpful' or 'not_helpful'
+                    responseId: responseId,
+                    userId: localStorage.getItem("id")
+                });
+            } else {
+                console.warn('[KB Coach] Socket 未連線，回饋事件已略過');
+            }
 
             setFeedbackGiven(true);
             toast.success(feedbackType === 'helpful' ? '感謝您的回饋！' : '感謝您的回饋，我們會持續改進！');
@@ -184,7 +209,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                         AI 協作夥伴
                     </h3>
                     <p className="text-body-sm text-gray-500 mt-1">
-                        選擇一位夥伴來協助你深化想法
+                        {isOwner ? 'AI 協作夥伴，幫助你深化想法' : 'AI 引導你理解這個想法並形成回應'}
                     </p>
                 </div>
                 <div className="flex items-center gap-stack-xs">
@@ -212,50 +237,18 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                 <span className="font-bold mr-2">當前想法:</span> {nodeInfo.title}
             </div>
 
-            {/* Agent 選擇區 */}
-            <div className="grid grid-cols-3 gap-stack-sm mb-6">
-                <button
-                    onClick={() => triggerAgent('IMPROVER')}
-                    disabled={isLoading}
-                    className={`p-component-base rounded-xl border-2 transition-all flex flex-col items-center text-center ${
-                        activeAgent === 'IMPROVER' 
-                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50 text-gray-600'
-                    }`}
-                >
-                    <div className="mb-2"><FiTool className="w-8 h-8" /></div>
-                    <div className="font-bold mb-1">想法改進者</div>
-                    <div className="text-caption opacity-80">深化單一觀點</div>
-                </button>
-
-                <button
-                    onClick={() => triggerAgent('SYNTHESIZER')}
-                    disabled={isLoading}
-                    className={`p-component-base rounded-xl border-2 transition-all flex flex-col items-center text-center ${
-                        activeAgent === 'SYNTHESIZER' 
-                            ? 'border-purple-500 bg-purple-50 text-purple-700' 
-                            : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50 text-gray-600'
-                    }`}
-                >
-                    <div className="mb-2"><FiLink className="w-8 h-8" /></div>
-                    <div className="font-bold mb-1">綜合者</div>
-                    <div className="text-caption opacity-80">連結多個想法</div>
-                </button>
-
-                <button
-                    onClick={() => triggerAgent('DEVIL')}
-                    disabled={isLoading}
-                    className={`p-component-base rounded-xl border-2 transition-all flex flex-col items-center text-center ${
-                        activeAgent === 'DEVIL' 
-                            ? 'border-red-500 bg-red-50 text-red-700' 
-                            : 'border-gray-200 hover:border-red-300 hover:bg-gray-50 text-gray-600'
-                    }`}
-                >
-                    <div className="mb-2"><FaGavel className="w-8 h-8" /></div>
-                    <div className="font-bold mb-1">魔鬼代言人</div>
-                    <div className="text-caption opacity-80">挑戰既有觀點</div>
-                </button>
-            </div>
+            {/* 觸發按鈕（尚未取得回應時顯示） */}
+            {!coaching && !isLoading && (
+                <div className="flex justify-center mb-6">
+                    <button
+                        onClick={() => triggerAgent(isOwner ? 'IMPROVER' : 'SYNTHESIZER')}
+                        className="px-btn-x-lg py-btn-y-lg bg-[#5BA491] text-white rounded-xl font-semibold text-body hover:bg-[#5BA491]/90 hover:shadow-lg transition-shadow duration-fast flex items-center gap-2"
+                    >
+                        <FiCpu className="w-5 h-5" />
+                        {isOwner ? '讓 AI 看看這個想法' : '讓 AI 引導我思考如何回應'}
+                    </button>
+                </div>
+            )}
 
             {/* 歷史記錄面板 */}
             {showHistory && (
@@ -324,32 +317,90 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                 </div>
             )}
 
+            {/* 無法引導狀態（AI 判定內容不足） */}
+            {!isLoading && coaching?._uncoachable && (
+                <div className="p-component-md bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-body-sm font-semibold text-amber-800 mb-2">
+                        AI 需要更多資訊才能提供引導
+                    </p>
+                    <p className="text-body-sm text-amber-700 whitespace-pre-wrap">
+                        {coaching.uncoachableReason}
+                    </p>
+                    <button
+                        onClick={() => { setCoaching(null); setActiveAgent(null); }}
+                        className="mt-4 text-caption text-amber-600 hover:text-amber-800 underline"
+                    >
+                        回到選擇
+                    </button>
+                </div>
+            )}
+
             {/* 結果顯示區 */}
-            {!isLoading && coaching && (
+            {!isLoading && coaching && !coaching._uncoachable && (
                 <div className="flex-1 overflow-y-auto pr-2">
                     {/* Thinking Process (Collapsible) */}
-                    {coaching.thinkingProcess && (
-                        <div className="mb-4">
-                            <button 
-                                onClick={() => setShowThinking(!showThinking)}
-                                className="text-caption text-gray-400 hover:text-gray-600 flex items-center mb-2"
-                            >
-                                {showThinking ? '▼ 隱藏思考過程' : '▶ 顯示 AI 思考過程 (CoT)'}
-                            </button>
-                            {showThinking && (
-                                <div className="p-component-sm bg-gray-100 rounded text-caption text-gray-600 font-mono whitespace-pre-wrap border border-gray-200">
-                                    {coaching.thinkingProcess}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    {coaching.thinkingProcess && (() => {
+                        const steps = parseThinkingSteps(coaching.thinkingProcess);
+                        return (
+                            <div className="mb-4">
+                                <button
+                                    onClick={() => setShowThinking(!showThinking)}
+                                    className="text-caption text-gray-400 hover:text-gray-600 flex items-center gap-1.5 mb-2 transition-colors duration-fast"
+                                >
+                                    {showThinking ? '▼ 隱藏思考過程' : '▶ 顯示 AI 思考過程'}
+                                </button>
+                                {showThinking && (
+                                    steps.length > 1 ? (
+                                        <div className="bg-gray-50 rounded-xl border border-gray-200 p-3">
+                                            {steps.map((step, idx) => (
+                                                <div key={idx} className="flex gap-3">
+                                                    {/* 左側時間軸 */}
+                                                    <div className="flex flex-col items-center flex-shrink-0">
+                                                        <div className="w-5 h-5 rounded-full bg-gray-300 text-gray-700 flex items-center justify-center text-caption font-bold">
+                                                            {idx + 1}
+                                                        </div>
+                                                        {idx < steps.length - 1 && (
+                                                            <div className="w-0.5 bg-gray-200 flex-1 my-1 min-h-[0.75rem]" />
+                                                        )}
+                                                    </div>
+                                                    {/* 右側文字 */}
+                                                    <div className={`flex-1 ${idx < steps.length - 1 ? 'pb-3' : ''}`}>
+                                                        <p className="text-caption text-gray-400 font-medium mb-0.5">步驟 {idx + 1}</p>
+                                                        <p className="text-caption text-gray-600 leading-relaxed">{step}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-caption text-gray-600 leading-relaxed">
+                                            {coaching.thinkingProcess}
+                                        </div>
+                                    )
+                                )}
+                            </div>
+                        );
+                    })()}
 
                     {/* Main Content */}
-                    <div className="bg-white p-component-md rounded-xl border border-gray-200 shadow-sm mb-6">
-                        <div className="prose prose-sm max-w-none text-gray-800">
-                            <ReactMarkdown>{coaching.content}</ReactMarkdown>
-                        </div>
-                    </div>
+                    {(() => {
+                        const borderClass = { IMPROVER: 'border-l-blue-400', SYNTHESIZER: 'border-l-purple-400', DEVIL: 'border-l-red-400' }[activeAgent] || 'border-l-gray-300';
+                        return (
+                            <div className="rounded-xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+                                <div className={`bg-white p-4 border-l-4 ${borderClass}`}>
+                                    <div className="prose prose-sm max-w-none text-gray-800
+                                        prose-p:leading-relaxed prose-p:mb-3 prose-p:text-gray-700
+                                        prose-headings:font-bold prose-headings:text-gray-800 prose-headings:mb-2
+                                        prose-ul:my-2 prose-li:text-gray-700 prose-li:leading-relaxed
+                                        prose-ol:my-2 prose-ol:pl-5
+                                        prose-blockquote:border-l-4 prose-blockquote:border-gray-300 prose-blockquote:pl-3 prose-blockquote:italic prose-blockquote:text-gray-500
+                                        prose-strong:text-gray-800
+                                    ">
+                                        <ReactMarkdown>{coaching.content}</ReactMarkdown>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Suggested Actions */}
                     {coaching.suggestedActions && coaching.suggestedActions.length > 0 && (
@@ -362,7 +413,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                                     <button
                                         key={idx}
                                         onClick={() => executeAction(action)}
-                                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm flex items-center text-body-sm font-medium"
+                                        className="px-4 py-2 bg-customgreen text-white rounded-lg hover:bg-customgreen/90 transition shadow-sm flex items-center text-body-sm font-medium"
                                     >
                                         <FiPlusCircle className="w-4 h-4 mr-2" />
                                         {action.label}
@@ -396,6 +447,54 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                                     <FiCheck className="w-4 h-4 mr-1" />
                                     感謝回饋！
                                 </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 換個角度看（顯示其他兩個 Agent） */}
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="flex justify-between items-center mb-3">
+                            <p className="text-body-sm text-gray-500">換個角度看？</p>
+                            <button
+                                onClick={() => triggerAgent(activeAgent)}
+                                disabled={isLoading}
+                                className="text-caption text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors duration-fast"
+                                title="重新用相同角度分析一次"
+                            >
+                                <FiRefreshCw className="w-3 h-3" />
+                                重新分析
+                            </button>
+                        </div>
+                        <div className="flex gap-3 flex-wrap">
+                            {activeAgent !== 'SYNTHESIZER' && (
+                                <button
+                                    onClick={() => triggerAgent('SYNTHESIZER')}
+                                    disabled={isLoading}
+                                    className="px-btn-x py-btn-y bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-shadow duration-fast flex items-center text-body-sm font-medium"
+                                >
+                                    <FiLink className="w-4 h-4 mr-2" />
+                                    整合觀點
+                                </button>
+                            )}
+                            {activeAgent !== 'DEVIL' && (
+                                <button
+                                    onClick={() => triggerAgent('DEVIL')}
+                                    disabled={isLoading}
+                                    className="px-btn-x py-btn-y bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-shadow duration-fast flex items-center text-body-sm font-medium"
+                                >
+                                    <FaGavel className="w-4 h-4 mr-2" />
+                                    找出漏洞
+                                </button>
+                            )}
+                            {activeAgent !== 'IMPROVER' && (
+                                <button
+                                    onClick={() => triggerAgent('IMPROVER')}
+                                    disabled={isLoading}
+                                    className="px-btn-x py-btn-y bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-shadow duration-fast flex items-center text-body-sm font-medium"
+                                >
+                                    <FiTool className="w-4 h-4 mr-2" />
+                                    改進想法
+                                </button>
                             )}
                         </div>
                     </div>

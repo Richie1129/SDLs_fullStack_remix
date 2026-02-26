@@ -71,8 +71,8 @@ export default function UpdateNodeModal({
                         </button>
                     </div>
 
-                    {/* 右側：工具按鈕 - 只在編輯模式顯示 */}
-                    {!showNodeChangeHistory && !isObservationMode && isOwner && (
+                    {/* 右側：工具按鈕 */}
+                    {!showNodeChangeHistory && !isObservationMode && (
                         <div className='flex items-center gap-2 pr-2'>
                             <button
                                 data-track
