@@ -38,6 +38,10 @@ const User = sequelize.define('user', {
     seatNumber: {
         type: DataTypes.TEXT,
         allowNull:true
+    },
+    school_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 }, {
     tableName: 'users',
@@ -45,9 +49,15 @@ const User = sequelize.define('user', {
         { fields: ['account'], unique: true },  // 登入查詢
         { fields: ['role'] },                    // 角色篩選
         { fields: ['class'] },                   // 班級分組
-        { fields: ['role', 'class'] }           // 複合查詢
+        { fields: ['role', 'class'] },          // 複合查詢
+        { fields: ['school_id'] }               // 學校篩選
     ]
 });
+
+// School 關聯
+const School = require('./school');
+User.belongsTo(School, { foreignKey: 'school_id', as: 'school' });
+School.hasMany(User, { foreignKey: 'school_id' });
 
 
 User.belongsToMany(Project, {through:"UserProject"});

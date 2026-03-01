@@ -51,6 +51,7 @@ export function useIdeaWallState(projectId) {
     // AI 相關狀態
     const [aiSuggestion, setAiSuggestion] = useState(null);
     const [suggestedAgentType, setSuggestedAgentType] = useState(null);
+    const [aiCoachingNote, setAiCoachingNote] = useState(null); // KB Coach 建議行動後帶入的參考內容
 
     // 變更歷史
     const [nodeChangeLogs, setNodeChangeLogs] = useState([]);
@@ -119,6 +120,8 @@ export function useIdeaWallState(projectId) {
         setAiSuggestion,
         suggestedAgentType,
         setSuggestedAgentType,
+        aiCoachingNote,
+        setAiCoachingNote,
 
         // 變更歷史
         nodeChangeLogs,

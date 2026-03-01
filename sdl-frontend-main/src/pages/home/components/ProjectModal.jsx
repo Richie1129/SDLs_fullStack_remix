@@ -91,7 +91,7 @@ const ProjectModal = ({
                   .filter(teacher => teacher.username !== selectedMentor)
                   .map(teacher => (
                     <option key={teacher.id} value={teacher.username}>
-                      {teacher.username}
+                      {teacher.username}{teacher.school ? `（${teacher.school.name}）` : ''}
                     </option>
                   ))
                 }
@@ -101,7 +101,7 @@ const ProjectModal = ({
                 <option value="" disabled>- 請選擇指導老師 -</option>
                 {teachers.map(teacher => (
                   <option key={teacher.id} value={teacher.username}>
-                    {teacher.username}
+                    {teacher.username}{teacher.school ? `（${teacher.school.name}）` : ''}
                   </option>
                 ))}
               </>

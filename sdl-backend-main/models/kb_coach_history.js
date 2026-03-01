@@ -103,6 +103,19 @@ const KbCoachHistory = sequelize.define('kb_coach_history', {
         allowNull: true,
         field: 'session_id',
         comment: '會話 ID（用於連結 feedback）'
+    },
+    helpSeekingIntent: {
+        type: DataTypes.STRING(50),
+        allowNull: true,
+        field: 'help_seeking_intent',
+        comment: '學生求助意圖：proactive_improve / proactive_judge / stuck / null（Orchestrator 觸發時為 null）'
+    },
+    triggerSource: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        defaultValue: 'manual',
+        field: 'trigger_source',
+        comment: '觸發來源：manual（學生手動）/ orchestrator（系統自動）'
     }
 }, {
     tableName: 'kb_coach_histories',

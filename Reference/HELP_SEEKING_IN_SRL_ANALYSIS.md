@@ -2,7 +2,10 @@
 
 > **文件目的**：以自我調節學習 (SRL) 為主框架，分析 SDL 平台中 Help-Seeking 策略的實作現況、理論缺口與強化方向。
 >
-> **日期**：2026-02-11
+> **初稿日期**：2026-02-11
+>
+> **修訂記錄**：
+> - 2026-02-25：修正 KB Coach 手動觸發的理論分類遺漏（原文件將其歸為「系統主動介入」，實為學生主動的策略型求助）；新增「主動策略型求助」分類；更新第 2.1 節 D、第 2.3 節、第 3 節；新增第 3.6 節。詳見 `docs/reports/KB_COACH_HELP_SEEKING_ENHANCEMENT.md`。
 
 ---
 
@@ -133,10 +136,15 @@ SDL 平台的五階段方法論（定標→擇策→監評→調節→學習歷�
 - 開啟延伸閱讀時同時對應 **S-Info**（資訊檢索），因為學生透過 AI 代為搜尋網路資源
 - **缺少後設認知鷹架** — 學生可直接發問，無反思步驟，也無 adaptive/expedient 分類
 
-#### D. KB Coach（想法牆 AI 教練）— 系統主動介入
+#### D. KB Coach（想法牆 AI 教練）— 雙模式：系統介入 + 學生主動求助
 
-**服務位置**：`sdl-backend-main/services/orchestrator.js`
+> **⚠️ 修訂說明（2026-02-25）**：原文件將 KB Coach 整體歸類為「系統主動介入」，這是不完整的描述。KB Coach 有兩種截然不同的觸發模式，理論性質完全不同，應分開處理。
+
+**服務位置**：`sdl-backend-main/services/orchestrator.js`（Orchestrator 模式）
+**元件位置**：`sdl-frontend-main/src/pages/ideaWall/components/KB_Coach.jsx`（手動模式）
 **資料模型**：`sdl-backend-main/models/kb_coach_history.js`
+
+**模式一：Orchestrator 自動建議（系統主動介入）**
 
 | 偵測模式 | 觸發的 AI 人格 | 教學目的 |
 |---------|--------------|---------|
@@ -145,7 +153,17 @@ SDL 平台的五階段方法論（定標→擇策→監評→調節→學習歷�
 | OVERLOAD（資訊過載） | Synthesizer | 整合發散想法 |
 
 - 冷卻機制：至少 10 分鐘間隔、至少 5 則訊息門檻
-- 這是**系統主動發起**的幫助，不同於學生主動的 Help-Seeking
+- 這是**系統主動發起**的幫助，不屬於學生主動的 Help-Seeking 行為
+
+**模式二：學生手動觸發（主動策略型求助）** ← 原文件遺漏
+
+- 學生自主點擊節點 → 選擇 Agent 類型 → 請 AI 提供回饋
+- 觸發意圖分三類：
+  - `proactive_improve`：想讓想法更好（已有方向，找盲點）
+  - `proactive_judge`：想確認想法是否站得住腳（不確定是否有問題）
+  - `stuck`：卡住了，需要方向感
+- 這是 **Karabenick (2004) adaptive help-seeking 的最佳型態**：學生在尚未危機時主動尋求外部回饋以強化思考品質
+- 對應理論類型：**主動策略型求助（Strategic Proactive Help-Seeking）**，詳見第 3.6 節
 
 #### E. 5Rs 反思系統 — 後設認知鷹架
 
@@ -189,7 +207,8 @@ SDL 平台的五階段方法論（定標→擇策→監評→調節→學習歷�
 | `rag_messages` | 學生問題、AI 回答、參考文獻、外部連結 | 學生問什麼科學問題？使用頻率？是否開啟延伸閱讀？ | **無求助類型分類，無法區分工具型 vs 執行型** |
 | `chatroom_message` | 小組討論訊息 | 團隊溝通頻率？ | **無法區分閒聊 vs 求助** |
 | `idea_wall_message` | 想法牆討論訊息 | 概念討論深度？ | **無法識別求助意圖** |
-| `kb_coach_history` | AI 教練介入紀錄 | AI 介入的頻率與類型？ | 學生是否接受了建議？ |
+| `kb_coach_history`（`trigger_source = 'orchestrator'`） | Orchestrator 自動介入紀錄 | AI 介入的頻率與類型？ | 學生是否接受了建議？ |
+| `kb_coach_history`（`trigger_source = 'manual'`） | 學生手動觸發紀錄 | 學生主動求助的頻率？意圖分布？各意圖的 helpful 率？ | 求助後討論品質是否提升？ |
 | `ai_feedback` | helpful/not_helpful | AI 回應品質？ | 為什麼覺得沒幫助？ |
 | `daily_personal` | 5Rs 反思內容 | 學生的後設認知發展？ | 未系統化挖掘求助相關反思 |
 
@@ -250,6 +269,34 @@ SDL 平台的五階段方法論（定標→擇策→監評→調節→學習歷�
 | **F-Query** | 正式詢問 | 教師（平台外居多） | ⚠️ 僅靠自陳報告 |
 | **I-Query** | 非正式詢問 | **小組討論區 + 想法牆** | ❌ 有管道但無標記 |
 | **AI-Help** | AI 輔助 | AI Task Assistant + 科學助手 | ⚠️ Task Assistant 完整；科學助手有對話紀錄但無分類 |
+
+### 3.6 主動策略型求助（Strategic Proactive Help-Seeking）— 新增分類
+
+> **⚠️ 原文件遺漏（2026-02-25 修訂補充）**
+
+Nelson-Le Gall 和 Karabenick 的框架主要針對**反應型求助**（學生遇到困難才求助）。但平台中存在另一種行為模式，原文件的二維分類架構無法捕捉：
+
+| 類型 | 描述 | 觸發條件 | 理論地位 |
+|------|------|---------|---------|
+| **被動反應型**（原框架） | 卡住了才尋求幫助 | 遭遇障礙 | Nelson-Le Gall INS/EXE |
+| **主動策略型**（新增） | 尚未卡住就主動尋求回饋 | 學習者自我調節驅動 | Karabenick adaptive 的最高型態 |
+
+**主動策略型求助的特徵**：
+- 在沒有「危機」的情況下，主動邀請外部評估
+- 目的是「優化」而非「解救」
+- 與 Zimmerman (2000) SRL 的「前瞻/計畫」階段高度對應
+- 這是 SRL 成熟度的指標行為——能主動監控自己想法品質的學生，代表具有高度後設認知能力
+
+**在 SDL 平台中的對應**：
+- **KB Coach 手動觸發**是目前唯一能捕捉此類行為的管道
+- 三種觸發意圖的理論對應：
+  - `proactive_improve`（想讓想法更好）→ 自我精進型，SRL 前瞻階段
+  - `proactive_judge`（確認想法是否成立）→ 自我評估型，SRL 監控階段
+  - `stuck`（卡住了需要方向）→ 問題解決型，傳統 adaptive help-seeking
+
+**資料追蹤現況**：
+- 實作前（2026-02-25 之前）：❌ 完全未追蹤，手動觸發混在 Orchestrator 記錄中無法區分
+- 實作後：✅ `kb_coach_history.trigger_source = 'manual'` + `help_seeking_intent` 欄位追蹤
 
 ---
 

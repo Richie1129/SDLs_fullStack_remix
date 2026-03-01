@@ -56,6 +56,11 @@ const Project = sequelize.define('project', {
         allowNull: false,
         comment: '學期代碼，例如 114-2'
     },
+    school_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: '所屬學校（繼承自建立者）'
+    },
     course_config: {
         type: DataTypes.JSONB,
         allowNull: true,
@@ -76,7 +81,8 @@ const Project = sequelize.define('project', {
         { fields: ['referral_code'], unique: true }, // 推薦碼查詢
         { fields: ['createdAt'] },                  // 時間排序
         { fields: ['semester'] },                   // 學期篩選
-        { fields: ['mentor', 'semester'] }          // 導師+學期複合查詢
+        { fields: ['mentor', 'semester'] },         // 導師+學期複合查詢
+        { fields: ['school_id'] }                    // 學校篩選
     ]
 });
 

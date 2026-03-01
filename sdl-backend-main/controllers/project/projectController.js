@@ -166,6 +166,9 @@ exports.createProject = async (req, res) => {
             return res.status(404).send({ message: '請輸入完整資料!' })
         }
 
+        const userId = req.body.userId;
+        const creater = await User.findByPk(userId, { transaction: t });
+
         const createdProject = await Project.create({
             name: projectName,
             describe: projectdescribe,
@@ -173,11 +176,9 @@ exports.createProject = async (req, res) => {
             referral_code: referral_code,
             currentStage: 1,
             currentSubStage: 1,
-            semester: getTaiwanSemester()
+            semester: getTaiwanSemester(),
+            school_id: creater ? creater.school_id : null
         }, { transaction: t, req });
-
-        const userId = req.body.userId;
-        const creater = await User.findByPk(userId, { transaction: t });
         await createdProject.addUser(creater, { transaction: t });
 
         // initialize kanban
