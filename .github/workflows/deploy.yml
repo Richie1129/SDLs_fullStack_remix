@@ -181,6 +181,19 @@ jobs:
                 exit 1
               }
               echo "✅ $service_name Migration 成功"
+
+              # ── Seed：匯入學校名單（upsert，可重複執行）─────────────
+              echo "🏫 執行 $service_name 學校名單 Seed..."
+              docker run --rm \
+                --network "container:${POSTGRES_CONTAINER_ID}" \
+                --env-file .env \
+                -e PG_HOST=127.0.0.1 \
+                -e PG_PORT=5432 \
+                -e NODE_ENV=production \
+                "stone881129/sdl-api:${NEW_TAG}" node scripts/seedSchools.js || {
+                echo "⚠️ Seed 失敗（非致命，繼續部署）"
+              }
+              echo "✅ $service_name Seed 完成"
               # ────────────────────────────────────────────────────────
 
               # 無停機替換：直接 up -d，Docker 自動重啟變更的容器

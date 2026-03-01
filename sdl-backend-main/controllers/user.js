@@ -20,10 +20,16 @@ exports.getUsers = (req, res) =>{
 
 //get all teachers
 exports.getTeachers = (req, res) => {
+    const School = require('../models/school');
     User.findAll({
-        where: {
-            role: 'teacher' // 確保你的 User 模型中有一個名為 'role' 的欄位
-        }
+        where: { role: 'teacher' },
+        attributes: ['id', 'username', 'account', 'email', 'school_id'],
+        include: [{
+            model: School,
+            as: 'school',
+            attributes: ['name', 'city'],
+            required: false
+        }]
     })
     .then(users => {
         res.status(200).json({ user: users });
@@ -53,8 +59,15 @@ exports.getCurrentUser = async (req, res) => {
     try {
         const userId = req.userId; // 來自 AuthMiddleware
         
+        const School = require('../models/school');
         const user = await User.findByPk(userId, {
-            attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber'] // 排除密碼
+            attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id'],
+            include: [{
+                model: School,
+                as: 'school',
+                attributes: ['id', 'name', 'city'],
+                required: false
+            }]
         });
         
         if (!user) {
@@ -175,7 +188,8 @@ exports.registerUser = (req, res) => {
     const role = req.body.role;
     const classField = req.body.class;
     const seatNumber = req.body.seatNumber;
-    
+    const schoolId = req.body.school_id || null;
+
     const logger = require('../config/logger');
     logger.info({ 
         account, 
@@ -208,7 +222,8 @@ exports.registerUser = (req, res) => {
                         password: hash,
                         role: role,
                         class: classField,
-                        seatNumber: seatNumber
+                        seatNumber: seatNumber,
+                        school_id: schoolId
                     })
                     .then(result => {
                         const account = result.account;

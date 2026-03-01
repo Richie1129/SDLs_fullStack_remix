@@ -109,9 +109,11 @@ exports.checkViewingPermission = async (req, res) => {
             });
         }
 
-        // 檢查觀摩權限
+        // 檢查觀摩權限（同校且班級在允許清單內）
         const hasViewingPermission = project.is_open_for_viewing &&
             project.allowed_classes &&
+            project.school_id !== null &&
+            project.school_id === user.school_id &&
             project.allowed_classes.includes(user.class);
 
         if (hasViewingPermission) {
@@ -200,11 +202,13 @@ exports.getViewableProjects = async (req, res) => {
             }]
         });
 
-        // 篩選允許指定班級觀摩的專案，並排除用戶自己參與的專案（實現組間觀摩）
+        // 篩選允許指定班級觀摩的專案（同校、班級在允許清單、且排除自己的專案）
         const viewableProjects = projects.filter(project =>
             project.allowed_classes &&
+            project.school_id !== null &&
+            project.school_id === user.school_id &&
             project.allowed_classes.includes(viewable_by) &&
-            !userProjectIds.includes(project.id)  // 排除用戶自己參與的專案
+            !userProjectIds.includes(project.id)
         );
 
         // 格式化回傳資料
@@ -252,13 +256,18 @@ exports.getAllClasses = async (req, res) => {
 
     try {
         console.log('開始查詢用戶班級資料...');
+        // 只取同一學校的班級清單（避免跨校班級混入）
+        const currentUser = await User.findByPk(req.userId);
+        const whereClause = {
+            class: { [require('sequelize').Op.ne]: null }
+        };
+        if (currentUser && currentUser.school_id) {
+            whereClause.school_id = currentUser.school_id;
+        }
+
         const classes = await User.findAll({
             attributes: ['class'],
-            where: {
-                class: {
-                    [require('sequelize').Op.ne]: null
-                }
-            },
+            where: whereClause,
             group: ['class'],
             raw: true
         });

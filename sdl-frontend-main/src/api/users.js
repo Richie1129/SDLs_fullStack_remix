@@ -11,6 +11,11 @@ export const userRegister = async (userdata) => {
     return response;
 }
 
+export const getSchools = async () => {
+    const response = await apiClient.get('/schools');
+    return response.data.schools;
+}
+
 export const  getProjectUser = async (projectId) => {
     const response = await apiClient.get(`/users/project/${projectId}`)
     return response.data

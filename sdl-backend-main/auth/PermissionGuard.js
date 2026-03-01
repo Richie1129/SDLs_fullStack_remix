@@ -86,9 +86,11 @@ class PermissionGuard {
             return { hasPermission: true, readOnly: false };
         }
 
-        // 檢查觀摩權限（只讀）
-        const hasViewingPermission = project.is_open_for_viewing && 
-            project.allowed_classes && 
+        // 檢查觀摩權限（只讀，同校且班級在允許清單內）
+        const hasViewingPermission = project.is_open_for_viewing &&
+            project.allowed_classes &&
+            project.school_id !== null &&
+            project.school_id === user.school_id &&
             project.allowed_classes.includes(user.class);
 
         if (hasViewingPermission) {

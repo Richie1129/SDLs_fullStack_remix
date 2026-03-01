@@ -13,7 +13,8 @@ export default function Profile() {
     account: '',
     email: '',
     class_name: '',
-    seat_number: ''
+    seat_number: '',
+    school_name: ''
   });
   const [originalUser, setOriginalUser] = useState({});
   const [isEditing, setIsEditing] = useState(false);
@@ -45,8 +46,11 @@ export default function Profile() {
         username: userData.username || '',
         account: userData.account || '',
         email: userData.email || '',
-        class_name: userData.class || '',  // 後端回傳 class
-        seat_number: userData.seatNumber || ''  // 後端回傳 seatNumber
+        class_name: userData.class || '',
+        seat_number: userData.seatNumber || '',
+        school_name: userData.school
+          ? `${userData.school.name}（${userData.school.city}）`
+          : ''
       };
       setUser(userInfo);
       setOriginalUser(userInfo);
@@ -267,6 +271,19 @@ export default function Profile() {
                     className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
                   />
                   <p className="text-caption text-gray-500 mt-1">帳號無法修改</p>
+                </div>
+
+                <div>
+                  <label className="block text-body-sm font-medium text-gray-700 mb-2">
+                    學校
+                  </label>
+                  <input
+                    type="text"
+                    value={user.school_name}
+                    disabled
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                    placeholder="（未設定）"
+                  />
                 </div>
 
                 <div>
