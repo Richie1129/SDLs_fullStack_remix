@@ -1,286 +1,357 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { TypeAnimation } from 'react-type-animation';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from 'react-query';
 import { userRegister, getSchools } from '../../api/users';
 import { AuthContext } from '../../utils/AuthContext';
 import Swal from 'sweetalert2';
-import Login_icon from "../../assets/Animation-login.json";
-import Lottie from "lottie-react";
 import { useTracking } from '../../providers/TrackingProvider';
+import { MdArrowForward, MdSchool, MdGroups } from 'react-icons/md';
+import { FiUser, FiLock, FiMail, FiHash, FiBriefcase, FiSearch, FiEye, FiEyeOff } from 'react-icons/fi';
 
 export default function Register() {
-    const [userData, setUserData] = useState({ role: "student", class: "", seatNumber: "", school_id: "" });
-    const [userContext, setUserContext] = useContext(AuthContext);
-    const [error, setError] = useState("");
-    const navigate = useNavigate();
-    const { track } = useTracking();
+  const [userData, setUserData] = useState({ role: 'student', class: '', seatNumber: '', school_id: '' });
+  const [userContext, setUserContext] = useContext(AuthContext);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const { track } = useTracking();
 
-    // 學校搜尋
-    const [schools, setSchools] = useState([]);
-    const [schoolSearch, setSchoolSearch] = useState('');
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const schoolRef = useRef(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    useEffect(() => {
-        getSchools()
-            .then(data => setSchools(data || []))
-            .catch(() => setSchools([]));
-    }, []);
+  const [schools, setSchools] = useState([]);
+  const [schoolSearch, setSchoolSearch] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const schoolRef = useRef(null);
 
-    // 點外部關閉建議清單
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (schoolRef.current && !schoolRef.current.contains(e.target)) {
-                setShowSuggestions(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+  useEffect(() => {
+    getSchools()
+      .then(data => setSchools(data || []))
+      .catch(() => setSchools([]));
+  }, []);
 
-    const filteredSchools = schoolSearch.trim()
-        ? schools.filter(s =>
-            s.name.includes(schoolSearch) || s.city.includes(schoolSearch)
-          ).slice(0, 15)
-        : [];
-
-    const handleSchoolSelect = (school) => {
-        setSchoolSearch(school.name);
-        setUserData(prev => ({ ...prev, school_id: school.id }));
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (schoolRef.current && !schoolRef.current.contains(e.target)) {
         setShowSuggestions(false);
+      }
     };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const handleChange = e => {
-        const { name, value } = e.target;
-        setUserData(prev => {
-            if (name === 'role') {
-                if (value === 'teacher') {
-                    return { ...prev, role: value, class: '', seatNumber: '' };
-                }
-                return { ...prev, role: value };
-            }
-            return { ...prev, [name]: value };
-        });
-    };
+  const filteredSchools = schoolSearch.trim()
+    ? schools.filter(s => s.name.includes(schoolSearch) || s.city.includes(schoolSearch)).slice(0, 15)
+    : [];
 
-    const validateInput = () => {
-        if (!userData.school_id) {
-            setError("請選擇學校");
-            return false;
-        }
-        if (!userData.account || userData.account.length < 6 || userData.account.length > 20) {
-            setError("帳號長度應為6-20個字符");
-            return false;
-        }
-        if (!/^\d+$/.test(userData.account) && !/^[A-Za-z0-9]+$/.test(userData.account)) {
-            setError("帳號只能包含字母或數字");
-            return false;
-        }
-        if (!userData.confirmPassword) {
-            setError("請確認密碼");
-            return false;
-        } else if (userData.confirmPassword !== userData.password) {
-            setError("密碼不相符");
-            return false;
-        } else if (!userData.password || userData.password.length < 8) {
-            setError("密碼長度至少為8個字符");
-            return false;
-        } else if (!/\d/.test(userData.password) || !/[A-Za-z]/.test(userData.password)) {
-            setError("密碼必須包含英文字母與數字");
-            return false;
-        }
-        setError("");
-        return true;
-    };
+  const handleSchoolSelect = (school) => {
+    setSchoolSearch(school.name);
+    setUserData(prev => ({ ...prev, school_id: school.id }));
+    setShowSuggestions(false);
+  };
 
-    const userRegisterMutation = useMutation(userRegister, {
-        onSuccess: (res) => {
-            localStorage.setItem("accessToken", res.data.accessToken);
-            localStorage.setItem("account", res.data.account);
-            localStorage.setItem("id", res.data.id);
-            if (res.data.class) localStorage.setItem("class", res.data.class);
-            if (res.data.seatNumber) localStorage.setItem("seatNumber", res.data.seatNumber);
-            setUserContext(prev => ({
-                ...prev,
-                account: res.data.account,
-                id: res.data.id,
-                accessToken: res.data.accessToken,
-                class: res.data.class,
-                seatNumber: res.data.seatNumber,
-            }));
-            navigate("/");
-            Swal.fire({
-                icon: 'success',
-                title: '註冊成功！',
-                text: '您已成功註冊！',
-                confirmButtonText: '確定',
-                timer: 2000,
-                timerProgressBar: true,
-                confirmButtonColor: '#5BA491'
-            });
-        },
-        onError: (err) => {
-            if (err.response?.status === 400 && err.response?.data?.message === '該用戶已存在，請嘗試其他用戶名稱。') {
-                Swal.fire({
-                    icon: 'error',
-                    title: '註冊失敗',
-                    text: '該用戶已存在，請嘗試其他用戶名稱。',
-                    confirmButtonText: '確定',
-                    timer: 2000,
-                    timerProgressBar: true,
-                    confirmButtonColor: '#5BA491'
-                });
-            } else {
-                setError("帳號或密碼錯誤");
-                Swal.fire({
-                    icon: 'error',
-                    title: '註冊失敗',
-                    text: '請檢查您的帳號或密碼！',
-                    confirmButtonText: '確定',
-                    timer: 2000,
-                    timerProgressBar: true,
-                    confirmButtonColor: '#5BA491'
-                });
-            }
-        }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setUserData(prev => {
+      if (name === 'role') {
+        if (value === 'teacher') return { ...prev, role: value, class: '', seatNumber: '' };
+        return { ...prev, role: value };
+      }
+      return { ...prev, [name]: value };
     });
+  };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (validateInput()) {
-            track('REGISTER_SUBMIT', 'user', null, {
-                account: userData.account,
-                role: userData.role,
-                timestamp: new Date().toISOString()
-            });
-            userRegisterMutation.mutate(userData);
-        }
-    };
+  const validateInput = () => {
+    if (!userData.school_id) { setError('請選擇學校'); return false; }
+    if (!userData.account || userData.account.length < 6 || userData.account.length > 20) {
+      setError('帳號長度應為 6-20 個字符'); return false;
+    }
+    if (!/^\d+$/.test(userData.account) && !/^[A-Za-z0-9]+$/.test(userData.account)) {
+      setError('帳號只能包含字母或數字'); return false;
+    }
+    if (!userData.confirmPassword) { setError('請確認密碼'); return false; }
+    if (userData.confirmPassword !== userData.password) { setError('密碼不相符'); return false; }
+    if (!userData.password || userData.password.length < 8) { setError('密碼長度至少為 8 個字符'); return false; }
+    if (!/\d/.test(userData.password) || !/[A-Za-z]/.test(userData.password)) {
+      setError('密碼必須包含英文字母與數字'); return false;
+    }
+    setError('');
+    return true;
+  };
 
-    return (
-        <section className="flex flex-col md:flex-row h-screen items-center">
-            <div className="hidden bg-white w-full md:w-1/2 xl:w-1/2 h-screen md:flex md:items-center md:justify-center">
-                <div className='flex flex-col items-center justify-center h-full'>
-                    <TypeAnimation
-                        sequence={[
-                            "自主學習 Self-directed Learning",
-                            3000,
-                            "學習歷程 Learning Portfolio",
-                            3000,
-                        ]}
-                        speed={50}
-                        wrapper="span"
-                        cursor={true}
-                        repeat={Infinity}
-                        className="mx-auto font-press-start font-semibold text-h2 md:text-h1 lg:text-display mb-10 md:mb-20 text-center px-4"
+  const userRegisterMutation = useMutation(userRegister, {
+    onSuccess: (res) => {
+      localStorage.setItem('accessToken', res.data.accessToken);
+      localStorage.setItem('account', res.data.account);
+      localStorage.setItem('id', res.data.id);
+      if (res.data.class) localStorage.setItem('class', res.data.class);
+      if (res.data.seatNumber) localStorage.setItem('seatNumber', res.data.seatNumber);
+      setUserContext(prev => ({
+        ...prev,
+        account: res.data.account,
+        id: res.data.id,
+        accessToken: res.data.accessToken,
+        class: res.data.class,
+        seatNumber: res.data.seatNumber,
+      }));
+      navigate('/');
+      Swal.fire({ icon: 'success', title: '註冊成功！', text: '您已成功註冊！', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' });
+    },
+    onError: (err) => {
+      if (err.response?.status === 400 && err.response?.data?.message === '該用戶已存在，請嘗試其他用戶名稱。') {
+        Swal.fire({ icon: 'error', title: '註冊失敗', text: '該用戶已存在，請嘗試其他用戶名稱。', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' });
+      } else {
+        setError('帳號或密碼錯誤');
+        Swal.fire({ icon: 'error', title: '註冊失敗', text: '請檢查您的帳號或密碼！', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' });
+      }
+    }
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateInput()) {
+      track('REGISTER_SUBMIT', 'user', null, { account: userData.account, role: userData.role, timestamp: new Date().toISOString() });
+      userRegisterMutation.mutate(userData);
+    }
+  };
+
+  const inputClass = 'w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-gray-200 text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast';
+
+  return (
+    // 桌面：左右分欄 h-screen；手機：單欄全高可捲動
+    <div className="flex min-h-screen md:h-screen md:overflow-hidden">
+
+      {/* ── 左側：品牌面板（桌面才顯示，sticky） ── */}
+      <div className="hidden md:flex flex-col justify-between w-1/2 sticky top-0 h-screen overflow-hidden px-12 lg:px-16 py-10 bg-customgreen flex-shrink-0">
+        {/* 裝飾圓 */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-white/[0.07] pointer-events-none" />
+
+        {/* Logo */}
+        <div className="relative z-10 flex items-baseline gap-3">
+          <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
+          <span className="text-white/50 text-body-sm">Self-Directed Learning</span>
+        </div>
+
+        {/* 主文案 */}
+        <div className="relative z-10">
+          <h1 className="text-white font-bold leading-snug text-h1">
+            開始你的<br />探究之旅。
+          </h1>
+          <p className="text-white/70 text-body mt-4 leading-relaxed">
+            建立帳號後，即可使用任務看板、AI 教練與學習歷程等完整功能。
+          </p>
+          <div className="mt-8 flex flex-col gap-3">
+            {[
+              { icon: <MdGroups />, text: '加入你的班級專案' },
+              { icon: <MdSchool />, text: '與同學即時協作' },
+            ].map((b, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0 bg-white/20">
+                  {b.icon}
+                </div>
+                <span className="text-white/80 text-body-sm">{b.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 底部：返回登入 */}
+        <div className="relative z-10">
+          <p className="text-white/70 text-body">
+            已有帳號？
+            <Link to="/" className="text-white font-semibold ml-1 hover:underline">返回登入</Link>
+          </p>
+        </div>
+      </div>
+
+      {/* ── 右側：表單區（桌面內部捲動；手機全寬頁面捲動） ── */}
+      <div className="w-full md:w-1/2 md:h-screen md:overflow-y-auto bg-gray-50 flex flex-col">
+
+        {/* ── 手機版品牌頭部（桌面隱藏） ── */}
+        <div className="md:hidden bg-customgreen px-6 pt-10 pb-6 flex-shrink-0">
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
+            <span className="text-white/60 text-body-sm">Self-Directed Learning</span>
+          </div>
+          <p className="text-white/75 text-body-sm leading-relaxed">
+            建立帳號，開始你的自主探究之旅。
+          </p>
+        </div>
+
+        {/* ── 表單內容 ── */}
+        <div className="px-6 sm:px-10 md:px-8 lg:px-20 xl:px-28 py-8 md:py-10 flex-1">
+          <div className="w-full max-w-lg mx-auto">
+            <div className="mb-7">
+              <h2 className="text-h1 font-bold text-gray-900">建立帳號</h2>
+              <p className="text-body-sm text-gray-500 mt-1">填寫以下資訊完成註冊</p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
+              {/* 學校 */}
+              <div ref={schoolRef} className="relative">
+                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">學校</label>
+                <div className="relative">
+                  <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="輸入學校名稱或縣市搜尋"
+                    value={schoolSearch}
+                    onChange={e => {
+                      setSchoolSearch(e.target.value);
+                      setUserData(prev => ({ ...prev, school_id: '' }));
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => schoolSearch.trim() && setShowSuggestions(true)}
+                    className={inputClass}
+                    autoComplete="off"
+                  />
+                </div>
+                {showSuggestions && filteredSchools.length > 0 && (
+                  <ul className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto">
+                    {filteredSchools.map(school => (
+                      <li
+                        key={school.id}
+                        onMouseDown={() => handleSchoolSelect(school)}
+                        className="px-4 py-2.5 cursor-pointer hover:bg-customgreen/5 text-body-sm flex justify-between items-center"
+                      >
+                        <span>{school.name}</span>
+                        <span className="text-caption text-gray-400">{school.city}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {schoolSearch.trim() && !userData.school_id && filteredSchools.length === 0 && (
+                  <p className="text-caption text-gray-400 mt-1">查無符合的學校</p>
+                )}
+              </div>
+
+              {/* 姓名 */}
+              <div>
+                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">姓名</label>
+                <div className="relative">
+                  <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <input type="text" name="username" placeholder="請輸入姓名" onChange={handleChange} className={inputClass} required />
+                </div>
+              </div>
+
+              {/* 帳號 */}
+              <div>
+                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">帳號</label>
+                <div className="relative">
+                  <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <input type="text" name="account" placeholder="請輸入帳號（學號）" onChange={handleChange} className={inputClass} required />
+                </div>
+              </div>
+
+              {/* 電子郵件 */}
+              <div>
+                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">電子郵件</label>
+                <div className="relative">
+                  <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <input type="email" name="email" placeholder="請輸入電子郵件" onChange={handleChange} className={inputClass} required />
+                </div>
+              </div>
+
+              {/* 密碼 / 確認密碼（手機單欄，sm 以上並排） */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-body-sm font-medium text-gray-700 mb-1.5">密碼</label>
+                  <div className="relative">
+                    <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                    <input
+                      type={showPassword ? 'text' : 'password'} name="password"
+                      placeholder="至少 8 碼，含英數" minLength="6"
+                      onChange={handleChange} className={`${inputClass} pr-10`} required
                     />
-                    <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => !prev)}
+                      aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                    >
+                      {showPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
+                    </button>
+                  </div>
                 </div>
-            </div>
-            <div className="bg-white w-full md:max-w-md lg:max-w-full md:mx-auto md:w-1/2 xl:w-1/2 h-screen px-6 lg:px-16 xl:px-40 flex items-center justify-center">
-                <div className="bg-white w-full h-100 rounded-lg p-component-lg shadow-2xl">
-                    <h1 className="text-display font-bold mb-6 flex items-center justify-center">註冊</h1>
-                    <form className="mt-6">
-                        {/* 學校搜尋 */}
-                        <div ref={schoolRef} className="relative">
-                            <label className="block text-gray-700 text-body">學校</label>
-                            <input
-                                type="text"
-                                placeholder="輸入學校名稱或縣市搜尋，例如：建國、台北市"
-                                value={schoolSearch}
-                                onChange={e => {
-                                    setSchoolSearch(e.target.value);
-                                    setUserData(prev => ({ ...prev, school_id: '' }));
-                                    setShowSuggestions(true);
-                                }}
-                                onFocus={() => schoolSearch.trim() && setShowSuggestions(true)}
-                                className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
-                                autoComplete="off"
-                            />
-                            {showSuggestions && filteredSchools.length > 0 && (
-                                <ul className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
-                                    {filteredSchools.map(school => (
-                                        <li
-                                            key={school.id}
-                                            onMouseDown={() => handleSchoolSelect(school)}
-                                            className="px-4 py-2 cursor-pointer hover:bg-green-50 text-body-sm flex justify-between items-center"
-                                        >
-                                            <span>{school.name}</span>
-                                            <span className="text-caption text-gray-400">{school.city}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                            {schoolSearch.trim() && !userData.school_id && filteredSchools.length === 0 && (
-                                <p className="text-caption text-gray-400 mt-1">查無符合的學校</p>
-                            )}
-                        </div>
+                <div>
+                  <label className="block text-body-sm font-medium text-gray-700 mb-1.5">確認密碼</label>
+                  <div className="relative">
+                    <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword"
+                      placeholder="再輸入一次密碼" minLength="6"
+                      onChange={handleChange} className={`${inputClass} pr-10`} required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(prev => !prev)}
+                      aria-label={showConfirmPassword ? '隱藏密碼' : '顯示密碼'}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                    >
+                      {showConfirmPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-                        <div>
-                            <label className="block text-gray-700 text-body">名稱</label>
-                            <input type="text" name="username" placeholder="請輸入名稱" onChange={handleChange} className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-body">帳號</label>
-                            <input type="text" name="account" placeholder="請輸入帳號 (學號)" onChange={handleChange} className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-body">電子郵件</label>
-                            <input type="email" name="email" placeholder="請輸入電子郵件" onChange={handleChange} className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-body">密碼</label>
-                            <input type="password" name="password" placeholder="請輸入密碼 ( P + 身分證後4碼+生日後4碼 )" minLength="6" onChange={handleChange} className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
-                        </div>
-                        <div>
-                            <label className="block text-gray-700 text-body">確認密碼</label>
-                            <input type="password" name="confirmPassword" placeholder="請輸入確認密碼" minLength="6" onChange={handleChange} className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none" required />
-                            {error && <span className="text-caption text-red-600">{error}</span>}
-                        </div>
-                        {userData.role === 'student' && (
-                            <>
-                                <div>
-                                    <label className="block text-gray-700 text-body">班級</label>
-                                    <input
-                                        type="text"
-                                        name="class"
-                                        placeholder="請輸入班級（教師請跳到職位）"
-                                        value={userData.class}
-                                        onChange={handleChange}
-                                        className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-gray-700 text-body">座號</label>
-                                    <input
-                                        type="text"
-                                        name="seatNumber"
-                                        placeholder="請輸入座號（教師請跳到職位）"
-                                        value={userData.seatNumber}
-                                        onChange={handleChange}
-                                        className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
-                                    />
-                                </div>
-                            </>
-                        )}
-                        <div className="mt-4">
-                            <label className="block text-gray-700 text-body">職位</label>
-                            <select name="role" onChange={handleChange} className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-blue-500 focus:bg-white focus:outline-none" required>
-                                <option value="student">學生</option>
-                                <option value="teacher">教師</option>
-                            </select>
-                        </div>
-                        <button type="submit" onClick={handleSubmit} style={{ backgroundColor: "#5BA491" }} className="w-full block hover:bg-violet-400 focus:bg-violet-400 text-white font-semibold rounded-lg px-4 py-3 mt-6 text-body">註冊</button>
-                    </form>
-                    <p className="mt-8">
-                        已經有帳號了?
-                        <span style={{ color: "#5BA491" }} className="text-blue-500 hover:text-blue-700 font-semibold ml-2">
-                            <Link to="/">登入</Link>
-                        </span>
-                    </p>
+              {/* 身份 */}
+              <div>
+                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">身份</label>
+                <div className="relative">
+                  <FiBriefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <select name="role" onChange={handleChange} className={`${inputClass} appearance-none`} required>
+                    <option value="student">學生</option>
+                    <option value="teacher">教師</option>
+                  </select>
                 </div>
-            </div>
-        </section>
-    )
+              </div>
+
+              {/* 班級 / 座號（學生限定） */}
+              {userData.role === 'student' && (
+                <div className="grid grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-body-sm font-medium text-gray-700 mb-1.5">班級</label>
+                    <div className="relative">
+                      <MdGroups className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                      <input type="text" name="class" placeholder="例：301" value={userData.class} onChange={handleChange} className={inputClass} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-body-sm font-medium text-gray-700 mb-1.5">座號</label>
+                    <div className="relative">
+                      <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                      <input type="text" name="seatNumber" placeholder="例：15" value={userData.seatNumber} onChange={handleChange} className={inputClass} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 錯誤訊息 */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                  <p className="text-body-sm text-red-600">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={userRegisterMutation.isLoading}
+                className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-xl py-3 text-body bg-customgreen hover:bg-customgreen/90 transition-colors duration-fast disabled:opacity-60 mt-1"
+              >
+                {userRegisterMutation.isLoading ? '註冊中...' : '建立帳號'}
+                {!userRegisterMutation.isLoading && <MdArrowForward className="text-lg" />}
+              </button>
+            </form>
+
+            {/* 手機版底部返回登入 */}
+            <p className="mt-6 text-body-sm text-gray-500 md:hidden text-center">
+              已有帳號？
+              <Link to="/" className="font-semibold ml-1 text-customgreen hover:underline">返回登入</Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

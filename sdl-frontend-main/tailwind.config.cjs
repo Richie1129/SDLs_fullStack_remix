@@ -21,10 +21,24 @@ module.exports = {
           '0%': { transform: 'translateY(100%)' },
           '100%': { transform: 'translateY(0)' },
         },
+        // 浮動效果（裝飾元素）
+        'float': {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%':       { transform: 'translateY(-14px)' },
+        },
+        // 上升淡入（英雄區塊登場動畫）
+        'rise': {
+          '0%':   { opacity: '0', transform: 'translateY(28px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
       },
       animation: {
-        'fade-in': 'fade-in 0.3s ease forwards',
-        'slide-up': 'slide-up 0.3s ease-out forwards',
+        'fade-in':    'fade-in 0.3s ease forwards',
+        'slide-up':   'slide-up 0.3s ease-out forwards',
+        'float':      'float 6s ease-in-out infinite',
+        'float-slow': 'float 9s ease-in-out infinite',
+        // 'both' = 延遲期間保持初始狀態，結束後停在終止狀態
+        'rise':       'rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
       },
 
       // ========================================

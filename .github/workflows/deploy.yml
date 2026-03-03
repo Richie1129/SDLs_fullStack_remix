@@ -3,7 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches:
-      - rwd-layout-clean
+      - master
 
 # 併發控制：同一分支同時只允許一個部署流程執行
 # cancel-in-progress: false → 排隊等待，不中斷進行中的 migration/部署

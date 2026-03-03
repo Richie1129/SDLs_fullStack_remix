@@ -85,7 +85,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Suspense fallback={<RouteFallback />}>
-        <RouterProvider router={router} />
+        <RouterProvider router={router} future={{ v7_startTransition: true }} />
       </Suspense>
     </AuthProvider>
   )
