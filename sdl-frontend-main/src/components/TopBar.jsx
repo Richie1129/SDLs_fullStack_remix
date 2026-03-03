@@ -196,12 +196,12 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
         <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-h2">
           <img src="/SDLS_LOGO_GEMINI.png" alt="Logo" className="h-14 w-auto" />
         </Link>
-        <div className="flex items-center flex-shrink-0 gap-1">
+        <div className="flex items-center flex-shrink-0 gap-3">
           {/* 跨班觀摩按鈕 - 只有教師可見 */}
           {role === "teacher" && (
             <button
               onClick={() => navigate("/observation")}
-              className="flex items-center space-x-1 mr-3 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-body-sm font-semibold transition-colors duration-fast whitespace-nowrap"
+              className="flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-body-sm font-semibold transition-colors duration-fast whitespace-nowrap"
               title="跨班專案觀摩"
             >
               <Eye className="h-4 w-4" />
@@ -211,7 +211,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           
           <div className="relative">
             <div
-              className="font-bold cursor-pointer p-1 mr-1 rounded-lg mx-1 sm:mx-3 hover:bg-gray-100 transition-colors duration-fast flex items-center gap-1 whitespace-nowrap max-w-[6rem] sm:max-w-none truncate"
+              className="font-bold cursor-pointer p-1 rounded-lg hover:bg-gray-100 transition-colors duration-fast flex items-center gap-1 whitespace-nowrap max-w-[6rem] sm:max-w-none truncate"
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
               title="用戶選單"
             >
@@ -244,7 +244,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           </div>
           {/* 移除 dashboard icon 按鈕 */}
           <Announcement projectId={projectId || 'all'} role={role} projectList={projectList} />
-          <button onClick={handleLogout} className="ml-1 sm:ml-3 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md px-2 py-1 sm:p-component-xs font-semibold whitespace-nowrap">
+          <button onClick={handleLogout} className="bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-md px-2 py-1 sm:p-component-xs font-semibold whitespace-nowrap">
             登出
           </button>
         </div>
