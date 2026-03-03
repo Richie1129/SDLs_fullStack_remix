@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import { useQueryClient, useQuery } from 'react-query';
 import { getProject } from '../../api/project';
 import { getProjectUser } from '../../api/users';
+import { postClientAuditEvent } from '../../api/audit';
 import { socket } from '../../utils/socket';
 import DraggableImage from "./components/DraggableImage";
 import useObservationMode from '../../hooks/useObservationMode';
@@ -17,8 +18,11 @@ import KanbanErrorBoundary from '../../components/ErrorBoundary/KanbanErrorBound
 import { useKanbanData } from './hooks/useKanbanData';
 import { useKanbanView } from './hooks/useKanbanView';
 import KanbanColumn from './components/KanbanColumn';
+import KanbanOnboarding from './components/KanbanOnboarding';
+import ExampleTasksDialog from './components/ExampleTasksDialog';
 import { PHASE_TEMPLATES, PHASES, COLUMN_ICON_MAP } from '../../config/kanbanTemplates';
 import { setStageInfo } from '../../utils/authUtils';
+import { FiHelpCircle } from 'react-icons/fi';
 
 /**
  * Kanban Component (Refactored)
@@ -54,6 +58,9 @@ export default function Kanban() {
   const [selectedTemplatePhase, setSelectedTemplatePhase] = useState(null);
   const [selectedTemplateColumns, setSelectedTemplateColumns] = useState([]);
   const [showMemberFilter, setShowMemberFilter] = useState(false); // 控制成員篩選下拉選單
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [pendingExampleTasks, setPendingExampleTasks] = useState(null);
+  const [pendingColumns, setPendingColumns] = useState(null); // 等待使用者選完任務後才建立的欄位
   
   // --- Stage Management ---
   const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
@@ -102,6 +109,18 @@ export default function Kanban() {
     return Array.from(assignees.values());
   }, [projectMembers, kanbanData]);
 
+  // --- Effects ---
+
+  // 第一次進入專案時顯示新手導覽（資料載入完成後）
+  useEffect(() => {
+    if (!kanbanIsLoading && projectId) {
+      const hasOnboarded = localStorage.getItem(`kanban_onboarded_${projectId}`);
+      if (!hasOnboarded) {
+        setShowOnboarding(true);
+      }
+    }
+  }, [kanbanIsLoading, projectId]);
+
   // --- Effects (Stage Sync) ---
   useEffect(() => {
     const onTaskSubmitted = async (_payload) => {
@@ -142,6 +161,15 @@ export default function Kanban() {
     const template = PHASE_TEMPLATES[phaseKey];
     if (!template) return;
 
+    // Audit log: 選擇階段範例
+    postClientAuditEvent({
+      action: 'KANBAN_TEMPLATE_PHASE_SELECT',
+      targetType: 'project',
+      targetId: projectId,
+      projectId,
+      metadata: { phase: phaseKey, label: template.label },
+    }).catch((e) => console.warn('KANBAN_TEMPLATE_PHASE_SELECT audit 紀錄失敗（略過）', e));
+
     // Open Selection Modal
     setSelectedTemplatePhase(phaseKey);
     // Default select all columns
@@ -149,25 +177,123 @@ export default function Kanban() {
     setShowTemplateMenu(false);
   };
 
-  const handleConfirmTemplate = () => {
+  const handleConfirmTemplate = async () => {
     if (!selectedTemplatePhase) return;
     const template = PHASE_TEMPLATES[selectedTemplatePhase];
-    
-    // Filter columns based on selection
+
     const columnsToAdd = template.columns.filter((_, idx) => selectedTemplateColumns.includes(idx));
-    
-    if (columnsToAdd.length > 0) {
+
+    // 先關閉選擇 Modal
+    setSelectedTemplatePhase(null);
+    setSelectedTemplateColumns([]);
+
+    if (columnsToAdd.length === 0) return;
+
+    // 若有範例任務，先顯示任務選擇對話框，等使用者選完後再建立欄位
+    const hasExampleTasks = columnsToAdd.some(col => col.exampleTasks?.length > 0);
+
+    if (hasExampleTasks && actions.addPhaseTemplate) {
+      // 暫存欄位，等使用者選完任務後再建立
+      setPendingColumns(columnsToAdd);
+      // 使用 index 作為暫時 ID，讓對話框可以預覽任務
+      const previewTasks = columnsToAdd
+        .map((col, idx) => ({
+          columnId: idx,
+          columnName: col.title,
+          tasks: col.exampleTasks || []
+        }))
+        .filter(col => col.tasks.length > 0);
+      setPendingExampleTasks(previewTasks);
+    } else {
+      // 無範例任務，直接建立欄位
       if (actions.addPhaseTemplate) {
-        actions.addPhaseTemplate(columnsToAdd);
+        await actions.addPhaseTemplate(columnsToAdd);
       } else {
-        // Fallback
         columnsToAdd.forEach(col => actions.addColumn(col.title));
       }
     }
-    
-    // Reset
-    setSelectedTemplatePhase(null);
-    setSelectedTemplateColumns([]);
+  };
+
+  const handleLoadExampleTasks = async (filteredTasks) => {
+    const columnsToCreate = pendingColumns;
+    setPendingExampleTasks(null);
+    setPendingColumns(null);
+
+    // Audit log: 使用範例新增（欄位 + 卡片）
+    const totalTasks = filteredTasks?.reduce((s, c) => s + c.tasks.length, 0) ?? 0;
+    postClientAuditEvent({
+      action: 'KANBAN_EXAMPLE_CONFIRM',
+      targetType: 'project',
+      targetId: projectId,
+      projectId,
+      metadata: {
+        columnCount: columnsToCreate?.length ?? 0,
+        taskCount: totalTasks,
+        type: 'columns_and_cards',
+      },
+    }).catch((e) => console.warn('KANBAN_EXAMPLE_CONFIRM audit 紀錄失敗（略過）', e));
+
+    // 先建立欄位，取得真實 column ID
+    const createdColumns = columnsToCreate
+      ? await actions.addPhaseTemplate(columnsToCreate)
+      : null;
+
+    // 將使用者選擇的任務對應到真實 column ID（依照 index 對應）
+    if (filteredTasks && filteredTasks.length > 0 && createdColumns) {
+      const realTasks = filteredTasks
+        .map(col => {
+          const realColumn = createdColumns[col.columnId]; // columnId 即原始 index
+          return realColumn ? { ...col, columnId: realColumn.id } : null;
+        })
+        .filter(Boolean)
+        .filter(col => col.tasks.length > 0);
+
+      if (realTasks.length > 0) {
+        await actions.bulkAddCards(realTasks);
+      }
+    }
+  };
+
+  const handleSkipExampleTasks = async () => {
+    const columnsToCreate = pendingColumns;
+    setPendingExampleTasks(null);
+    setPendingColumns(null);
+
+    // Audit log: 使用範例新增（僅欄位，跳過卡片）
+    postClientAuditEvent({
+      action: 'KANBAN_EXAMPLE_SKIP_TASKS',
+      targetType: 'project',
+      targetId: projectId,
+      projectId,
+      metadata: {
+        columnCount: columnsToCreate?.length ?? 0,
+        type: 'columns_only',
+      },
+    }).catch((e) => console.warn('KANBAN_EXAMPLE_SKIP_TASKS audit 紀錄失敗（略過）', e));
+
+    // 使用者點「先自己開始」：跳過任務選擇，但仍需建立欄位
+    if (columnsToCreate) {
+      if (actions.addPhaseTemplate) {
+        await actions.addPhaseTemplate(columnsToCreate);
+      } else {
+        columnsToCreate.forEach(col => actions.addColumn(col.title));
+      }
+    }
+  };
+
+  const handleCancelExampleTasks = () => {
+    // Audit log: 取消範例導入
+    postClientAuditEvent({
+      action: 'KANBAN_EXAMPLE_CANCEL',
+      targetType: 'project',
+      targetId: projectId,
+      projectId,
+      metadata: { type: 'cancelled' },
+    }).catch((e) => console.warn('KANBAN_EXAMPLE_CANCEL audit 紀錄失敗（略過）', e));
+
+    // 使用者點右上角 X：完全取消，不建立欄位也不新增任務
+    setPendingExampleTasks(null);
+    setPendingColumns(null);
   };
 
   const toggleTemplateColumnSelection = (index) => {
@@ -286,8 +412,26 @@ export default function Kanban() {
       onNetworkError={handleNetworkError}
       onDataReload={handleDataReload}
     >
+      {/* 新手導覽 */}
+      {showOnboarding && (
+        <KanbanOnboarding
+          projectId={projectId}
+          onClose={() => setShowOnboarding(false)}
+        />
+      )}
+
+      {/* 範例任務載入確認 */}
+      {pendingExampleTasks && (
+        <ExampleTasksDialog
+          pendingExampleTasks={pendingExampleTasks}
+          onConfirm={handleLoadExampleTasks}
+          onSkip={handleSkipExampleTasks}
+          onClose={handleCancelExampleTasks}
+        />
+      )}
+
       <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
-      
+
       {/* Template Selection Modal */}
       {selectedTemplatePhase && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50">
@@ -356,7 +500,12 @@ export default function Kanban() {
                     : 'bg-[#5BA491] hover:bg-[#5BA491]/90'
                 }`}
               >
-                確認新增
+                {selectedTemplatePhase &&
+                PHASE_TEMPLATES[selectedTemplatePhase].columns
+                  .filter((_, idx) => selectedTemplateColumns.includes(idx))
+                  .some(col => col.exampleTasks?.length > 0)
+                  ? '下一步：選擇任務'
+                  : '新增欄位'}
               </button>
             </div>
           </div>
@@ -606,6 +755,26 @@ export default function Kanban() {
                 清除篩選
               </button>
             )}
+
+            {/* 導覽重播按鈕 */}
+            {!isObservationMode && (
+              <button
+                onClick={() => {
+                  setShowOnboarding(true);
+                  postClientAuditEvent({
+                    action: 'KANBAN_TOUR_REPLAY',
+                    targetType: 'project',
+                    targetId: projectId,
+                    projectId,
+                    metadata: { page: 'kanban' },
+                  }).catch((e) => console.warn('Kanban 導覽重播 audit 紀錄失敗（略過）', e));
+                }}
+                className="p-2 text-gray-400 hover:text-customgreen hover:bg-customgreen/10 rounded-lg transition-colors duration-fast"
+                title="重播看板導覽"
+              >
+                <FiHelpCircle size={18} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -647,7 +816,19 @@ export default function Kanban() {
                         data-track-action="KANBAN_TEMPLATE_MENU_TOGGLE"
                         data-track-type="kanban"
                         className="w-full h-full bg-white border-2 border-dashed border-gray-300 hover:border-[#5BA491] hover:text-[#5BA491] text-gray-500 flex flex-col items-center justify-center rounded-lg p-component-base transition-colors"
-                        onClick={() => setShowTemplateMenu(!showTemplateMenu)}
+                        onClick={() => {
+                          const opening = !showTemplateMenu;
+                          setShowTemplateMenu(opening);
+                          if (opening) {
+                            postClientAuditEvent({
+                              action: 'KANBAN_EXAMPLE_MENU_OPEN',
+                              targetType: 'project',
+                              targetId: projectId,
+                              projectId,
+                              metadata: { source: '從範例新增' },
+                            }).catch((e) => console.warn('KANBAN_EXAMPLE_MENU_OPEN audit 紀錄失敗（略過）', e));
+                          }
+                        }}
                       >
                         <span className="text-h2 mb-1">+</span>
                         <b className="text-body-sm md:text-body">

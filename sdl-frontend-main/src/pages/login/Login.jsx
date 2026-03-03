@@ -496,12 +496,27 @@ export default function Login() {
           Footer
       ════════════════════════════════════════════════════ */}
       <footer className="py-6 px-6 bg-gray-900 text-center">
-        <p className="text-gray-500 text-body-sm">
-          &copy; 2025 SDL Platform &middot; 自主探究學習系統
-          <Link to="/register" className="ml-3 text-customgreen hover:opacity-80 transition-opacity duration-fast">
+        <div className="flex flex-col items-center gap-2">
+          {/* 校徽 + 機構名稱 */}
+          <div className="flex items-center gap-2">
+            <img
+              src="/NCU_logo.jpg"
+              alt="國立中央大學校徽"
+              className="w-7 h-7 object-contain rounded-full"
+            />
+            <span className="text-gray-400 text-caption">
+              國立中央大學 網路學習科技研究所 WURET Team
+            </span>
+          </div>
+          {/* 版權 */}
+          <p className="text-gray-600 text-caption">
+            &copy; 2026 SDL Platform &middot; 自主探究學習系統
+          </p>
+          {/* 申請帳號 */}
+          <Link to="/register" className="text-caption text-customgreen hover:opacity-80 transition-opacity duration-fast">
             申請帳號
           </Link>
-        </p>
+        </div>
       </footer>
 
       {/* ── 浮動回頂部按鈕 ── */}

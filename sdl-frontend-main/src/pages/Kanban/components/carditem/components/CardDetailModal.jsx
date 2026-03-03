@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useQueryClient } from 'react-query';
 import Swal from 'sweetalert2';
 import toast from 'react-hot-toast';
@@ -53,8 +53,25 @@ export function CardDetailModal({
 }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
+  const titleRef = useRef(null);
+  const contentRef = useRef(null);
   const [assignMemberModalopen, setAssignMemberModalOpen] = useState(false);
   const [showChangeHistory, setShowChangeHistory] = useState(false);
+
+  // 自動調整輸入框高度
+  const autoResize = useCallback((el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, []);
+
+  useEffect(() => {
+    autoResize(titleRef.current);
+  }, [cardData.title, autoResize, open]);
+
+  useEffect(() => {
+    autoResize(contentRef.current);
+  }, [cardData.content, autoResize, open]);
 
   // 圖片查看器狀態
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
@@ -235,21 +252,29 @@ export function CardDetailModal({
             {!showChangeHistory && (
               <>
                 <div className='flex justify-between mb-4'>
-                  <input
-                    className={`rounded outline-none ring-2 p-component-xs ring-customgreen w-full ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    type="text"
+                  <textarea
+                    ref={titleRef}
+                    className={`rounded outline-none ring-2 p-component-xs ring-customgreen w-full resize-none overflow-hidden leading-normal ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    rows={1}
                     placeholder="標題"
                     value={cardData.title}
-                    onChange={permissions.canEdit ? (e) => setCardData({ ...cardData, title: e.target.value }) : undefined}
+                    onChange={permissions.canEdit ? (e) => {
+                      setCardData({ ...cardData, title: e.target.value });
+                      autoResize(e.target);
+                    } : undefined}
                     readOnly={!permissions.canEdit}
                   />
                 </div>
                 <textarea
-                  className={`rounded outline-none ring-2 ring-customgreen w-full p-component-xs mb-4 ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  ref={contentRef}
+                  className={`rounded outline-none ring-2 ring-customgreen w-full p-component-xs mb-4 resize-none overflow-hidden leading-normal ${!permissions.canEdit ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   rows={3}
                   placeholder="內容"
                   value={cardData.content}
-                  onChange={permissions.canEdit ? (e) => setCardData({ ...cardData, content: e.target.value }) : undefined}
+                  onChange={permissions.canEdit ? (e) => {
+                    setCardData({ ...cardData, content: e.target.value });
+                    autoResize(e.target);
+                  } : undefined}
                   readOnly={!permissions.canEdit}
                 />
 

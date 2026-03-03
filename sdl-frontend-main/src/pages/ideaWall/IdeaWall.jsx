@@ -8,6 +8,7 @@ import { FiHelpCircle } from 'react-icons/fi';
 
 // API
 import { getIdeaWall, createIdeaWall } from '../../api/ideaWall';
+import { postClientAuditEvent } from '../../api/audit';
 import { getProjectNodes, getProjectNodeRelation } from '../../api/nodes';
 import { getProject } from '../../api/project';
 import { getNodeChangeLogs } from '../../api/kanban';
@@ -459,7 +460,16 @@ export default function IdeaWall() {
                         />
                     </button>
                     <button
-                        onClick={() => setShowOnboarding(true)}
+                        onClick={() => {
+                            setShowOnboarding(true);
+                            postClientAuditEvent({
+                                action: 'IDEA_WALL_TOUR_REPLAY',
+                                targetType: 'project',
+                                targetId: projectId,
+                                projectId,
+                                metadata: { page: 'idea_wall' },
+                            }).catch((e) => console.warn('想法牆導覽重播 audit 紀錄失敗（略過）', e));
+                        }}
                         className="p-2 mb-9 bg-white/80 backdrop-blur-sm text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg shadow-sm border border-gray-200 transition-colors duration-fast"
                         title="重播想法牆導覽"
                     >

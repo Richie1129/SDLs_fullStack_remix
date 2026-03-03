@@ -319,6 +319,73 @@ export const useKanbanData = (projectId) => {
 
     console.log(`✅ Template creation completed. ${createdColumns.length}/${columnsToAdd.length} columns created.`);
 
+    // 等待資料同步完成，確保 queryClient 中有真實 column ID
+    await queryClient.refetchQueries(['kanbanDatas', projectId]);
+
+    return createdColumns;
+
+  }, [kanbanData, projectId, queryClient]);
+
+  /**
+   * 批次新增卡片到指定欄位，用於載入範例任務。
+   * @param {Array} tasksPerColumn - [{columnId, columnName, tasks: [{title, content}]}]
+   */
+  const bulkAddCards = useCallback(async (tasksPerColumn) => {
+    const username = getCurrentUsername();
+    const userId = getCurrentUserId();
+
+    // 從 query cache 取得最新資料（包含剛建立的真實 column ID）
+    const currentData = queryClient.getQueryData(['kanbanDatas', projectId]) || kanbanData;
+
+    // 1. 樂觀更新：一次把所有任務加入本地狀態
+    let updatedData = currentData.map(col => ({ ...col, task: [...(col.task || [])] }));
+
+    for (const { columnId, tasks } of tasksPerColumn) {
+      const colIdx = updatedData.findIndex(col => col.id === columnId);
+      if (colIdx === -1) continue;
+
+      const optimisticTasks = tasks.map((task, i) => ({
+        id: `temp-bulk-${Date.now()}-${colIdx}-${i}`,
+        title: task.title,
+        content: task.content || '',
+        labels: [],
+        assignees: [],
+        createdAt: new Date().toISOString(),
+        createdBy: username
+      }));
+
+      updatedData[colIdx] = {
+        ...updatedData[colIdx],
+        task: [...updatedData[colIdx].task, ...optimisticTasks]
+      };
+    }
+
+    setKanbanData(updatedData);
+    queryClient.setQueryData(['kanbanDatas', projectId], updatedData);
+
+    // 2. 依序發送 socket 事件，避免伺服器過載
+    for (const { columnId, tasks } of tasksPerColumn) {
+      const columnIndex = currentData.findIndex(col => col.id === columnId);
+      if (columnIndex === -1) continue;
+
+      for (const task of tasks) {
+        socket.emit('taskItemCreated', {
+          eventType: 'taskItemCreated',
+          selectedcolumn: columnIndex,
+          item: {
+            title: task.title,
+            content: task.content || '',
+            labels: [],
+            assignees: []
+          },
+          kanbanData: currentData,
+          projectId,
+          user: { username, id: userId || null }
+        });
+        // 短暫延遲，避免伺服器端競態
+        await new Promise(resolve => setTimeout(resolve, 80));
+      }
+    }
   }, [kanbanData, projectId, queryClient]);
 
   const addColumn = useCallback((name) => {
@@ -462,6 +529,7 @@ export const useKanbanData = (projectId) => {
       addCard,
       addColumn,
       addPhaseTemplate,
+      bulkAddCards,
       deleteColumn,
       reorderColumn,
       moveCard
