@@ -9,12 +9,12 @@ import React from 'react';
  */
 export default function KnowledgeForumScaffolds({ currentContent, onInsert }) {
     const scaffolds = [
-        { text: "我的理論：", label: "我的理論", color: "bg-blue-100 hover:bg-blue-200" },
-        { text: "我需要了解：", label: "我需要了解", color: "bg-green-100 hover:bg-green-200" },
-        { text: "新資訊：", label: "新資訊", color: "bg-yellow-100 hover:bg-yellow-200" },
-        { text: "這種理論無法解釋：", label: "這種理論無法解釋", color: "bg-red-100 hover:bg-red-200" },
-        { text: "更好的理論：", label: "更好的理論", color: "bg-purple-100 hover:bg-purple-200" },
-        { text: "整合我們的知識：", label: "整合我們的知識", color: "bg-pink-100 hover:bg-pink-200" }
+        { text: "我的理論：", label: "我的理論", shortLabel: "我的理論", color: "bg-blue-100 hover:bg-blue-200" },
+        { text: "我需要了解：", label: "我需要了解", shortLabel: "需了解", color: "bg-green-100 hover:bg-green-200" },
+        { text: "新資訊：", label: "新資訊", shortLabel: "新資訊", color: "bg-yellow-100 hover:bg-yellow-200" },
+        { text: "這訮理論無法解釋：", label: "這訮理論無法解釋", shortLabel: "無法解釋", color: "bg-red-100 hover:bg-red-200" },
+        { text: "更好的理論：", label: "更好的理論", shortLabel: "更好理論", color: "bg-purple-100 hover:bg-purple-200" },
+        { text: "整合我們的知識：", label: "整合我們的知識", shortLabel: "整合知識", color: "bg-pink-100 hover:bg-pink-200" }
     ];
 
     return (
@@ -26,9 +26,10 @@ export default function KnowledgeForumScaffolds({ currentContent, onInsert }) {
                         key={scaffold.text}
                         type="button"
                         onClick={() => onInsert(currentContent + scaffold.text)}
-                        className={`px-3 py-1 ${scaffold.color} rounded text-body-sm transition-colors`}
+                        className={`px-2 py-1 ${scaffold.color} rounded text-caption sm:text-body-sm transition-colors`}
                     >
-                        {scaffold.label}
+                        <span className="sm:hidden">{scaffold.shortLabel}</span>
+                        <span className="hidden sm:inline">{scaffold.label}</span>
                     </button>
                 ))}
             </div>

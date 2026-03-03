@@ -20,7 +20,7 @@ export default function CreateNodeModal({
 
     return (
         <Modal open={open} onClose={onClose} opacity={false} position={"justify-center items-center"}>
-            <div className='flex flex-col p-component-sm'>
+            <div className='flex flex-col'>
                 <h3 className=' font-bold text-body mb-3'>建立想法</h3>
 
                 {/* AI 建議參考（來自 KB Coach 建議行動） */}
@@ -67,13 +67,13 @@ export default function CreateNodeModal({
                     onChange={onChange}
                 />
             </div>
-            <div className='flex justify-end m-2'>
+            <div className='flex gap-2 mt-4'>
                 <button 
                     data-track
                     data-track-action="IDEAWALL_NODE_CREATE_CANCEL"
                     data-track-type="node"
                     onClick={onClose} 
-                    className="mx-auto w-full h-7 mb-2 bg-customgray rounded font-bold text-caption sm:text-body-sm text-black/60 mr-2"
+                    className="flex-1 h-10 bg-customgray rounded font-bold text-body-sm text-black/60"
                 >
                     取消
                 </button>
@@ -83,7 +83,7 @@ export default function CreateNodeModal({
                     data-track-type="node"
                     onClick={onSubmit} 
                     style={{ backgroundColor: "#5BA491" }} 
-                    className="mx-auto w-full h-7 mb-2 rounded font-bold text-caption sm:text-body-sm text-white"
+                    className="flex-1 h-10 rounded font-bold text-body-sm text-white"
                 >
                     新增
                 </button>

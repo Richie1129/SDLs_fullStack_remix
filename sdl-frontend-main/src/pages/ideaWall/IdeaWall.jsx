@@ -1,9 +1,10 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import toast, { Toaster } from 'react-hot-toast';
 import Lottie from "lottie-react";
 import { HiLink, HiX } from 'react-icons/hi';
+import { FiHelpCircle } from 'react-icons/fi';
 
 // API
 import { getIdeaWall, createIdeaWall } from '../../api/ideaWall';
@@ -13,13 +14,14 @@ import { getNodeChangeLogs } from '../../api/kanban';
 
 // Components
 import Modal from '../../components/Modal';
-import Timer from './components/Timer';
+// import Timer from './components/Timer';
 import KB_Coach from './components/KB_Coach';
 // import OrchestratorMonitor from './components/OrchestratorMonitor';
 import IdeaWallChatPanel from '../../components/IdeaWall/IdeaWallChatPanel';
 import CreateNodeModal from './components/modals/CreateNodeModal';
 import UpdateNodeModal from './components/modals/UpdateNodeModal';
 import CreateOptionMenu from './components/modals/CreateOptionMenu';
+import IdeaWallOnboarding from './components/IdeaWallOnboarding';
 
 // Hooks
 import { useIdeaWallState } from './hooks/useIdeaWallState';
@@ -47,6 +49,17 @@ export default function IdeaWall() {
 
     // 使用狀態管理 hook
     const state = useIdeaWallState(projectId);
+
+    // 新手導覽
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    useEffect(() => {
+        if (projectId) {
+            const hasOnboarded = localStorage.getItem(`ideawall_onboarded_${projectId}`);
+            if (!hasOnboarded) {
+                setShowOnboarding(true);
+            }
+        }
+    }, [projectId]);
 
     // 計算節點建立者顯示名稱
     const getDisplayNodeOwnerName = (owner) => {
@@ -305,6 +318,14 @@ export default function IdeaWall() {
 
     return (
         <div className="h-full w-full relative">
+            {/* 新手導覽 */}
+            {showOnboarding && (
+                <IdeaWallOnboarding
+                    projectId={projectId}
+                    onClose={() => setShowOnboarding(false)}
+                />
+            )}
+
             <div ref={container} className="h-full w-full" />
 
             {/* 連線模式提示 UI */}
@@ -406,9 +427,6 @@ export default function IdeaWall() {
                 </Modal>
             )}
 
-            {/* Timer */}
-            <Timer />
-
             {/* Phase 2 Orchestrator 監控面板 */}
             {/* {!isObservationMode && state.ideaWallInfo?.id && (
                 <div className="absolute top-4 right-4 w-80 z-40">
@@ -419,25 +437,35 @@ export default function IdeaWall() {
                 </div>
             )} */}
 
-            {/* 新增節點按鈕 */}
+            {/* 計時器 + 新增節點按鈕 + 導覽重播按鈕 */}
             {!isObservationMode && (
-                <button
-                    data-track
-                    data-track-action="IDEAWALL_NODE_CREATE_OPEN"
-                    data-track-type="node"
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
-                    onClick={handleCreateIdeaClick}
-                    aria-label="新增節點"
-                    className={`absolute bottom-4 right-4 sm:bottom-6 sm:right-6 flex items-center justify-center text-h2 transition-opacity duration-normal z-50 ${state.hovering ? "opacity-80" : "opacity-100"}`}
-                >
-                    <Lottie
-                        className="w-28"
-                        animationData={Adding_icon}
-                        loop={false}
-                        autoplay={false}
-                    />
-                </button>
+                <div className="fixed bottom-4 right-4 flex flex-row items-end gap-2 z-50">
+                    {/* <Timer /> */}
+                    <button
+                        data-track
+                        data-track-action="IDEAWALL_NODE_CREATE_OPEN"
+                        data-track-type="node"
+                        onMouseEnter={handleMouseEnter}
+                        onMouseLeave={handleMouseLeave}
+                        onClick={handleCreateIdeaClick}
+                        aria-label="新增節點"
+                        className={`flex items-center justify-center transition-opacity duration-normal ${state.hovering ? "opacity-80" : "opacity-100"}`}
+                    >
+                        <Lottie
+                            className="w-20 sm:w-28"
+                            animationData={Adding_icon}
+                            loop={false}
+                            autoplay={false}
+                        />
+                    </button>
+                    <button
+                        onClick={() => setShowOnboarding(true)}
+                        className="p-2 mb-9 bg-white/80 backdrop-blur-sm text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg shadow-sm border border-gray-200 transition-colors duration-fast"
+                        title="重播想法牆導覽"
+                    >
+                        <FiHelpCircle size={18} />
+                    </button>
+                </div>
             )}
 
             {/* Phase 2: IdeaWall Chat Panel */}

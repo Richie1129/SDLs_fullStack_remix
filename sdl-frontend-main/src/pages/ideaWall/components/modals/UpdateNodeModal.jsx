@@ -93,7 +93,7 @@ export default function UpdateNodeModal({
 
                 {/* 編輯節點內容 */}
                 {!showNodeChangeHistory && (
-                    <div className='flex flex-col p-component-sm'>
+                    <div className='flex flex-col'>
                         <h3 className=' font-bold text-body mb-3'>檢視便利貼</h3>
                         <p className=' font-bold text-body mb-3'>標題</p>
                         <input 
@@ -261,9 +261,9 @@ export default function UpdateNodeModal({
             {!showNodeChangeHistory ? (
                 <div className='flex flex-col pt-stack-sm border-t border-gray-200'>
                     {/* 操作按鈕區 */}
-                    <div className='flex items-center justify-between px-component-sm pb-component-sm'>
-                        {/* 左側：次要操作 */}
-                        <div className='flex items-center gap-stack-xs'>
+                    <div className='flex flex-wrap gap-2 items-center pt-stack-sm border-t border-gray-200 px-component-sm pb-component-sm'>
+                        {/* 次要操作 */}
+                        <div className='flex flex-wrap items-center gap-2 flex-1'>
                             {!isObservationMode && isOwner && (
                                 <button 
                                     data-track
@@ -312,8 +312,8 @@ export default function UpdateNodeModal({
                             )}
                         </div>
 
-                        {/* 右側：主要操作 */}
-                        <div className='flex items-center gap-stack-xs'>
+                        {/* 主要操作 */}
+                        <div className='flex items-center gap-2 ml-auto'>
                             <button 
                                 data-track
                                 data-track-action="IDEAWALL_NODE_CLOSE"

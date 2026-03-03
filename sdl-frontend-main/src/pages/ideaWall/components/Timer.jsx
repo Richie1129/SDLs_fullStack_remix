@@ -92,7 +92,7 @@ const Timer = () => {
     setHovering(false);
   };
   return (
-    <div className="fixed bottom-32 right-9 flex flex-col items-center justify-center">
+    <div className="flex flex-col items-center justify-center">
       <div className="relative z-10"> {/* SVG will be on top */}
         {isActive && (
           <>
@@ -124,9 +124,14 @@ const Timer = () => {
           </>
         )}
       </div>
-      <button onClick={handleSetTime} className="relative z-0 transition-opacity duration-normal hover:opacity-80">
+      <button
+        onClick={handleSetTime}
+        aria-label="設定學習計時器"
+        title="設定學習計時器"
+        className="relative z-0 flex items-center justify-center w-20 h-20 cursor-pointer transition-opacity duration-normal hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-customgreen focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+      >
         <Lottie
-          className="w-20"
+          className="w-20 h-20"
           animationData={TimerIcon}
           loop={false}
           autoplay={false}

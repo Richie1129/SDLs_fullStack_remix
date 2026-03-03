@@ -10,7 +10,7 @@ import { getStageInfo, setStageInfo } from '../utils/authUtils';
 
 const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     const [animationClass, setAnimationClass] = useState('');
-    const [dialogContent, setDialogContent] = useState('嗨!有什麼能夠幫助你的嗎?');
+    const [dialogContent, setDialogContent] = useState('嗨！有什麼能夠幫助你的嗎？');
     const [showOptions, setShowOptions] = useState(true);
 
     // Option B: 四階段 SRL 循環（「歷程」階段目標已隱藏）
@@ -60,14 +60,14 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
 
 
     useEffect(() => {
-        setDisplayedContent(''); // 在开始打字前清空内容
+        setDisplayedContent(''); // 在打字前清空內容
         let charIndex = 0;
         const typeWriter = setInterval(() => {
             if (charIndex < dialogContent.length) {
                 const charToAdd = dialogContent[charIndex];
-                if (typeof charToAdd !== 'undefined') {  // 确保即将添加的字符不是 undefined
+                if (typeof charToAdd !== 'undefined') {  // 確保即將新增的字元不是 undefined
                     setDisplayedContent((prev) => prev + charToAdd);
-                    // console.log("Adding:", charToAdd);  // 输出当前添加的字符，帮助诊断问题
+                    // console.log("Adding:", charToAdd);  // 輸出當前新增的字元，協助診斷問題
                 } else {
                     console.error("Attempted to add undefined character at index", charIndex);
                 }
@@ -75,10 +75,10 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
             } else {
                 clearInterval(typeWriter);
             }
-        }, 50); // 每50毫秒添加一个字符
-    
-        return () => clearInterval(typeWriter); // 清除定时器
-    }, [dialogContent]); // 依赖于dialogContent的变化
+        }, 50); // 每50毫秒新增一個字元
+
+        return () => clearInterval(typeWriter); // 清除計時器
+    }, [dialogContent]); // 依賴 dialogContent 的變化
 
     useEffect(() => {
         if (isOpen) {
@@ -91,16 +91,16 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
             .dialog-box::after {
                 content: '';
                 position: absolute;
-                bottom: -30px; 
-                right: 28px; 
+                bottom: -30px;
+                right: 28px;
                 border-left: 13px solid transparent;
                 border-right: 13px solid transparent;
-                border-top: 30px solid #f1f5f9; 
+                border-top: 30px solid #f1f5f9;
             }
         `;
         document.head.appendChild(style);
 
-        // 组件卸载时移除样式
+        // 元件卸載時移除樣式
         return () => {
             document.head.removeChild(style);
         };
@@ -118,10 +118,10 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     };
 
     const resetDialog = () => {
-        setDialogContent('嗨!有什麼能夠幫助你的嗎?');
+        setDialogContent('嗨！有什麼能夠幫助你的嗎？');
         setShowOptions(true);
         onClose();
-        // setImageSrc('/robot.png'); 
+        // setImageSrc('/robot.png');
     };
 
 
@@ -130,7 +130,7 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
 
 
     return (
-        <div className={`absolute right-2 sm:right-4 lg:right-40 bottom-0 mb-16 sm:mb-20 lg:mb-28 rounded-lg transform transition-all duration-slow ease-in-out ${animationClass} shadow-2xl dialog-box max-w-xs sm:max-w-sm lg:max-w-md`}>
+        <div className={`absolute right-2 sm:right-4 lg:right-8 bottom-full mb-2 rounded-lg transform transition-all duration-slow ease-in-out ${animationClass} shadow-2xl dialog-box max-w-xs sm:max-w-sm lg:max-w-md z-50`}>
             <div className="bg-slate-100 p-component-sm sm:p-component-base rounded-lg font-bold">
                 <p className="text-caption sm:text-body-sm lg:text-body">{displayedContent}</p>
                 {showOptions && (
@@ -140,7 +140,7 @@ const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
                     </>
                 )}
                 {!showOptions && (
-                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-caption sm:text-body-sm">我了解了!</button>
+                    <button onClick={resetDialog} className="bg-[#5BA491] text-white w-full rounded-lg my-2 sm:my-3 py-1 sm:py-2 text-caption sm:text-body-sm">我了解了！</button>
                 )}
             </div>
         </div>
@@ -175,7 +175,7 @@ export default function SubStageComponent() {
     const queryClient = useQueryClient();
     const { projectId } = useParams();
 
-    // Update stages based on the current stage index
+    // 根據當前階段索引更新子階段列表
     useEffect(() => {
         const isValidStageIndex = currentStageIndex > 0 && currentStageIndex <= stageInfo.length;
         setStages(isValidStageIndex ? stageInfo[currentStageIndex - 1] : []);
@@ -190,20 +190,20 @@ export default function SubStageComponent() {
     };
     const getStageColor = (stageIndex) => {
         if (currentSubStageIndex === stageIndex) {
-            return '#5BA491'; // 当前阶段
+            return '#5BA491'; // 當前階段
         } else if (stageIndex < currentSubStageIndex) {
-            return '#7C968F'; // 小于当前阶段的阶段
+            return '#7C968F'; // 小於當前階段
         } else {
-            return '#BEBEBE'; // 其他阶段
+            return '#BEBEBE'; // 其他階段
         }
     };
     const getTextColor = (stageIndex) => {
         if (currentSubStageIndex === stageIndex) {
-            return 'text-white animate-pulse '; // 当前阶段
+            return 'text-white animate-pulse '; // 當前階段
         } else if (stageIndex < currentSubStageIndex) {
-            return 'text-slate-200'; // 小于当前阶段的阶段
+            return 'text-slate-200'; // 小於當前階段
         } else {
-            return 'text-slate-700'; // 其他阶段
+            return 'text-slate-700'; // 其他階段
         }
     };
     const getProjectQuery = useQuery("getProject", () => getProject(projectId),
@@ -216,7 +216,7 @@ export default function SubStageComponent() {
             enabled: !!projectId
         }
     );
-    // Handle socket event
+    // 處理 socket 事件
     useEffect(() => {
         const handleRefreshKanban = (newStages) => {
             queryClient.invalidateQueries('getProject');
@@ -247,12 +247,11 @@ export default function SubStageComponent() {
     const handleOptionSelect = (option) => {
         console.log(option);
         setDialogOpen(false);
-        // 这里可以根据选项做更多的逻辑处理
+        // 這裡可以根據選項做更多邏輯處理
     };
-    // 使用状态来管理图片源
 
 
-    // 鼠标悬停时更改图片
+    // 滑鼠懸停時更改圖片
     const handleMouseEnter = () => {
         if (!ignoreHover) {
             setImageSrc('/robot2.png')
@@ -260,7 +259,7 @@ export default function SubStageComponent() {
         setIsHovered(true)
     }
 
-    // 鼠标离开时恢复原图片
+    // 滑鼠離開時恢復原圖片
     const handleMouseLeave = () => {
         if (!ignoreHover) {
             setImageSrc('/robot.png')
@@ -288,19 +287,19 @@ export default function SubStageComponent() {
     }, [isDialogOpen]); // 依賴於 isDialogOpen 的變化來重新添加/移除事件監聽器
 
     return (
-        <div className="w-full bg-[#F5F5F5] h-12 sm:h-14 lg:h-16 duration-slow border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4">
+        <div className="relative w-full bg-[#F5F5F5] h-12 sm:h-14 lg:h-16 duration-slow border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4">
             <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-component-xs lg:p-component-base overflow-x-auto" ref={dialogRef}>
                 <div className="flex items-center space-x-1 sm:space-x-stack-xs lg:space-x-stack-sm min-w-0 flex-1">
                     {stages.map((subStage, index) => (
                         <React.Fragment key={index}>
-                            <div 
-                                style={{ backgroundColor: getStageColor(index + 1) }} 
+                            <div
+                                style={{ backgroundColor: getStageColor(index + 1) }}
                                 className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner text-caption sm:text-body-sm lg:text-body whitespace-nowrap`}
                             >
                                 {subStage}
                             </div>
                             {index < stages.length - 1 && (
-                                // 添加水平虚线分隔符，但不在最后一个元素之后添加
+                                // 水平虛線分隔符，最後一個元素後不加
                                 <div className="border-b border-dashed border-gray-400 h-0.5 flex-grow mx-1 sm:mx-2 min-w-[10px] hidden sm:block"></div>
                             )}
                         </React.Fragment>

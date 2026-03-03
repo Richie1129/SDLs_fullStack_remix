@@ -14,7 +14,7 @@ export default function Modal({ open, onClose, opacity, position, modalCoordinat
             {
                 coordinate ?
                 <div  style={{top: `${coordinate.y}px`, left: `${coordinate.x}px`}} className={`z-50 fixed flex transition-colors duration-normal ${open ? "visible" : "invisible"} ${opacity ? "bg-black/50" : ""} ${position}`}>
-                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-md shadow transition-all duration-normal ${scrollClass} ${custom ? custom : "w-11/12 sm:w-3/4 lg:w-1/3"} ${open ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} >
+                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-md shadow transition-all duration-normal ${scrollClass} ${custom ? custom : "w-[95vw] sm:w-4/5 lg:w-2/5 max-w-2xl"} ${open ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} >
                     {/* <button onClick={onClose} className=' absolute top-2 right-2 rounded-lg bg-white hover:bg-slate-200'>
                         <GrFormClose  className=' w-6 h-6'/>
                     </button> */}
@@ -23,7 +23,7 @@ export default function Modal({ open, onClose, opacity, position, modalCoordinat
                 </div>   
                 :
                 <div className={`z-50 fixed inset-0 flex items-center justify-center transition-colors duration-normal ${open ? "visible" : "invisible"} ${opacity ? "bg-black/50" : ""} ${position}`}>
-                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-md shadow p-component-sm sm:p-component-md lg:p-component-lg transition-all duration-normal ${scrollClass} ${custom ? custom : "w-11/12 sm:w-3/4 lg:w-1/3"} ${open ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} >
+                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-md shadow p-component-sm sm:p-component-md transition-all duration-normal ${scrollClass} ${custom ? custom : "w-[95vw] sm:w-4/5 lg:w-2/5 max-w-2xl"} ${open ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} >
                     {children}
                     </div>
                 </div> 
