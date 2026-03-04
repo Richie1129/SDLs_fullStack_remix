@@ -151,3 +151,7 @@ daily_file/
 
 # Copilot instructions (Postman extension)
 .copilot-instructions/
+
+# Ignore local AI agent skills
+.agent/skills/
+.gemini/skills/
