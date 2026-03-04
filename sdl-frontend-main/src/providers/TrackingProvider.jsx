@@ -34,6 +34,11 @@ class EventBatcher {
     // 頁面離開時用 sendBeacon 保證送達
     this.handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && this.queue.length > 0) {
+        // 未登入時不送出，避免 401
+        if (!authStorage.get('accessToken')) {
+          this.queue = [];
+          return;
+        }
         const payload = JSON.stringify({ events: this.queue });
         const sent = navigator.sendBeacon(
           `${import.meta.env.VITE_API_BASE_URL || '/api'}${this.endpoint}`,
@@ -56,6 +61,11 @@ class EventBatcher {
    * @param {Object} event - 審計事件
    */
   push(event) {
+    // 未登入時不排入佇列，避免後續 flush 產生 401
+    if (!authStorage.get('accessToken')) {
+      return;
+    }
+
     this.queue.push({ 
       ...event, 
       _ts: Date.now(),
@@ -73,6 +83,13 @@ class EventBatcher {
    */
   async flush() {
     if (this.queue.length === 0) return;
+
+    // 未登入時不發送，避免 401；清空佇列以防止舊事件累積
+    const token = authStorage.get('accessToken');
+    if (!token) {
+      this.queue = [];
+      return;
+    }
     
     const batch = this.queue.splice(0, this.maxBatchSize);
     
