@@ -42,6 +42,30 @@ import { NODE_COLORS } from './constants/ideaWallConstants';
 // Assets
 import Adding_icon from "../../assets/AnimationAddingNode.json";
 
+/**
+ * 將後端原始節點資料轉換為 vis-network 所需格式（SVG image + shape）
+ * 抽成 module 層級 helper 以便在 useEffect 和其他地方共用
+ */
+function processRawNodes(nodes) {
+    return nodes.map((item) => {
+        let colorIndex;
+        if (item.colorindex) {
+            colorIndex = item.colorindex;
+        } else {
+            const hash = item.owner.split('').reduce((acc, char) => {
+                return char.charCodeAt(0) + ((acc << 5) - acc);
+            }, 0);
+            colorIndex = Math.abs(hash) % NODE_COLORS.length + 1;
+        }
+        const nodeColor = NODE_COLORS[(colorIndex - 1) % NODE_COLORS.length];
+        return {
+            ...item,
+            image: svgConvertUrl(item.title, item.owner, item.createdAt, nodeColor, item.content),
+            shape: 'image',
+        };
+    });
+}
+
 export default function IdeaWall() {
     const container = useRef(null);
     const { projectId } = useParams();
@@ -111,46 +135,32 @@ export default function IdeaWall() {
     const getNodesQuery = useQuery({
         queryKey: ['projectNodes', projectId],
         queryFn: () => getProjectNodes(projectId),
-        onSuccess: (nodes) => {
-            // 在設置 nodes 時就轉換為 SVG，避免在 useEffect 中反覆修改
-            const processedNodes = nodes.map((item) => {
-                // 如果有 colorindex 就用 colorindex（用戶 ID）
-                // 沒有的話，用 owner 名字生成穩定的顏色索引
-                let colorIndex;
-                if (item.colorindex) {
-                    colorIndex = item.colorindex;
-                } else {
-                    // 根據 owner 名字生成穩定的數字（同名同色）
-                    const hash = item.owner.split('').reduce((acc, char) => {
-                        return char.charCodeAt(0) + ((acc << 5) - acc);
-                    }, 0);
-                    colorIndex = Math.abs(hash) % NODE_COLORS.length + 1;
-                }
-                const nodeColor = NODE_COLORS[(colorIndex - 1) % NODE_COLORS.length];
-
-                // 創建新對象，不修改原對象
-                return {
-                    ...item,
-                    image: svgConvertUrl(item.title, item.owner, item.createdAt, nodeColor, item.content),
-                    shape: "image"
-                };
-            });
-            state.setNodes(processedNodes);
-        },
         enabled: !!projectId,
-        retryOnMount: false
+        retryOnMount: false,
     });
 
     // 獲取節點關係
     const getNodeRelationQuery = useQuery({
         queryKey: ['projectNodeRelations', projectId],
         queryFn: () => getProjectNodeRelation(projectId),
-        onSuccess: state.setEdges,
         enabled: !!projectId,
-        retryOnMount: false
+        retryOnMount: false,
     });
 
-    // 移除了轉換節點為 SVG 的 useEffect（已在 onSuccess 中處理）
+    // 修復：改用 useEffect 監聽 query data 變化來同步 state。
+    // 原先依賴 onSuccess callback，但在 React Query v3 + React StrictMode 下，
+    // 當 cache 有資料直接被 serve 時，onSuccess 不一定可靠觸發（第二次 mount 時
+    // query 已處於 success 狀態，transition 不再發生），導致進頁時節點不顯示，
+    // 需要 F5 才能看到。改用 useEffect 可保證每次 data reference 改變都同步。
+    useEffect(() => {
+        if (!getNodesQuery.data) return;
+        state.setNodes(processRawNodes(getNodesQuery.data));
+    }, [getNodesQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (!getNodeRelationQuery.data) return;
+        state.setEdges(getNodeRelationQuery.data);
+    }, [getNodeRelationQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 完成連線 - 必須在 useVisNetwork 之前定義
     const handleLinkingComplete = (fromId, toId) => {

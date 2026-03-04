@@ -7,6 +7,7 @@ import { socket } from '../utils/socket';
 // import { useQuery } from 'react-query';
 import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import { getStageInfo, setStageInfo } from '../utils/authUtils';
+import { getStageColor, getStageTextColor } from '../utils/stageUtils';
 
 const DialogBox = ({ isOpen, onClose, onOptionSelect }) => {
     const [animationClass, setAnimationClass] = useState('');
@@ -188,24 +189,7 @@ export default function SubStageComponent() {
         setImageSrc('/robot2.png');
         setIgnoreHover(true);
     };
-    const getStageColor = (stageIndex) => {
-        if (currentSubStageIndex === stageIndex) {
-            return '#5BA491'; // 當前階段
-        } else if (stageIndex < currentSubStageIndex) {
-            return '#7C968F'; // 小於當前階段
-        } else {
-            return '#BEBEBE'; // 其他階段
-        }
-    };
-    const getTextColor = (stageIndex) => {
-        if (currentSubStageIndex === stageIndex) {
-            return 'text-white animate-pulse '; // 當前階段
-        } else if (stageIndex < currentSubStageIndex) {
-            return 'text-slate-200'; // 小於當前階段
-        } else {
-            return 'text-slate-700'; // 其他階段
-        }
-    };
+    // [Refactored] getStageColor / getTextColor 已統一至 stageUtils.js
     const getProjectQuery = useQuery("getProject", () => getProject(projectId),
         {
             onSuccess: (data) => {
@@ -293,8 +277,8 @@ export default function SubStageComponent() {
                     {stages.map((subStage, index) => (
                         <React.Fragment key={index}>
                             <div
-                                style={{ backgroundColor: getStageColor(index + 1) }}
-                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getTextColor(index + 1)} font-semibold rounded-lg shadow-inner text-caption sm:text-body-sm lg:text-body whitespace-nowrap`}
+                                style={{ backgroundColor: getStageColor(index + 1, currentSubStageIndex) }}
+                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getStageTextColor(index + 1, currentSubStageIndex)} font-semibold rounded-lg shadow-inner text-caption sm:text-body-sm lg:text-body whitespace-nowrap`}
                             >
                                 {subStage}
                             </div>

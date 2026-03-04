@@ -1,5 +1,4 @@
-const axios = require('axios');
-const { callGeminiAPI } = require('./gemini');
+const { callVLLM, callGeminiAPI, parseJsonResponse } = require('./llmGateway');
 const { Op } = require('sequelize');
 
 class AITaskAssistantService {
@@ -289,47 +288,13 @@ ${helpSeekingType === 'adaptive' ? `
   }
 
   /**
-   * Call vLLM OpenAI-compatible API
-   */
-  async _callVLLM(baseUrl, modelName, apiKey, systemInstruction, prompt) {
-    const response = await axios.post(
-      `${baseUrl}/chat/completions`,
-      {
-        model: modelName,
-        messages: [
-          { role: 'system', content: systemInstruction },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2048
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        timeout: 30000
-      }
-    );
-
-    const content = response.data.choices?.[0]?.message?.content;
-    if (!content) {
-      throw new Error('vLLM returned empty content');
-    }
-    return content;
-  }
-
-  /**
    * Parse AI response content to JSON
+   * [Refactored] 委派給 llmGateway.parseJsonResponse
    */
   _parseAIResponse(raw) {
-    let content = raw.trim();
-    if (content.startsWith('```json')) {
-      content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (content.startsWith('```')) {
-      content = content.replace(/```\n?/g, '');
-    }
-    return JSON.parse(content);
+    const parsed = parseJsonResponse(raw);
+    if (!parsed) throw new Error('AI 回應無法解析為 JSON');
+    return parsed;
   }
 
   /**
@@ -345,27 +310,23 @@ ${helpSeekingType === 'adaptive' ? `
 你的回應必須是有效的 JSON 格式，不包含任何 markdown 標記或其他文字。
 使用繁體中文回覆。`;
 
-    // Provider chain: HSUEH_VLLM → VLLM → Gemini
+    // [Refactored] Provider chain via llmGateway
     const providers = [
       {
-        name: 'HSUEH_VLLM',
+        name: 'GPT-OSS-20B',
         enabled: !!process.env.HSUEH_VLLM_BASE_URL,
-        call: () => this._callVLLM(
-          process.env.HSUEH_VLLM_BASE_URL,
-          process.env.HSUEH_VLLM_MODEL_NAME || 'openai/gpt-oss-20b',
-          process.env.HSUEH_VLLM_API_KEY || 'dummy',
-          systemInstruction, prompt
-        )
+        call: async () => {
+          const result = await callVLLM('gpt-oss', { systemPrompt: systemInstruction, userPrompt: prompt });
+          return result.content;
+        }
       },
       {
-        name: 'VLLM',
+        name: 'Gemma-3-27B',
         enabled: !!process.env.VLLM_BASE_URL,
-        call: () => this._callVLLM(
-          process.env.VLLM_BASE_URL,
-          process.env.VLLM_MODEL_NAME || 'ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g',
-          process.env.VLLM_API_KEY || 'dummy',
-          systemInstruction, prompt
-        )
+        call: async () => {
+          const result = await callVLLM('gemma', { systemPrompt: systemInstruction, userPrompt: prompt });
+          return result.content;
+        }
       },
       {
         name: 'Gemini',

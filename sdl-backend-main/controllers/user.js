@@ -1,65 +1,70 @@
 const User = require('../models/user');
 const Project = require('../models/project');
+const School = require('../models/school');
 const RefreshToken = require('../models/refresh_token');
+const Task = require('../models/task');
+const Node = require('../models/node');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
-const {sign} = require('jsonwebtoken');
+const { sign } = require('jsonwebtoken');
 const crypto = require('crypto');
 const sequelize = require('../util/database'); // 引入 Sequelize 實例以支援事務
 const config = require('../config');
 const { logAudit } = require('../services/auditService');
+const logger = require('../config/logger');
 
 //get all users
-exports.getUsers = (req, res) =>{
-    User.findAll()
-        .then(users =>{
-            res.status(200).json({ user: users})
-        })
-        .catch(err => console.log(err));
+exports.getUsers = async (req, res) => {
+    try {
+        const users = await User.findAll();
+        res.status(200).json({ user: users });
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 }
 
 //get all teachers
-exports.getTeachers = (req, res) => {
-    const School = require('../models/school');
-    User.findAll({
-        where: { role: 'teacher' },
-        attributes: ['id', 'username', 'account', 'email', 'school_id'],
-        include: [{
-            model: School,
-            as: 'school',
-            attributes: ['name', 'city'],
-            required: false
-        }]
-    })
-    .then(users => {
+exports.getTeachers = async (req, res) => {
+    try {
+        const users = await User.findAll({
+            where: { role: 'teacher' },
+            attributes: ['id', 'username', 'account', 'email', 'school_id'],
+            include: [{
+                model: School,
+                as: 'school',
+                attributes: ['name', 'city'],
+                required: false
+            }]
+        });
         res.status(200).json({ user: users });
-    })
-    .catch(err => {
-        console.error(err);
+    } catch (err) {
+        console.error('Error fetching teachers:', err);
         res.status(500).json({ error: 'Internal server error' });
-    });
+    }
 }
 
 
 //get user by id
-exports.getUser = (req, res) =>{
-    const userId = req.params.userId;
-    User.findByPk(userId)
-        .then(user =>{
-            if(!user){
-                return res.status(404).json({ message: 'User not found' });
-            }
-            res.status(200).json({ user:user });
-        })
-        .catch(err => console.log(err));
+exports.getUser = async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const user = await User.findByPk(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.status(200).json({ user: user });
+    } catch (err) {
+        console.error('Error fetching user:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 }
 
 //get current user from token
 exports.getCurrentUser = async (req, res) => {
     try {
         const userId = req.userId; // 來自 AuthMiddleware
-        
-        const School = require('../models/school');
+
         const user = await User.findByPk(userId, {
             attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id'],
             include: [{
@@ -69,11 +74,11 @@ exports.getCurrentUser = async (req, res) => {
                 required: false
             }]
         });
-        
+
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        
+
         // 記錄用戶查看個人資料
         logAudit(req, {
             action: 'USER_VIEW_PROFILE',
@@ -82,7 +87,7 @@ exports.getCurrentUser = async (req, res) => {
             actorId: userId,
             metadata: { role: user.role }
         }).catch(err => console.error('Audit log error:', err));
-        
+
         res.status(200).json(user);
     } catch (error) {
         console.error('Error fetching current user:', error);
@@ -114,11 +119,11 @@ exports.loginUser = async (req, res) => {
                 targetType: 'user',
                 targetId: null,
                 metadata: { reason: 'user_not_found', account }
-            }).catch(() => {});
+            }).catch(() => { });
             return res.status(401).json({ message: '帳號或密碼錯誤' });
         }
 
-        // 驗證密碼 - 使用 Promise
+        // 驗證密碼
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
@@ -128,7 +133,7 @@ exports.loginUser = async (req, res) => {
                 targetType: 'user',
                 targetId: user.id,
                 metadata: { reason: 'invalid_password', account }
-            }).catch(() => {});
+            }).catch(() => { });
             return res.status(401).json({ message: '帳號或密碼錯誤' });
         }
 
@@ -158,7 +163,7 @@ exports.loginUser = async (req, res) => {
             targetId: user.id,
             actorId: user.id,
             metadata: { account, role: user.role }
-        }).catch(() => {});
+        }).catch(() => { });
 
         // 返回用戶資料（不包含密碼）
         res.status(200).json({
@@ -180,86 +185,55 @@ exports.loginUser = async (req, res) => {
 }
 
 // register user
-exports.registerUser = (req, res) => {
-    const username = req.body.username;
-    const account = req.body.account;
-    const email = req.body.email;
-    const password = req.body.password;
-    const role = req.body.role;
-    const classField = req.body.class;
-    const seatNumber = req.body.seatNumber;
-    const schoolId = req.body.school_id || null;
+exports.registerUser = async (req, res) => {
+    try {
+        const { username, account, email, password, role, seatNumber, school_id } = req.body;
+        const classField = req.body.class;
+        const schoolId = school_id || null;
 
-    const logger = require('../config/logger');
-    logger.info({ 
-        account, 
-        email, 
-        role, 
-        class: classField 
-    }, '收到註冊請求');
+        logger.info({ account, email, role, class: classField }, '收到註冊請求');
 
-    // 檢查用戶是否已經存在
-    User.findOne({
-        where: {
-            account: account
-        }
-    })
-    .then(existingUser => {
+        // 檢查用戶是否已經存在
+        const existingUser = await User.findOne({ where: { account } });
         if (existingUser) {
-            // 如果用戶已經存在，返回錯誤信息
             return res.status(400).json({ message: '該用戶已存在，請嘗試其他用戶名稱。' });
-        } else {
-            // 如果用戶不存在，則創建新用戶
-            bcrypt.hash(password, saltRounds, (err, hash) => {
-                if (err) {
-                    console.log(err);
-                    res.status(500).json({ message: '內部錯誤，無法創建新用戶。' });
-                } else {
-                    User.create({
-                        username: username,
-                        account: account,
-                        email: email,
-                        password: hash,
-                        role: role,
-                        class: classField,
-                        seatNumber: seatNumber,
-                        school_id: schoolId
-                    })
-                    .then(result => {
-                        const account = result.account;
-                        const id = result.id;
-                        const username = result.username;
-                        const roleValue = result.role;
-                        const accessToken = sign(
-                            { account: account, id: id, role: roleValue, username: username },
-                            config.jwt.secret,
-                            { expiresIn: config.jwt.expiresIn }
-                        );
-                        
-                        // 記錄用戶註冊
-                        logAudit(req, {
-                            action: 'USER_REGISTER',
-                            targetType: 'user',
-                            targetId: id,
-                            actorId: id,
-                            metadata: { account, role, email }
-                        }).catch(() => {});
-                        
-                        console.log(result);
-                        res.status(201).json({ accessToken, account, id });
-                    })
-                    .catch(err => {
-                        console.log(err);
-                        res.status(500).json({ message: '內部錯誤，無法創建新用戶。' });
-                    });
-                }
-            });
         }
-    })
-    .catch(err => {
-        console.log(err);
-        res.status(500).json({ message: '內部錯誤，無法查詢用戶信息。' });
-    });
+
+        // 加密密碼
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        // 創建新用戶
+        const result = await User.create({
+            username,
+            account,
+            email,
+            password: hashedPassword,
+            role,
+            class: classField,
+            seatNumber,
+            school_id: schoolId
+        });
+
+        const accessToken = sign(
+            { account: result.account, id: result.id, role: result.role, username: result.username },
+            config.jwt.secret,
+            { expiresIn: config.jwt.expiresIn }
+        );
+
+        // 記錄用戶註冊
+        logAudit(req, {
+            action: 'USER_REGISTER',
+            targetType: 'user',
+            targetId: result.id,
+            actorId: result.id,
+            metadata: { account: result.account, role: result.role, email: result.email }
+        }).catch(() => { });
+
+        res.status(201).json({ accessToken, account: result.account, id: result.id });
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(500).json({ message: '內部錯誤，無法創建新用戶。' });
+    }
 }
 
 //update user profile (excluding password)
@@ -304,7 +278,6 @@ exports.updateUserProfile = async (req, res) => {
             const transaction = await sequelize.transaction();
             try {
                 // 更新卡片 owner
-                const Task = require('../models/task');
                 const taskUpdateResult = await Task.update({
                     owner: newUsername
                 }, {
@@ -313,7 +286,6 @@ exports.updateUserProfile = async (req, res) => {
                 });
 
                 // 更新節點 owner
-                const Node = require('../models/node');
                 const nodeUpdateResult = await Node.update({
                     owner: newUsername
                 }, {
@@ -342,7 +314,7 @@ exports.updateUserProfile = async (req, res) => {
                 oldUsername,
                 newUsername
             }
-        }).catch(() => {});
+        }).catch(() => { });
 
         // 返回更新後的用戶資料
         const updatedUser = await User.findByPk(userId, {
@@ -382,24 +354,14 @@ exports.updateUserPassword = async (req, res) => {
         }
 
         // 驗證當前密碼
-        const isCurrentPasswordValid = await new Promise((resolve, reject) => {
-            bcrypt.compare(currentPassword, user.password, (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-            });
-        });
+        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
         if (!isCurrentPasswordValid) {
             return res.status(400).json({ message: '當前密碼不正確' });
         }
 
         // 加密新密碼
-        const hashedNewPassword = await new Promise((resolve, reject) => {
-            bcrypt.hash(newPassword, saltRounds, (err, hash) => {
-                if (err) reject(err);
-                else resolve(hash);
-            });
-        });
+        const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
 
         // 更新密碼
         const [updatedRowsCount] = await User.update({
@@ -418,7 +380,7 @@ exports.updateUserPassword = async (req, res) => {
             targetType: 'user',
             targetId: userId,
             metadata: { updatedAt: new Date().toISOString() }
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.status(200).json({ message: '密碼更新成功' });
 
@@ -428,48 +390,27 @@ exports.updateUserPassword = async (req, res) => {
     }
 };
 
-//update user
-// exports.updateUser = (req, res) => {
-//     const userId = req.body.userId;
-//     const updatedaccount = req.body.account;
-//     const updatedpassword = req.body.password;
-//     bcrypt.hash(updatedpassword, saltRounds, (err, hash) => {
-//         if(err){
-//             console.log(err)
-//         };
-//         User.findByPk(userId)
-//         .then(user => {
-//         if (!user) {
-//             return res.status(404).json({ message: 'User not found!' });
-//         }
-//         user.account = updatedaccount;
-//         user.password = hash;
-//         return user.save();
-//         })
-//         .then(result => {
-//         res.status(200).json({message: 'User updated!'});
-//         })
-//         .catch(err => console.log(err));
-//     })
-// }
 
-exports.getProjectUsers = async(req, res) => {
-    const projectId = req.params.projectId;
-    await User.findAll({
-        attributes: ['id', 'username', 'class', 'seatNumber'],
-        include: [{
-            model:Project,
-            attributes:[],
-            where :{
-            id:projectId
-        },
-        }]
-    })
-    .then(result =>{
-        console.log(result);
-        res.status(200).json(result)
-    })
-    .catch(err => console.log(err));
+
+
+exports.getProjectUsers = async (req, res) => {
+    try {
+        const projectId = req.params.projectId;
+        const result = await User.findAll({
+            attributes: ['id', 'username', 'class', 'seatNumber'],
+            include: [{
+                model: Project,
+                attributes: [],
+                where: {
+                    id: projectId
+                },
+            }]
+        });
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('Error fetching project users:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 }
 
 // 批次獲取多個專案的用戶（解決 N+1 查詢問題）
@@ -543,22 +484,4 @@ exports.batchGetProjectUsers = async (req, res) => {
     }
 }
 
-// delete user
-// exports.deleteUser = (req, res) => {
-//     const userId = req.body.userId;
-//     User.findByPk(userId)
-//         .then(user => {
-//             if (!user) {
-//                 return res.status(404).json({ message: 'User not found!' });
-//             }
-//             return User.destroy({
-//                 where: {
-//                 id: userId
-//                 }
-//             });
-//         })
-//         .then(result => {
-//             res.status(200).json({ message: 'User deleted!' });
-//         })
-//         .catch(err => console.log(err));
-// }
+

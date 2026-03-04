@@ -19,12 +19,17 @@ const { getTaiwanSemester } = require('../../utils/semesterUtils');
 const { logAudit } = require('../../services/auditService');
 
 exports.getProject = async (req, res) => {
-    const projectId = req.params.projectId;
-    await Project.findByPk(projectId)
-        .then(result => {
-            res.status(200).json(result)
-        })
-        .catch(err => console.log(err));
+    try {
+        const projectId = req.params.projectId;
+        const result = await Project.findByPk(projectId);
+        if (!result) {
+            return res.status(404).json({ message: '專案未找到' });
+        }
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('Error fetching project:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 }
 
 exports.getAllProject = async (req, res) => {
@@ -582,45 +587,4 @@ exports.deleteProject = async (req, res) => {
     }
 };
 
-// exports.updateProject = async(req, res) => {
-//     const projectId = req.body.projectId;
-//     const projectName = req.body.projectName;
-//     const projectdescribe = req.body.projectdescribe;
-//     const projectMentor = req.body.projectMentor;
-//     const userId = req.body.userId
-//     Project.findByPk(projectId)
-//     .then(project =>{
-//         if(!project){
-//             return res.status(404).json({ message: 'Project not found!' });
-//         }
-//         project.name = projectName;
-//         project.describe = projectdescribe;
-//         project.mentor = projectMentor;
-//         project.userId = userId;
-//         return project.save();
-//     })
-//     .then(() => {
-//         res.status(200).json({message: 'project updated!'});
-//     })
-//     .catch(err => console.log(err));
-// }
-
-// exports.deleteProject = async(req, res) => {
-//     const projectId = req.body.projectId;
-//     User.findByPk(projectId)
-//         .then(project =>{
-//             if (!project) {
-//                 return res.status(404).json({ message: 'project not found!' });
-//             }
-//             return User.destroy({
-//                 where: {
-//                 id: projectId
-//                 }
-//             });
-//         })
-//         .then(result => {
-//             res.status(200).json({ message: 'project deleted!' });
-//         })
-//         .catch(err => console.log(err));
-// }
 

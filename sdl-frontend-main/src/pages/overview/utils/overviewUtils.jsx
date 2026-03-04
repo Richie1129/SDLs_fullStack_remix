@@ -32,32 +32,8 @@ export const calculateProgress = (stage, subStage) => {
     return Math.min(Math.round((completedSubStages / totalStages) * 100), 100);
 };
 
-/**
- * 格式化相對時間
- * @param {string} dateString - ISO 日期字串
- * @returns {string} 相對時間描述
- */
-export const formatRelativeTime = (dateString) => {
-    if (!dateString) return '未知時間';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return '剛剛';
-    if (diffInMinutes < 60) return `${diffInMinutes}分鐘前`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours}小時前`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 30) return `${diffInDays}天前`;
-    
-    const diffInMonths = Math.floor(diffInDays / 30);
-    if (diffInMonths < 12) return `${diffInMonths}個月前`;
-    
-    const diffInYears = Math.floor(diffInMonths / 12);
-    return `${diffInYears}年前`;
-};
+// [Refactored] 統一使用 timeUtils.js 的 formatRelativeTime
+export { formatRelativeTime } from '@/utils/timeUtils';
 
 /**
  * 獲取進度狀態顏色

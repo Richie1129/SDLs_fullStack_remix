@@ -9,6 +9,7 @@ import dateFormat from 'dateformat';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';  // 引入Font Awesome圖標
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
+import { formatRelativeTime } from '../../utils/timeUtils';
 
 export default function ManagementOverview() {
   const [projectData, setProjectData] = useState([]);
@@ -94,14 +95,7 @@ export default function ManagementOverview() {
     fetchMembers();
 }, []);
   
-  function formatRelativeTime(date) {
-    const now = new Date();
-    const diffInSeconds = (now - new Date(date)) / 1000;
-    if (diffInSeconds < 60) return '剛剛';
-    else if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}分鐘前`;
-    else if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}小時前`;
-    else return `${Math.floor(diffInSeconds / 86400)}天前`;
-  }
+  // [Refactored] formatRelativeTime 已統一至 timeUtils.js
 
   const calculateProgress = (currentStage, currentSubStage) => {
     if (currentStage === 5) {

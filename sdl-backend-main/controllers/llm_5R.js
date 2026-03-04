@@ -1,6 +1,5 @@
-// 引入必要的套件
-const axios = require('axios'); // 用於 vLLM API 呼叫 (Gemma-3, GPT-OSS-20b)
-const { GoogleGenAI } = require('@google/genai'); // 用於 Gemini API 呼叫
+// [Refactored] AI 呼叫統一由 llmGateway 處理
+const { callVLLM, callGeminiAPI: _callGeminiAPI, parseJsonResponse } = require('../services/llmGateway');
 require('dotenv').config(); // 載入環境變數
 
 // 5Rs 反思框架的詳細定義
@@ -135,131 +134,21 @@ Reconstructing：${studentContent.reconstructing || '未填寫'}
 • 每個區塊的文字回饋以2–4句為宜。`;
 }
 
-// Gemini API 呼叫函數 (使用新版 SDK)
-async function callGeminiAPI(prompt, options = {}) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY not found in environment variables");
-    }
+// [Refactored] AI 呼叫函數 — 統一透過 llmGateway
+const FIVE_RS_SYSTEM = '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。';
 
-    const genAI = new GoogleGenAI({ apiKey });
-
-    // ✅ 修復：加入 systemInstruction 支援
-    const systemInstruction = options.systemInstruction ||
-      '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。';
-
-    const safetySettings = [
-      { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-      { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-    ];
-
-    // ✅ 修復：攤平 config 結構，符合 @google/genai API 規範
-    const response = await genAI.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        systemInstruction,  // ✅ 修復：加入 systemInstruction
-        temperature: 0.7,   // ✅ 修復：攤平到 config 層級
-        topP: 1,
-        topK: 1,
-        maxOutputTokens: 2048,
-        safetySettings,
-      }
-    });
-
-    const text = response.text;
-
-    return {
-      success: true,
-      provider: "gemini-2.5-flash",
-      content: text,
-    };
-
-  } catch (error) {
-    console.error('Gemini API 呼叫失敗:', error.message);
-    throw new Error(`Gemini API 呼叫失敗: ${error.message}`);
-  }
-}
-
-// vLLM API 呼叫函數 (Gemma-3-27b)
 async function callVLLMGemmaAPI(prompt) {
-  try {
-    const response = await axios.post(
-      `${process.env.VLLM_BASE_URL}/chat/completions`,
-      {
-        model: process.env.VLLM_MODEL_NAME,
-        messages: [
-          {
-            role: 'system',
-            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.VLLM_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    return {
-      success: true,
-      provider: 'gemma-3-27b',
-      content: response.data.choices[0].message.content
-    };
-  } catch (error) {
-    console.error('vLLM Gemma-3 API 呼叫失敗:', error.response?.data || error.message);
-    throw new Error(`vLLM Gemma-3 API 呼叫失敗: ${error.response?.data?.error?.message || error.message}`);
-  }
+  const result = await callVLLM('gemma', { systemPrompt: FIVE_RS_SYSTEM, userPrompt: prompt });
+  return { success: true, provider: 'gemma-3-27b', content: result.content };
 }
 
-// Hsueh vLLM API 呼叫函數 (GPT-OSS-20b)
 async function callHsuehVLLMAPI(prompt) {
-  try {
-    const response = await axios.post(
-      `${process.env.HSUEH_VLLM_BASE_URL}/chat/completions`,
-      {
-        model: process.env.HSUEH_VLLM_MODEL_NAME,
-        messages: [
-          {
-            role: 'system',
-            content: '你是一位專業的教育輔導員，擅長 5Rs 反思指導。請全程使用繁體中文，語氣溫暖且務實。重要：僅回傳有效 JSON，不要輸出任何額外文字或 Markdown。'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.HSUEH_VLLM_API_KEY}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+  const result = await callVLLM('gpt-oss', { systemPrompt: FIVE_RS_SYSTEM, userPrompt: prompt });
+  return { success: true, provider: 'gpt-oss-20b', content: result.content };
+}
 
-    return {
-      success: true,
-      provider: 'gpt-oss-20b',
-      content: response.data.choices[0].message.content
-    };
-  } catch (error) {
-    console.error('Hsueh vLLM GPT-OSS API 呼叫失敗:', error.response?.data || error.message);
-    throw new Error(`Hsueh vLLM GPT-OSS API 呼叫失敗: ${error.response?.data?.error?.message || error.message}`);
-  }
+async function callGeminiAPI(prompt) {
+  return _callGeminiAPI(prompt, { systemInstruction: FIVE_RS_SYSTEM });
 }
 
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
@@ -412,7 +301,7 @@ exports.analyze5RsReflection = async (req, res) => {
           provider: result.provider
         })
       });
-    } catch (_) {}
+    } catch (_) { }
 
     res.status(200).json(finalResponse);
 
@@ -472,7 +361,7 @@ exports.validate5RsContent = (req, res) => {
             sample: Object.fromEntries(Object.entries(parsed.data || {}).slice(0, 2).map(([k, v]) => [k, summarizeText(String(v || ''))]))
           })
         });
-      } catch (_) {}
+      } catch (_) { }
       res.status(200).json(resp);
     } else {
       const resp = {
@@ -480,7 +369,7 @@ exports.validate5RsContent = (req, res) => {
         is5RsFormat: false,
         message: '內容不是 5Rs 反思格式'
       };
-      try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false }) }); } catch (_) {}
+      try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false }) }); } catch (_) { }
       res.status(200).json(resp);
     }
   } catch (error) {
@@ -489,7 +378,7 @@ exports.validate5RsContent = (req, res) => {
       is5RsFormat: false,
       message: '內容不是有效的 JSON 格式，可能是傳統文字格式'
     };
-    try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false, parseError: true }) }); } catch (_) {}
+    try { logAudit(req, { action: 'ASSISTANT_5RS_VALIDATE', targetType: 'assistant', metadata: clampMetadataSize({ is5RsFormat: false, parseError: true }) }); } catch (_) { }
     res.status(200).json(resp);
   }
 };

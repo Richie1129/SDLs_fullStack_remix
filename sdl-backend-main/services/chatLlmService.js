@@ -1,7 +1,10 @@
-const { GoogleGenAI } = require('@google/genai');
+/**
+ * Chat LLM Service — IdeaWall 聊天 AI 介入
+ *
+ * [Refactored] AI 呼叫邏輯已遷移至 llmGateway
+ */
 
-// Initialize Clients
-const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const { callGemini } = require('./llmGateway');
 
 const PRIMARY_MODEL = "gemini-2.5-flash";
 
@@ -18,37 +21,16 @@ async function generateChatIntervention(contextMessages, relatedNode, wallNodes 
 
     try {
         console.log(`🧠 [Chat LLM] Using Model: ${PRIMARY_MODEL}`);
-        return await callGemini(PRIMARY_MODEL, systemPrompt, userPrompt);
+        const result = await callGemini({
+            prompt: [{ role: 'user', parts: [{ text: userPrompt }] }],
+            systemInstruction: systemPrompt,
+            model: PRIMARY_MODEL,
+        });
+        return result.content || '';
     } catch (error) {
         console.error(`❌ [Chat LLM] Gemini model failed:`, error.message);
         return null;
     }
-}
-
-async function callGemini(modelName, systemPrompt, userPrompt) {
-    // Use the new @google/genai SDK syntax
-    const result = await genai.models.generateContent({
-        model: modelName,
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        config: {
-            systemInstruction: { parts: [{ text: systemPrompt }] }
-        }
-    });
-
-    // Robust response extraction
-    if (typeof result.text === 'function') {
-        return result.text();
-    }
-    
-    if (result.candidates && result.candidates.length > 0) {
-        const candidate = result.candidates[0];
-        if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0) {
-            return candidate.content.parts[0].text;
-        }
-    }
-
-    // Fallback: return stringified result if structure is unknown
-    return JSON.stringify(result);
 }
 
 function buildSystemPrompt(relatedNode, wallNodes = []) {
@@ -95,7 +77,7 @@ Instructions:
 
 function buildUserPrompt(messages) {
     let prompt = "Here is the recent conversation transcript:\n\n";
-    
+
     messages.forEach(msg => {
         const sender = msg.User ? (msg.User.username || msg.User.account) : "Unknown";
         const role = msg.isAiIntervention ? "AI" : "Student";
@@ -128,7 +110,12 @@ ${nodes.map(n => `- ${n.title}: ${n.content ? n.content.substring(0, 100) : ''}`
 Please summarize the main themes or topics being discussed.`;
 
     try {
-        return await callGemini(PRIMARY_MODEL, systemPrompt, userPrompt);
+        const result = await callGemini({
+            prompt: [{ role: 'user', parts: [{ text: userPrompt }] }],
+            systemInstruction: systemPrompt,
+            model: PRIMARY_MODEL,
+        });
+        return result.content || '';
     } catch (error) {
         console.error('Summary generation failed:', error.message);
         return `目前牆上有 ${nodes.length} 個想法節點，主要關於: ${nodes.slice(0, 3).map(n => n.title).join(', ')}...`;

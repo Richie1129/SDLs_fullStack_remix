@@ -2,24 +2,8 @@ import React from 'react';
 import { FiLoader, FiRefreshCw, FiCheckCircle, FiEye, FiPause, FiClipboard, FiInfo, FiFileText, FiUsers, FiCpu } from 'react-icons/fi';
 import { FaTrophy } from 'react-icons/fa';
 
-// 輔助函式工具
-
-/**
- * 格式化相對時間
- * @param {string} dateString - 日期字符串
- * @returns {string} 格式化後的相對時間
- */
-export const formatRelativeTime = (dateString) => {
-  if (!dateString) return '未知時間';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-  
-  if (diffInHours < 1) return '剛剛';
-  if (diffInHours < 24) return `${diffInHours}小時前`;
-  const diffInDays = Math.floor(diffInHours / 24);
-  return `${diffInDays}天前`;
-};
+// [Refactored] 統一使用 timeUtils.js 的 formatRelativeTime
+export { formatRelativeTime } from '@/utils/timeUtils';
 
 /**
  * 獲取活動類型的顏色

@@ -17,6 +17,7 @@ import { formatUserDisplay } from '../utils/userDisplayUtils';
 import { buildFileDownloadUrl, buildFileImageUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 import AuthImage from '@/components/AuthImage';
 import { getCurrentUserId } from '../utils/authUtils';
+import { formatRelativeTime } from '@/utils/timeUtils';
 
 const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   if (!isOpen) return null;
@@ -110,23 +111,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
     return personImg[idx];
   };
 
-  const formatRelativeTime = (iso) => {
-    try {
-      const d = typeof iso === 'string' || typeof iso === 'number' ? new Date(iso) : iso;
-      const diff = Date.now() - d.getTime();
-      const sec = Math.max(0, Math.floor(diff / 1000));
-      if (sec < 10) return '剛剛';
-      if (sec < 60) return `${sec} 秒前`;
-      const min = Math.floor(sec / 60);
-      if (min < 60) return `${min} 分鐘前`;
-      const hr = Math.floor(min / 60);
-      if (hr < 24) return `${hr} 小時前`;
-      const day = Math.floor(hr / 24);
-      return `${day} 天前`;
-    } catch {
-      return '';
-    }
-  };
+  // [Refactored] formatRelativeTime 已從 @/utils/timeUtils 統一匯入
 
   const handleSubmit = () => {
     if (!content.trim()) return;

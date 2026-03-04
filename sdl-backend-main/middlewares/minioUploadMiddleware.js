@@ -50,20 +50,20 @@ const upload = multer({
 const uploadToMinio = (fieldName, maxCount = 10) => {
     return async (req, res, next) => {
         const uploadHandler = upload.array(fieldName, maxCount);
-        
+
         uploadHandler(req, res, async (err) => {
             if (err) {
                 console.error('Multer 錯誤:', err);
                 // Linus: 改進錯誤回報
                 if (err.code === 'LIMIT_FILE_SIZE') {
-                     return res.status(400).json({ 
-                        message: '檔案過大 (超過 100MB)', 
-                        code: 'LIMIT_FILE_SIZE' 
+                    return res.status(400).json({
+                        message: '檔案過大 (超過 100MB)',
+                        code: 'LIMIT_FILE_SIZE'
                     });
                 }
-                return res.status(400).json({ 
-                    message: '檔案上傳失敗', 
-                    error: err.message 
+                return res.status(400).json({
+                    message: '檔案上傳失敗',
+                    error: err.message
                 });
             }
 
@@ -76,14 +76,14 @@ const uploadToMinio = (fieldName, maxCount = 10) => {
                     // 生成唯一檔名
                     const originalFileName = Buffer.from(file.originalname, 'latin1').toString('utf8');
                     const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${originalFileName}`;
-                    
+
                     // 上傳到 MinIO
                     const result = await uploadFileToMinio(
-                        file.buffer, 
-                        uniqueFileName, 
+                        file.buffer,
+                        uniqueFileName,
                         file.mimetype
                     );
-                    
+
                     return {
                         originalName: originalFileName,
                         fileName: uniqueFileName,
@@ -96,19 +96,19 @@ const uploadToMinio = (fieldName, maxCount = 10) => {
 
                 // 等待所有檔案上傳完成
                 const uploadedFiles = await Promise.all(uploadPromises);
-                
+
                 // 將結果添加到 req 物件
                 req.uploadedFiles = uploadedFiles;
                 req.minioFiles = uploadedFiles; // 向後相容
-                
+
                 console.log('所有檔案上傳到 MinIO 成功:', uploadedFiles.map(f => f.fileName));
                 next();
-                
+
             } catch (error) {
                 console.error('MinIO 上傳失敗:', error);
-                return res.status(500).json({ 
-                    message: 'MinIO 上傳失敗', 
-                    error: error.message 
+                return res.status(500).json({
+                    message: 'MinIO 上傳失敗',
+                    error: error.message
                 });
             }
         });
@@ -119,13 +119,13 @@ const uploadToMinio = (fieldName, maxCount = 10) => {
 const uploadSingleToMinio = (fieldName) => {
     return async (req, res, next) => {
         const uploadHandler = upload.single(fieldName);
-        
+
         uploadHandler(req, res, async (err) => {
             if (err) {
                 console.error('Multer 錯誤:', err);
-                return res.status(400).json({ 
-                    message: '檔案上傳失敗', 
-                    error: err.message 
+                return res.status(400).json({
+                    message: '檔案上傳失敗',
+                    error: err.message
                 });
             }
 
@@ -137,14 +137,14 @@ const uploadSingleToMinio = (fieldName) => {
                 // 生成唯一檔名
                 const originalFileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
                 const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${originalFileName}`;
-                
+
                 // 上傳到 MinIO
                 const result = await uploadFileToMinio(
-                    req.file.buffer, 
-                    uniqueFileName, 
+                    req.file.buffer,
+                    uniqueFileName,
                     req.file.mimetype
                 );
-                
+
                 // 將結果添加到 req 物件
                 req.uploadedFile = {
                     originalName: originalFileName,
@@ -154,15 +154,15 @@ const uploadSingleToMinio = (fieldName) => {
                     url: result.url,
                     etag: result.etag
                 };
-                
+
                 console.log('檔案上傳到 MinIO 成功:', uniqueFileName);
                 next();
-                
+
             } catch (error) {
                 console.error('MinIO 上傳失敗:', error);
-                return res.status(500).json({ 
-                    message: 'MinIO 上傳失敗', 
-                    error: error.message 
+                return res.status(500).json({
+                    message: 'MinIO 上傳失敗',
+                    error: error.message
                 });
             }
         });

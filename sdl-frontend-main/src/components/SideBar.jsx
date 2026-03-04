@@ -14,6 +14,7 @@ import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import ChatRoom from "./ChatRoom";
 import useObservationMode from "../hooks/useObservationMode"; // 引入觀摩模式 hook
 import { userStorage } from '../services/storageService';
+import { getStageColor } from '../utils/stageUtils';
 
 // Simple NavItem without framer-motion
 const NavItem = ({ children, selected, id, setSelected }) => {
@@ -121,22 +122,14 @@ const HoverTooltip = ({ children, text, show = true }) => {
 
 // Stage Progress Item with Perfect Centering
 const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick }) => {
-  const getStageColor = (stageIndex) => {
-    if (parseInt(currentStageIndex) === stageIndex) {
-      return "#5BA491";
-    } else if (stageIndex < parseInt(currentStageIndex)) {
-      return "#7C968F";
-    } else {
-      return "#BEBEBE";
-    }
-  };
+  // [Refactored] getStageColor 已統一至 stageUtils.js
 
   if (!isOpen) {
     // Collapsed state: small fixed-size colored block with centered text
     return (
       <div
         onClick={onClick}
-        style={{ backgroundColor: getStageColor(stage.index) }}
+        style={{ backgroundColor: getStageColor(stage.index, currentStageIndex) }}
         className="h-8 w-14 rounded-md flex items-center justify-center cursor-pointer mx-auto hover:shadow"
       >
         <span className="text-caption font-semibold text-white tracking-wide">
@@ -150,7 +143,7 @@ const StageProgressItem = ({ stage, isOpen, currentStageIndex, onClick }) => {
   return (
     <div
       onClick={onClick}
-      style={{ backgroundColor: getStageColor(stage.index) }}
+      style={{ backgroundColor: getStageColor(stage.index, currentStageIndex) }}
       className="h-10 w-full flex items-center justify-center cursor-pointer rounded-lg hover:shadow"
     >
       <span className="text-body-sm font-bold text-white">{stage.name}</span>

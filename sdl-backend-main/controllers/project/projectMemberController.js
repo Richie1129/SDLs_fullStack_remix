@@ -151,26 +151,3 @@ exports.getAllStudents = async (req, res) => {
     }
 };
 
-// exports.inviteForProject = async( req, res) => {
-//     const referral_Code = req.body.referral_Code;
-//     const userId = req.body.userId;
-//     console.log(userId);
-//     if(!referral_Code){
-//         return res.status(404).send({message: 'please enter referral code!'})
-//     }
-//     const referralProject = await Project.findOne({
-//         where:{
-//             referral_code:referral_Code
-//         }
-//     })
-//     const invited = await User.findByPk(userId);
-//     const userProjectAssociations = await referralProject.addUser(invited)
-//     .then(() => {
-//             return res.status(200).send({message: 'invite success!'})
-//     })
-//     .catch(err => {
-//         console.log(err);
-//         return res.status(500).send({message: 'invite failed!'})
-//     });
-//
-// }

@@ -17,8 +17,25 @@ export function useIdeaWallSocket({
 }) {
     const refetchTimeoutRef = useRef(null);
 
+    // 使用 ref 持有最新的 refetch 函式，避免 effect 依賴 getNodesQuery 物件
+    // （useQuery 每次 render 都回傳新物件，若放進 deps 會導致 effect 頻繁重跑，
+    //  造成 nodeUpdated listener 在 teardown/re-attach 空隙中丟失事件）
+    const refetchNodesRef = useRef(getNodesQuery.refetch);
+    const refetchRelationsRef = useRef(getNodeRelationQuery.refetch);
+    useEffect(() => { refetchNodesRef.current = getNodesQuery.refetch; }, [getNodesQuery.refetch]);
+    useEffect(() => { refetchRelationsRef.current = getNodeRelationQuery.refetch; }, [getNodeRelationQuery.refetch]);
+
+    // 使用 ref 持有最新的 AI 相關 setter，同樣避免頻繁重掛 effect
+    const setAiSuggestionRef = useRef(setAiSuggestion);
+    const setSuggestedAgentTypeRef = useRef(setSuggestedAgentType);
+    const setKbCoachModalOpenRef = useRef(setKbCoachModalOpen);
+    useEffect(() => { setAiSuggestionRef.current = setAiSuggestion; }, [setAiSuggestion]);
+    useEffect(() => { setSuggestedAgentTypeRef.current = setSuggestedAgentType; }, [setSuggestedAgentType]);
+    useEffect(() => { setKbCoachModalOpenRef.current = setKbCoachModalOpen; }, [setKbCoachModalOpen]);
+
     useEffect(() => {
         // 節點更新事件處理器（使用 debounce 避免頻繁重新載入）
+        // 透過 ref 讀取最新 refetch，不需將 query 物件放入 deps
         function nodeUpdateEvent(data) {
             console.log("收到節點更新事件:", data);
 
@@ -29,8 +46,8 @@ export function useIdeaWallSocket({
 
             // 延遲 300ms 後才重新載入，避免連續事件導致畫面跳動
             refetchTimeoutRef.current = setTimeout(() => {
-                getNodesQuery.refetch();
-                getNodeRelationQuery.refetch();
+                refetchNodesRef.current?.();
+                refetchRelationsRef.current?.();
             }, 300);
         }
 
@@ -62,9 +79,9 @@ export function useIdeaWallSocket({
         const handleAiSuggestion = (data) => {
             console.log('🤖 [Phase 3] Received AI suggestion:', data);
             
-            // 儲存建議資訊
-            setAiSuggestion(data);
-            setSuggestedAgentType(data.role);
+            // 儲存建議資訊（透過 ref 讀取最新 setter）
+            setAiSuggestionRef.current(data);
+            setSuggestedAgentTypeRef.current(data.role);
             
             // 顯示 Toast 通知
             const agentName = AGENT_NAMES[data.role] || 'AI 助教';
@@ -77,7 +94,7 @@ export function useIdeaWallSocket({
                         <button
                             onClick={() => {
                                 toast.dismiss(t.id);
-                                setKbCoachModalOpen(true);
+                                setKbCoachModalOpenRef.current(true);
                             }}
                             className="px-3 py-1 bg-purple-600 text-white text-body-sm rounded hover:bg-purple-700"
                         >
@@ -158,5 +175,9 @@ export function useIdeaWallSocket({
             socket.off('nodeDeleteSuccess', handleNodeSuccess);
             socket.off('aiSuggestion', handleAiSuggestion);
         };
-    }, [socket, projectId, getNodesQuery, getNodeRelationQuery, setAiSuggestion, setSuggestedAgentType, setKbCoachModalOpen]);
+    // 只依賴 projectId：projectId 換了才需要重新加入房間並重新掛 listener
+    // getNodesQuery / getNodeRelationQuery 每次 render 都是新物件，
+    // 放入 deps 會讓 effect 頻繁重跑，在 teardown 空隙丟失 socket 事件
+    // → 改用 ref 持有最新的 refetch，listener 只掛一次，永遠不漏接
+    }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 }

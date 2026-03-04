@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import dateFormat from 'dateformat';
 import { getSemesterLabel } from '../../../utils/semesterUtils';
+import { formatRelativeTime } from '../../../utils/timeUtils';
 
 const Tooltip = ({ children, content }) => {
   return (
@@ -30,15 +31,7 @@ const ProgressTooltip = ({ children, content }) => {
   );
 };
 
-// 格式化相對時間
-const formatRelativeTime = (date) => {
-  const now = new Date();
-  const diffInSeconds = (now - new Date(date)) / 1000;
-  if (diffInSeconds < 60) return '剛剛';
-  else if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}分鐘前`;
-  else if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}小時前`;
-  else return `${Math.floor(diffInSeconds / 86400)}天前`;
-};
+// [Refactored] formatRelativeTime 已統一至 timeUtils.js
 
 export default function ProjectCard({
   project,

@@ -23,10 +23,18 @@ class Config {
 
     // JWT 配置
     get jwt() {
+        // expiresIn：支援純數字秒數（'3600'）或 jsonwebtoken 時間字串（'24h', '7d'）
+        // refreshExpiresIn：僅支援數字秒數（用於資料庫日期計算）
+        const parseExpiresIn = (val, defaultVal) => {
+            if (!val) return defaultVal;
+            const num = Number(val);
+            if (!isNaN(num)) return num;  // 純數字字串 → 秒數
+            return val;  // '24h', '7d' 等交給 jsonwebtoken 解析
+        };
         return {
             secret: process.env.JWT_SECRET || this.getDefaultJwtSecret(),
-            expiresIn: parseInt(process.env.JWT_EXPIRES_IN) || 86400,  // 秒數，預設24h
-            refreshExpiresIn: parseInt(process.env.JWT_REFRESH_EXPIRES_IN) || 604800  // 7天
+            expiresIn: parseExpiresIn(process.env.JWT_EXPIRES_IN, 86400),            // 預設 24h
+            refreshExpiresIn: parseInt(process.env.JWT_REFRESH_EXPIRES_IN) || 604800  // 預設 7d（秒數）
         };
     }
 

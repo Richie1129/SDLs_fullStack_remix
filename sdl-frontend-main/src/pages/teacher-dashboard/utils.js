@@ -3,7 +3,7 @@
 // 計算專案進度
 export const calculateProgress = (currentStage, currentSubStage) => {
   if (!currentStage || !currentSubStage) return 0;
-  
+
   if (currentStage === 5) {
     return 100;
   } else {
@@ -13,22 +13,8 @@ export const calculateProgress = (currentStage, currentSubStage) => {
   }
 };
 
-// 格式化相對時間
-export const formatRelativeTime = (dateString) => {
-  if (!dateString) return '無資料';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-  
-  if (diffInMinutes < 1) return '剛剛';
-  if (diffInMinutes < 60) return `${diffInMinutes}分鐘前`;
-  
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) return `${diffInHours}小時前`;
-  
-  const diffInDays = Math.floor(diffInHours / 24);
-  return `${diffInDays}天前`;
-};
+// [Refactored] 統一使用 timeUtils.js 的 formatRelativeTime
+export { formatRelativeTime } from '@/utils/timeUtils';
 
 // 獲取學生狀態顏色
 export const getStatusColor = (status) => {
