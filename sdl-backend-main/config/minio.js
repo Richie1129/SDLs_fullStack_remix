@@ -2,21 +2,15 @@ const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadO
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // 📦 MinIO 配置
-// 確保 endpoint 為完整 URL（含 http:// 與 port）
-const rawEndpoint = process.env.MINIO_ENDPOINT || 'localhost';
-const minioPort = process.env.MINIO_PORT || '9000';
-const resolvedEndpoint = rawEndpoint.startsWith('http://') || rawEndpoint.startsWith('https://')
-    ? rawEndpoint
-    : `http://${rawEndpoint}:${minioPort}`;
-
 const minioConfig = {
-    endpoint: resolvedEndpoint,
+
+    endpoint: process.env.MINIO_ENDPOINT || 'http://localhost:9000',
     publicEndpoint: process.env.MINIO_PUBLIC_ENDPOINT || 'http://localhost:9000', // 前端可訪問的地址
     accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
     secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
     bucketName: process.env.MINIO_BUCKET_NAME || 'sdl-files',
     region: 'us-east-1', // MinIO 預設區域
-};
+}
 
 console.log('🚀 MinIO 配置載入:', {
     endpoint: minioConfig.endpoint,
