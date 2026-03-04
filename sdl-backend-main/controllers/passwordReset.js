@@ -76,7 +76,7 @@ const requestPasswordReset = async (req, res) => {
             targetId: user.id,
             actorId: user.id,
             metadata: { email: normalizedEmail }
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.status(200).json({
             success: true,
@@ -113,7 +113,7 @@ const validateResetToken = async (req, res) => {
             include: [{
                 model: User,
                 as: 'User',
-                attributes: ['id', 'email']
+                attributes: ['id', 'email', 'username', 'account']
             }]
         });
 
@@ -140,12 +140,14 @@ const validateResetToken = async (req, res) => {
             targetId: resetToken.User.id,
             actorId: resetToken.User.id,
             metadata: { email: resetToken.User.email, tokenValid: true }
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.status(200).json({
             success: true,
             message: 'Token 有效',
-            email: resetToken.User.email
+            email: resetToken.User.email,
+            username: resetToken.User.username,
+            account: resetToken.User.account
         });
 
     } catch (error) {
@@ -226,7 +228,7 @@ const resetPassword = async (req, res) => {
             targetId: resetToken.User.id,
             actorId: resetToken.User.id,
             metadata: { email: resetToken.User.email, resetAt: new Date().toISOString() }
-        }).catch(() => {});
+        }).catch(() => { });
 
         res.status(200).json({
             success: true,

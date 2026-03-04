@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { TypeAnimation } from 'react-type-animation';
 import { useMutation } from 'react-query';
 import axios from 'axios';
-import Login_icon from "../../assets/Animation-login.json";
-import Lottie from "lottie-react";
 import { useTracking } from '../../providers/TrackingProvider';
+import { MdArrowForward } from 'react-icons/md';
+import { FiLock, FiEye, FiEyeOff, FiCheckCircle, FiAlertCircle, FiShield } from 'react-icons/fi';
 
 const validateTokenAPI = async (token) => {
   const response = await axios.get(`/api/auth/reset-password/${token}`);
@@ -34,13 +33,19 @@ export default function ResetPassword() {
   const [isValidToken, setIsValidToken] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
+  const [userAccount, setUserAccount] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // 驗證 token
   const tokenValidationMutation = useMutation(validateTokenAPI, {
     onSuccess: (data) => {
       setIsValidToken(true);
       setUserEmail(data.email);
+      setUserName(data.username || '');
+      setUserAccount(data.account || '');
       setIsLoading(false);
     },
     onError: (error) => {
@@ -52,7 +57,7 @@ export default function ResetPassword() {
 
   // 重設密碼
   const resetPasswordMutation = useMutation(resetPasswordAPI, {
-    onSuccess: (data) => {
+    onSuccess: () => {
       setIsSuccess(true);
       setTimeout(() => {
         navigate('/');
@@ -78,7 +83,7 @@ export default function ResetPassword() {
       ...prev,
       [name]: value
     }));
-    setError(''); // 清除錯誤訊息
+    setError('');
   };
 
   const handleSubmit = (e) => {
@@ -99,7 +104,6 @@ export default function ResetPassword() {
       return;
     }
 
-    // 記錄密碼重置執行
     track('PASSWORD_RESET_SUBMIT', 'user', null, {
       email: userEmail,
       timestamp: new Date().toISOString()
@@ -111,165 +115,296 @@ export default function ResetPassword() {
     });
   };
 
+  const inputClass = 'w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-gray-200 text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast';
+
+  // ── 載入中 ──
   if (isLoading) {
     return (
-      <section className="flex flex-col md:flex-row h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">驗證中...</p>
-        </div>
-      </section>
-    );
-  }
-
-  if (!isValidToken) {
-    return (
-      <section className="flex flex-col md:flex-row h-screen items-center justify-center">
-        <div className="bg-white w-full max-w-md rounded-lg p-component-lg shadow-2xl text-center">
-          <div className="mb-6">
-            <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-            </svg>
-            <h1 className="text-h2 font-bold text-gray-800 mb-2">連結無效</h1>
-            <p className="text-gray-600 mb-6">{error}</p>
-          </div>
-
-          <Link
-            to="/forgot-password"
-            style={{ backgroundColor: "#5BA491" }}
-            className="inline-block text-white font-semibold rounded-lg px-6 py-3 text-body"
-          >
-            重新請求密碼重設
-          </Link>
-        </div>
-      </section>
-    );
-  }
-
-  if (isSuccess) {
-    return (
-      <section className="flex flex-col md:flex-row h-screen items-center justify-center">
-        <div className="bg-white w-full max-w-md rounded-lg p-component-lg shadow-2xl text-center">
-          <div className="mb-6">
-            <svg className="w-16 h-16 text-green-500 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <h1 className="text-h2 font-bold text-gray-800 mb-2">密碼重設成功！</h1>
-            <p className="text-gray-600 mb-6">您的密碼已成功更新，3秒後將自動跳轉到登入頁面</p>
-          </div>
-
-          <Link
-            to="/"
-            style={{ backgroundColor: "#5BA491" }}
-            className="inline-block text-white font-semibold rounded-lg px-6 py-3 text-body"
-          >
-            立即登入
-          </Link>
-        </div>
-      </section>
-    );
-  }
-
-  return (
-    <section className="flex flex-col md:flex-row h-screen items-center">
-      <div className="hidden bg-white w-full md:w-1/2 xl:w-1/2 h-screen md:flex md:items-center md:justify-center">
-        <div className='flex flex-col items-center justify-center h-full'>
-          <TypeAnimation
-            sequence={[
-              "重設密碼 Reset Password",
-              3000,
-              "設定新密碼 New Password",
-              3000,
-            ]}
-            speed={50}
-            wrapper="span"
-            cursor={true}
-            repeat={Infinity}
-            className="mx-auto font-press-start font-semibold text-h2 md:text-h1 lg:text-display mb-10 md:mb-20 text-center px-4"
-          />
-          <Lottie className="w-64 md:w-80 lg:w-96 max-w-full h-auto" animationData={Login_icon} />
+          <div className="w-10 h-10 border-3 border-customgreen/30 border-t-customgreen rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-body-sm text-gray-500">驗證連結中...</p>
         </div>
       </div>
+    );
+  }
 
-      <div className="bg-white w-full md:max-w-md lg:max-w-full md:mx-auto md:w-1/2 xl:w-1/2 h-screen lg:px-36 xl:px-40 flex items-center justify-center">
-        <div className="bg-white w-full h-100 rounded-lg p-component-lg shadow-2xl">
-          <h1 className="text-body-lg font-bold mb-6 flex items-center justify-center">
-            歡迎來到 <span style={{ color: "#5BA491" }} className="ml-2">SDLS</span>
-          </h1>
-          <h1 className="text-display font-bold mb-6 flex items-center justify-center">重設密碼</h1>
+  // ── Token 無效 ──
+  if (!isValidToken) {
+    return (
+      <div className="flex min-h-screen">
+        {/* 左側品牌面板 */}
+        <div className="hidden md:flex flex-col justify-between w-1/2 relative overflow-hidden px-12 lg:px-16 py-10 bg-customgreen">
+          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
 
-          <div className="mb-4">
-            <p className="text-gray-600 text-center mb-6">
-              為帳號 <span className="font-semibold text-gray-800">{userEmail}</span> 設定新密碼
+          <div className="relative z-10 flex items-baseline gap-3">
+            <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
+            <span className="text-white/50 text-body-sm">Self-Directed Learning</span>
+          </div>
+
+          <div className="relative z-10">
+            <h1 className="text-white font-bold leading-snug" style={{ fontSize: '2.75rem' }}>
+              連結已失效
+            </h1>
+            <p className="text-white/70 text-body mt-4 max-w-xs leading-relaxed">
+              密碼重設連結可能已過期或無效，請重新申請。
             </p>
           </div>
 
-          <form className="mt-6" onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-body">新密碼</label>
-              <input
-                type="password"
-                name="newPassword"
-                placeholder="請輸入新密碼（至少 8 個字元）"
-                value={passwords.newPassword}
-                onChange={handleChange}
-                className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
-                minLength="8"
-                required
-                autoFocus
-              />
+          <div className="relative z-10">
+            <p className="text-white/50 text-body-sm">
+              需要協助？
+              <Link to="/forgot-password" className="text-white font-semibold ml-1 hover:underline">重新取得連結</Link>
+            </p>
+          </div>
+        </div>
+
+        {/* 右側內容 */}
+        <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-gray-50 px-8 sm:px-14 lg:px-20 xl:px-28">
+          <div className="md:hidden mb-10">
+            <span className="font-bold text-h2 tracking-tight text-customgreen">SDLS</span>
+          </div>
+
+          <div className="w-full max-w-sm mx-auto">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 text-3xl mb-6">
+              <FiAlertCircle />
+            </div>
+            <h2 className="text-h1 font-bold text-gray-900 mb-2">連結無效</h2>
+            <p className="text-body-sm text-gray-500 mb-6">{error}</p>
+
+            <Link
+              to="/forgot-password"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-customgreen text-white font-semibold text-body hover:bg-customgreen/90 transition-colors duration-fast mb-4"
+            >
+              重新請求密碼重設
+              <MdArrowForward className="text-lg" />
+            </Link>
+
+            <Link
+              to="/"
+              className="flex items-center justify-center w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-600 font-medium text-body hover:bg-gray-50 transition-colors duration-fast"
+            >
+              返回登入
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 重設成功 ──
+  if (isSuccess) {
+    return (
+      <div className="flex min-h-screen">
+        {/* 左側品牌面板 */}
+        <div className="hidden md:flex flex-col justify-between w-1/2 relative overflow-hidden px-12 lg:px-16 py-10 bg-customgreen">
+          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
+
+          <div className="relative z-10 flex items-baseline gap-3">
+            <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
+            <span className="text-white/50 text-body-sm">Self-Directed Learning</span>
+          </div>
+
+          <div className="relative z-10">
+            <h1 className="text-white font-bold leading-snug" style={{ fontSize: '2.75rem' }}>
+              密碼已更新，<br />歡迎回來。
+            </h1>
+            <p className="text-white/70 text-body mt-4 max-w-xs leading-relaxed">
+              你的密碼已成功重設，現在可以使用新密碼登入。
+            </p>
+          </div>
+
+          <div className="relative z-10" />
+        </div>
+
+        {/* 右側內容 */}
+        <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-gray-50 px-8 sm:px-14 lg:px-20 xl:px-28">
+          <div className="md:hidden mb-10">
+            <span className="font-bold text-h2 tracking-tight text-customgreen">SDLS</span>
+          </div>
+
+          <div className="w-full max-w-sm mx-auto">
+            <div className="w-14 h-14 rounded-2xl bg-customgreen/10 flex items-center justify-center text-customgreen text-3xl mb-6">
+              <FiCheckCircle />
+            </div>
+            <h2 className="text-h1 font-bold text-gray-900 mb-2">密碼重設成功！</h2>
+            <p className="text-body-sm text-gray-500 mb-2">你的密碼已成功更新。</p>
+
+            <div className="p-5 bg-customgreen/5 border border-customgreen/20 rounded-2xl mb-6">
+              <p className="text-body-sm text-gray-600 leading-relaxed">
+                3 秒後將自動跳轉到登入頁面，你也可以直接點選下方按鈕。
+              </p>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-gray-700 text-body">確認新密碼</label>
-              <input
-                type="password"
-                name="confirmPassword"
-                placeholder="請再次輸入新密碼"
-                value={passwords.confirmPassword}
-                onChange={handleChange}
-                className="text-body w-full px-4 py-3 rounded-lg bg-white mt-2 border focus:border-green-700 focus:bg-white focus:outline-none"
-                minLength="8"
-                required
-              />
+            <Link
+              to="/"
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-customgreen text-white font-semibold text-body hover:bg-customgreen/90 transition-colors duration-fast"
+            >
+              立即登入
+              <MdArrowForward className="text-lg" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── 重設密碼表單（主畫面） ──
+  return (
+    <div className="flex min-h-screen">
+
+      {/* ── 左側：品牌面板 ── */}
+      <div className="hidden md:flex flex-col justify-between w-1/2 relative overflow-hidden px-12 lg:px-16 py-10 bg-customgreen">
+        {/* 裝飾圓 */}
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
+
+        {/* Logo */}
+        <div className="relative z-10 flex items-baseline gap-3">
+          <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
+          <span className="text-white/50 text-body-sm">Self-Directed Learning</span>
+        </div>
+
+        {/* 主文案 */}
+        <div className="relative z-10">
+          <h1 className="text-white font-bold leading-snug" style={{ fontSize: '2.75rem' }}>
+            重設你的<br />密碼。
+          </h1>
+          <p className="text-white/70 text-body mt-4 max-w-xs leading-relaxed">
+            設定一組新密碼，即可重新登入並繼續你的探究旅程。
+          </p>
+          <div className="mt-8 flex flex-col gap-3">
+            {[
+              { icon: <FiShield />, text: '密碼至少 8 個字元' },
+              { icon: <FiLock />, text: '建議包含英文與數字' },
+            ].map((b, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0 bg-white/20">
+                  {b.icon}
+                </div>
+                <span className="text-white/80 text-body-sm">{b.text}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 底部導覽 */}
+        <div className="relative z-10">
+          <p className="text-white/50 text-body-sm">
+            記起密碼了？
+            <Link to="/" className="text-white font-semibold ml-1 hover:underline">返回登入</Link>
+          </p>
+        </div>
+      </div>
+
+      {/* ── 右側：表單 ── */}
+      <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-gray-50 px-8 sm:px-14 lg:px-20 xl:px-28">
+
+        {/* 行動版 Logo */}
+        <div className="md:hidden mb-10">
+          <span className="font-bold text-h2 tracking-tight text-customgreen">SDLS</span>
+        </div>
+
+        <div className="w-full max-w-sm mx-auto">
+          <div className="mb-8">
+            <h2 className="text-h1 font-bold text-gray-900">重設密碼</h2>
+            <p className="text-body-sm text-gray-500 mt-1">
+              {userName && userAccount
+                ? <>為 <span className="font-semibold text-gray-700">{userName}</span>（帳號：<span className="font-semibold text-gray-700">{userAccount}</span>）設定新密碼</>
+                : <>為 <span className="font-semibold text-gray-700">{userEmail}</span> 設定新密碼</>
+              }
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* 新密碼 */}
+            <div>
+              <label className="block text-body-sm font-medium text-gray-700 mb-1.5">新密碼</label>
+              <div className="relative">
+                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  name="newPassword"
+                  placeholder="請輸入新密碼（至少 8 個字元）"
+                  value={passwords.newPassword}
+                  onChange={handleChange}
+                  className={inputClass}
+                  minLength="8"
+                  required
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(prev => !prev)}
+                  aria-label={showNewPassword ? '隱藏密碼' : '顯示密碼'}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                >
+                  {showNewPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
+                </button>
+              </div>
             </div>
 
+            {/* 確認新密碼 */}
+            <div>
+              <label className="block text-body-sm font-medium text-gray-700 mb-1.5">確認新密碼</label>
+              <div className="relative">
+                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  placeholder="請再次輸入新密碼"
+                  value={passwords.confirmPassword}
+                  onChange={handleChange}
+                  className={inputClass}
+                  minLength="8"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(prev => !prev)}
+                  aria-label={showConfirmPassword ? '隱藏密碼' : '顯示密碼'}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                >
+                  {showConfirmPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
+                </button>
+              </div>
+            </div>
+
+            {/* 密碼要求提示 */}
+            <div className="p-4 bg-customgreen/5 border border-customgreen/15 rounded-xl">
+              <p className="text-body-sm text-gray-600 font-medium mb-1.5">密碼要求：</p>
+              <ul className="text-body-sm text-gray-500 space-y-0.5 list-disc list-inside">
+                <li>至少 8 個字元</li>
+                <li>建議包含英文大小寫、數字和特殊字元</li>
+              </ul>
+            </div>
+
+            {/* 錯誤訊息 */}
             {error && (
-              <div className="mb-4 p-component-sm bg-red-50 border border-red-200 rounded-lg">
-                <span className="text-body-sm text-red-600">{error}</span>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-body-sm text-red-600">{error}</p>
               </div>
             )}
-
-            <div className="mb-6 p-component-sm bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="text-body-sm text-blue-700">
-                <p className="font-semibold mb-1">密碼要求：</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>至少 8 個字元</li>
-                  <li>建議包含英文大小寫、數字和特殊字元</li>
-                </ul>
-              </div>
-            </div>
 
             <button
               type="submit"
               disabled={resetPasswordMutation.isLoading}
-              style={{ backgroundColor: "#5BA491" }}
-              className="w-full block text-white font-semibold rounded-lg px-4 py-3 text-body disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-2 text-white font-semibold rounded-xl py-3 text-body bg-customgreen hover:bg-customgreen/90 transition-colors duration-fast disabled:opacity-60"
             >
               {resetPasswordMutation.isLoading ? '更新中...' : '更新密碼'}
+              {!resetPasswordMutation.isLoading && <MdArrowForward className="text-lg" />}
             </button>
           </form>
 
-          <div className="mt-8 text-center">
-            <p className="text-gray-400">
-              記起密碼了?
-              <span style={{ color: "#5BA491" }} className="text-blue-500 hover:text-blue-700 font-semibold ml-2">
-                <Link to="/">返回登入</Link>
-              </span>
-            </p>
+          <div className="mt-6">
+            <Link to="/" className="text-body-sm font-medium text-customgreen hover:underline">
+              返回登入
+            </Link>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }
