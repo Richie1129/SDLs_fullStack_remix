@@ -1,0 +1,173 @@
+# 📝 更新日誌 (Changelog)
+
+本文件記錄 SDL 全端學習平台的所有版本迭代內容。格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/)。
+
+---
+
+## [v3.3.0] - 2026-03-04 — 求助分析、學校系統與登入改版
+
+### 🌟 重大更新
+- **求助行為分析系統 (Help-Seeking Analytics)**
+  - 基於 Won (2024) 與 Li (2023) 研究的求助品質量化模型
+  - **求助迴避風險偵測**：跨課堂趨勢分析，結合困難信號 + 求助活躍度 + 行為突變偵測
+  - **求助成效追蹤**：24 小時後自動檢查任務狀態變化，計算成效分數
+  - **教師專用視圖**：專案統計概覽、學生個別記錄、風險預警清單、後續追蹤案例
+  - 完整的 RESTful API（8 個端點）與教師儀表板前端整合
+  - 📄 [後端實作文檔](docs/backend/HELP_SEEKING_IMPLEMENTATION.md) · [前端實作文檔](docs/frontend/HELP_SEEKING_FRONTEND_IMPLEMENTATION.md) · [研究分析](Reference/HELP_SEEKING_IN_SRL_ANALYSIS.md)
+- **學校多租戶系統 (Multi-Tenancy)**
+  - 學校資料模型（教育部代碼、公私立、縣市）
+  - 使用者與專案關聯學校 ID
+  - 註冊時模糊搜尋學校名稱，跨校觀摩隔離機制
+- **全新登入系統設計**
+  - 登入頁面：雙面板設計、平台特色介紹、5Rs 反思框架說明、統計數字動態計數動畫
+  - 註冊頁面：學校搜尋下拉、密碼強度驗證、角色選擇
+  - 忘記密碼/重設密碼：Email 寄送帶 Token 的重設連結（24 小時有效、一次性）
+  - 重設密碼頁面：即時 Token 驗證、使用者資訊顯示、密碼安全性提示
+  - 📄 [密碼重設設定指南](docs/backend/PASSWORD_RESET_SETUP.md)
+- **教師儀表板重新設計**
+  - 全新圖表系統（Recharts / Chart.js）
+  - 效能優化與響應式設計改善
+  - 整合求助行為分析視圖
+  - 📄 [設計規劃](docs/frontend/TEACHER_DASHBOARD_REDESIGN_PLAN.md) · [設計評審](docs/frontend/TEACHER_DASHBOARD_DESIGN_REVIEW.md)
+
+### ✨ 新功能
+- **新手導覽系統 (Onboarding)**
+  - **看板導覽**：4 步驟引導（認識看板 → 卡片 → 範例任務 → 求助按鈕），首次使用自動觸發
+  - **想法牆導覽**：4 步驟引導（認識想法牆 → 新增節點 → 建立連線 → KB 教練），步驟指示器動畫
+- **學生學習歷程匯出**：PDF 格式匯出個人學習歷程，觀摩模式下自動隱藏匯出按鈕
+- **vLLM 對話摘要生成**：自動為 AI 對話生成摘要標題
+- **AuthImage 元件**：統一帶 Token 認證的圖片顯示與檔案下載，支援環境變數配置
+- **首頁 UX 重新設計**：進行中活動常駐展示 + Tab 切換架構、學期篩選預設改為全部
+
+### 🔒 安全強化
+- **OWASP Top 10 全面修復**
+  - Express Rate Limiting（API 請求頻率限制）
+  - Helmet 安全標頭設定
+  - 參數驗證與注入防護
+  - 📄 [安全審查報告](docs/reports/SECURITY_AUDIT_REPORT.md)
+- **密碼重設安全設計**
+  - `crypto.randomUUID()` 生成不可預測 Token
+  - Token 使用後即刻銷毀，密碼重設後自動撤銷所有 Refresh Token
+  - 審計追蹤記錄（REQUEST / VALIDATE / EXECUTE）
+
+### 🔧 技術改進
+- **CI/CD 部署流程優化**：GitHub Actions 併發控制、PostgreSQL 啟動等待機制、VITE 環境變數注入
+- **Sequelize 資料庫兼容性**：修正 `PG_DB` 與 `PG_NAME` 環境變數讀取
+- **手機端響應式體驗**：全面優化移動端佈局與交互 — 📄 [測試報告](docs/reports/responsive-test-report.md)
+- **KB Coach 強化**：求助引導 UX 改善、全員開放使用、AI 建議參考功能
+- **未登入審計事件防護**：未登入時不送出審計事件，避免 401 錯誤
+
+### 📦 資料庫遷移
+- `20260211000000-extend-help-seeking-log.js` — 擴展求助日誌欄位
+- `20260211000001-create-help-seeking-avoidance-risk.js` — 求助迴避風險資料表
+- `20260211000002-add-course-config-to-projects.js` — 專案課程設定
+- `20260211100000-add-semester-to-projects.js` — 專案學期欄位
+- `20260215-add-audit-fields.js` — 審計欄位擴充
+- `20260223000000-add-session-title-to-rag-messages.js` — 對話標題
+- `20260225000000-add-intent-to-kb-coach-history.js` — KB Coach 意圖欄位
+- `20260301000001-create-schools-table.js` — 學校資料表
+- `20260301000002-add-school-id-to-users.js` — 使用者關聯學校
+- `20260301000003-add-school-id-to-projects.js` — 專案關聯學校
+
+---
+
+## [v3.2.0] - 2026-02-11 — 儲存管理與知識建構系統
+
+### 🌟 重大更新
+- **StorageService 統一儲存管理**
+  - 完全重構本地儲存機制，取代 88+ 處直接 `localStorage` 呼叫
+  - 命名空間系統（`authStorage`, `userStorage`, `projectStorage`）
+  - 類型安全工具（`getInt`, `getBoolean`, `getNumber`）
+  - 認證快捷函式（`getCurrentUserId`, `getCurrentUserRole`, `isAuthenticated`, `isTeacher`）
+  - 完整錯誤處理與降級機制（localStorage 不可用時自動切換記憶體儲存）
+  - 📄 [StorageService 報告](docs/releases/PHASE2_STORAGESERVICE_REPORT.md)
+- **KB Coach 知識建構教練**
+  - 基於 Knowledge Building 12 原則的 AI 教練系統
+  - Gemini 2.5 Flash Function Calling 提供結構化輸出
+  - 6 個核心 KB 原則（Phase 1）
+  - 零破壞性設計：與舊版「想法發展助手」並存
+  - 📄 [KB Coach 實作報告](docs/reports/KB_COACH_IMPLEMENTATION.md)
+- **結構化日誌系統**
+  - Pino 高效能日誌取代 console.log
+  - 自動遮蔽敏感資訊（password, token, apiKey, sessionId）
+  - 📄 [Logger 修復報告](docs/releases/LOGGER_FIX_REPORT.md)
+
+### ✨ 新功能
+- **反思系統升級**
+  - **階段選擇器**：支援日誌關聯特定專案階段（如 1-1, 2-3），提供智慧推薦與驗證
+  - **UI 差異化**：雙卡片入口（傳統日誌 vs 5Rs 反思）與智慧橫幅引導
+  - 📄 [階段選擇器實作](docs/misc/STAGE_SELECTOR_IMPLEMENTATION.md) · [UI 差異化報告](docs/misc/UI_DIFFERENTIATION_REPORT.md)
+- **Idea Improver 2.0**
+  - 導入 **Shadow Orchestrator** 架構，實現非侵入式 AI 監控
+  - 死規則過濾器：冷卻時間（10 分鐘）+ 訊息累積（5 則）
+  - 雙模式切換：全域討論 + 節點討論
+  - 📄 [Idea Improver 改進計畫](docs/proposals/Improve-Idea-Improver.md)
+- **公告管理系統增強**
+  - 完整的刪除功能（RBAC 權限、Socket.IO 即時同步、審計追蹤）
+  - 📄 [實作報告](docs/releases/ANNOUNCEMENT_DELETE_COMPLETE.md)
+
+### 🔧 技術改進
+- **審計追蹤系統完成 Phase 3 P1**（9 個中等風險操作追蹤點）
+  - 📄 [Phase 3 實作報告](docs/releases/PHASE3_IMPLEMENTATION_COMPLETE.md) · [驗證指南](docs/guides/HOW_TO_VERIFY_PHASE3.md)
+- 架構優化：`IdeaWallMessage` 模型解耦、權限中間件強化、資料庫索引優化
+
+### 📦 資料庫遷移
+- `20260202233226-update-substage-usersubmit.js` — 子階段與使用者提交更新
+- `20260205000000-add-stage-to-daily-reflections.js` — 反思日誌階段欄位
+- `20260206000000-create-kb-coach-history.js` — KB Coach 歷史記錄
+- `20260210000000-remove-announcement-projectId-fkey.js` — 公告外鍵移除
+- `20260211000000-drop-user-consents.js` — 移除使用者同意表
+
+---
+
+## [v3.0.0] - 2025-01-12 — 重大更新
+
+### ✨ 新功能
+- **5Rs 反思框架與 AI 智能分析功能**
+  - 雙 AI 引擎支援（vLLM 本地部署 + gemini-2.5-flash）
+  - 結構化反思模型與專業回饋生成
+- **儀表板系統模組化重構**
+  - 學生儀表板：1000+ 行 → 14 個模組
+  - 教師儀表板：2000+ 行 → 15 個專業模組
+  - 響應式設計優化
+
+### 🗄️ 系統遷移
+- **MinIO 檔案儲存系統**：完全遷移至 MinIO 對象儲存，效能提升 300%
+
+### 🔧 技術改進
+- **Session 管理優化**：UUID + localStorage 持久化
+- **AI 助理 Streaming 功能**：即時回應體驗
+- **Refresh Token 實作**：自動 Token 刷新機制
+
+---
+
+## [v2.3] — 階段完成功能
+
+📄 [詳細更新記錄](Reference/versions/v2.3-stage-completion.md)
+
+- 階段完成流程與自動推進
+- 學習完成度追蹤
+
+## [v2.2] — 階段感知型 AI 助理
+
+📄 [詳細更新記錄](Reference/versions/v2.2-stage-aware.md)
+
+- AI 助理根據當前階段動態調整引導策略
+- 階段感知 Prompt Engineering
+
+## [v2.1] — AI Advisor 升級
+
+📄 [詳細更新記錄](Reference/versions/v2.1-advisor-upgrade.md)
+
+- AI Advisor 整體升級
+- RAG 系統整合
+
+---
+
+## 歷史版本
+
+更早期的版本歷史請參考 Git 提交記錄：
+
+```bash
+git log --oneline --no-merges
+```

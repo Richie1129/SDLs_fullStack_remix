@@ -22,10 +22,14 @@ Reference/
 │   ├── v2.2-stage-aware.md         # v2.2 階段感知型 AI 助理
 │   └── v2.3-stage-completion.md    # v2.3 階段完成功能
 │
+├── AI_ASSISTANT_GUIDE.md            # AI 助理完整使用指南
+├── HELP_SEEKING_IN_SRL_ANALYSIS.md  # 求助行為研究文獻分析
 ├── MONITORING.md                    # 系統監控與日誌指南
 ├── REFRESH_TOKEN_IMPLEMENTATION.md  # Refresh Token 實作說明
+├── SESSION_FIX_IMPLEMENTATION.md    # Session ID 修復實作
 ├── TOKENS_EXPLAINED.md              # Token 機制詳細說明
-└── reflection-log-permission-fix.md # 反思日誌權限修復
+├── reflection-log-permission-fix.md # 反思日誌權限修復
+└── student-portfolio-plan.md        # 學生學習歷程規劃
 ```
 
 ## 📚 文檔分類
@@ -51,6 +55,7 @@ Reference/
 - [backend/BACKEND_API_README.md](backend/BACKEND_API_README.md) - 後端 API 完整文檔
 - [general/CODE_REVIEW_CHECKLIST.md](general/CODE_REVIEW_CHECKLIST.md) - 代碼審查清單
 - [general/IMPROVEMENTS_SUMMARY.md](general/IMPROVEMENTS_SUMMARY.md) - 系統改進總結
+- [student-portfolio-plan.md](student-portfolio-plan.md) - 學生學習歷程規劃
 
 ## 📝 使用說明
 
@@ -83,6 +88,12 @@ Reference/
 | `sdl-backend-main/docs/v2.2-stage-aware.md` | `Reference/versions/v2.2-stage-aware.md` |
 | `sdl-backend-main/docs/v2.3-stage-completion.md` | `Reference/versions/v2.3-stage-completion.md` |
 
+### 🔍 求助行為研究
+- [HELP_SEEKING_IN_SRL_ANALYSIS.md](HELP_SEEKING_IN_SRL_ANALYSIS.md) - 求助行為研究文獻分析（Won 2024, Li 2023）
+
+### 🤖 AI 助理
+- [AI_ASSISTANT_GUIDE.md](AI_ASSISTANT_GUIDE.md) - AI 專案助理完整使用指南（Streaming、RAG）
+
 ---
 
-*這個資料夾由 README 重構時自動生成 - 2025-01-13*
+*最後更新：2026-03-04*

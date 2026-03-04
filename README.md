@@ -1,6 +1,6 @@
 # SDL (Self-Directed Learning) 全端學習平台
 
-> **🚀 2026 最新版本 v3.2**：整合 Shadow Orchestrator 影子中控、StorageService 統一儲存管理、反思階段選擇器、KB Coach 知識建構教練、與 P1-P3 三級審計追蹤系統
+> **🚀 2026 最新版本 v3.3**：新增求助行為分析系統、學校多租戶機制、密碼重設流程、全新登入頁面設計、新手導覽系統與學生學習歷程匯出
 
 一個專為教育研究設計的智慧型自主學習平台，結合科學探究方法論、AI 輔助學習分析與現代化協作工具。採用 React 18 + Node.js + PostgreSQL + Socket.IO 全端架構，提供完整的專案式學習 (PBL) 支援。
 
@@ -18,6 +18,7 @@
 - [專案結構](#-專案結構)
 - [文檔導航](#-文檔導航)
 - [最新更新](#-最新更新)
+- [更新日誌](CHANGELOG.md)
 - [故障排除](#-故障排除)
 - [貢獻指南](#-貢獻指南)
 
@@ -28,8 +29,9 @@
 ### 🎯 學習引導系統
 - **科學探究五階段引導**：定標 → 擇策 → 監評 → 調節 → 學習歷程
 - **智慧看板管理**：拖拽式任務管理，即時協作同步
+- **新手導覽系統**：看板與想法牆互動式引導教學，首次使用自動觸發
 - **AI 學習助手**：基於 RAG 技術的個人化學習支援（[詳細指南](Reference/AI_ASSISTANT_GUIDE.md)）
-- **數位作品集**：階段性學習成果展示與管理
+- **數位作品集**：階段性學習成果展示與管理，支援 PDF 匯出
 
 ### 🧠 AI 反思分析與知識建構系統
 - **5Rs 反思框架**：Reporting → Responding → Relating → Reasoning → Reconstructing
@@ -38,6 +40,13 @@
 - **KB Coach 教練系統**：基於 Knowledge Building 12 原則的 AI 教練，使用 Gemini Function Calling 提供結構化引導
 - **雙 AI 引擎支援**：vLLM (本地部署) + gemini-2.5-flash，自動容錯與降級機制
 - **專業回饋生成**：針對每個反思層次提供個人化改進建議
+
+### 📊 求助行為分析系統 (Help-Seeking Analytics)
+- **求助品質分析**：基於 Won (2024) 與 Li (2023) 研究，量化求助行為品質分數
+- **求助迴避風險偵測**：跨課堂趨勢分析，結合困難信號 + 求助活躍度 + 行為突變偵測
+- **求助成效追蹤**：24 小時後自動檢查任務狀態變化，計算求助成效分數
+- **教師儀表板視圖**：專案統計概覽、學生個別追蹤、風險預警清單
+- **AI 任務助手求助引導**：引導式求助流程，記錄後設認知狀態與求助類型（工具型/執行型）
 
 ### 🤝 協作與交流
 - **即時聊天系統**：專案群組、學習小組的即時通訊與檔案分享（Socket.IO v4.6）
@@ -50,9 +59,20 @@
 
 ### 📊 智慧儀表板系統
 - **學生儀表板**：個人學習概覽、團隊協作資訊、學習軌跡記錄
-- **教師管理儀表板**：多視圖模式、學生個別追蹤、即時監控系統
+- **教師管理儀表板**：多視圖模式、學生個別追蹤、即時監控系統、求助行為分析圖表
 - **教師總覽面板**：全局統計、跨專案進度監控、系統分析功能
-- **響應式設計**：桌面版表格與移動版卡片雙重佈局
+- **響應式設計**：桌面版表格與移動版卡片雙重佈局，全面手機端優化
+
+### 🏫 學校多租戶系統
+- **學校資料管理**：教育部學校代碼、公私立分類、縣市歸屬
+- **跨校觀摩隔離**：不同學校的專案資料隔離與權限控制
+- **註冊時學校選擇**：模糊搜尋學校名稱，自動關聯使用者與學校
+
+### 🔐 帳號安全與認證
+- **密碼重設流程**：Email 寄送重設連結（Nodemailer）、24 小時有效期限、一次性 Token 驗證
+- **全新登入/註冊頁面**：雙面板設計（品牌 + 表單）、平台特色介紹、統計數字動態計數
+- **JWT + Refresh Token**：雙 Token 機制，存取權杖 15 分鐘 + 更新權杖 7 天
+- **AuthImage 元件**：帶 Token 認證的安全圖片顯示與檔案下載
 
 ### 🔧 技術創新特色
 - **StorageService 統一儲存管理**：
@@ -67,7 +87,7 @@
 - **MinIO 對象儲存**：統一檔案管理，S3 相容介面，確保檔案安全與高可用性
 - **即時協作同步**：Socket.io v4.6 高效能即時通訊，支援房間訂閱與事件廣播
 - **模組化架構**：前後端組件化設計，控制器層拆分優化（儀表板 1000+ 行 → 14-15 個模組）
-- **Session 管理優化**：UUID + StorageService 持久化（[修復說明](Reference/SESSION_FIX_IMPLEMENTATION.md)）
+- **OWASP Top 10 安全強化**：全面修復常見 Web 安全弱點，包含 Rate Limiting、Helmet、參數驗證
 
 ---
 
@@ -79,8 +99,10 @@
 - **基礎框架**：React 18.2.0 + Vite 5.0
 - **UI 系統**：TailwindCSS + Styled Components
 - **狀態管理**：React Query + Context API
-- **資料視覺化**：Recharts, Vis Network, React Beautiful DnD
+- **動畫引擎**：Framer Motion
+- **資料視覺化**：Recharts, Chart.js, Vis Network, React Beautiful DnD
 - **路由系統**：React Router DOM v6
+- **Markdown 渲染**：React Markdown + remark-gfm + Streamdown (AI 串流)
 
 #### 後端技術
 - **核心框架**：Node.js + Express.js
@@ -88,14 +110,17 @@
 - **身份驗證**：JWT + Bcrypt（[Refresh Token 實作](Reference/REFRESH_TOKEN_IMPLEMENTATION.md)）
 - **即時通訊**：Socket.io v4.6
 - **檔案處理**：MinIO Object Storage + AWS SDK v3
+- **郵件服務**：Nodemailer（SMTP / 演示模式自動切換）
 - **日誌系統**：Pino v9 + Pino-HTTP（結構化日誌、敏感資訊遮蔽）
+- **安全中間件**：Helmet v8 + express-rate-limit
 - **AI 整合**：
-  - vLLM（本地部署大型語言模型，反思分析、對話）
+  - vLLM（本地部署大型語言模型，反思分析、對話、摘要標題生成）
   - Google gemini-2.5-flash（Gemini Flash Thinking, Function Calling）
   - 自動容錯與降級機制
 
 #### DevOps 基礎設施
 - **容器化**：Docker + Docker Compose
+- **CI/CD**：GitHub Actions（自動建構、遷移、部署）
 - **反向代理**：Nginx
 - **資料庫管理**：pgAdmin v4
 - **對象儲存**：MinIO (S3 相容)
@@ -176,6 +201,14 @@ GEMINI_API_KEY=your_gemini_api_key
 # JWT 認證密鑰
 JWT_SECRET=your_super_secret_key
 
+# 郵件服務設定（密碼重設功能）
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+EMAIL_FROM=noreply@sdl-platform.com
+FRONTEND_URL=http://localhost
+
 NODE_ENV=development
 ```
 
@@ -233,30 +266,59 @@ docker compose -f docker-compose.prod.yml ps
 SDLs_fullStack_remix/
 ├── sdl-frontend-main/          # React 前端應用
 │   ├── src/
-│   │   ├── components/         # 可重用組件庫
+│   │   ├── components/         # 可重用組件庫（AuthImage, StageSelector...）
 │   │   ├── pages/              # 頁面組件
+│   │   │   ├── login/          # 登入/註冊/忘記密碼/重設密碼
+│   │   │   ├── Kanban/         # 看板管理（含新手導覽）
+│   │   │   ├── ideaWall/       # 想法牆（含新手導覽）
+│   │   │   ├── reflection/     # 反思日誌系統
+│   │   │   ├── student-dashboard/ # 學生儀表板
+│   │   │   ├── teacher-dashboard/ # 教師儀表板
+│   │   │   ├── StudentPortfolio/  # 學生學習歷程
+│   │   │   └── ...
 │   │   ├── hooks/              # 自定義 React Hooks
 │   │   ├── api/                # API 呼叫層
-│   │   └── utils/              # 工具函數
+│   │   ├── providers/          # Context Providers（Tracking）
+│   │   └── utils/              # 工具函數（StorageService）
 │   └── package.json
 │
 ├── sdl-backend-main/           # Express.js 後端 API
 │   ├── controllers/            # 業務邏輯控制器
-│   ├── models/                 # Sequelize 資料模型
+│   │   ├── project/            # 專案相關（模組化拆分）
+│   │   ├── teacherHelpSeekingController.js  # 求助行為分析
+│   │   ├── passwordReset.js    # 密碼重設
+│   │   └── ...
+│   ├── models/                 # Sequelize 資料模型（46 個）
 │   ├── routes/                 # API 路由定義
-│   ├── middlewares/            # 中介軟體
+│   ├── middlewares/            # 中介軟體（認證、權限、Rate Limiting）
 │   ├── services/               # 服務層
+│   │   ├── helpSeekingAvoidanceService.js   # 求助迴避偵測
+│   │   ├── helpSeekingEffectivenessService.js # 求助成效追蹤
+│   │   ├── emailService.js     # 郵件服務
+│   │   ├── auditService.js     # 審計服務
+│   │   └── ...
 │   ├── config/                 # 設定檔案
-│   ├── migrations/             # 資料庫遷移檔案
+│   ├── migrations/             # 資料庫遷移檔案（62 個）
 │   └── package.json
 │
 ├── docs/                       # 詳細文檔目錄
+│   ├── releases/               # 版本發佈報告
+│   ├── reports/                # 功能實作報告
+│   ├── guides/                 # 使用指南
+│   ├── proposals/              # 功能提案
+│   ├── architecture/           # 架構設計文檔
 │   ├── frontend/               # 前端開發文檔
 │   ├── backend/                # 後端開發文檔
-│   └── general/                # 通用文檔
+│   └── ...
 │
+├── Reference/                  # 參考文檔
+│   ├── HELP_SEEKING_IN_SRL_ANALYSIS.md  # 求助行為研究分析
+│   └── ...
+│
+├── .github/                    # GitHub Actions CI/CD 配置
 ├── docker-compose.yml          # 開發環境容器配置
 ├── docker-compose.prod.yml     # 生產環境容器配置
+├── docker-compose.dev.yml      # 進階開發配置
 ├── nginx.conf                  # Nginx 反向代理配置
 ├── .env                        # 環境變數（不要提交）
 └── README.md                   # 本文件
@@ -268,125 +330,95 @@ SDLs_fullStack_remix/
 
 ## 📚 文檔導航
 
+> 📂 **完整文檔索引**：[docs/README.md](docs/README.md) — 按分類瀏覽所有 53 份技術文檔
+
 ### 📖 核心文檔
 
 | 文檔 | 說明 |
 |------|------|
-| [AGENTS.md](AGENTS.md) | **AI 編碼代理開發指南**（必讀！程式碼規範、StorageService、設計系統規範） |
+| [CLAUDE.md](CLAUDE.md) | AI 輔助開發指南（程式碼規範、StorageService、設計系統規範） |
+| [CHANGELOG.md](CHANGELOG.md) | 完整版本更新日誌（含 Migration 記錄） |
 | [AI_ASSISTANT_GUIDE.md](Reference/AI_ASSISTANT_GUIDE.md) | AI 專案助理完整使用指南（Streaming、RAG 系統） |
-| [SESSION_FIX_IMPLEMENTATION.md](Reference/SESSION_FIX_IMPLEMENTATION.md) | Session ID 管理修復實作總結 |
-| [CLAUDE.md](CLAUDE.md) | Claude AI 輔助開發指南 |
+| [HELP_SEEKING_IN_SRL_ANALYSIS.md](Reference/HELP_SEEKING_IN_SRL_ANALYSIS.md) | 求助行為研究文獻分析 |
 
 ### 🚀 開發文檔
 
 | 文檔 | 說明 |
 |------|------|
-| [Reference/REFRESH_TOKEN_IMPLEMENTATION.md](Reference/REFRESH_TOKEN_IMPLEMENTATION.md) | Refresh Token 實作說明 |
-| [Reference/TOKENS_EXPLAINED.md](Reference/TOKENS_EXPLAINED.md) | Token 機制詳細說明 |
-| [Reference/MONITORING.md](Reference/MONITORING.md) | 系統監控與日誌指南 |
-| [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md) | **深度分析與優化建議**（Socket 記憶體洩漏、程式碼品質評分） |
-| [LOGGER_FIX_REPORT.md](LOGGER_FIX_REPORT.md) | Logger 循環引用修復報告 |
+| [REFRESH_TOKEN_IMPLEMENTATION.md](Reference/REFRESH_TOKEN_IMPLEMENTATION.md) | Refresh Token 實作說明 |
+| [TOKENS_EXPLAINED.md](Reference/TOKENS_EXPLAINED.md) | Token 機制詳細說明 |
+| [MONITORING.md](Reference/MONITORING.md) | 系統監控與日誌指南 |
+| [SECURITY_AUDIT_REPORT.md](docs/reports/SECURITY_AUDIT_REPORT.md) | OWASP Top 10 安全審查報告 |
+| [PASSWORD_RESET_SETUP.md](docs/backend/PASSWORD_RESET_SETUP.md) | 密碼重設功能設定指南 |
 
 ### 📊 功能實作報告
 
 | 文檔 | 說明 |
 |------|------|
-| [PHASE3_IMPLEMENTATION_COMPLETE.md](PHASE3_IMPLEMENTATION_COMPLETE.md) | **Phase 3 P1 審計追蹤**（9 個中等風險操作追蹤點） |
-| [STAGE_SELECTOR_IMPLEMENTATION.md](STAGE_SELECTOR_IMPLEMENTATION.md) | **階段選擇器實作報告**（反思日誌階段關聯功能） |
-| [UI_DIFFERENTIATION_REPORT.md](UI_DIFFERENTIATION_REPORT.md) | **UI 差異化實施報告**（雙卡片選擇器、智慧橫幅） |
-| [Improve-Idea-Improver.md](Improve-Idea-Improver.md) | **Idea Improver 2.0 實作計畫**（Shadow Orchestrator 架構） |
-| [ANNOUNCEMENT_DELETE_COMPLETE.md](ANNOUNCEMENT_DELETE_COMPLETE.md) | 公告刪除功能完整實作（RBAC 權限、審計追蹤） |
-| [docs/KB_COACH_IMPLEMENTATION.md](docs/KB_COACH_IMPLEMENTATION.md) | **KB Coach 知識建構教練**（Gemini Function Calling） |
-| [docs/PHASE0_IMPLEMENTATION_COMPLETE.md](docs/PHASE0_IMPLEMENTATION_COMPLETE.md) | Phase 0 P0 最高風險審計追蹤（認證、授權） |
-| [docs/PHASE1_IMPLEMENTATION_COMPLETE.md](docs/PHASE1_IMPLEMENTATION_COMPLETE.md) | Phase 1 實作完成報告 |
-| [docs/PHASE2_IMPLEMENTATION_COMPLETE.md](docs/PHASE2_IMPLEMENTATION_COMPLETE.md) | Phase 2 實作完成報告 |
+| [HELP_SEEKING_IMPLEMENTATION.md](docs/backend/HELP_SEEKING_IMPLEMENTATION.md) | 求助行為分析系統後端實作 |
+| [HELP_SEEKING_FRONTEND_IMPLEMENTATION.md](docs/frontend/HELP_SEEKING_FRONTEND_IMPLEMENTATION.md) | 求助行為分析前端實作 |
+| [KB_COACH_IMPLEMENTATION.md](docs/reports/KB_COACH_IMPLEMENTATION.md) | KB Coach 知識建構教練（Gemini Function Calling） |
+| [TEACHER_DASHBOARD_REDESIGN_PLAN.md](docs/frontend/TEACHER_DASHBOARD_REDESIGN_PLAN.md) | 教師儀表板重新設計規劃 |
+| [PHASE3_IMPLEMENTATION_COMPLETE.md](docs/releases/PHASE3_IMPLEMENTATION_COMPLETE.md) | Phase 3 P1 審計追蹤（9 個追蹤點） |
 
-### 🛠️ 問題修復與指南
+### 🏗️ 架構與提案
 
 | 文檔 | 說明 |
 |------|------|
-| [docs/TOKEN_CLEANUP_GUIDE.md](docs/TOKEN_CLEANUP_GUIDE.md) | **Token 清理指南**（移除遺留 Token 系統） |
-| [docs/TRACKING_PROVIDER_GUIDE.md](docs/TRACKING_PROVIDER_GUIDE.md) | 追蹤提供者整合指南 |
-| [docs/AUDIT_COVERAGE_REPORT.md](docs/AUDIT_COVERAGE_REPORT.md) | 審計覆蓋率報告 |
-| [Reference/reflection-log-permission-fix.md](Reference/reflection-log-permission-fix.md) | 反思日誌權限修復 |
-| [Reference/frontend/LOGIN_FIX_TEST.md](Reference/frontend/LOGIN_FIX_TEST.md) | 登入功能修復測試 |
-| [Reference/backend/FIXES_SUMMARY.md](Reference/backend/FIXES_SUMMARY.md) | 後端修復總結 |
+| [FOUR_STAGE_SRL_REFACTOR.md](docs/architecture/FOUR_STAGE_SRL_REFACTOR.md) | 四階段自我調整學習重構方案 |
+| [KB.md](docs/architecture/KB.md) | Knowledge Building 理論架構 |
+| [Improve-SDLS.md](docs/proposals/Improve-SDLS.md) | SDL 平台整體改進提案 |
+| [TYPESCRIPT_MIGRATION_PLAN.md](docs/proposals/TYPESCRIPT_MIGRATION_PLAN.md) | TypeScript 務實遷移計畫 |
+
+### 🛠️ 指南與修復
+
+| 文檔 | 說明 |
+|------|------|
+| [TOKEN_CLEANUP_GUIDE.md](docs/guides/TOKEN_CLEANUP_GUIDE.md) | Token 清理指南 |
+| [TRACKING_PROVIDER_GUIDE.md](docs/guides/TRACKING_PROVIDER_GUIDE.md) | 追蹤提供者整合指南 |
+| [AUDIT_COVERAGE_REPORT.md](docs/reports/AUDIT_COVERAGE_REPORT.md) | 審計覆蓋率報告 |
+| [STAGE_REFLECTION_GUIDE_V2.md](docs/guides/STAGE_REFLECTION_GUIDE_V2.md) | 階段反思指南 V2 |
 
 ---
 
 ## 🆕 最新更新
 
-### v3.2.0 (2026-02-11) - 儲存管理與知識建構系統
+> 📜 **完整更新日誌**：[CHANGELOG.md](CHANGELOG.md)（含每個版本的資料庫 Migration 記錄）
 
-#### 🌟 重大更新
-- **StorageService 統一儲存管理**
-  - 完全重構本地儲存機制，取代 88+ 處直接 `localStorage` 呼叫
-  - 命名空間系統（`authStorage`, `userStorage`, `projectStorage`）
-  - 類型安全工具（`getInt`, `getBoolean`, `getNumber`）
-  - 認證快捷函式（`getCurrentUserId`, `getCurrentUserRole`, `isAuthenticated`, `isTeacher`）
-  - 完整錯誤處理與降級機制（localStorage 不可用時自動切換記憶體儲存）
-- **KB Coach 知識建構教練**
-  - 基於 Knowledge Building 12 原則的 AI 教練系統
-  - Gemini 2.5 Flash Function Calling 提供結構化輸出
-  - 6 個核心 KB 原則（Phase 1）：真實想法、可改進想法、想法多樣性、知識代理、社群知識、KB 對話
-  - 零破壞性設計：與舊版「想法發展助手」並存
-- **結構化日誌系統**
-  - Pino 高效能日誌取代 console.log
-  - 自動遮蔽敏感資訊（password, token, apiKey, sessionId）
-  - 開發環境美化輸出，生產環境高效 JSON 格式
-  - 修復循環引用問題（consoleLogger.raw）
+### v3.3.0 (2026-03-04) — 求助分析、學校系統與登入改版
 
-#### ✨ 新功能
-- **反思系統升級**
-  - **階段選擇器**：支援日誌關聯特定專案階段（如 1-1, 2-3），提供智慧推薦與驗證
-  - **UI 差異化**：雙卡片入口（傳統日誌 vs 5Rs 反思）與智慧橫幅引導
-  - 智慧橫幅三大情境：建議嘗試 5Rs、階段里程碑、鼓勵記錄
-- **Idea Improver 2.0**
-  - 導入 **Shadow Orchestrator** 架構，實現非侵入式 AI 監控
-  - 死規則過濾器：冷卻時間（10 分鐘）+ 訊息累積（5 則）
-  - 雙模式切換：全域討論 + 節點討論，右側滑出式抽屜設計
-  - LLM 上下文分析：Conflict/Question/Social 三類討論自動識別
-- **公告管理系統增強**
-  - 完整的刪除功能，包含 RBAC 權限檢查（教師/管理員）
-  - Socket.IO 即時同步刪除事件
-  - 審計追蹤記錄（ACTION_CODE: `ANNOUNCEMENT_DELETE`）
+| 類別 | 重點更新 |
+|------|----------|
+| 🌟 **求助行為分析** | 求助品質量化、迴避風險偵測、成效追蹤、教師儀表板視圖（8 個 API 端點） |
+| 🏫 **學校多租戶** | 學校資料模型、跨校觀摩隔離、註冊時學校搜尋 |
+| 🔐 **登入系統改版** | 全新雙面板登入頁、註冊頁、忘記密碼、Email 密碼重設 |
+| 📊 **教師儀表板** | 全新圖表系統（Recharts / Chart.js）、求助分析整合 |
+| 🎓 **新手導覽** | 看板 / 想法牆 4 步驟互動式導覽 |
+| 📋 **學習歷程匯出** | PDF 格式學生學習歷程匯出 |
+| 🔒 **安全強化** | OWASP Top 10 修復、Rate Limiting、Helmet |
+| ⚙️ **CI/CD** | GitHub Actions 併發控制、PostgreSQL 啟動等待、VITE 環境變數注入 |
 
-#### 🔧 技術改進
-- **審計追蹤系統完成 Phase 3 P1**
-  - 9 個中等風險操作追蹤點：
-    - **A. 專案查看權限**：單一更新、批量更新
-    - **B. 專案成員管理**：邀請碼加入、批量分配
-    - **C. 聊天室管理**：建立聊天室、發送訊息
-    - **D. AI 助理互動**：指導請求、聊天請求
-    - **E. 檔案操作**：單一刪除、批量刪除
-  - 完整的 metadata 記錄，支援審計追溯
-- **架構優化**
-  - 聊天訊息資料結構解耦（`IdeaWallMessage` 模型）
-  - 權限控制中間件強化（`announcementPermission.js`）
-  - 資料庫索引優化（階段查詢、專案階段組合索引）
-  - Socket 事件處理器重構（`SocketHandlerFactory`）
+### v3.2.0 (2026-02-11) — 儲存管理與知識建構系統
 
-### v3.0.0 (2025-01-12) - 重大更新
+| 類別 | 重點更新 |
+|------|----------|
+| 🌟 **StorageService** | 統一儲存管理，取代 88+ 處 `localStorage`，命名空間 + 類型安全 |
+| 🧠 **KB Coach** | Knowledge Building 12 原則 AI 教練，Gemini Function Calling |
+| 📝 **結構化日誌** | Pino 高效能日誌，敏感資訊自動遮蔽 |
+| ✨ **反思升級** | 階段選擇器、UI 差異化（雙卡片 + 智慧橫幅） |
+| 💡 **Idea Improver 2.0** | Shadow Orchestrator 非侵入式 AI 監控 |
+| 🔧 **審計 Phase 3 P1** | 9 個中等風險操作追蹤點 |
 
-#### ✨ 新功能
-- **5Rs 反思框架與 AI 智能分析功能**
-  - 雙 AI 引擎支援（vLLM 本地部署 + gemini-2.5-flash）
-  - 結構化反思模型與專業回饋生成
-- **儀表板系統模組化重構**
-  - 學生儀表板：1000+ 行 → 14 個模組
-  - 教師儀表板：2000+ 行 → 15 個專業模組
-  - 響應式設計優化
+### v3.0.0 (2025-01-12) — 重大更新
 
-#### 🗄️ 系統遷移
-- **MinIO 檔案儲存系統**
-  - 完全遷移至 MinIO 對象儲存
-  - 效能提升 300%
-  - 支援 PB 級檔案儲存
+| 類別 | 重點更新 |
+|------|----------|
+| ✨ **5Rs 反思** | 雙 AI 引擎（vLLM + Gemini）結構化反思分析 |
+| 📊 **儀表板重構** | 2000+ 行 → 14-15 個模組 |
+| 🗄️ **MinIO 遷移** | 對象儲存，效能提升 300% |
+| 🔐 **Refresh Token** | 雙 Token 機制自動刷新 |
 
-#### 🔧 技術改進
-- **Session 管理優化**：UUID + localStorage 持久化（[詳情](Reference/SESSION_FIX_IMPLEMENTATION.md)）
-- **AI 助理 Streaming 功能**：即時回應體驗（[指南](Reference/AI_ASSISTANT_GUIDE.md)）
-- **Refresh Token 實作**：自動 Token 刷新機制（[說明](Reference/REFRESH_TOKEN_IMPLEMENTATION.md)）
+> 📖 更早版本（v2.1 ~ v2.3）：[Reference/versions/](Reference/versions/)
 
 ---
 
@@ -451,6 +483,18 @@ cat sdl-backend-main/.env | grep API_KEY
 docker compose logs -f api | grep -i "api\|gemini"
 ```
 
+#### 6. 密碼重設郵件未收到
+
+```bash
+# 檢查郵件服務配置
+cat sdl-backend-main/.env | grep EMAIL
+
+# 查看後端郵件發送日誌
+docker compose logs -f api | grep -i "email\|password reset"
+
+# 演示模式下重設連結會輸出在後端日誌中
+```
+
 ### 更多問題？
 
 - 查看詳細故障排除指南：[Reference/general/CODE_REVIEW_CHECKLIST.md](Reference/general/CODE_REVIEW_CHECKLIST.md)
@@ -474,6 +518,9 @@ npm run dev
 
 # 建構生產版本
 npm run build
+
+# 執行測試
+npm run test
 ```
 
 ### 後端開發
@@ -490,8 +537,14 @@ npm run dev
 # 資料庫遷移
 npm run migrate
 
+# 查看遷移狀態
+npm run migrate:status
+
 # 還原資料庫遷移
 npm run migrate:undo
+
+# 執行測試
+npm test
 ```
 
 **開發規範與最佳實踐**：參考 [Reference/general/CODE_REVIEW_CHECKLIST.md](Reference/general/CODE_REVIEW_CHECKLIST.md)
@@ -526,6 +579,7 @@ style: 調整 UI 樣式
 refactor: 重構反思系統代碼
 test: 新增單元測試
 chore: 更新依賴套件
+security: 修復安全弱點
 ```
 
 ---
@@ -556,6 +610,7 @@ chore: 更新依賴套件
 - **科學探究方法論**：完整實作五階段學習引導（定標 → 擇策 → 監評 → 調節 → 學習歷程）
 - **5Rs 反思框架**：基於 Gibbs 反思循環的結構化反思模型
 - **Knowledge Building 理論**：KB Coach 實踐 12 原則的知識建構教練系統
+- **求助行為研究**：基於 Won (2024) 與 Li (2023) 研究的求助品質分析與迴避偵測
 - **專案式學習 (PBL)**：完整的協作工具鏈支援
 
 ### 🔐 企業級安全設計
@@ -563,19 +618,23 @@ chore: 更新依賴套件
 - **JWT + Refresh Token**：雙 Token 機制，存取權杖 15 分鐘 + 更新權杖 7 天
 - **RBAC 權限控制**：角色基礎存取控制（學生/教師/管理員）
 - **敏感資訊保護**：Pino 日誌自動遮蔽 password, token, apiKey 等敏感欄位
+- **OWASP Top 10 合規**：Rate Limiting、Helmet、參數驗證、安全標頭
+- **安全密碼重設**：一次性加密 Token、使用後即刻銷毀、強制重新登入
 
 ### 🚀 效能與可維護性
 - **模組化重構**：儀表板系統從 2000+ 行拆分為 14-15 個專業模組
 - **統一儲存管理**：StorageService 取代 88+ 處直接 localStorage 操作
 - **結構化日誌**：Pino 高效能日誌系統，生產環境零配置
 - **MinIO 對象儲存**：S3 相容介面，效能提升 300%
+- **CI/CD 自動化**：GitHub Actions 自動建構、遷移與部署
 
 ### 🤖 AI 技術整合
 - **多模型協作**：vLLM (本地部署) + Gemini 2.5 Flash 雙引擎，自動容錯
 - **Streaming 回應**：即時 AI 回應體驗，支援 Server-Sent Events
 - **Function Calling**：Gemini 結構化輸出，保證 JSON 格式正確性
 - **Shadow Orchestrator**：非侵入式 AI 監控與智能介入
+- **AI 對話摘要**：vLLM 驅動的自動對話標題生成
 
 ---
 
-*最後更新：2026-02-11 | 版本：v3.2.0*
+*最後更新：2026-03-04 | 版本：v3.3.0*
