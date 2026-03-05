@@ -89,6 +89,13 @@ npm run migrate:status       # 查看遷移狀態
 npm run test-minio          # 測試 MinIO 連線
 ```
 
+### 資料庫 seed / import 腳本規則
+
+撰寫任何資料庫插入或批次匯入腳本前：
+1. 先讀取對應的 Sequelize model，列出所有 `allowNull: false` 的必填欄位
+2. 對照來源資料確認每個必填欄位都有值（特別注意 `email`、`password` 等）
+3. 先以 3 筆測試資料執行驗證，確認無 ValidationError 後再跑完整資料
+
 ### 資料庫操作
 
 ```bash
@@ -300,6 +307,12 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 <div className="grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
 ```
 
+## Git 規範
+
+- **commit 訊息一律使用繁體中文**，不使用簡體中文或英文描述（技術術語除外）
+- 使用 `/commit` skill 執行完整的 commit + push + 驗證流程
+- push 後必須用 `git log --oneline -1` 與 `git ls-remote origin HEAD` 比對 hash，確認遠端已同步
+
 ## 程式碼規範
 
 ### 命名約定
@@ -308,6 +321,19 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 - **函式**: camelCase (`fetchStudentData`)
 - **常數**: UPPER_SNAKE_CASE (`FIVE_R_FRAMEWORK`)
 - **檔案**: kebab-case 或 PascalCase (`student-dashboard.jsx` 或 `StudentDashboard.jsx`)
+
+### Auth 頁面一致性規則
+
+修改任一 auth 頁面（`Login.jsx`、`Register.jsx`、`ForgotPassword.jsx`）時：
+- **主動檢查並同步其他兩個頁面**，確保品牌面板寬度、配色、動畫速度、響應式斷點一致
+- 三頁共用：`customgreen` 主題 + `duration-normal` 動畫 + `h-screen overflow-hidden` 佈局
+
+### 多步驟 UX 流程規則
+
+實作對話框、引導流程等互動功能前，先向使用者確認：
+- 項目是「預填選取」還是「自動執行」？
+- 每個步驟的按鈕文字為何？
+- 確認後才開始撰寫程式碼
 
 ### 錯誤處理
 
