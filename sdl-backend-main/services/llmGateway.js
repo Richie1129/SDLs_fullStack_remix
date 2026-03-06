@@ -371,9 +371,9 @@ async function callWithFallback(options = {}) {
             }
 
             if (step.type === 'gemini') {
-                const combinedText = systemPrompt + '\n\n' + userPrompt;
                 const geminiOpts = {
-                    prompt: [{ role: 'user', parts: [{ text: combinedText }] }],
+                    prompt: [{ role: 'user', parts: [{ text: userPrompt }] }],
+                    systemInstruction: systemPrompt,
                     temperature: 0.7,
                 };
 
