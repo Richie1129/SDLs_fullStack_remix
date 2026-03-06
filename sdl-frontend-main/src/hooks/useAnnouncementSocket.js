@@ -8,7 +8,6 @@ import Swal from 'sweetalert2';
 export const useAnnouncementSocket = (projectId, setNotifications, selectedAnnouncement, setSelectedAnnouncement) => {
     useEffect(() => {
         const handleReceiveAnnouncement = (data) => {
-            console.log("從 socket 收到公告:", data);
             setNotifications((prev) => {
                 if (prev.find(n => n.id === data.id)) {
                     return prev;
@@ -18,7 +17,6 @@ export const useAnnouncementSocket = (projectId, setNotifications, selectedAnnou
         };
 
         const handleAnnouncementDeleted = (data) => {
-            console.log("從 socket 收到公告刪除通知:", data);
             setNotifications((prev) => prev.filter(n => n.id !== data.id));
 
             // 如果正在查看被刪除的公告，關閉 Modal
@@ -46,13 +44,11 @@ export const useAnnouncementSocket = (projectId, setNotifications, selectedAnnou
     // 當 projectId 變更時，加入或離開對應的 socket room
     useEffect(() => {
         if (projectId) {
-            console.log(`加入 socket 房間: project-${projectId}`);
             socket.emit('join_project', projectId);
         }
 
         return () => {
             if (projectId) {
-                console.log(`離開 socket 房間: project-${projectId}`);
                 socket.emit('leave_project', projectId);
             }
         };

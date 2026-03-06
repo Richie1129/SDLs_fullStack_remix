@@ -438,16 +438,6 @@ export default function IdeaWall() {
                 </Modal>
             )}
 
-            {/* Phase 2 Orchestrator 監控面板 */}
-            {/* {!isObservationMode && state.ideaWallInfo?.id && (
-                <div className="absolute top-4 right-4 w-80 z-40">
-                    <OrchestratorMonitor
-                        ideaWallId={state.ideaWallInfo.id}
-                        projectId={parseInt(projectId)}
-                    />
-                </div>
-            )} */}
-
             {/* 計時器 + 新增節點按鈕 + 導覽重播按鈕 */}
             {!isObservationMode && (
                 <div className="fixed bottom-4 right-4 flex flex-row items-end gap-2 z-50">
@@ -492,9 +482,9 @@ export default function IdeaWall() {
             {!isObservationMode && (
                 <>
                     {state.isChatPanelOpen ? (
-                        <IdeaWallChatPanel 
-                            ideaWallId={state.ideaWallInfo.id} 
-                            selectedNodeId={state.selectNodeInfo.id} 
+                        <IdeaWallChatPanel
+                            ideaWallId={state.ideaWallInfo?.id}
+                            selectedNodeId={state.selectNodeInfo?.id}
                             nodes={state.nodes}
                             onClose={() => state.setIsChatPanelOpen(false)} 
                         />

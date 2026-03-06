@@ -16,7 +16,9 @@ const logger = require('../config/logger');
 //get all users
 exports.getUsers = async (req, res) => {
     try {
-        const users = await User.findAll();
+        const users = await User.findAll({
+            attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id'],
+        });
         res.status(200).json({ user: users });
     } catch (err) {
         console.error('Error fetching users:', err);

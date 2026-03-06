@@ -34,7 +34,7 @@ class Config {
         return {
             secret: process.env.JWT_SECRET || this.getDefaultJwtSecret(),
             expiresIn: parseExpiresIn(process.env.JWT_EXPIRES_IN, 86400),            // 預設 24h
-            refreshExpiresIn: parseInt(process.env.JWT_REFRESH_EXPIRES_IN) || 604800  // 預設 7d（秒數）
+            refreshExpiresIn: parseExpiresIn(process.env.JWT_REFRESH_EXPIRES_IN, 604800)  // 預設 7d（秒數）
         };
     }
 

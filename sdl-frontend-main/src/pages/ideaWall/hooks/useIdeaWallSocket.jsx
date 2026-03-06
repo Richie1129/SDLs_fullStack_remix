@@ -36,9 +36,7 @@ export function useIdeaWallSocket({
     useEffect(() => {
         // 節點更新事件處理器（使用 debounce 避免頻繁重新載入）
         // 透過 ref 讀取最新 refetch，不需將 query 物件放入 deps
-        function nodeUpdateEvent(data) {
-            console.log("收到節點更新事件:", data);
-
+        function nodeUpdateEvent(_data) {
             // 清除之前的 timeout
             if (refetchTimeoutRef.current) {
                 clearTimeout(refetchTimeoutRef.current);
@@ -66,8 +64,6 @@ export function useIdeaWallSocket({
 
         // 成功處理事件：節點操作成功
         const handleNodeSuccess = (result) => {
-            console.log('節點操作成功:', result);
-            
             if (result?.code === 'NODE_DELETE_SUCCESS') {
                 toast.success(`${result.nodeTitle || '節點'} 刪除成功！`);
             } else if (result?.message) {
@@ -77,8 +73,6 @@ export function useIdeaWallSocket({
 
         // Phase 3: AI 建議通知處理器
         const handleAiSuggestion = (data) => {
-            console.log('🤖 [Phase 3] Received AI suggestion:', data);
-            
             // 儲存建議資訊（透過 ref 讀取最新 setter）
             setAiSuggestionRef.current(data);
             setSuggestedAgentTypeRef.current(data.role);

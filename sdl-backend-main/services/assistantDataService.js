@@ -13,6 +13,7 @@
  */
 
 const { Op } = require("sequelize");
+const logger = require("../config/logger");
 
 const Project = require("../models/project");
 const User = require("../models/user");
@@ -122,7 +123,7 @@ async function getCompleteStageStructure(projectId) {
         });
 
         if (!process || !process.stages || process.stages.length === 0) {
-            console.log(`⚠️ [Stage Structure] 專案 ${projectId} 沒有階段資料`);
+            logger.warn(`[Stage Structure] 專案 ${projectId} 沒有階段資料`);
             return null;
         }
 
@@ -137,10 +138,10 @@ async function getCompleteStageStructure(projectId) {
             })),
         }));
 
-        console.log(`✅ [Stage Structure] 成功載入 ${process.stages.length} 個階段`);
+        logger.info(`[Stage Structure] 成功載入 ${process.stages.length} 個階段`);
         return stageStructure;
     } catch (error) {
-        console.error(`❌ [Stage Structure] 查詢失敗:`, error);
+        logger.error({ err: error }, '[Stage Structure] 查詢失敗');
         return null;
     }
 }
@@ -160,7 +161,7 @@ async function getStageCompletionStatus(projectId, currentStageId, currentSubSta
         });
 
         if (!process || !process.stages || process.stages.length === 0) {
-            console.log(`⚠️ [Stage Completion] 專案 ${projectId} 沒有階段資料`);
+            logger.warn(`[Stage Completion] 專案 ${projectId} 沒有階段資料`);
             return null;
         }
 
@@ -228,7 +229,7 @@ async function getStageCompletionStatus(projectId, currentStageId, currentSubSta
 
         const totalCompleteness = totalSubStages > 0 ? Math.round((completedSubStages / totalSubStages) * 100) : 0;
 
-        console.log(`✅ [Stage Completion] 成功分析 ${process.stages.length} 個階段，總完成度: ${totalCompleteness}%`);
+        logger.info(`[Stage Completion] 成功分析 ${process.stages.length} 個階段，總完成度: ${totalCompleteness}%`);
         return {
             hasData: true,
             當前階段: { 階段ID: currentStageId, 子階段ID: currentSubStageId },
@@ -237,7 +238,7 @@ async function getStageCompletionStatus(projectId, currentStageId, currentSubSta
             各階段狀況: stageCompletionData,
         };
     } catch (error) {
-        console.error(`❌ [Stage Completion] 查詢失敗:`, error);
+        logger.error({ err: error }, '[Stage Completion] 查詢失敗');
         return null;
     }
 }
@@ -408,8 +409,8 @@ ${JSON.stringify(activitySummary, null, 2)}
         }
         return JSON.parse(jsonContent);
     } catch (error) {
-        console.error('LLM analysis failed, using fallback:', error);
-        if (result?.content) console.error('LLM raw response:', result.content.substring(0, 500));
+        logger.error({ err: error }, 'LLM analysis failed, using fallback');
+        if (result?.content) logger.error(`LLM raw response: ${result.content.substring(0, 500)}`);
         const basicSummary = generateBasicSummaries({ kanban, ideaWall, submissions, stageMeta });
         return { ...basicSummary, degradedMode: true, degradedReason: 'LLM 服務暫時不可用' };
     }
@@ -458,7 +459,7 @@ ${userMessage || '請提供目前狀況的建議'}
         const result = await callGeminiAPI(reportPrompt);
         return result.content;
     } catch (error) {
-        console.error('Report generation failed:', error);
+        logger.error({ err: error }, 'Report generation failed');
         return `# 專案分析報告：${projectBasics.name}
 
 ## 整體狀況
@@ -473,9 +474,9 @@ ${projectAnalysis.researchQuality}
 ## 階段符合度
 ${projectAnalysis.stageCompliance}
 
-${projectAnalysis.riskFactors?.length > 0 ? `## ⚠️ 需要注意\n${projectAnalysis.riskFactors.map(risk => `- ${risk}`).join('\n')}` : ''}
+${projectAnalysis.riskFactors?.length > 0 ? `## 需要注意\n${projectAnalysis.riskFactors.map(risk => `- ${risk}`).join('\n')}` : ''}
 
-${projectAnalysis.actionableInsights?.length > 0 ? `## 💡 建議行動\n${projectAnalysis.actionableInsights.map(insight => `- ${insight}`).join('\n')}` : ''}`;
+${projectAnalysis.actionableInsights?.length > 0 ? `## 建議行動\n${projectAnalysis.actionableInsights.map(insight => `- ${insight}`).join('\n')}` : ''}`;
     }
 }
 

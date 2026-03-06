@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import Modal from '../Modal';
 import Swal from 'sweetalert2';
 import { createAnnouncement } from '../../api/announcement';
-import { getCurrentUsername } from '../../utils/userUtils';
 
 export default function AnnouncementFormModal({ 
     open, 
@@ -34,14 +33,12 @@ export default function AnnouncementFormModal({
             payload = {
                 title: newTitle,
                 content: newDescription,
-                author: getCurrentUsername() || 'Unknown Author',
                 projectId: selectedTarget === 'all' ? null : selectedTarget,
             };
         } else {
             payload = {
                 title: newTitle,
                 content: newDescription,
-                author: getCurrentUsername() || 'Unknown Author',
                 projectId: `student_${selectedTarget}`,
             };
         }
@@ -204,7 +201,7 @@ export default function AnnouncementFormModal({
                         >取消</button>
                         <button
                             type="submit"
-                            className="px-4 py-2 bg-[#5BA491] text-white rounded-lg hover:bg-opacity-90"
+                            className="px-btn-x py-btn-y bg-customgreen text-white rounded-lg hover:bg-customgreen/90"
                         >發佈公告</button>
                     </div>
                 </form>

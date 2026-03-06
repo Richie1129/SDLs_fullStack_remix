@@ -461,6 +461,8 @@ exports.getFeedbackStats = async (req, res) => {
 exports.getHistory = async (req, res) => {
   try {
     const { projectId, nodeId, userId, agentType, limit = 20 } = req.query;
+    const MAX_LIMIT = 100;
+    const safeLimit = Math.min(parseInt(limit) || 20, MAX_LIMIT);
 
     // 建構查詢條件
     const whereClause = {};
@@ -472,7 +474,7 @@ exports.getHistory = async (req, res) => {
     const histories = await KbCoachHistory.findAll({
       where: whereClause,
       order: [['createdAt', 'DESC']],
-      limit: parseInt(limit),
+      limit: safeLimit,
       attributes: [
         'id',
         'agentType',

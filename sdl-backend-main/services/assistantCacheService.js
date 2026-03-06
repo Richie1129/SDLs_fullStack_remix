@@ -11,6 +11,7 @@
  */
 
 const ASSISTANT_CONFIG = require("../config/assistant");
+const logger = require("../config/logger");
 const {
     getStageMeta,
     getCompleteStageStructure,
@@ -38,13 +39,13 @@ async function getProjectContext(projectId, projectData, forceRefresh = false) {
     if (!forceRefresh) {
         const cached = projectContextCache.get(cacheKey);
         if (cached && (now - cached.timestamp) < CACHE_TTL) {
-            console.log(`🚀 [Cache Hit] ProjectContext 從快取載入 (${projectId})`);
+            logger.info(`[Cache Hit] ProjectContext 從快取載入 (${projectId})`);
             return cached.data;
         }
     }
 
     // 快取未命中或強制刷新
-    console.log(`📊 [Cache Miss] 開始撈取 ProjectContext (${projectId})`);
+    logger.info(`[Cache Miss] 開始撈取 ProjectContext (${projectId})`);
 
     const [stageMeta, stageStructure, stageCompletion, kanban, ideaWall, submissions] = await Promise.all([
         getStageMeta(projectData.project),
@@ -120,7 +121,7 @@ async function getProjectContext(projectId, projectData, forceRefresh = false) {
 
     // 存入快取
     projectContextCache.set(cacheKey, { data: projectContext, timestamp: now });
-    console.log(`✅ [Cache Store] ProjectContext 已快取 (${projectId})`);
+    logger.info(`[Cache Store] ProjectContext 已快取 (${projectId})`);
 
     // 定期清理過期快取
     if (projectContextCache.size > 100) {
@@ -143,7 +144,7 @@ function cleanExpiredCache() {
         }
     }
     if (cleaned > 0) {
-        console.log(`🧹 [Cache Clean] 清理 ${cleaned} 個過期快取條目`);
+        logger.info(`[Cache Clean] 清理 ${cleaned} 個過期快取條目`);
     }
 }
 
@@ -154,7 +155,7 @@ function invalidateProjectCache(projectId) {
     const cacheKey = `project_${projectId}`;
     const deleted = projectContextCache.delete(cacheKey);
     if (deleted) {
-        console.log(`🗑️ [Cache Invalidate] 已清除 ProjectContext 快取 (${projectId})`);
+        logger.info(`[Cache Invalidate] 已清除 ProjectContext 快取 (${projectId})`);
     }
 }
 

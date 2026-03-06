@@ -8,13 +8,11 @@ const { logAudit } = require('../services/auditService');
 // 發佈公告
 exports.createAnnouncement = async (req, res) => {
     try {
-        const { title, content, author, projectId } = req.body;
+        const { title, content, projectId } = req.body;
+        const author = req.user?.username || 'Unknown Author';
 
-        console.log("接收到的請求數據:", { title, content, author, projectId });
-
-        if (!title || !content || !author || projectId === undefined) {
-            console.log("缺少必要字段:", { title, content, author, projectId });
-            return res.status(400).json({ message: '缺少必要欄位', missingFields: { title, content, author, projectId } });
+        if (!title || !content || projectId === undefined) {
+            return res.status(400).json({ message: '缺少必要欄位', missingFields: { title, content, projectId } });
         }
 
         // 檢查是否為學生模式
@@ -67,12 +65,6 @@ exports.createAnnouncement = async (req, res) => {
             projectId: finalProjectId,
         });
 
-        if (newAnnouncement) {
-            console.log("公告成功儲存至資料庫:", newAnnouncement);
-        } else {
-            console.error("公告儲存至資料庫失敗: 未返回新記錄");
-        }
-
         // 記錄公告建立
         logAudit(req, {
             action: 'ANNOUNCEMENT_CREATE',
@@ -91,7 +83,6 @@ exports.createAnnouncement = async (req, res) => {
         if (isStudentMode) {
             // 學生模式：只發送給特定學生
             const studentId = projectId.replace('student_', '');
-            console.log(`向學生 ${studentId} 發送公告`);
             req.app.get('io').to(`user_${studentId}`).emit('receiveAnnouncement', newAnnouncement);
         } else if (!finalProjectId) {
             // 全域公告：發送給所有人
