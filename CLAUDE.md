@@ -307,6 +307,15 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 <div className="grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
 ```
 
+## 可用 Skills 快速參考
+
+| 指令 | 用途 | 何時使用 |
+|------|------|---------|
+| `/commit` | 繁體中文 commit + push + 驗證 | 每次提交前 |
+| `/debug` | 收集 Docker/DB/env 環境快照 | 遇到任何錯誤前 |
+| `/feature <描述>` | 確認互動模型與受影響檔案 | 實作新功能前 |
+| `/auth-sync` | 比對並同步三個 auth 頁面樣式 | 修改 auth 頁面後 |
+
 ## Git 規範
 
 - **commit 訊息一律使用繁體中文**，不使用簡體中文或英文描述（技術術語除外）
