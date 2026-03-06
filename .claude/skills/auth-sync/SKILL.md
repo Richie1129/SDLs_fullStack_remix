@@ -15,9 +15,12 @@ description: "檢查並同步 Login、Register、ForgotPassword 三個 auth 頁�
 ```
 
 ## Auth 頁面路徑
-- `sdl-frontend-main/src/pages/Login.jsx`
-- `sdl-frontend-main/src/pages/Register.jsx`
-- `sdl-frontend-main/src/pages/ForgotPassword.jsx`
+
+以下四個頁面共用品牌面板（左側 customgreen）+ 表單（右側）的左右佈局：
+- `sdl-frontend-main/src/pages/login/Login.jsx`
+- `sdl-frontend-main/src/pages/login/Register.jsx`
+- `sdl-frontend-main/src/pages/login/ForgotPassword.jsx`
+- `sdl-frontend-main/src/pages/login/ResetPassword.jsx`
 
 ## 執行步驟
 
@@ -90,5 +93,6 @@ description: "檢查並同步 Login、Register、ForgotPassword 三個 auth 頁�
 
 ## 注意事項
 - ForgotPassword 頁面沒有密碼欄位，跳過密碼相關項目的比對
+- ResetPassword 頁面有兩組密碼欄位（新密碼 + 確認密碼），皆需有顯示/隱藏切換
 - 若三個頁面各有不同邏輯需求（如 Register 有更多欄位），只同步視覺樣式，不改動表單結構
 - 修改前先確認使用者想以哪個頁面為基準

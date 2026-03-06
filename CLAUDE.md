@@ -340,7 +340,7 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 
 ### Auth 頁面一致性規則
 
-修改任一 auth 頁面（`Login.jsx`、`Register.jsx`、`ForgotPassword.jsx`）時：
+修改任一 auth 頁面（`Login.jsx`、`Register.jsx`、`ForgotPassword.jsx`、`ResetPassword.jsx`）時：
 - **主動檢查並同步其他兩個頁面**，確保品牌面板寬度、配色、動畫速度、響應式斷點一致
 - 三頁共用：`customgreen` 主題 + `duration-normal` 動畫 + `h-screen overflow-hidden` 佈局
 
