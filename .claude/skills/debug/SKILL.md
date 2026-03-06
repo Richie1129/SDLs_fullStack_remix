@@ -17,9 +17,36 @@ description: "除錯前先收集完整環境快照，避免連鎖除錯問題。
 
 ## 執行步驟
 
+## 環境偵測
+
+本專案有三個 compose 檔案：
+- **本地開發**：`docker-compose.dev.yml`（`docker compose -f docker-compose.dev.yml up --build`）
+- **生產**：`docker-compose.prod.yml`
+- **預設**：`docker-compose.yml`
+
+**執行任何 docker compose 指令前，先偵測目前運行的環境：**
+```bash
+# 偵測哪個 compose 環境正在運行
+docker compose -f docker-compose.dev.yml ps --quiet 2>/dev/null | head -1 && echo "DEV" || \
+docker compose ps --quiet 2>/dev/null | head -1 && echo "DEFAULT" || echo "UNKNOWN"
+```
+
+將偵測結果存為 `$DC`（`docker compose -f docker-compose.dev.yml` 或 `docker compose`），後續所有指令都使用 `$DC`。
+
+實際執行時用 shell 變數：
+```bash
+# 判斷使用哪個 compose 檔
+if docker compose -f docker-compose.dev.yml ps --quiet 2>/dev/null | grep -q .; then
+  DC="docker compose -f docker-compose.dev.yml"
+else
+  DC="docker compose"
+fi
+echo "使用環境: $DC"
+```
+
 ### 步驟 1：Docker 服務狀態
 ```bash
-docker compose ps
+$DC ps
 ```
 列出所有服務狀態，標記哪些是 `Up`、`Exit`、`Restarting`。
 
@@ -27,20 +54,20 @@ docker compose ps
 
 若使用者指定服務，只查該服務；否則查 api 和 front：
 ```bash
-docker compose logs --tail=50 api
-docker compose logs --tail=50 front
+$DC logs --tail=50 api
+$DC logs --tail=50 front
 ```
 
 若看到 ERROR 或 WARN，額外取得更多上下文：
 ```bash
-docker compose logs --tail=200 <問題服務> | grep -E "ERROR|WARN|error|Error"
+$DC logs --tail=200 <問題服務> | grep -E "ERROR|WARN|error|Error"
 ```
 
 ### 步驟 3：環境變數存在性確認
 
 **只確認變數是否存在，絕對不顯示實際值：**
 ```bash
-docker compose exec api sh -c '
+$DC exec api sh -c '
   for var in GEMINI_API_KEY JWT_SECRET PG_HOST PG_DB MINIO_ENDPOINT MINIO_BUCKET_NAME; do
     if [ -n "$(eval echo \$$var)" ]; then
       echo "$var: ✅ 已設定"
@@ -53,17 +80,17 @@ docker compose exec api sh -c '
 
 ### 步驟 4：資料庫連線確認
 ```bash
-docker compose exec postgres psql -U postgres -d postgres -c "SELECT 1 as connection_test;" 2>&1
+$DC exec postgres psql -U postgres -d postgres -c "SELECT 1 as connection_test;" 2>&1
 ```
 
 若使用者問題涉及特定資料表，額外執行：
 ```bash
-docker compose exec postgres psql -U postgres -d postgres -c "\dt" 2>&1
+$DC exec postgres psql -U postgres -d postgres -c "\dt" 2>&1
 ```
 
 ### 步驟 5：網路連通性（若涉及服務間通訊）
 ```bash
-docker compose exec api sh -c 'curl -s -o /dev/null -w "%{http_code}" http://minio:9000/minio/health/live' 2>&1
+$DC exec api sh -c 'curl -s -o /dev/null -w "%{http_code}" http://minio:9000/minio/health/live' 2>&1
 ```
 
 ### 步驟 6：整理快照報告

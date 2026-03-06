@@ -21,24 +21,25 @@ SDL (Self-Directed Learning) 是一個全端學習平台,結合科學探究五�
 # 啟動所有服務 (開發環境)
 docker compose up -d
 
-# 本地開發
-docker-compose -f docker-compose.dev.yml up --build 
+# 本地開發（主要使用此指令）
+docker compose -f docker-compose.dev.yml up --build
 
+# ⚠️ 本地開發時，所有 docker compose 指令都需加上 -f docker-compose.dev.yml：
 # 檢查服務狀態
-docker compose ps
+docker compose -f docker-compose.dev.yml ps
 
 # 查看特定服務日誌
-docker compose logs -f api      # 後端 API
-docker compose logs -f front    # 前端
-docker compose logs -f postgres # 資料庫
-docker compose logs -f minio    # MinIO 儲存
+docker compose -f docker-compose.dev.yml logs -f api      # 後端 API
+docker compose -f docker-compose.dev.yml logs -f front    # 前端
+docker compose -f docker-compose.dev.yml logs -f postgres # 資料庫
+docker compose -f docker-compose.dev.yml logs -f minio    # MinIO 儲存
 
 # 重啟特定服務
-docker compose restart api
-docker compose restart front
+docker compose -f docker-compose.dev.yml restart api
+docker compose -f docker-compose.dev.yml restart front
 
 # 停止所有服務
-docker compose down
+docker compose -f docker-compose.dev.yml down
 
 # 停止並刪除所有資料 (包含 volumes)
 docker compose down -v
@@ -330,6 +331,12 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 - **函式**: camelCase (`fetchStudentData`)
 - **常數**: UPPER_SNAKE_CASE (`FIVE_R_FRAMEWORK`)
 - **檔案**: kebab-case 或 PascalCase (`student-dashboard.jsx` 或 `StudentDashboard.jsx`)
+
+### 圖示與 Emoji 規範
+
+- **禁止在 UI 中使用 emoji**（包含按鈕、標籤、標題、提示訊息等）
+- **圖示一律使用 `react-icons`**，例如 `import { FiUser } from 'react-icons/fi'`
+- 需要新圖示時，優先從 `react-icons` 已有的 icon 集中挑選
 
 ### Auth 頁面一致性規則
 
