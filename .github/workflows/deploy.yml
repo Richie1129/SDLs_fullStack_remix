@@ -167,6 +167,24 @@ jobs:
                 exit 1
               fi
 
+                if [ -z "${PG_USER:-}" ] || [ -z "${PG_PASSWORD:-}" ]; then
+                  echo "❌ .env 缺少 PG_USER 或 PG_PASSWORD，停止部署以避免初始化出錯"
+                  exit 1
+                fi
+
+              # ── 同步 postgres 密碼（防止 volume 初始化密碼與 .env 不符）──────
+              echo "🔑 同步 postgres 密碼..."
+                docker exec \
+                  -e TARGET_PG_USER="${PG_USER}" \
+                  -e TARGET_PG_PASSWORD="${PG_PASSWORD}" \
+                  "${POSTGRES_CONTAINER_ID}" \
+                  sh -lc '
+                    escaped_user=$(printf "%s" "$TARGET_PG_USER" | sed "s/\"/\"\"/g")
+                    escaped_password=$(printf "%s" "$TARGET_PG_PASSWORD" | sed "s/'"'"'/'"'"''"'"'/g")
+                    psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "ALTER ROLE \"$escaped_user\" WITH PASSWORD '\''$escaped_password'\'';"
+                  '
+              echo "✅ 密碼已同步為 .env 設定值"
+
               echo "🔗 共用 postgres 網路命名空間: ${POSTGRES_CONTAINER_ID}"
               # 傳入 .env 及必要覆蓋值，確保臨時容器能讀到正確 DB 連線資訊
               # 注意：舊版 docker-compose run 不支援 --network，改用 docker run 直接啟動
