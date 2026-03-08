@@ -167,16 +167,20 @@ jobs:
                 exit 1
               fi
 
-                if [ -z "${PG_USER:-}" ] || [ -z "${PG_PASSWORD:-}" ]; then
-                  echo "❌ .env 缺少 PG_USER 或 PG_PASSWORD，停止部署以避免初始化出錯"
-                  exit 1
-                fi
+              # 從 .env 讀取 PG 認證資訊（shell 不自動載入 .env）
+              EFFECTIVE_PG_USER=$(grep -E '^PG_USER=' .env 2>/dev/null | cut -d= -f2 | tr -d '"'"'"'')
+              EFFECTIVE_PG_PASSWORD=$(grep -E '^PG_PASSWORD=' .env 2>/dev/null | cut -d= -f2 | tr -d '"'"'"'')
+
+              if [ -z "$EFFECTIVE_PG_USER" ] || [ -z "$EFFECTIVE_PG_PASSWORD" ]; then
+                echo "❌ .env 缺少 PG_USER 或 PG_PASSWORD，中止部署"
+                exit 1
+              fi
 
               # ── 同步 postgres 密碼（防止 volume 初始化密碼與 .env 不符）──────
-              echo "🔑 同步 postgres 密碼..."
+              echo "🔑 同步 postgres 密碼 (user=${EFFECTIVE_PG_USER})..."
                 docker exec \
-                  -e TARGET_PG_USER="${PG_USER}" \
-                  -e TARGET_PG_PASSWORD="${PG_PASSWORD}" \
+                  -e TARGET_PG_USER="${EFFECTIVE_PG_USER}" \
+                  -e TARGET_PG_PASSWORD="${EFFECTIVE_PG_PASSWORD}" \
                   "${POSTGRES_CONTAINER_ID}" \
                   sh -lc '
                     escaped_user=$(printf "%s" "$TARGET_PG_USER" | sed "s/\"/\"\"/g")
