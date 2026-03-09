@@ -3,6 +3,78 @@
  * "好代碼沒有特殊情況" - 統一所有錯誤處理邏輯
  */
 
+const fs = require('fs');
+const path = require('path');
+
+// 不記錄的狀態碼（正常行為，非 bug）
+// 401 = Session 過期/未登入，正常流程
+const SKIP_LOG_STATUS = [401];
+
+// 請求 body 中需要遮蔽的敏感欄位
+const SENSITIVE_FIELDS = ['password', 'newPassword', 'oldPassword', 'token', 'secret', 'refreshToken'];
+
+function sanitizeBody(body) {
+    if (!body || typeof body !== 'object') return body;
+    const cleaned = { ...body };
+    SENSITIVE_FIELDS.forEach(field => {
+        if (field in cleaned) cleaned[field] = '***';
+    });
+    return cleaned;
+}
+
+function writeErrorReport(err, req, statusCode) {
+    try {
+        // 忽略：401（Session 過期/未登入，正常行為）
+        if (SKIP_LOG_STATUS.includes(statusCode)) return;
+        // 忽略：非 /api/ 路徑（靜態檔案 404 等噪音）
+        if (!req.originalUrl.startsWith('/api/')) return;
+
+        const logsDir = path.join(__dirname, '..', 'logs', 'errors');
+        fs.mkdirSync(logsDir, { recursive: true });
+
+        const now = new Date();
+        const date = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' }); // YYYY-MM-DD
+        const time = now.toLocaleTimeString('zh-TW', { hour12: false, timeZone: 'Asia/Taipei' });
+        const filePath = path.join(logsDir, `${date}.md`);
+
+        const user = req.user
+            ? `${req.user.username || '未知'} / ${req.user.email || '無 email'} (ID: ${req.user.id})`
+            : '未登入';
+
+        const body = sanitizeBody(req.body);
+        const hasBody = body && Object.keys(body).length > 0;
+
+        const lines = [
+            `## ${time} — ${req.method} ${req.originalUrl} \`${statusCode}\``,
+            '',
+            `- **使用者:** ${user}`,
+            `- **錯誤代碼:** \`${err.code || 'INTERNAL_ERROR'}\``,
+            `- **錯誤訊息:** ${err.message}`,
+        ];
+
+        if (hasBody) {
+            lines.push(`- **請求內容:**`);
+            lines.push('  ```json');
+            lines.push('  ' + JSON.stringify(body, null, 2).replace(/\n/g, '\n  '));
+            lines.push('  ```');
+        }
+
+        if (err.stack && !err.isOperational) {
+            lines.push('- **堆疊追蹤:**');
+            lines.push('  ```');
+            lines.push('  ' + err.stack.replace(/\n/g, '\n  '));
+            lines.push('  ```');
+        }
+
+        lines.push('', '---', '');
+
+        fs.appendFileSync(filePath, lines.join('\n'));
+    } catch (writeErr) {
+        // 不讓日誌錯誤影響正常請求回應
+        console.error('[ErrorReport] 寫入失敗:', writeErr.message);
+    }
+}
+
 /**
  * 標準化的錯誤類別
  */
@@ -77,6 +149,10 @@ function errorHandler(err, req, res, next) {
 
     // 標準化回應格式
     const statusCode = err.statusCode || 500;
+
+    // 寫入 MD 錯誤報告
+    writeErrorReport(err, req, statusCode);
+
     const response = {
         success: false,
         error: {
