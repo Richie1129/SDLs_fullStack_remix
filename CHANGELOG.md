@@ -4,6 +4,33 @@
 
 ---
 
+## [v3.3.1] - 2026-03-09 — 安全強化、AI 修復與錯誤日誌
+
+### 🔒 安全修復
+- **getUsers 密碼欄位洩漏**：API 回應加入 `attributes` 限制，排除 `password` 雜湊值
+- **公告作者偽造防護**：`author` 欄位改由後端從 JWT 取得，防止前端傳入任意值
+- **getHistory 無界限查詢**：`limit` 參數加入上界限制（最大 100 筆），防止 DB 過載
+
+### 🔴 Bug 修復
+- **JWT Token 大量 401**：修復 `config/index.js` 中 `refreshExpiresIn` 使用錯誤解析函式的問題
+- **Gemini prompt 層級錯誤**：修復 `callWithFallback` 將 systemPrompt 與 userPrompt 拼接的問題，改用 `systemInstruction` 參數確保正確隔離
+- **IdeaWallChatPanel null crash**：加入 optional chaining 防止 props 為 null 時崩潰
+- **kbCoach 缺失函式**：還原 `buildSystemPrompt` 函式，修復 KB Coach 無法啟動的問題
+- **部署 PG 密碼認證失敗**：改從 `.env` 直接讀取 PG 認證資訊，避免硬編碼預設值導致認證錯誤
+- **部署流程環境變數**：新增 PG 密碼同步步驟與環境變數完整性驗證
+
+### 🟣 新功能
+- **API 錯誤每日報告**：所有 API 錯誤自動寫入 `/logs/errors/YYYY-MM-DD.md`，包含使用者資訊、請求路徑、堆疊追蹤，方便教師問題回報
+
+### 🔧 技術改進
+- 後端模組化重構：公告元件拆分、想法牆節點顯示修復
+- `assistantCacheService` / `assistantDataService` 改用 Pino 結構化 logger，移除服務層 emoji
+- MinIO 配置優化：新增 `MINIO_PUBLIC_ENDPOINT` 環境變數，移除不必要設定
+- 移除前端殘留 `console.log`（`useAnnouncementSocket`、`useIdeaWallSocket`）
+- `AnnouncementFormModal` 硬編碼顏色改用 `bg-customgreen` 設計系統 token
+
+---
+
 ## [v3.3.0] - 2026-03-04 — 求助分析、學校系統與登入改版
 
 ### 🌟 重大更新

@@ -1,6 +1,6 @@
 # SDL (Self-Directed Learning) 全端學習平台
 
-> **🚀 2026 最新版本 v3.3**：新增求助行為分析系統、學校多租戶機制、密碼重設流程、全新登入頁面設計、新手導覽系統與學生學習歷程匯出
+> **🚀 2026 最新版本 v3.3.1**：安全強化（密碼洩漏修復、公告作者偽造防護）、Gemini AI 指令隔離修復、API 錯誤每日報告、PostgreSQL 部署穩定性提升
 
 一個專為教育研究設計的智慧型自主學習平台，結合科學探究方法論、AI 輔助學習分析與現代化協作工具。採用 React 18 + Node.js + PostgreSQL + Socket.IO 全端架構，提供完整的專案式學習 (PBL) 支援。
 
@@ -385,6 +385,16 @@ SDLs_fullStack_remix/
 
 > 📜 **完整更新日誌**：[CHANGELOG.md](CHANGELOG.md)（含每個版本的資料庫 Migration 記錄）
 
+### v3.3.1 (2026-03-09) — 安全強化、AI 修復與錯誤日誌
+
+| 類別 | 重點更新 |
+|------|----------|
+| 🔒 **安全修復** | getUsers 密碼欄位洩漏修復、公告作者偽造防護、getHistory 無界限查詢限制 |
+| 🔴 **Bug 修復** | JWT 大量 401 修復、Gemini systemInstruction 層級隔離、kbCoach buildSystemPrompt 還原、IdeaWallChatPanel null crash |
+| 🚀 **部署穩定** | PG 密碼從 .env 直接讀取、部署流程環境變數驗證 |
+| 🟣 **新功能** | API 錯誤自動寫入每日 Markdown 報告（/logs/errors/） |
+| 🔧 **技術改進** | Pino logger 統一、MinIO 配置優化、移除前端殘留 console.log |
+
 ### v3.3.0 (2026-03-04) — 求助分析、學校系統與登入改版
 
 | 類別 | 重點更新 |
@@ -637,4 +647,4 @@ security: 修復安全弱點
 
 ---
 
-*最後更新：2026-03-04 | 版本：v3.3.0*
+*最後更新：2026-03-09 | 版本：v3.3.1*
