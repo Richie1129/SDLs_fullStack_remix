@@ -222,7 +222,10 @@ jobs:
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
           command_timeout: 180s
+          envs: IMAGE_TAG
           script: |
+            NEW_TAG="${IMAGE_TAG}"
+
             # 驗證部署目標 (復用相同數據結構)
             VERIFY_TARGETS=(
               "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
@@ -238,6 +241,12 @@ jobs:
               echo "🔍 驗證 $service_name 部署狀態..."
               cd "$deploy_dir" || { echo "❌ 無法進入 $deploy_dir"; exit 1; }
 
+              if ! grep -q "^IMAGE_TAG=${NEW_TAG}$" .env; then
+                echo "❌ $service_name .env 的 IMAGE_TAG 不是預期值 ${NEW_TAG}"
+                grep '^IMAGE_TAG=' .env || true
+                exit 1
+              fi
+
               docker-compose -f "$compose_file" ps
 
               INVALID=$(docker-compose -f "$compose_file" ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
@@ -250,4 +259,35 @@ jobs:
               else
                 echo "✅ $service_name 所有容器皆正常運行"
               fi
+
+              API_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q api | head -1)
+              FRONT_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q front | head -1)
+              POSTGRES_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q postgres | head -1)
+
+              API_IMAGE=$(docker inspect "$API_CONTAINER_ID" --format '{{.Config.Image}}')
+              FRONT_IMAGE=$(docker inspect "$FRONT_CONTAINER_ID" --format '{{.Config.Image}}')
+
+              if [ "$API_IMAGE" != "stone881129/sdl-api:${NEW_TAG}" ]; then
+                echo "❌ $service_name API 映像版本不符: $API_IMAGE"
+                exit 1
+              fi
+
+              if [ "$FRONT_IMAGE" != "stone881129/sdl-front:${NEW_TAG}" ]; then
+                echo "❌ $service_name Frontend 映像版本不符: $FRONT_IMAGE"
+                exit 1
+              fi
+
+              PG_USER=$(grep '^PG_USER=' .env | cut -d= -f2-)
+              PG_PASSWORD=$(grep '^PG_PASSWORD=' .env | cut -d= -f2-)
+              PG_NAME=$(grep '^PG_NAME=' .env | cut -d= -f2-)
+
+              docker exec \
+                -e PGPASSWORD="$PG_PASSWORD" \
+                "$POSTGRES_CONTAINER_ID" \
+                psql -h 127.0.0.1 -p 5432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null || {
+                echo "❌ $service_name PostgreSQL TCP 密碼驗證失敗"
+                exit 1
+              }
+
+              echo "✅ $service_name 映像版本與 PostgreSQL 連線驗證皆正確"
             done
