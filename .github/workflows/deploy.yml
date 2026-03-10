@@ -178,16 +178,24 @@ jobs:
 
               # ── 同步 postgres 密碼（防止 volume 初始化密碼與 .env 不符）──────
               echo "🔑 同步 postgres 密碼 (user=${EFFECTIVE_PG_USER})..."
-                docker exec \
-                  -e TARGET_PG_USER="${EFFECTIVE_PG_USER}" \
-                  -e TARGET_PG_PASSWORD="${EFFECTIVE_PG_PASSWORD}" \
-                  "${POSTGRES_CONTAINER_ID}" \
-                  sh -lc '
-                    escaped_user=$(printf "%s" "$TARGET_PG_USER" | sed "s/\"/\"\"/g")
-                    escaped_password=$(printf "%s" "$TARGET_PG_PASSWORD" | sed "s/'"'"'/'"'"''"'"'/g")
-                    psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c "ALTER ROLE \"$escaped_user\" WITH PASSWORD '\''$escaped_password'\'';"
-                  '
-              echo "✅ 密碼已同步為 .env 設定值"
+              # 先在外層 escape 單引號，再用 pipe 送 SQL 進容器，避免巢狀引號問題
+              ESCAPED_PG_PASS=$(printf '%s' "${EFFECTIVE_PG_PASSWORD}" | sed "s/'/''/g")
+              printf "ALTER ROLE \"%s\" WITH PASSWORD '%s';\n" \
+                "${EFFECTIVE_PG_USER}" "${ESCAPED_PG_PASS}" | \
+              docker exec -u postgres -i "${POSTGRES_CONTAINER_ID}" \
+                psql -v ON_ERROR_STOP=1 -U postgres -d postgres || {
+                echo "❌ 密碼同步失敗，中止部署"
+                exit 1
+              }
+              # 驗證密碼是否真的生效：用新密碼嘗試連線
+              docker exec \
+                -e PGPASSWORD="${EFFECTIVE_PG_PASSWORD}" \
+                -u postgres "${POSTGRES_CONTAINER_ID}" \
+                psql -U "${EFFECTIVE_PG_USER}" -d postgres -c "SELECT 1;" > /dev/null 2>&1 || {
+                echo "❌ 密碼驗證失敗：ALTER ROLE 可能未正確執行"
+                exit 1
+              }
+              echo "✅ 密碼已同步並驗證通過"
 
               echo "🔗 共用 postgres 網路命名空間: ${POSTGRES_CONTAINER_ID}"
               # 傳入 .env 及必要覆蓋值，確保臨時容器能讀到正確 DB 連線資訊
