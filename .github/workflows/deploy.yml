@@ -281,13 +281,21 @@ jobs:
               PG_PASSWORD=$(grep '^PG_PASSWORD=' .env | cut -d= -f2-)
               PG_NAME=$(grep '^PG_NAME=' .env | cut -d= -f2-)
 
-              docker exec \
-                -e PGPASSWORD="$PG_PASSWORD" \
-                "$POSTGRES_CONTAINER_ID" \
-                psql -h 127.0.0.1 -p 5432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null || {
-                echo "❌ $service_name PostgreSQL TCP 密碼驗證失敗"
-                exit 1
-              }
+              if command -v psql > /dev/null 2>&1; then
+                PGPASSWORD="$PG_PASSWORD" \
+                  psql -h 127.0.0.1 -p 15432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null || {
+                  echo "❌ $service_name PostgreSQL 對外映射埠 15432 密碼驗證失敗"
+                  exit 1
+                }
+              else
+                docker run --rm --network host \
+                  -e PGPASSWORD="$PG_PASSWORD" \
+                  postgres:17 \
+                  psql -h 127.0.0.1 -p 15432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null || {
+                  echo "❌ $service_name PostgreSQL 對外映射埠 15432 密碼驗證失敗"
+                  exit 1
+                }
+              fi
 
-              echo "✅ $service_name 映像版本與 PostgreSQL 連線驗證皆正確"
+              echo "✅ $service_name 映像版本與 PostgreSQL 對外連線驗證皆正確"
             done
