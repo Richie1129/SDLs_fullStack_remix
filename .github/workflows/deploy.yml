@@ -112,11 +112,14 @@ jobs:
                 echo "✅ 已備份 $service_name .env 檔案"
               fi
 
-              # 將 IMAGE_TAG 寫入 .env（有則更新，無則新增）
+              # 將 IMAGE_TAG 寫入 .env（有則更新，無則新增），並確保不會黏到上一行
               if grep -q "^IMAGE_TAG=" .env 2>/dev/null; then
                 sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${NEW_TAG}|" .env
               else
-                echo "IMAGE_TAG=${NEW_TAG}" >> .env
+                if [ -s .env ] && [ "$(tail -c 1 .env 2>/dev/null || true)" != "" ]; then
+                  printf '\n' >> .env
+                fi
+                printf 'IMAGE_TAG=%s\n' "$NEW_TAG" >> .env
               fi
               echo "✅ .env IMAGE_TAG 已更新為 ${NEW_TAG}"
 
@@ -280,21 +283,37 @@ jobs:
               PG_USER=$(grep '^PG_USER=' .env | cut -d= -f2-)
               PG_PASSWORD=$(grep '^PG_PASSWORD=' .env | cut -d= -f2-)
               PG_NAME=$(grep '^PG_NAME=' .env | cut -d= -f2-)
+              ESCAPED_PG_PASSWORD=$(printf "%s" "$PG_PASSWORD" | sed "s/'/''/g")
 
-              if command -v psql > /dev/null 2>&1; then
-                PGPASSWORD="$PG_PASSWORD" \
-                  psql -h 127.0.0.1 -p 15432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null || {
-                  echo "❌ $service_name PostgreSQL 對外映射埠 15432 密碼驗證失敗"
+              verify_public_db() {
+                if command -v psql > /dev/null 2>&1; then
+                  PGPASSWORD="$PG_PASSWORD" \
+                    psql -h 127.0.0.1 -p 15432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null
+                else
+                  docker run --rm --network host \
+                    -e PGPASSWORD="$PG_PASSWORD" \
+                    postgres:17 \
+                    psql -h 127.0.0.1 -p 15432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null
+                fi
+              }
+
+              if ! verify_public_db; then
+                echo "⚠️ $service_name PostgreSQL 對外映射埠 15432 密碼驗證失敗，嘗試以 .env 同步角色密碼"
+
+                docker exec -u postgres "$POSTGRES_CONTAINER_ID" \
+                  psql -U postgres -d postgres -c "ALTER ROLE \"$PG_USER\" WITH PASSWORD '$ESCAPED_PG_PASSWORD';" > /dev/null || {
+                  echo "❌ $service_name 無法同步 PostgreSQL 角色密碼"
+                  docker-compose -f "$compose_file" logs --tail=80 postgres
                   exit 1
                 }
-              else
-                docker run --rm --network host \
-                  -e PGPASSWORD="$PG_PASSWORD" \
-                  postgres:17 \
-                  psql -h 127.0.0.1 -p 15432 -U "$PG_USER" -d "$PG_NAME" -c "SELECT 1;" > /dev/null || {
-                  echo "❌ $service_name PostgreSQL 對外映射埠 15432 密碼驗證失敗"
+
+                if ! verify_public_db; then
+                  echo "❌ $service_name PostgreSQL 對外映射埠 15432 密碼驗證仍然失敗"
+                  docker-compose -f "$compose_file" logs --tail=120 postgres
                   exit 1
-                }
+                fi
+
+                echo "✅ $service_name PostgreSQL 角色密碼已同步並驗證成功"
               fi
 
               echo "✅ $service_name 映像版本與 PostgreSQL 對外連線驗證皆正確"
