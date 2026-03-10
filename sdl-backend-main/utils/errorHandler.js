@@ -6,10 +6,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// 不記錄的狀態碼（正常行為，非 bug）
-// 401 = Session 過期/未登入，正常流程
-const SKIP_LOG_STATUS = [401];
-
 // 請求 body 中需要遮蔽的敏感欄位
 const SENSITIVE_FIELDS = ['password', 'newPassword', 'oldPassword', 'token', 'secret', 'refreshToken'];
 
@@ -22,14 +18,17 @@ function sanitizeBody(body) {
     return cleaned;
 }
 
+// 登入路由：401 需要記錄（帳號密碼錯誤，方便排查學生問題）
+const LOGIN_ROUTES = ['/api/users/login'];
+
 function writeErrorReport(err, req, statusCode) {
     try {
-        // 忽略：401（Session 過期/未登入，正常行為）
-        if (SKIP_LOG_STATUS.includes(statusCode)) return;
+        // 忽略：401，但登入路由例外（帳號密碼錯誤仍要記錄）
+        if (statusCode === 401 && !LOGIN_ROUTES.includes(req.originalUrl)) return;
         // 忽略：非 /api/ 路徑（靜態檔案 404 等噪音）
         if (!req.originalUrl.startsWith('/api/')) return;
 
-        const logsDir = path.join(__dirname, '..', 'logs', 'errors');
+        const logsDir = path.join(__dirname, '..', '..', 'logs', 'errors');
         fs.mkdirSync(logsDir, { recursive: true });
 
         const now = new Date();
@@ -207,6 +206,9 @@ function paginatedResponse(res, data, pagination, message = '查詢成功') {
 }
 
 module.exports = {
+    // 錯誤報告
+    writeErrorReport,
+
     // 錯誤類別
     AppError,
     ValidationError,

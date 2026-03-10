@@ -59,6 +59,7 @@ services:
       - "./sdl-backend-main:/sdl-backend-main"
       - "/sdl-backend-main/node_modules"
       - "./sdl-backend-main/daily_file:/sdl-backend-main/daily_file"
+      - "./logs:/logs"
     networks:
       - agent_network
     depends_on:

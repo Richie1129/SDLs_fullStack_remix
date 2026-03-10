@@ -12,6 +12,7 @@ const sequelize = require('../util/database'); // 引入 Sequelize 實例以支�
 const config = require('../config');
 const { logAudit } = require('../services/auditService');
 const logger = require('../config/logger');
+const { writeErrorReport } = require('../utils/errorHandler');
 
 //get all users
 exports.getUsers = async (req, res) => {
@@ -122,6 +123,7 @@ exports.loginUser = async (req, res) => {
                 targetId: null,
                 metadata: { reason: 'user_not_found', account }
             }).catch(() => { });
+            writeErrorReport({ message: `登入失敗：帳號不存在 (${account})`, isOperational: true }, req, 401);
             return res.status(401).json({ message: '帳號或密碼錯誤' });
         }
 
@@ -136,6 +138,7 @@ exports.loginUser = async (req, res) => {
                 targetId: user.id,
                 metadata: { reason: 'invalid_password', account }
             }).catch(() => { });
+            writeErrorReport({ message: `登入失敗：密碼錯誤 (帳號: ${account})`, isOperational: true }, req, 401);
             return res.status(401).json({ message: '帳號或密碼錯誤' });
         }
 
