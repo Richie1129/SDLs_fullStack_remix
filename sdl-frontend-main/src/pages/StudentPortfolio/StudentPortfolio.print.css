@@ -1,0 +1,36 @@
+/**
+ * 學習歷程 PDF 列印樣式
+ * 使用瀏覽器原生列印引擎，保留完整排版與真正的文字層
+ */
+
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
+@media print {
+  /* 隱藏所有 UI chrome */
+  .portfolio-no-print {
+    display: none !important;
+  }
+
+  /* 清除外框容器的螢幕樣式 */
+  .portfolio-print-frame {
+    background: white !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* 確保最外層容器不影響版面 */
+  .portfolio-page-root {
+    background: white !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 強制保留背景色彩與漸層（Chrome/Edge/Firefox 預設會移除背景圖） */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

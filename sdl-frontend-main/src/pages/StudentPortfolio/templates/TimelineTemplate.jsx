@@ -21,7 +21,7 @@ export default function TimelineTemplate({ data, narrative }) {
       width: '210mm',
       minHeight: '297mm',
       margin: '0 auto',
-      padding: '16mm 16mm',
+      padding: '1mm 16mm',
       boxSizing: 'border-box',
       fontSize: '10pt',
       lineHeight: '1.8'
@@ -69,7 +69,7 @@ export default function TimelineTemplate({ data, narrative }) {
           const hasContent = stage.reflections.length > 0 || stage.submits.length > 0 || stage.nodes.length > 0;
 
           return (
-            <div key={stage.stageNumber} style={{ marginBottom: '10mm', position: 'relative', pageBreakInside: 'avoid' }}>
+            <div key={stage.stageNumber} style={{ marginBottom: '10mm', position: 'relative' }}>
               {/* 時間軸節點 */}
               <div style={{
                 position: 'absolute', left: '-10.5mm', top: '3mm',
@@ -80,7 +80,7 @@ export default function TimelineTemplate({ data, narrative }) {
               }} />
 
               {/* 階段標題 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', marginBottom: '4mm' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', marginBottom: '4mm', breakAfter: 'avoid' }}>
                 <span style={{ fontSize: '16pt' }}>{STAGE_ICONS[stage.stageNumber]}</span>
                 <div>
                   <div style={{ fontSize: '8pt', color: color, fontWeight: '700', letterSpacing: '1px' }}>
@@ -103,7 +103,7 @@ export default function TimelineTemplate({ data, narrative }) {
                     <div style={{ marginBottom: '4mm' }}>
                       <TimelineSubTitle color={color}>正式提交成果</TimelineSubTitle>
                       {stage.submits.map((s, i) => (
-                        <div key={i} style={{ marginBottom: '2mm', paddingLeft: '4mm', borderLeft: `2px solid ${color}33`, fontSize: '9pt' }}>
+                        <div key={i} style={{ marginBottom: '2mm', paddingLeft: '4mm', borderLeft: `2px solid ${color}33`, fontSize: '9pt', breakInside: 'avoid' }}>
                           <span style={{ fontWeight: '700', color }}>{s.stage} {s.stageTitle}：</span>
                           {s.content && typeof s.content === 'object'
                             ? Object.entries(s.content)
@@ -134,7 +134,7 @@ export default function TimelineTemplate({ data, narrative }) {
                     <div>
                       <TimelineSubTitle color={color}>想法牆貢獻</TimelineSubTitle>
                       {stage.nodes.map((n, i) => (
-                        <div key={i} style={{ marginBottom: '2mm', paddingLeft: '4mm', borderLeft: `2px solid ${color}50`, fontSize: '9pt' }}>
+                        <div key={i} style={{ marginBottom: '2mm', paddingLeft: '4mm', borderLeft: `2px solid ${color}50`, fontSize: '9pt', breakInside: 'avoid' }}>
                           <div style={{ fontWeight: '700', color }}>💡 {n.title}</div>
                           {n.content && <div style={{ color: '#555', marginTop: '0.5mm' }}>{String(n.content).slice(0, 200)}</div>}
                         </div>
@@ -156,7 +156,7 @@ export default function TimelineTemplate({ data, narrative }) {
               background: '#888', borderRadius: '50%',
               border: '2px solid #fff', boxShadow: '0 0 0 2px #888'
             }} />
-            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#666', marginBottom: '4mm' }}>🌟 跨階段自由省思</div>
+            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#666', marginBottom: '4mm', breakAfter: 'avoid' }}>🌟 跨階段自由省思</div>
             {freeReflections.map((r, i) => (
               <TimelineReflectionCard key={i} reflection={r} color="#888" />
             ))}
@@ -172,18 +172,18 @@ export default function TimelineTemplate({ data, narrative }) {
               background: '#4a7cc7', borderRadius: '50%',
               border: '2px solid #fff', boxShadow: '0 0 0 2px #4a7cc7'
             }} />
-            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '4mm' }}>📌 想法牆記錄</div>
+            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '4mm', breakAfter: 'avoid' }}>📌 想法牆記錄</div>
             {ideaWallChats.map((iw, i) => (
-              <div key={i} style={{ marginBottom: '3mm', padding: '3mm 5mm', background: '#f0f5fd', borderRadius: '6px', borderLeft: '3px solid #4a7cc7' }}>
+              <div key={i} style={{ marginBottom: '3mm', padding: '3mm 5mm', background: '#f0f5fd', borderRadius: '6px', borderLeft: '3px solid #4a7cc7', breakInside: 'avoid' }}>
                 <div style={{ fontWeight: '700', fontSize: '9.5pt', color: '#2a5da8', marginBottom: '2mm', display: 'flex', justifyContent: 'space-between' }}>
                   <span>{iw.ideaWallName}{iw.ideaWallStage && <span style={{ fontWeight: '400', color: '#999', marginLeft: '2mm', fontSize: '8.5pt' }}>· {iw.ideaWallStage}</span>}</span>
                   <span style={{ fontWeight: '400', color: '#aaa', fontSize: '8.5pt' }}>{iw.nodes.length > 0 && `${iw.nodes.length}節點`}{iw.nodes.length > 0 && iw.messages.filter(m=>!m.isAiIntervention).length > 0 && ' · '}{iw.messages.filter(m=>!m.isAiIntervention).length > 0 && `${iw.messages.filter(m=>!m.isAiIntervention).length}則討論`}</span>
                 </div>
                 {iw.nodes.length > 0 && (
                   <div style={{ marginBottom: iw.messages.filter(m=>!m.isAiIntervention).length > 0 ? '3mm' : '0' }}>
-                    <div style={{ fontSize: '8.5pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '1.5mm' }}>想法節點</div>
+                    <div style={{ fontSize: '8.5pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '1.5mm', breakAfter: 'avoid' }}>想法節點</div>
                     {iw.nodes.map((n, j) => (
-                      <div key={j} style={{ marginBottom: '2mm', paddingLeft: '3mm', borderLeft: '1px solid #4a7cc750', fontSize: '9pt' }}>
+                      <div key={j} style={{ marginBottom: '2mm', paddingLeft: '3mm', borderLeft: '1px solid #4a7cc750', fontSize: '9pt', breakInside: 'avoid' }}>
                         <div style={{ fontWeight: '700', color: '#2a5da8' }}>💡 {n.title}</div>
                         {n.content && <div style={{ color: '#555', marginTop: '0.5mm' }}>{String(n.content).slice(0, 180)}</div>}
                       </div>
@@ -191,7 +191,7 @@ export default function TimelineTemplate({ data, narrative }) {
                   </div>
                 )}
                 {iw.messages.filter(m => !m.isAiIntervention).slice(0, 4).map((m, j) => (
-                  <div key={j} style={{ fontSize: '9pt', color: '#444', marginBottom: '1.5mm', paddingLeft: '3mm', borderLeft: '1px solid #4a7cc730' }}>
+                  <div key={j} style={{ fontSize: '9pt', color: '#444', marginBottom: '1.5mm', paddingLeft: '3mm', borderLeft: '1px solid #4a7cc730', breakInside: 'avoid' }}>
                     {m.content.slice(0, 180)}
                   </div>
                 ))}
@@ -216,7 +216,7 @@ export default function TimelineTemplate({ data, narrative }) {
                 background: '#5BA491', borderRadius: '50%',
                 border: '2px solid #fff', boxShadow: '0 0 0 2px #5BA491'
               }} />
-              <div style={{ fontSize: '12pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm' }}>🤖 科學助手對話摘要</div>
+              <div style={{ fontSize: '12pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm', breakAfter: 'avoid' }}>🤖 科學助手對話摘要</div>
               <div style={{ padding: '4mm 5mm', background: '#f8fdfb', borderRadius: '6px', borderLeft: '3px solid #5BA491' }}>
                 {/* 統計 */}
                 <div style={{ display: 'flex', gap: '8mm', marginBottom: '4mm' }}>
@@ -231,9 +231,9 @@ export default function TimelineTemplate({ data, narrative }) {
                   </div>
                 </div>
                 {/* 提問列表 */}
-                <div style={{ fontSize: '8.5pt', fontWeight: '700', color: '#5BA491', marginBottom: '2mm' }}>歷次提問</div>
+                <div style={{ fontSize: '8.5pt', fontWeight: '700', color: '#5BA491', marginBottom: '2mm', breakAfter: 'avoid' }}>歷次提問</div>
                 {displayQ.map((q, i) => (
-                  <div key={i} style={{ marginBottom: '1.5mm', fontSize: '9pt', color: '#444', display: 'flex', gap: '2mm' }}>
+                  <div key={i} style={{ marginBottom: '1.5mm', fontSize: '9pt', color: '#444', display: 'flex', gap: '2mm', breakInside: 'avoid' }}>
                     <span style={{ color: '#5BA491', fontWeight: '700', flexShrink: 0 }}>{i + 1}.</span>
                     <span>{q.slice(0, 80)}{q.length > 80 ? '…' : ''}</span>
                   </div>
@@ -269,7 +269,7 @@ export default function TimelineTemplate({ data, narrative }) {
 
 function TimelineSubTitle({ children, color }) {
   return (
-    <div style={{ fontSize: '8.5pt', fontWeight: '700', color, letterSpacing: '0.5px', marginBottom: '2mm' }}>
+    <div style={{ fontSize: '8.5pt', fontWeight: '700', color, letterSpacing: '0.5px', marginBottom: '2mm', breakAfter: 'avoid' }}>
       ▸ {children}
     </div>
   );
@@ -277,7 +277,7 @@ function TimelineSubTitle({ children, color }) {
 
 function TimelineReflectionCard({ reflection, color }) {
   return (
-    <div style={{ marginBottom: '3mm', padding: '3mm 5mm', background: `${color}08`, borderRadius: '6px', borderLeft: `3px solid ${color}`, fontSize: '9pt' }}>
+    <div style={{ marginBottom: '3mm', padding: '3mm 5mm', background: `${color}08`, borderRadius: '6px', borderLeft: `3px solid ${color}`, fontSize: '9pt', breakInside: 'avoid' }}>
       <div style={{ fontWeight: '700', color: '#333', marginBottom: '1.5mm' }}>
         {reflection.title}
         <span style={{ fontWeight: '400', color: '#ccc', fontSize: '8pt', marginLeft: '3mm' }}>
