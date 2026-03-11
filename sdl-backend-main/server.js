@@ -57,13 +57,13 @@ const loginLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
 });
-const resetLimiter = rateLimit({
+const forgotPasswordLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,  // 1 小時
-    max: 5,
+    max: 30,
     message: { message: '密碼重設請求次數過多，請稍後再試' },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV !== 'production', // 開發環境跳過限制
+    skip: () => process.env.NODE_ENV !== 'production',
 });
 const aiLimiter = rateLimit({
     windowMs: 60 * 1000,       // 1 分鐘
@@ -73,8 +73,7 @@ const aiLimiter = rateLimit({
     legacyHeaders: false,
 });
 app.use('/api/users/login', loginLimiter);
-app.use('/api/auth/forgot-password', resetLimiter);
-app.use('/api/auth/reset-password', resetLimiter);
+app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 app.use('/api/llm', aiLimiter);
 app.use('/proxy/api/v1/chats', aiLimiter);
 
