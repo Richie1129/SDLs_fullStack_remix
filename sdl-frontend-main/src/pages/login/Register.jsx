@@ -68,6 +68,9 @@ export default function Register() {
     if (!/^\d+$/.test(userData.account) && !/^[A-Za-z0-9]+$/.test(userData.account)) {
       setError('帳號只能包含字母或數字'); return false;
     }
+    if (!userData.email) { setError('請輸入電子郵件'); return false; }
+    if (!userData.confirmEmail) { setError('請確認電子郵件'); return false; }
+    if (userData.confirmEmail !== userData.email) { setError('電子郵件不相符，請重新確認'); return false; }
     if (!userData.confirmPassword) { setError('請確認密碼'); return false; }
     if (userData.confirmPassword !== userData.password) { setError('密碼不相符'); return false; }
     if (!userData.password || userData.password.length < 8) { setError('密碼至少需要 8 個字元，並包含英文字母與數字'); return false; }
@@ -127,17 +130,17 @@ export default function Register() {
         <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-white/[0.07] pointer-events-none" />
 
         {/* Logo */}
-        <div className="relative z-10 flex items-baseline gap-3">
+        <div className="relative z-10 flex items-baseline gap-3 motion-safe:animate-rise">
           <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
           <span className="text-white/50 text-body-sm">Self-Directed Learning</span>
         </div>
 
         {/* 主文案 */}
         <div className="relative z-10">
-          <h1 className="text-white font-bold leading-snug text-h1">
+          <h1 className="text-white font-bold leading-snug text-h1 motion-safe:animate-rise" style={{ animationDelay: '150ms' }}>
             開始你的<br />探究之旅。
           </h1>
-          <p className="text-white/70 text-body mt-4 leading-relaxed">
+          <p className="text-white/70 text-body mt-4 leading-relaxed motion-safe:animate-rise" style={{ animationDelay: '300ms' }}>
             建立帳號後，即可使用任務看板、AI 教練與學習歷程等完整功能。
           </p>
           <div className="mt-8 flex flex-col gap-3">
@@ -145,7 +148,7 @@ export default function Register() {
               { icon: <MdGroups />, text: '加入你的班級專案' },
               { icon: <MdSchool />, text: '與同學即時協作' },
             ].map((b, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="flex items-center gap-3 motion-safe:animate-rise" style={{ animationDelay: `${450 + i * 100}ms` }}>
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0 bg-white/20">
                   {b.icon}
                 </div>
@@ -156,7 +159,7 @@ export default function Register() {
         </div>
 
         {/* 底部：返回登入 */}
-        <div className="relative z-10">
+        <div className="relative z-10 motion-safe:animate-rise" style={{ animationDelay: '650ms' }}>
           <p className="text-white/70 text-body">
             已有帳號？
             <Link to="/" className="text-white font-semibold ml-1 hover:underline">返回登入</Link>
@@ -180,7 +183,7 @@ export default function Register() {
 
         {/* ── 表單內容 ── */}
         <div className="px-6 sm:px-10 md:px-8 lg:px-20 xl:px-28 py-8 md:py-10 flex-1">
-          <div className="w-full max-w-lg mx-auto">
+          <div className="w-full max-w-lg mx-auto motion-safe:animate-rise" style={{ animationDelay: '200ms' }}>
             <div className="mb-7">
               <h2 className="text-h1 font-bold text-gray-900">建立帳號</h2>
               <p className="text-body-sm text-gray-500 mt-1">填寫以下資訊完成註冊</p>
@@ -253,6 +256,15 @@ export default function Register() {
                 </div>
               </div>
 
+              {/* 確認電子郵件 */}
+              <div>
+                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">確認電子郵件</label>
+                <div className="relative">
+                  <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <input type="email" name="confirmEmail" placeholder="再次輸入電子郵件" onChange={handleChange} className={inputClass} required autoComplete="off" />
+                </div>
+              </div>
+
               {/* 密碼 / 確認密碼（手機單欄，sm 以上並排） */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
@@ -280,7 +292,7 @@ export default function Register() {
                     <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
                     <input
                       type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword"
-                      placeholder="再輸入一次密碼" minLength="6"
+                      placeholder="再輸入一次密碼" minLength="8"
                       onChange={handleChange} className={`${inputClass} pr-10`} required
                     />
                     <button

@@ -39,23 +39,23 @@ export default function ForgotPassword() {
         <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
 
         {/* Logo */}
-        <div className="relative z-10 flex items-baseline gap-3">
+        <div className="relative z-10 flex items-baseline gap-3 motion-safe:animate-rise">
           <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
           <span className="text-white/50 text-body-sm">Self-Directed Learning</span>
         </div>
 
         {/* 主文案 */}
         <div className="relative z-10">
-          <h1 className="text-white font-bold leading-snug" style={{ fontSize: '2.75rem' }}>
+          <h1 className="text-white font-bold leading-snug motion-safe:animate-rise" style={{ fontSize: '2.75rem', animationDelay: '150ms' }}>
             重設你的<br />密碼。
           </h1>
-          <p className="text-white/70 text-body mt-4 max-w-xs leading-relaxed">
+          <p className="text-white/70 text-body mt-4 max-w-xs leading-relaxed motion-safe:animate-rise" style={{ animationDelay: '300ms' }}>
             輸入你的電子郵件，我們會寄送重設連結，幫你快速找回帳號。
           </p>
         </div>
 
         {/* 底部導覽 */}
-        <div className="relative z-10">
+        <div className="relative z-10 motion-safe:animate-rise" style={{ animationDelay: '450ms' }}>
           <p className="text-white/50 text-body-sm">
             記起密碼了？
             <Link to="/" className="text-white font-semibold ml-1 hover:underline">返回登入</Link>
@@ -71,7 +71,7 @@ export default function ForgotPassword() {
           <span className="font-bold text-h2 tracking-tight text-customgreen">SDLS</span>
         </div>
 
-        <div className="w-full max-w-sm mx-auto">
+        <div className="w-full max-w-sm mx-auto motion-safe:animate-rise" style={{ animationDelay: '200ms' }}>
 
           {!isSuccess ? (
             <>
