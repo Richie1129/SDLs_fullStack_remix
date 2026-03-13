@@ -143,11 +143,11 @@ export default function Profile() {
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
+    if (passwordData.newPassword.length < 8 || !/[A-Za-z]/.test(passwordData.newPassword) || !/\d/.test(passwordData.newPassword)) {
       Swal.fire({
         icon: 'error',
         title: '錯誤',
-        text: '密碼長度不能少於6個字符'
+        text: '密碼至少需要 8 個字元，並包含英文字母與數字'
       });
       return;
     }

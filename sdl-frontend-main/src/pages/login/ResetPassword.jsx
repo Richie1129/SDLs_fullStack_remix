@@ -94,8 +94,8 @@ export default function ResetPassword() {
       return;
     }
 
-    if (passwords.newPassword.length < 8) {
-      setError('密碼至少需要 8 個字元');
+    if (passwords.newPassword.length < 8 || !/[A-Za-z]/.test(passwords.newPassword) || !/\d/.test(passwords.newPassword)) {
+      setError('密碼至少需要 8 個字元，並包含英文字母與數字');
       return;
     }
 

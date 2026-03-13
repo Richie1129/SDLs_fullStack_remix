@@ -170,10 +170,10 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        if (newPassword.length < 8) {
+        if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
             return res.status(400).json({
                 success: false,
-                message: '密碼至少需要 8 個字元'
+                message: '密碼至少需要 8 個字元，並包含英文字母與數字'
             });
         }
 

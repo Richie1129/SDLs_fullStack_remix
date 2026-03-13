@@ -204,6 +204,11 @@ exports.registerUser = async (req, res) => {
             return res.status(400).json({ message: '該用戶已存在，請嘗試其他用戶名稱。' });
         }
 
+        // 驗證密碼強度
+        if (!password || password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+            return res.status(400).json({ message: '密碼至少需要 8 個字元，並包含英文字母與數字' });
+        }
+
         // 加密密碼
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -348,8 +353,8 @@ exports.updateUserPassword = async (req, res) => {
             return res.status(400).json({ message: '當前密碼和新密碼都是必需的' });
         }
 
-        if (newPassword.length < 6) {
-            return res.status(400).json({ message: '新密碼長度不能少於6個字符' });
+        if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+            return res.status(400).json({ message: '密碼至少需要 8 個字元，並包含英文字母與數字' });
         }
 
         // 查找用戶

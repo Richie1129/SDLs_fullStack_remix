@@ -70,7 +70,7 @@ export default function Register() {
     }
     if (!userData.confirmPassword) { setError('請確認密碼'); return false; }
     if (userData.confirmPassword !== userData.password) { setError('密碼不相符'); return false; }
-    if (!userData.password || userData.password.length < 8) { setError('密碼長度至少為 8 個字符'); return false; }
+    if (!userData.password || userData.password.length < 8) { setError('密碼至少需要 8 個字元，並包含英文字母與數字'); return false; }
     if (!/\d/.test(userData.password) || !/[A-Za-z]/.test(userData.password)) {
       setError('密碼必須包含英文字母與數字'); return false;
     }
@@ -261,7 +261,7 @@ export default function Register() {
                     <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
                     <input
                       type={showPassword ? 'text' : 'password'} name="password"
-                      placeholder="至少 8 碼，含英數" minLength="6"
+                      placeholder="至少 8 碼，含英數" minLength="8"
                       onChange={handleChange} className={`${inputClass} pr-10`} required
                     />
                     <button
