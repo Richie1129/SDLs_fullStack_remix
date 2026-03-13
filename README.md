@@ -4,9 +4,19 @@
 
 一個專為教育研究設計的智慧型自主學習平台，結合科學探究方法論、AI 輔助學習分析與現代化協作工具。採用 React 18 + Node.js + PostgreSQL + Socket.IO 全端架構，提供完整的專案式學習 (PBL) 支援。
 
+[![Version](https://img.shields.io/badge/version-v3.3.1-0ea5e9)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-required-blue.svg)](https://www.docker.com/)
-[![Node](https://img.shields.io/badge/node-18%2B-green.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-required-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Node](https://img.shields.io/badge/node-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/react-18-61DAFB?logo=react&logoColor=1f2937)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Express](https://img.shields.io/badge/express-4-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/postgresql-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Socket.IO](https://img.shields.io/badge/socket.io-4.6-010101?logo=socketdotio&logoColor=white)](https://socket.io/)
+[![MinIO](https://img.shields.io/badge/minio-s3%20compatible-C72E49?logo=minio&logoColor=white)](https://min.io/)
+[![vLLM](https://img.shields.io/badge/vLLM-local%20LLM-4b5563)](https://github.com/vllm-project/vllm)
+[![Gemini](https://img.shields.io/badge/ai-gemini%202.5%20flash-1a73e8)](https://ai.google.dev/)
+[![Deploy to Production](https://github.com/Richie1129/SDLs_fullStack_remix/actions/workflows/deploy.yml/badge.svg?branch=master)](https://github.com/Richie1129/SDLs_fullStack_remix/actions/workflows/deploy.yml)
 
 ---
 
