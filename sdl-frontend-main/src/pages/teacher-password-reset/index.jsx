@@ -50,7 +50,6 @@ export default function TeacherPasswordReset() {
 
     try {
       const data = await adminResetPassword(student.id);
-      // 更新本地狀態的重設時間
       setStudents(prev => prev.map(s =>
         s.id === student.id ? { ...s, passwordResetAt: new Date().toISOString() } : s
       ));
@@ -86,7 +85,7 @@ export default function TeacherPasswordReset() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
           <button
             onClick={() => navigate('/homepage')}
             className="p-2 text-gray-500 hover:text-customgreen hover:bg-customgreen/10 rounded-lg transition-colors duration-fast"
@@ -105,7 +104,7 @@ export default function TeacherPasswordReset() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         {/* 搜尋列 */}
         <div className="relative mb-5">
           <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -135,18 +134,18 @@ export default function TeacherPasswordReset() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600">姓名</th>
-                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600">帳號</th>
-                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600">班級 / 座號</th>
-                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600">所屬專案</th>
-                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600">重設時間</th>
-                    <th className="text-center px-4 py-3 text-body-sm font-semibold text-gray-600">操作</th>
+                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600 whitespace-nowrap">姓名</th>
+                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600 whitespace-nowrap">帳號</th>
+                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600 whitespace-nowrap">班級 / 座號</th>
+                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600 whitespace-nowrap">所屬專案</th>
+                    <th className="text-left px-4 py-3 text-body-sm font-semibold text-gray-600 whitespace-nowrap">重設時間</th>
+                    <th className="text-center px-4 py-3 text-body-sm font-semibold text-gray-600 whitespace-nowrap">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filtered.map(student => (
                     <tr key={student.id} className="hover:bg-gray-50 transition-colors duration-fast">
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-customgreen/10 flex items-center justify-center flex-shrink-0">
                             <FiUser className="text-customgreen text-caption" />
@@ -154,14 +153,14 @@ export default function TeacherPasswordReset() {
                           <span className="font-medium text-body-sm text-gray-800">{student.username}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-body-sm text-gray-600">{student.account}</td>
-                      <td className="px-4 py-3 text-body-sm text-gray-600">
+                      <td className="px-4 py-3 text-body-sm text-gray-600 whitespace-nowrap">{student.account}</td>
+                      <td className="px-4 py-3 text-body-sm text-gray-600 whitespace-nowrap">
                         {student.class || '—'} {student.seatNumber ? `/ ${student.seatNumber}` : ''}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {student.projects?.map(p => (
-                            <span key={p.id} className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full text-caption">
+                            <span key={p.id} className="px-2 py-0.5 bg-teal-50 text-teal-700 rounded-full text-caption whitespace-nowrap">
                               {p.name}
                             </span>
                           ))}
@@ -170,10 +169,10 @@ export default function TeacherPasswordReset() {
                       <td className="px-4 py-3 text-body-sm text-gray-500 whitespace-nowrap">
                         {formatTaiwanTime(student.passwordResetAt)}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td className="px-4 py-3 text-center whitespace-nowrap">
                         <button
                           onClick={() => handleReset(student)}
-                          className="px-3 py-1.5 bg-amber-500 text-white text-body-sm rounded-lg hover:bg-amber-600 transition-colors duration-fast"
+                          className="px-3 py-1.5 bg-amber-500 text-white text-body-sm rounded-lg hover:bg-amber-600 transition-colors duration-fast whitespace-nowrap"
                         >
                           重設密碼
                         </button>
