@@ -70,6 +70,18 @@ export const updateUserPassword = async (passwordData) => {
     }
 }
 
+// 取得此老師所有指導專案的學生列表
+export const getTeacherStudents = async () => {
+    const response = await apiClient.get('/users/teacher/my-students');
+    return response.data;
+};
+
+// 老師重設學生臨時密碼
+export const adminResetPassword = async (userId) => {
+    const response = await apiClient.put(`/users/${userId}/reset-password`);
+    return response.data;
+};
+
 // 批次獲取多個專案的用戶
 export const batchGetProjectUsers = async (projectIds) => {
     try {

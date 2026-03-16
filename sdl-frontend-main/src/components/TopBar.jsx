@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ChevronDown, Eye, LogOut, MessageSquare, PlusCircle, X } from 'lucide-react';
+import { Activity, ChevronDown, Eye, KeyRound, LogOut, MessageSquare, PlusCircle, X } from 'lucide-react';
 import { getProjectUser } from '../api/users';
 import { getProject, getProjectsByMentor } from '../api/project';
 import { logout } from '../api/auth';  // 引入 logout API
@@ -197,16 +197,26 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
           <img src="/SDLS_LOGO_GEMINI.png" alt="Logo" className="h-14 w-auto" />
         </Link>
         <div className="flex items-center flex-shrink-0 gap-3">
-          {/* 跨班觀摩按鈕 - 只有教師可見 */}
+          {/* 教師專用按鈕群 */}
           {role === "teacher" && (
-            <button
-              onClick={() => navigate("/observation")}
-              className="flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-body-sm font-semibold transition-colors duration-fast whitespace-nowrap"
-              title="跨班專案觀摩"
-            >
-              <Eye className="h-4 w-4" />
-              <span className="hidden xs:inline">觀摩</span>
-            </button>
+            <>
+              <button
+                onClick={() => navigate("/observation")}
+                className="flex items-center space-x-1 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-body-sm font-semibold transition-colors duration-fast whitespace-nowrap"
+                title="跨班專案觀摩"
+              >
+                <Eye className="h-4 w-4" />
+                <span className="hidden xs:inline">觀摩</span>
+              </button>
+              <button
+                onClick={() => navigate("/teacher-password-reset")}
+                className="flex items-center space-x-1 bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-md px-2 py-1 sm:px-3 sm:py-2 text-body-sm font-semibold transition-colors duration-fast whitespace-nowrap"
+                title="學生密碼重設"
+              >
+                <KeyRound className="h-4 w-4" />
+                <span className="hidden xs:inline">密碼重設</span>
+              </button>
+            </>
           )}
           
           <div className="relative">

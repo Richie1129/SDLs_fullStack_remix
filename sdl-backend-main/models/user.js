@@ -42,6 +42,11 @@ const User = sequelize.define('user', {
     school_id: {
         type: DataTypes.INTEGER,
         allowNull: true
+    },
+    passwordResetAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        field: 'password_reset_at'
     }
 }, {
     tableName: 'users',

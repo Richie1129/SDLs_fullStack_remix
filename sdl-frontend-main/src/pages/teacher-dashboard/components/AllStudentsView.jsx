@@ -1,10 +1,55 @@
 import React from 'react';
+import Swal from 'sweetalert2';
 import { formatRelativeTime, getStatusColor } from '../utils';
+import { adminResetPassword } from '../../../api/users';
 
 const AllStudentsView = ({ enhancedStudents, onViewDetails }) => {
   const handleViewDetails = (student) => {
     if (onViewDetails) {
       onViewDetails(student);
+    }
+  };
+
+  const handleResetPassword = async (student) => {
+    const confirm = await Swal.fire({
+      icon: 'warning',
+      title: '重設密碼',
+      text: `確定要重設「${student.username || student.name}」的密碼？`,
+      showCancelButton: true,
+      confirmButtonText: '確定重設',
+      cancelButtonText: '取消',
+      confirmButtonColor: '#5BA491',
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const data = await adminResetPassword(student.id);
+      await Swal.fire({
+        icon: 'success',
+        title: '重設成功',
+        html: `
+          <p class="text-sm text-gray-600 mb-3">
+            ${data.username} 的臨時密碼如下，請告知學生盡快至個人頁面修改密碼。
+          </p>
+          <div class="flex items-center justify-center gap-2 bg-gray-100 rounded-lg px-4 py-3">
+            <span id="temp-password" class="font-mono text-lg font-bold tracking-widest text-gray-800">${data.tempPassword}</span>
+            <button
+              onclick="navigator.clipboard.writeText('${data.tempPassword}').then(() => { this.textContent = '已複製'; setTimeout(() => this.textContent = '複製', 1500); })"
+              class="ml-2 px-3 py-1 text-sm bg-teal-500 text-white rounded hover:bg-teal-600 transition-colors"
+            >複製</button>
+          </div>
+        `,
+        confirmButtonText: '關閉',
+        confirmButtonColor: '#5BA491',
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: '重設失敗',
+        text: err?.response?.data?.message || '請稍後再試',
+        confirmButtonColor: '#5BA491',
+      });
     }
   };
 
@@ -119,12 +164,20 @@ const AllStudentsView = ({ enhancedStudents, onViewDetails }) => {
                     </span>
                   </td>
                   <td className="border p-component-sm text-center">
-                    <button 
-                      onClick={() => handleViewDetails(student)}
-                      className="bg-teal-500 text-white px-3 py-1 rounded text-body-sm hover:bg-teal-600 transition-colors"
-                    >
-                      查看詳情
-                    </button>
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() => handleViewDetails(student)}
+                        className="bg-teal-500 text-white px-3 py-1 rounded text-body-sm hover:bg-teal-600 transition-colors"
+                      >
+                        查看詳情
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(student)}
+                        className="bg-amber-500 text-white px-3 py-1 rounded text-body-sm hover:bg-amber-600 transition-colors"
+                      >
+                        重設密碼
+                      </button>
+                    </div>
                   </td>
                 </tr>
               )) : (
@@ -201,12 +254,20 @@ const AllStudentsView = ({ enhancedStudents, onViewDetails }) => {
               <span className="text-caption text-gray-500">
                 最後活動: {student.lastActivity ? formatRelativeTime(student.lastActivity) : '無資料'}
               </span>
-              <button 
-                onClick={() => handleViewDetails(student)}
-                className="bg-teal-500 text-white px-3 py-2 rounded text-body-sm hover:bg-teal-600 transition-colors"
-              >
-                查看詳情
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleViewDetails(student)}
+                  className="bg-teal-500 text-white px-3 py-2 rounded text-body-sm hover:bg-teal-600 transition-colors"
+                >
+                  查看詳情
+                </button>
+                <button
+                  onClick={() => handleResetPassword(student)}
+                  className="bg-amber-500 text-white px-3 py-2 rounded text-body-sm hover:bg-amber-600 transition-colors"
+                >
+                  重設密碼
+                </button>
+              </div>
             </div>
           </div>
         )) : (

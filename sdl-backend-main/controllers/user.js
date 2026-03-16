@@ -403,6 +403,107 @@ exports.updateUserPassword = async (req, res) => {
 
 
 
+// 取得此老師所有指導專案的學生列表（跨專案去重）
+exports.getTeacherStudents = async (req, res) => {
+    try {
+        if (req.user?.role !== 'teacher') {
+            return res.status(403).json({ message: '權限不足' });
+        }
+
+        const teacherUsername = req.user.username;
+
+        // 找出此老師指導的所有專案
+        const projects = await Project.findAll({
+            where: { mentor: teacherUsername },
+            attributes: ['id', 'name']
+        });
+
+        if (projects.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        const projectIds = projects.map(p => p.id);
+
+        // 取得這些專案的所有學生（去重）
+        const students = await User.findAll({
+            attributes: ['id', 'username', 'account', 'class', 'seatNumber', 'passwordResetAt'],
+            where: { role: 'student' },
+            include: [{
+                model: Project,
+                attributes: ['id', 'name'],
+                where: { id: projectIds },
+                through: { attributes: [] }
+            }]
+        });
+
+        // 整理回傳格式：每個學生帶上所屬專案列表
+        const result = students.map(s => ({
+            id: s.id,
+            username: s.username,
+            account: s.account,
+            class: s.class,
+            seatNumber: s.seatNumber,
+            projects: s.projects.map(p => ({ id: p.id, name: p.name })),
+            passwordResetAt: s.passwordResetAt || null
+        }));
+
+        res.status(200).json(result);
+    } catch (error) {
+        logger.error({ error: error.message }, '取得老師學生列表失敗');
+        res.status(500).json({ message: '伺服器內部錯誤' });
+    }
+};
+
+// 老師重設學生密碼（產生臨時密碼）
+exports.adminResetPassword = async (req, res) => {
+    try {
+        // 只有 teacher 可以呼叫
+        if (req.user?.role !== 'teacher') {
+            return res.status(403).json({ message: '權限不足，僅教師可重設學生密碼' });
+        }
+
+        const targetUserId = req.params.userId;
+
+        const targetUser = await User.findByPk(targetUserId, {
+            attributes: ['id', 'username', 'account', 'role']
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ message: '找不到該使用者' });
+        }
+
+        // 只能重設學生密碼，不能重設其他老師
+        if (targetUser.role !== 'student') {
+            return res.status(403).json({ message: '只能重設學生密碼' });
+        }
+
+        // 產生臨時密碼：SDL + 6 位隨機數字
+        const randomDigits = Math.floor(100000 + Math.random() * 900000);
+        const tempPassword = `SDL${randomDigits}`;
+
+        const hashedPassword = await bcrypt.hash(tempPassword, saltRounds);
+
+        await User.update({ password: hashedPassword, passwordResetAt: new Date() }, { where: { id: targetUserId } });
+
+        logAudit(req, {
+            action: 'ADMIN_PASSWORD_RESET',
+            targetType: 'user',
+            targetId: targetUserId,
+            metadata: { resetBy: req.userId, targetAccount: targetUser.account }
+        }).catch(() => { });
+
+        res.status(200).json({
+            message: '密碼重設成功',
+            tempPassword,
+            username: targetUser.username
+        });
+
+    } catch (error) {
+        logger.error({ error: error.message }, '老師重設密碼失敗');
+        res.status(500).json({ message: '伺服器內部錯誤' });
+    }
+};
+
 exports.getProjectUsers = async (req, res) => {
     try {
         const projectId = req.params.projectId;

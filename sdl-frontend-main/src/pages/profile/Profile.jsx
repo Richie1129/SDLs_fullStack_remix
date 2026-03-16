@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { FaUser, FaLock, FaArrowLeft, FaEdit, FaSave, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { FiAlertTriangle } from 'react-icons/fi';
 import Swal from 'sweetalert2';
-import { triggerUserUpdate } from '../../utils/userUtils';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -30,10 +29,7 @@ export default function Profile() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const role = localStorage.getItem("role");
-  const isTeacher = role === 'teacher';
-  // 只允許編輯 email，其他資料保持鎖定
-  const canEditEmail = true;
-  const canEditProfile = false;
+  const canEditProfile = false; // 班級、座號由管理員管理
 
   useEffect(() => {
     fetchUserData();
@@ -86,10 +82,10 @@ export default function Profile() {
     try {
       // 只更新 email，其他資料保持原樣
       const updateData = {
-        username: originalUser.username,  // 保持原樣
-        email: user.email,  // 只更新 email
-        class: originalUser.class_name,   // 保持原樣
-        seatNumber: originalUser.seat_number  // 保持原樣
+        username: user.username,
+        email: user.email,
+        class: originalUser.class_name,
+        seatNumber: originalUser.seat_number
       };
 
       await updateUserProfile(updateData);
@@ -102,13 +98,14 @@ export default function Profile() {
       // 更新 originalUser，只更新 email
       setOriginalUser({
         ...originalUser,
+        username: user.username,
         email: user.email
       });
       setIsEditing(false);
       Swal.fire({
         icon: 'success',
         title: '成功',
-        text: '電子郵件已更新',
+        text: '資料已更新',
         showConfirmButton: false,
         timer: 1500
       });
@@ -125,9 +122,9 @@ export default function Profile() {
   };
 
   const handleCancel = () => {
-    // 只回復 email，其他欄位保持不變
     setUser({
       ...user,
+      username: originalUser.username,
       email: originalUser.email
     });
     setIsEditing(false);
@@ -253,9 +250,11 @@ export default function Profile() {
                     name="username"
                     value={user.username}
                     onChange={handleInputChange}
-                    disabled={!canEditProfile}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !canEditProfile ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    disabled={!isEditing}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none transition-colors ${
+                      !isEditing
+                        ? 'bg-gray-50 text-gray-400 border-gray-200'
+                        : 'bg-[#5BA491]/5 text-gray-800 border-[#5BA491] ring-1 ring-[#5BA491]/20 focus:ring-2 focus:ring-[#5BA491]'
                     }`}
                   />
                 </div>
@@ -268,7 +267,7 @@ export default function Profile() {
                     type="text"
                     value={user.account}
                     disabled
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
                   />
                   <p className="text-caption text-gray-500 mt-1">帳號無法修改</p>
                 </div>
@@ -281,7 +280,7 @@ export default function Profile() {
                     type="text"
                     value={user.school_name}
                     disabled
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-500"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
                     placeholder="（未設定）"
                   />
                 </div>
@@ -296,8 +295,10 @@ export default function Profile() {
                     value={user.email}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !isEditing ? 'bg-gray-50 text-gray-500' : 'bg-white'
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none transition-colors ${
+                      !isEditing
+                        ? 'bg-gray-50 text-gray-400 border-gray-200'
+                        : 'bg-[#5BA491]/5 text-gray-800 border-[#5BA491] ring-1 ring-[#5BA491]/20 focus:ring-2 focus:ring-[#5BA491]'
                     }`}
                     placeholder="請輸入您的電子郵件"
                   />
@@ -318,9 +319,7 @@ export default function Profile() {
                     value={user.class_name}
                     onChange={handleInputChange}
                     disabled={!canEditProfile}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !canEditProfile ? 'bg-gray-50 text-gray-500' : 'bg-white'
-                    }`}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
                   />
                 </div>
 
@@ -334,22 +333,12 @@ export default function Profile() {
                     value={user.seat_number}
                     onChange={handleInputChange}
                     disabled={!canEditProfile}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5BA491] focus:border-transparent transition-colors ${
-                      !canEditProfile ? 'bg-gray-50 text-gray-500' : 'bg-white'
-                    }`}
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-400 cursor-not-allowed"
                   />
                 </div>
 
                 {/* 操作按鈕 */}
                 <div className="pt-4 flex flex-col space-y-3">
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-component-sm">
-                    <div className="flex items-center space-x-stack-xs">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                      <p className="text-body-sm text-blue-800 font-medium">
-                        目前僅開放電子郵件編輯功能
-                      </p>
-                    </div>
-                  </div>
                   <div className="flex space-x-3">
                     {!isEditing ? (
                       <button
@@ -389,24 +378,15 @@ export default function Profile() {
                 </h3>
 
                 <div className="bg-gray-50 rounded-lg p-component-base">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-component-sm mb-4">
-                    <div className="flex items-center space-x-stack-xs">
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                      <p className="text-body-sm text-yellow-800 font-medium">
-                        密碼修改功能暫時關閉
-                      </p>
-                    </div>
-                  </div>
                   <button
                     onClick={() => setShowPasswordForm(!showPasswordForm)}
-                    disabled={true}
-                    className="w-full flex items-center justify-center space-x-stack-xs px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200"
+                    className="w-full flex items-center justify-center space-x-stack-xs px-4 py-3 border border-gray-300 rounded-lg transition-colors font-medium bg-white text-gray-700 hover:bg-gray-100"
                   >
                     <FaLock />
                     <span>{showPasswordForm ? '隱藏密碼表單' : '修改密碼'}</span>
                   </button>
 
-                  {showPasswordForm && canEdit && (
+                  {showPasswordForm && (
                     <div className="mt-4 space-y-stack-sm">
                       <div>
                         <label className="block text-body-sm font-medium text-gray-700 mb-2">
