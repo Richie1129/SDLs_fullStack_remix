@@ -249,6 +249,7 @@ export default function Protfolio() {
                         >
                             <AiOutlineCloudDownload className="text-h3" />
                             <span>匯出學習歷程 PDF</span>
+                            <span className="ml-1 text-[10px] font-semibold bg-white/25 text-white px-1.5 py-0.5 rounded-full tracking-wide">Beta</span>
                         </button>
                         )}
                     </div>
