@@ -4,6 +4,63 @@
 
 ---
 
+## [v3.4.0] - 2026-03-17 — 效能監控基礎設施與全面效能優化
+
+### 🟣 新功能
+- **Grafana + Prometheus 效能監控 Dashboard**
+  - `docker-compose.dev.yml` 新增 Prometheus（port 9090）與 Grafana（port 3001）服務
+  - 自訂 SDL k6 Dashboard：P95/P50 回應時間、VUs、錯誤率、各端點分析
+  - Grafana 自動 provision datasource 與 Dashboard，啟動即用
+- **完整效能測試套件（`performance/`）**
+  - `k6/api-load-test.js` — 負載測試（50 VU，3 分鐘，Token 預取策略避免 rate limit 干擾）
+  - `k6/stress-test.js` — 壓力測試（自動尋找服務上限，約 12 分鐘）
+  - `k6/spike-test.js` — 尖峰測試（模擬課堂 30 人同時湧入）
+  - `lighthouse/lighthouserc.js` — Lighthouse CI 設定（Core Web Vitals 閾值）
+  - `lighthouse/web-vitals-patch.js` — 瀏覽器端即時 RUM 監控
+  - `profiling/backend-profiler.js` — Node.js 記憶體 / N+1 查詢偵測工具
+  - `run-tests.sh` — 一鍵執行腳本，自動偵測 Prometheus 並啟用即時 Grafana 輸出
+  - `PERFORMANCE_CHECKLIST.md` — 完整效能驗收標準清單（P-percentile 基準、快取命中率、Bundle 大小等）
+- **In-Memory API Cache 服務（`sdl-backend-main/services/apiCache.js`）**
+  - 零外部依賴，純 Map 實作，TTL 自動過期
+  - 超過 2000 筆自動 GC 防記憶體洩漏
+  - Cache key 包含用戶 ID 確保資料隔離
+- **V8 Heap Snapshot 端點**（`POST /api/metrics/heapsnapshot`，僅開發環境）
+  - 輸出 `.heapsnapshot` 檔案，可用 Chrome DevTools Memory tab 分析記憶體洩漏
+- **效能測試專用帳號**
+  - `perf_student_01` / `perf_student_02`（student）、`perf_teacher_01`（teacher）
+  - 密碼：`Perf@Test2026`，bcrypt rounds=10（避免干擾負載測試數值）
+  - 📄 [效能監控完整指南](Reference/PERFORMANCE_MONITORING.md)
+
+### 🔧 P0 關鍵修復
+- **登入 Rate Limiter 改為 per-account 鎖定**（`server.js`）
+  - 原本每 IP 每分鐘限制 10 次，50 VU 高並發下 96% 請求被 429 封鎖
+  - 改用 `keyGenerator`，以帳號名稱為鎖定單位，IP 為後備
+  - **效果：k6 錯誤率從 96% 降至 0%**
+
+### ⚡ P2 效能優化（快取）
+- **`/api/users/me` 加入 60 秒 In-Memory 快取**（`controllers/user.js`）
+  - 快取命中後回應 < 5ms；更新 profile 或密碼時自動清除快取
+- **`/api/projects` 加入 30 秒 In-Memory 快取**（`controllers/project/projectController.js`）
+  - Cache key 格式：`projects:${userId}:${semesterFilter}`，確保篩選結果正確隔離
+
+### 🔧 P3 錯誤狀態碼規範化
+- **`usage.js` startSession 明確區分 400 / 401 / 500**
+  - 未授權 → `401`；缺少 projectId 或格式錯誤 → `400`；伺服器錯誤 → `500`
+
+### 🔧 P4 雜項清理
+- **移除 `projectController.js` 中 5 行 debug `console.log`**（高負載下影響 I/O）
+
+### 📊 效能基準達成（本機 Docker，50 VU × 3 分鐘）
+
+| 指標 | 優化前 | 優化後 | 改善 |
+|------|--------|--------|------|
+| HTTP 整體 P95 | 30.3ms | 12.0ms | ↓ 60% |
+| 錯誤率 | 96% | 0% | 修復 |
+| 登入 P95 | 230ms | 84ms | ↓ 64% |
+| 吞吐量 | ~180 req/s | ~420 req/s | ↑ 133% |
+
+---
+
 ## [v3.3.1] - 2026-03-09 — 安全強化、AI 修復與錯誤日誌
 
 ### 🔒 安全修復

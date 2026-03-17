@@ -17,6 +17,7 @@ const sequelize = require('../../util/database');
 const projectViewingController = require('./projectViewingController');
 const { getTaiwanSemester } = require('../../utils/semesterUtils');
 const { logAudit } = require('../../services/auditService');
+const apiCache = require('../../services/apiCache'); // P2: API 快取
 
 exports.getProject = async (req, res) => {
     try {
@@ -41,21 +42,12 @@ exports.getAllProject = async (req, res) => {
         // 決定學期過濾條件（預設為當前學期，'all' 表示不過濾）
         const semesterFilter = semester || getTaiwanSemester();
 
-        console.log('=== getAllProject Debug ===');
-        console.log('req.query.userId:', req.query.userId);
-        console.log('req.userId:', req.userId);
-        console.log('viewable_by:', viewable_by);
-        console.log('semester:', semesterFilter);
-
         // 分支：可觀摩專案查詢
         if (viewable_by) {
-            console.log('[getAllProject] 轉交至 getViewableProjects');
-            // 確保 semester 參數傳遞給 getViewableProjects
             req.query.semester = semesterFilter;
             return projectViewingController.getViewableProjects(req, res);
         }
 
-        // 分支：用戶參與的專案
         // 防呆：沒有 userId 直接回覆 400，避免 ORM where: { id: undefined } 造成例外
         if (typeof rawUserId === 'undefined' || rawUserId === null || rawUserId === '') {
             return res.status(400).json({ message: '缺少 userId 參數' });
@@ -66,10 +58,14 @@ exports.getAllProject = async (req, res) => {
             return res.status(400).json({ message: 'userId 參數格式不正確' });
         }
 
+        // P2: 先查快取（TTL 30s，專案列表不常變動）
+        const cacheKey = `projects:${userId}:${semesterFilter}`;
+        const cached = apiCache.get(cacheKey);
+        if (cached) return res.status(200).json(cached);
+
         // 建立學期過濾條件
         const whereClause = semesterFilter !== 'all' ? { semester: semesterFilter } : {};
 
-        console.log('[getAllProject] 查詢用戶參與的專案 userId:', userId, 'semester:', semesterFilter);
         const projects = await Project.findAll({
             where: whereClause,
             include: [{
@@ -80,8 +76,9 @@ exports.getAllProject = async (req, res) => {
             }]
         });
 
-        console.log('[getAllProject] 專案數量:', projects.length);
-        
+        const projectsData = projects.map(p => p.toJSON());
+        apiCache.set(cacheKey, projectsData, 30); // 快取 30 秒
+
         // 記錄學生查看儀表板/專案列表
         logAudit(req, {
             action: 'STUDENT_VIEW_DASHBOARD',
@@ -90,8 +87,8 @@ exports.getAllProject = async (req, res) => {
             actorId: userId,
             metadata: { projectCount: projects.length, semester: semesterFilter }
         }).catch(err => console.error('Audit log error:', err));
-        
-        return res.status(200).json(projects);
+
+        return res.status(200).json(projectsData);
     } catch (error) {
         console.error('取得專案列表錯誤:', error);
         return res.status(500).json({

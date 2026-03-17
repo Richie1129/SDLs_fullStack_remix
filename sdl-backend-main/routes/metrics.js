@@ -246,6 +246,56 @@ router.post('/metrics/reset', authMetrics, (req, res) => {
 });
 
 /**
+ * GET /api/metrics/heapsnapshot
+ *
+ * 拍攝 V8 Heap Snapshot（僅限開發環境）
+ * 輸出的 .heapsnapshot 可用 Chrome DevTools Memory 分析記憶體洩漏
+ *
+ * 注意：此操作會短暫暫停 Node.js（Stop-the-World GC）
+ * 僅在開發環境可用，生產環境會拒絕請求
+ */
+router.post('/metrics/heapsnapshot', authMetrics, (req, res) => {
+  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+
+  if (!isDev) {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Heap snapshot is only available in development mode',
+    });
+  }
+
+  try {
+    const v8 = require('v8');
+    const path = require('path');
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const filename = path.join('/tmp', `sdl-heap-${timestamp}.heapsnapshot`);
+
+    console.warn('[Metrics] 開始拍攝 Heap Snapshot（服務將短暫停頓）...');
+    const snapshotPath = v8.writeHeapSnapshot(filename);
+    console.warn(`[Metrics] Heap Snapshot 已儲存: ${snapshotPath}`);
+
+    const mem = process.memoryUsage();
+
+    res.json({
+      success: true,
+      path: snapshotPath,
+      instructions: '使用 Chrome DevTools → Memory → Load profile 載入此檔案',
+      memoryAtSnapshot: {
+        heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(2)} MB`,
+        heapTotal: `${(mem.heapTotal / 1024 / 1024).toFixed(2)} MB`,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error taking heap snapshot:', error);
+    res.status(500).json({
+      error: 'Failed to take heap snapshot',
+      details: error.message,
+    });
+  }
+});
+
+/**
  * 格式化運行時間
  *
  * 將秒數轉換為易讀格式

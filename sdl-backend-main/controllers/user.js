@@ -6,6 +6,7 @@ const Task = require('../models/task');
 const Node = require('../models/node');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
+const apiCache = require('../services/apiCache'); // P2: API 快取
 const { sign } = require('jsonwebtoken');
 const crypto = require('crypto');
 const sequelize = require('../util/database'); // 引入 Sequelize 實例以支援事務
@@ -67,6 +68,11 @@ exports.getUser = async (req, res) => {
 exports.getCurrentUser = async (req, res) => {
     try {
         const userId = req.userId; // 來自 AuthMiddleware
+        const cacheKey = `me:${userId}`;
+
+        // P2: 先查快取（TTL 60s，個人資料不常變動）
+        const cached = apiCache.get(cacheKey);
+        if (cached) return res.status(200).json(cached);
 
         const user = await User.findByPk(userId, {
             attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id'],
@@ -82,6 +88,9 @@ exports.getCurrentUser = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
+        const userData = user.toJSON();
+        apiCache.set(cacheKey, userData, 60); // 快取 60 秒
+
         // 記錄用戶查看個人資料
         logAudit(req, {
             action: 'USER_VIEW_PROFILE',
@@ -91,7 +100,7 @@ exports.getCurrentUser = async (req, res) => {
             metadata: { role: user.role }
         }).catch(err => console.error('Audit log error:', err));
 
-        res.status(200).json(user);
+        res.status(200).json(userData);
     } catch (error) {
         console.error('Error fetching current user:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -326,6 +335,8 @@ exports.updateUserProfile = async (req, res) => {
             }
         }).catch(() => { });
 
+        apiCache.del(`me:${userId}`); // 清除個人資料快取
+
         // 返回更新後的用戶資料
         const updatedUser = await User.findByPk(userId, {
             attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber']
@@ -383,6 +394,8 @@ exports.updateUserPassword = async (req, res) => {
         if (updatedRowsCount === 0) {
             return res.status(404).json({ message: '密碼更新失敗' });
         }
+
+        apiCache.del(`me:${userId}`); // 密碼更新後清除快取
 
         // 記錄密碼更新
         logAudit(req, {

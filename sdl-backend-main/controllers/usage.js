@@ -22,12 +22,19 @@ exports.startSession = async (req, res) => {
   try {
     const { projectId } = req.body;
     const userId = req.userId || req.user?.id;
-    
-    if (!userId || !projectId) return res.status(400).json({ message: '缺少 userId 或 projectId' });
+
+    // P3: 明確驗證型別，區分 400（用戶端錯誤）與 500（伺服器錯誤）
+    if (!userId) return res.status(401).json({ message: '未授權，請重新登入' });
+    if (!projectId) return res.status(400).json({ message: '缺少 projectId' });
+
+    const parsedProjectId = Number(projectId);
+    if (!Number.isFinite(parsedProjectId) || parsedProjectId <= 0) {
+      return res.status(400).json({ message: 'projectId 格式不正確' });
+    }
 
     // 先嘗試查找現有的未結束 session
-    let session = await UsageSession.findOne({ 
-      where: { userId, projectId, endedAt: null },
+    let session = await UsageSession.findOne({
+      where: { userId, projectId: parsedProjectId, endedAt: null },
       attributes: ['id', 'startedAt', 'lastActiveAt', 'updatedAt']
     });
     
@@ -47,7 +54,7 @@ exports.startSession = async (req, res) => {
     // 如果沒有現有 session，創建新的
     session = await UsageSession.create({
       userId,
-      projectId,
+      projectId: parsedProjectId,
       startedAt: now,
       lastActiveAt: now,
       endedAt: null,
@@ -60,8 +67,8 @@ exports.startSession = async (req, res) => {
       lastActiveAt: session.lastActiveAt 
     });
   } catch (err) {
-    console.error('startSession error:', err);
-    res.status(500).json({ message: 'server error' });
+    console.error('startSession error:', err.message, { userId: req.userId, projectId: req.body?.projectId });
+    res.status(500).json({ message: 'server error', detail: err.message });
   }
 };
 

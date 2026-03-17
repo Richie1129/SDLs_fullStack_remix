@@ -25,6 +25,7 @@ Reference/
 ├── AI_ASSISTANT_GUIDE.md            # AI 助理完整使用指南
 ├── HELP_SEEKING_IN_SRL_ANALYSIS.md  # 求助行為研究文獻分析
 ├── MONITORING.md                    # 系統監控與日誌指南
+├── PERFORMANCE_MONITORING.md        # 效能測試套件與 Grafana 監控指南（v3.4.0）
 ├── REFRESH_TOKEN_IMPLEMENTATION.md  # Refresh Token 實作說明
 ├── SESSION_FIX_IMPLEMENTATION.md    # Session ID 修復實作
 ├── TOKENS_EXPLAINED.md              # Token 機制詳細說明
@@ -40,6 +41,7 @@ Reference/
 
 ### 📊 監控與維運
 - [MONITORING.md](MONITORING.md) - 系統監控、日誌管理與效能分析
+- [PERFORMANCE_MONITORING.md](PERFORMANCE_MONITORING.md) - 效能測試套件（k6、Lighthouse CI）、Grafana Dashboard、v3.4.0 優化項目
 
 ### 🐛 問題修復記錄
 - [reflection-log-permission-fix.md](reflection-log-permission-fix.md) - 反思日誌權限修復詳細記錄
@@ -96,4 +98,4 @@ Reference/
 
 ---
 
-*最後更新：2026-03-04*
+*最後更新：2026-03-17*

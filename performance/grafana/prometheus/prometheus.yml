@@ -1,0 +1,6 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# k6 透過 Prometheus Remote Write 推送 metrics
+# 不需要設定 scrape_configs（k6 是推送方）

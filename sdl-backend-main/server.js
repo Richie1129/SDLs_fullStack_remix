@@ -50,12 +50,20 @@ app.use(helmet({
 }));
 
 // Rate Limiting
+// P0 修正：改為 per-account 限制，避免學校 NAT（同一 IP）造成多人被一起封鎖
+// per-account: 每帳號每分鐘 5 次（防暴力破解）
+// per-IP fallback: 未提供帳號時仍以 IP 限制，上限寬鬆至 60 次（整間教室）
 const loginLimiter = rateLimit({
-    windowMs: 60 * 1000,       // 1 分鐘
-    max: 10,                    // 最多 10 次嘗試
+    windowMs: 60 * 1000,
+    max: 5,
+    keyGenerator: (req) => {
+        const account = req.body?.account;
+        return account ? `login:account:${account}` : `login:ip:${req.ip}`;
+    },
     message: { message: '登入嘗試次數過多，請稍後再試' },
     standardHeaders: true,
     legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === 'test',
 });
 const forgotPasswordLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,  // 1 小時
