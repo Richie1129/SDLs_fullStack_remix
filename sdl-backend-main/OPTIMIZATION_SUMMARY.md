@@ -69,15 +69,6 @@ ${chatHistory.slice(-chatHistoryLimit).map(...).join('\\n')}` : ''} // 第一次
   `;
 }
 
-function generateOpenAISystemContent({ userName, projectContext, chatHistory, chatHistoryLimit }) {
-  const hasHistory = chatHistory && chatHistory.length > 0; // 重複的判斷
-  return `...
-${JSON.stringify(projectContext, null, 2)} // 第二次 stringify
-...
-${hasHistory ? `\\n最近的對話紀錄：\\n${chatHistory.slice(-chatHistoryLimit).map(...).join('\\n')}` : ''} // 第二次格式化
-  `;
-}
-
 function generateStructuredPrompt({ userName, projectContext, chatHistory, message, chatHistoryLimit }) {
   const hasHistory = chatHistory && chatHistory.length > 0; // 再次重複
   return `...
@@ -90,7 +81,7 @@ ${chatHistory.slice(-chatHistoryLimit).map(...).join('\\n')}` : ''} // 第三次
 ```
 
 **問題**：
-- 三個函數 90% 相同
+- 兩個函數 90% 相同
 - 每次調用都重複 JSON.stringify（可能每次 ~5ms）
 - 每次調用都重複格式化 chatHistory
 - 特殊情況判斷可以消除
@@ -133,11 +124,6 @@ class PromptBuilder {
   forGemini(message) {
     const core = this._buildCore();
     return `${core.role}\n\n${core.thinking}\n\n## 使用者資訊：\n- 使用者名字：${core.userName}\n\n## 專案完整資料：\n${core.projectData}\n\n${core.history ? `## 最近的對話紀錄：\n${core.history}\n` : ''}\n${core.guidelines}\n\n## 使用者問題：\n${message}`;
-  }
-
-  forOpenAI(message = null) {
-    const core = this._buildCore();
-    // ... 只有格式微調
   }
 
   forStructured(message) {
@@ -206,7 +192,7 @@ async function getProjectContext(projectId, projectData, forceRefresh = false) {
 
 ```javascript
 // v1.0 舊版函數（仍可用）
-const { generateGeminiPrompt, generateOpenAISystemContent, generateStructuredPrompt } = require("./config/assistantPrompts");
+const { generateGeminiPrompt, generateStructuredPrompt } = require("./config/assistantPrompts");
 
 // v2.0 新版建構器（推薦）
 const { PromptBuilder } = require("./config/assistantPrompts");
@@ -216,7 +202,6 @@ const { PromptBuilder } = require("./config/assistantPrompts");
 ```
 📋 測試 2: 舊函數向後相容性
   ✅ generateGeminiPrompt 仍可用: 1052 字元
-  ✅ generateOpenAISystemContent 仍可用: 1025 字元
   ✅ generateStructuredPrompt 仍可用: 884 字元
   ✅ 向後相容性測試通過
 ```
@@ -263,7 +248,6 @@ const builder = new PromptBuilder({
 });
 
 const geminiPrompt = builder.forGemini(message);
-const openaiPrompt = builder.forOpenAI(message);
 const structuredPrompt = builder.forStructured(message);
 ```
 

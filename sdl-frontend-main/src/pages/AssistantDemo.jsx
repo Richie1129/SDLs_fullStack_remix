@@ -95,8 +95,8 @@ export default function AssistantDemo() {
               <p className="text-gray-600">自動分析看板、想法牆、提交記錄</p>
             </div>
             <div>
-              <strong><FiCheckCircle className="w-4 h-4 inline mr-1 text-green-500" />雙 AI 支援</strong>
-              <p className="text-gray-600">Gemini（預設）+ OpenAI（備選）</p>
+              <strong><FiCheckCircle className="w-4 h-4 inline mr-1 text-green-500" />AI 支援</strong>
+              <p className="text-gray-600">Gemini 驅動</p>
             </div>
             <div>
               <strong><FiCheckCircle className="w-4 h-4 inline mr-1 text-green-500" />Markdown 支援</strong>

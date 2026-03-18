@@ -77,7 +77,6 @@ if (thinkingStartRegex.test(buffer) && !inThinking) {
 - ✅ 添加詳細日誌（`🔍 偵測到標籤`, `💭 思考內容預覽`）
 
 **同時修改了**：
-- OpenAI streaming 解析（第 83-145 行）
 - Gemini streaming 解析（第 290-355 行）
 
 ---
@@ -294,8 +293,8 @@ data: {"type":"done"}
 
 **症狀**：
 ```
-⚠️ [Gemini/OpenAI] 未偵測到 <thinking> 標籤
-⚠️ [Gemini/OpenAI] THINKING 解析完全失敗
+⚠️ [Gemini] 未偵測到 <thinking> 標籤
+⚠️ [Gemini] THINKING 解析完全失敗
 ```
 
 **可能原因**：
@@ -305,7 +304,7 @@ data: {"type":"done"}
 
 **解決方法**：
 1. 檢查 `promptBuilder.js` 是否正確修改
-2. 嘗試切換 model（例如從 gemini-3.1-flash-lite-preview 到 gpt-4o-mini）
+2. 確認 model 設定為 `gemini-3.1-flash-lite-preview`
 3. 檢查 `systemInstruction` 是否與 `THINKING_INSTRUCTION` 衝突
 4. 考慮啟用 Structured Output（強制 JSON 格式）
 

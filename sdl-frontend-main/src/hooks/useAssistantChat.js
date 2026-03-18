@@ -63,7 +63,7 @@ export function useAssistantChat() {
    * 發送訊息給 AI 助理
    * @param {number} projectId - 專案 ID
    * @param {string} userMessage - 使用者的訊息
-   * @param {string} provider - AI 提供者（'gemini' 或 'openai'），預設使用 gemini
+   * @param {string} provider - AI 提供者，預設使用 gemini
    */
   const sendMessage = useCallback(async (projectId, userMessage, provider = 'gemini') => {
     if (!projectId || !userMessage?.trim()) {

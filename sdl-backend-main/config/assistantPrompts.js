@@ -3,7 +3,7 @@
  * 集中管理所有 Prompt 模板和回答準則
  *
  * 版本說明：
- * - v1.0 (原始版本): generateGeminiPrompt, generateOpenAISystemContent, generateStructuredPrompt
+ * - v1.0 (原始版本): generateGeminiPrompt, generateStructuredPrompt
  * - v2.0 (推薦): PromptBuilder 類 - 消除重複代碼，提升性能
  *
  * 遷移指南：
@@ -201,33 +201,6 @@ ${message}`;
 }
 
 /**
- * 生成 OpenAI 使用的 System Content
- * @param {Object} params
- * @param {string} params.userName - 使用者名字
- * @param {Object} params.projectContext - 專案完整資料
- * @param {Array} params.chatHistory - 對話歷史
- * @param {number} params.chatHistoryLimit - 對話歷史顯示數量限制
- * @returns {string} System message 內容
- */
-function generateOpenAISystemContent({ userName, projectContext, chatHistory, chatHistoryLimit }) {
-  const hasHistory = chatHistory && chatHistory.length > 0;
-
-  return `${ASSISTANT_ROLE}
-
-${THINKING_INSTRUCTION}
-
-使用者資訊：
-- 使用者名字：${userName}
-
-以下是專案的完整資料：
-${JSON.stringify(projectContext, null, 2)}
-
-${hasHistory ? `\n最近的對話紀錄：\n${chatHistory.slice(-chatHistoryLimit).map(h => `${h.username || h.role}: ${h.content}`).join('\n')}` : ''}
-
-${getAnswerGuidelines(userName).replace('## 回答準則：', '回答準則：')}`;
-}
-
-/**
  * 邊界約束測試案例（用於文檔說明）
  */
 const BOUNDARY_TEST_CASES = {
@@ -305,7 +278,6 @@ module.exports = {
   THINKING_INSTRUCTION,
   getAnswerGuidelines,
   generateGeminiPrompt,
-  generateOpenAISystemContent,
   generateStructuredPrompt,
   BOUNDARY_TEST_CASES
 };

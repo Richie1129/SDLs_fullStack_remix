@@ -225,7 +225,7 @@ graph TD
         -   ✅ 可預測性：100%
     -   **未來考量**: 若規則引擎失敗率 > 30%（透過 Feedback Loop 收集），才考慮引入 LLM 輔助決策。
 -   **LLM 模型**（僅用於 Worker Agents 生成內容）:
-    -   Worker Agents: 使用 `gemini-3.1-flash-lite-preview` 或 `gpt-4o-mini` (高性價比)。
+    -   Worker Agents: 使用 `gemini-3.1-flash-lite-preview` (高性價比)。
 -   **Prompt Engineering**:
     -   必須使用 **Chain-of-Thought (CoT)**，要求 AI 先輸出思考過程再輸出建議。
 -   **Latency**:

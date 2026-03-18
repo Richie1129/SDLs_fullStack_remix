@@ -194,26 +194,24 @@ Phase 3 專注於 **P1 中等風險操作** 的審計追蹤,這些操作對專�
 
 **Provider 支援**:
 - ✅ Gemini (預設)
-- ✅ OpenAI
 
 **Metadata 結構**:
 ```javascript
 {
   projectName: string,
-  provider: 'gemini' | 'openai',
+  provider: 'gemini',
   sessionId: string,                    // 對話會話 ID
   message: string,                      // 前 100 字元
   messageLength: number,
   responseLength: number,
   hasThinking: boolean,                 // 是否有思考過程
   useStructuredOutput: boolean,         // (Gemini only)
-  model: string                         // (OpenAI only, e.g. 'gpt-4o-mini')
+  model: string                         // 使用的 AI 模型名稱
 }
 ```
 
 **實作位置**:
 - **Gemini**: 第 1155 行左右，在 `ChatTurn.create()` 之後
-- **OpenAI**: 第 1225 行左右，在 `ChatTurn.create()` 之後
 
 **特殊處理**: 
 - 只在成功儲存對話記錄後才記錄審計 (避免重複記錄失敗請求)

@@ -279,38 +279,6 @@ ${message}`;
     }
 
     /**
-     * 生成 OpenAI 格式 System Content
-     *
-     * @param {string} message - 使用者問題（可選，某些情況下 system message 不包含使用者問題）
-     * @returns {string} System message 內容
-     */
-    forOpenAI(message = null) {
-        const core = this._buildCore();
-
-        // 格式化輸出：OpenAI 偏好較少的 Markdown
-        let content = `${core.role}
-
-${core.thinking}
-
-使用者資訊：
-- 使用者名字：${core.userName}
-
-以下是專案的完整資料：
-${core.projectData}
-
-${core.history ? `\n最近的對話紀錄：\n${core.history}` : ''}
-
-${core.guidelines.replace('## ', '')}`;
-
-        // 如果提供了 message，加入使用者問題
-        if (message) {
-            content += `\n\n## 使用者問題：\n${message}`;
-        }
-
-        return content;
-    }
-
-    /**
      * 生成 Structured Output 格式 Prompt
      * 不需要 XML 標籤指示，因為結構由 responseSchema 保證
      *

@@ -25,9 +25,9 @@
 **好品味（Good Taste）：**
 ```javascript
 // ❌ 舊設計：兩階段API呼叫（特殊情況）
-const classification = await openai.chat.completions.create({...}); // 第一次
-const guidance = await openai.chat.completions.create({...});      // 第二次
-const result = JSON.parse(guidance.content);  // 手動解析，可能失敗
+const classification = await llm.complete({...}); // 第一次
+const guidance = await llm.complete({...});       // 第二次
+const result = JSON.parse(guidance.content);      // 手動解析，可能失敗
 
 // ✅ 新設計：一次Function Calling（消除特殊情況）
 const result = await genai.generateContent([

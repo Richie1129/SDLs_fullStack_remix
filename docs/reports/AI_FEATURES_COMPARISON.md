@@ -14,13 +14,13 @@
 
 | 特性 | AI 輔助發展（舊版） | KB Coach（新版） |
 |------|-------------------|-----------------|
-| **技術** | OpenAI GPT-4o-mini | Gemini 2.0 Flash |
+| **技術** | 舊版 LLM | Gemini 3.1 Flash-Lite-Preview |
 | **API呼叫** | 2次（分類+引導） | 1次（Function Calling） |
 | **理論基礎** | 自訂7種分類 | KB 12原則（教育理論） |
 | **輸出格式** | 手動JSON.parse | 結構化輸出（保證格式） |
 | **回應內容** | 1個引導問題 | 原則+多個問題+可執行建議 |
 | **互動方式** | 自動建立新節點 | 顯示建議，學生選擇執行 |
-| **成本** | OpenAI（較貴） | Gemini（較便宜） |
+| **成本** | 較貴 | Gemini（較便宜） |
 | **教育價值** | 簡單引導 | 深度教學支架 |
 
 ---
@@ -176,7 +176,7 @@ GROUP BY action;
 
 **缺點：**
 - UI混亂（兩個功能太相似）
-- 維護成本高（OpenAI + Gemini）
+- 維護成本高（兩套功能並存）
 - 學生不知道該用哪個
 
 **判斷：** ❌ 不推薦，製造困惑。
@@ -210,8 +210,8 @@ GROUP BY action;
 
 ```javascript
 // ❌ 問題1：兩次API呼叫
-const classification = await openai.chat.completions.create({...});  // 第一次
-const guidance = await openai.chat.completions.create({...});        // 第二次
+const classification = await llm.complete({...});  // 第一次
+const guidance = await llm.complete({...});        // 第二次
 
 // ❌ 問題2：手動JSON.parse（不穩定）
 const parsedResponse = JSON.parse(response);  // 如果AI輸出格式錯？

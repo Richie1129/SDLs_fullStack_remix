@@ -78,9 +78,8 @@ AI 會自動分析：
 - AI 會稱呼你的名字（例如：「蔡狄澄，...」）
 - 讓對話更有溫度
 
-#### 4. **雙 AI 支援**
+#### 4. **AI 支援**
 - 🟢 **Gemini**（預設）- 快速、免費額度高
-- 🔵 **OpenAI GPT-4o-mini**（備選）- 品質穩定
 
 #### 5. **快速問題按鈕**
 - 點擊範例問題立即發送
@@ -180,15 +179,6 @@ function MyChat() {
 
 ### 🎨 客製化選項
 
-#### 改變 AI 提供者
-
-```jsx
-<AssistantChatStreaming
-  projectId={123}
-  provider="openai"  // 改用 OpenAI GPT
-/>
-```
-
 #### 嵌入模式（無標題列）
 
 ```jsx
@@ -227,7 +217,7 @@ function MyChat() {
     ↓
 Streaming Service
     ↓ Server-Sent Events (SSE)
-AI API (Gemini/OpenAI)
+AI API (Gemini)
     ↓ 逐字回傳
 前端即時顯示
 ```
@@ -425,7 +415,6 @@ docker logs sdls_fullstack_remix-api-1 -f
 
 **後端模型：**
 - Gemini: `gemini-3.1-flash-lite-preview` (預設)
-- OpenAI: `gpt-4o-mini` (備選)
 
 **前端設定：**
 - Provider: `gemini`
@@ -440,13 +429,6 @@ docker logs sdls_fullstack_remix-api-1 -f
 **A:**
 - **科學助手**：專注於科學問題解答
 - **專案助理**：分析**你的專案資料**，提供專案相關建議
-
-### Q: 為什麼選擇 Gemini 而不是 OpenAI？
-
-**A:**
-- Gemini 速度快、免費額度高
-- 適合高頻使用
-- 如需要可以改成 `provider="openai"`
 
 ### Q: 資料會被上傳到哪裡？
 
@@ -468,12 +450,6 @@ docker logs sdls_fullstack_remix-api-1 -f
 2. `.env` 有 `GEMINI_API_KEY` 嗎？
 3. 瀏覽器 Console 有沒有錯誤訊息？
 4. 網路有沒有通？
-
-### Q: 如何切換到 OpenAI（GPT）？
-
-**A:**
-1. 在組件加 `provider="openai"`
-2. 確認 `.env` 有 `OPENAI_API_KEY`
 
 ### Q: 可以改變 AI 回答的語氣嗎？
 
@@ -548,7 +524,7 @@ const prompt = `你是一個超級熱情的專案助理 AI！用最有活力的�
 - ✅ **個人化體驗** - AI 會稱呼你的名字
 - ✅ **快速提問** - 點擊範例問題立即發送
 - ✅ **無縫整合** - 與現有功能並存
-- ✅ **雙 AI 支援** - Gemini + OpenAI
+- ✅ **AI 支援** - Gemini
 - ✅ **完整除錯** - 詳細日誌幫助排查問題
 
 ### 開始使用
