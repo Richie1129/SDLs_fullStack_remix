@@ -51,7 +51,7 @@ Get Weather Schedule Meeting Create Chart
 
     # Send request with function declarations
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         contents="Schedule a meeting with Bob and Alice for 03/14/2025 at 10:00 AM about the Q3 planning.",
         config=config,
     )
@@ -105,7 +105,7 @@ Get Weather Schedule Meeting Create Chart
 
     // Send request with function declarations
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: 'Schedule a meeting with Bob and Alice for 03/27/2025 at 10:00 AM about the Q3 planning.',
       config: {
         tools: [{
@@ -128,7 +128,7 @@ Get Weather Schedule Meeting Create Chart
 
 ### REST
 
-    curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
+    curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent" \
       -H "x-goog-api-key: $GEMINI_API_KEY" \
       -H 'Content-Type: application/json' \
       -X POST \
@@ -306,7 +306,7 @@ object will contain a function call suggestion.
 
     # Send request with function declarations
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         contents=contents
         config=config,
     )
@@ -337,7 +337,7 @@ object will contain a function call suggestion.
 
     // Send request with function declarations
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: contents,
       config: config
     });
@@ -406,7 +406,7 @@ incorporate this information into its final response to the user.
 
     client = genai.Client()
     final_response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         config=config,
         contents=contents,
     )
@@ -427,7 +427,7 @@ incorporate this information into its final response to the user.
 
     // Get the final response from the model
     const final_response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: contents,
       config: config
     });
@@ -652,7 +652,7 @@ To learn more, you can read about
         ),
     )
 
-    chat = client.chats.create(model="gemini-2.5-flash", config=config)
+    chat = client.chats.create(model="gemini-3.1-flash-lite-preview", config=config)
     response = chat.send_message("Turn this place into a party!")
 
     # Print out each of the function calls requested from this single call
@@ -685,7 +685,7 @@ To learn more, you can read about
 
     // Create a chat session
     const chat = ai.chats.create({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.1-flash-lite-preview',
         config: config
     });
     const response = await chat.sendMessage({message: 'Turn this place into a party!'});
@@ -759,7 +759,7 @@ the disco use case.
 
     # Make the request
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         contents="Do everything you need to this place into party!",
         config=config,
     )
@@ -813,7 +813,7 @@ by the model, and sends the results back to the model to complete the task.
 
     # Make the request
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         contents="If it's warmer than 20°C in London, set the thermostat to 20°C, otherwise set it to 18°C.",
         config=config,
     )
@@ -915,7 +915,7 @@ function calling using a manual execution loop.
     // Loop until the model has no more function calls to make
     while (true) {
       const result = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-flash-lite-preview",
         contents,
         config: { tools },
       });
@@ -1105,7 +1105,7 @@ entire docstring as the top-level function description.
 
     # Make the request
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         contents="What's the temperature in Boston?",
         config=config,
     )
@@ -1262,7 +1262,7 @@ your platform of choice.
 
                 # Send request to the model with MCP function declarations
                 response = await client.aio.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.1-flash-lite-preview",
                     contents=prompt,
                     config=genai.types.GenerateContentConfig(
                         temperature=0,
@@ -1312,7 +1312,7 @@ of choice.
 
     // Send request to the model with MCP tools
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite-preview",
       contents: `What is the weather in London in ${new Date().toLocaleDateString()}?`,
       config: {
         tools: [mcpToTool(client)],  // uses the session, will automatically call the tool
@@ -1347,9 +1347,9 @@ the [model overview](https://ai.google.dev/gemini-api/docs/models) page.
 
 |         Model         | Function Calling | Parallel Function Calling | Compositional Function Calling |
 |-----------------------|------------------|---------------------------|--------------------------------|
-| Gemini 2.5 Pro        | ✔️               | ✔️                        | ✔️                             |
-| Gemini 2.5 Flash      | ✔️               | ✔️                        | ✔️                             |
-| Gemini 2.5 Flash-Lite | ✔️               | ✔️                        | ✔️                             |
+| Gemini 3.1 Pro        | ✔️               | ✔️                        | ✔️                             |
+| Gemini 3.1 Flash-Lite-Preview      | ✔️               | ✔️                        | ✔️                             |
+| Gemini 3.1 Flash-Lite-Preview | ✔️               | ✔️                        | ✔️                             |
 | Gemini 2.0 Flash      | ✔️               | ✔️                        | ✔️                             |
 | Gemini 2.0 Flash-Lite | X                | X                         | X                              |
 

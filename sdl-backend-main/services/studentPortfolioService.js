@@ -7,7 +7,7 @@
  * AI 敘事生成使用三層 fallback：
  *   1. vLLM Gemma-3-27b  (VLLM_BASE_URL)
  *   2. vLLM GPT-OSS-20b  (HSUEH_VLLM_BASE_URL)
- *   3. Gemini 2.5-flash  (fallback)
+ *   3. Gemini 3.1-flash-lite-preview  (fallback)
  */
 
 const { Op } = require('sequelize');
@@ -625,10 +625,10 @@ async function streamNarrative(prompt, res) {
   }
 
   // 3. Gemini fallback（使用現有 streamingService）
-  console.log('🤖 [Portfolio] 使用 Gemini 2.5-flash fallback...');
+  console.log('🤖 [Portfolio] 使用 Gemini 3.1-flash-lite-preview fallback...');
   const { streamGeminiResponse } = require('./streamingService');
   await streamGeminiResponse(prompt, res, {
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.1-flash-lite-preview',
     systemInstruction: SYSTEM_INSTRUCTION
   });
 }

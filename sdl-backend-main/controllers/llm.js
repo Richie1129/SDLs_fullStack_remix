@@ -24,7 +24,7 @@ exports.generateIdea = async (req, res) => {
 }`;
 
     const classificationResult = await genai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: [
         {
           role: 'user',
@@ -58,7 +58,7 @@ exports.generateIdea = async (req, res) => {
 }`;
 
     const completion = await genai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite-preview',
       contents: [
         {
           role: 'user',
@@ -94,7 +94,7 @@ exports.generateIdea = async (req, res) => {
           input: { title: summarizeText(title || ''), content: summarizeText(content || '') },
           classification: { type, reason: summarizeText(reason || '') },
           output: { title: summarizeText(responseWithOwner.title || ''), content: summarizeText(responseWithOwner.content || '') },
-          provider: 'gemini:gemini-2.5-flash'
+          provider: 'gemini:gemini-3.1-flash-lite-preview'
         })
       });
     } catch (_) {}

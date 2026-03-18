@@ -167,7 +167,7 @@
   - 📄 [StorageService 報告](docs/releases/PHASE2_STORAGESERVICE_REPORT.md)
 - **KB Coach 知識建構教練**
   - 基於 Knowledge Building 12 原則的 AI 教練系統
-  - Gemini 2.5 Flash Function Calling 提供結構化輸出
+  - Gemini 3.1 Flash-Lite-Preview Function Calling 提供結構化輸出
   - 6 個核心 KB 原則（Phase 1）
   - 零破壞性設計：與舊版「想法發展助手」並存
   - 📄 [KB Coach 實作報告](docs/reports/KB_COACH_IMPLEMENTATION.md)
@@ -208,7 +208,7 @@
 
 ### ✨ 新功能
 - **5Rs 反思框架與 AI 智能分析功能**
-  - 雙 AI 引擎支援（vLLM 本地部署 + gemini-2.5-flash）
+  - 雙 AI 引擎支援（vLLM 本地部署 + gemini-3.1-flash-lite-preview）
   - 結構化反思模型與專業回饋生成
 - **儀表板系統模組化重構**
   - 學生儀表板：1000+ 行 → 14 個模組

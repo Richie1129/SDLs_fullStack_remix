@@ -62,7 +62,7 @@
 - [x] **4.1 整合 LLM Service**
     - [x] 實作 `analyzeContext(messages)`: 呼叫輕量模型 (gpt-4o-mini) 判斷意圖 (Conflict/Question/Social)。
     - [x] 實作 `generateIntervention(context)`: 呼叫強力模型 (gpt-4o) 生成引導語。
-    - [x] **Fallback 機制:** 優先使用 `gemini-2.5-flash`，失敗時降級至 `gpt-5-nano` (模擬) / `gpt-4o-mini`。
+    - [x] **Fallback 機制:** 優先使用 `gemini-3.1-flash-lite-preview`，失敗時降級至 `gpt-5-nano` (模擬) / `gpt-4o-mini`。
 
 - [x] **4.2 自動介入實作**
     - [x] 當 Orchestrator 決定介入時，呼叫 `IdeaWallMessage.create()`。

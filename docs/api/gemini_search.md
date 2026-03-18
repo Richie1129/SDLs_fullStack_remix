@@ -24,7 +24,7 @@ Grounding helps you build applications that can:
     )
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite-preview",
         contents="Who won the euro 2024?",
         config=config,
     )
@@ -46,7 +46,7 @@ Grounding helps you build applications that can:
     };
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite-preview",
       contents: "Who won the euro 2024?",
       config,
     });
@@ -55,7 +55,7 @@ Grounding helps you build applications that can:
 
 ### REST
 
-    curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent" \
+    curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent" \
       -H "x-goog-api-key: $GEMINI_API_KEY" \
       -H "Content-Type: application/json" \
       -X POST \
@@ -228,9 +228,9 @@ Experimental and Preview models are not included. You can find their capabilitie
 
 |         Model         | Grounding with Google Search |
 |-----------------------|------------------------------|
-| Gemini 2.5 Pro        | ✔️                           |
-| Gemini 2.5 Flash      | ✔️                           |
-| Gemini 2.5 Flash-Lite | ✔️                           |
+| Gemini 3.1 Pro        | ✔️                           |
+| Gemini 3.1 Flash-Lite-Preview      | ✔️                           |
+| Gemini 3.1 Flash-Lite-Preview | ✔️                           |
 | Gemini 2.0 Flash      | ✔️                           |
 | Gemini 1.5 Pro        | ✔️                           |
 | Gemini 1.5 Flash      | ✔️                           |

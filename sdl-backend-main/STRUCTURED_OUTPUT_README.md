@@ -2,7 +2,7 @@
 
 ## 概述
 
-本專案現已支援 **Gemini 2.5 Structured Output** 功能，作為實驗性選項提供更可靠的 AI 思考過程提取。
+本專案現已支援 **Gemini 3.1 Structured Output** 功能，作為實驗性選項提供更可靠的 AI 思考過程提取。
 
 ---
 
@@ -115,7 +115,7 @@ try {
 ### 限制 ⚠️
 
 1. **模型支援**
-   - 需要 Gemini 2.5+
+   - 需要 Gemini 3.1+
    - 舊版模型不支援
 
 2. **Streaming 體驗**
@@ -157,7 +157,7 @@ try {
 ```
 ⚠️ [Gemini] THINKING 解析完全失敗 {
   provider: 'gemini',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3.1-flash-lite-preview',
   assistantContentPreview: '...',
   totalLength: 452,
   timestamp: '2025-01-10T...'

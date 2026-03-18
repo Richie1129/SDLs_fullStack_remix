@@ -591,7 +591,7 @@ const FiveRsReflectionForm = ({
                 <option value="auto">自動選擇</option>
                 <option value="gemma-3">Gemma-3 (推薦)</option>
                 <option value="gpt-oss-20b">GPT-OSS-20b (均衡)</option>
-                <option value="gemini">Gemini-2.5-flash</option>
+                <option value="gemini">Gemini-3.1-flash-lite-preview</option>
               </select>
               <button
                 onClick={handleAIAnalysis}

@@ -135,7 +135,7 @@
 3. **檢查 AI 模型**
    ```javascript
    // controllers/assistant.js
-   const model = 'gemini-2.5-flash';  // 確認使用的模型
+   const model = 'gemini-3.1-flash-lite-preview';  // 確認使用的模型
    ```
 
 4. **查看 AI 的 thinking 內容**

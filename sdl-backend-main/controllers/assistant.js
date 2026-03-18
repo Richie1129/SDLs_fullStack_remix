@@ -241,7 +241,7 @@ exports.chatWithStreaming = async (req, res) => {
           console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元 (Structured), ~${promptTokens} tokens`);
 
           result = await streamGeminiResponseStructured(structuredPrompt, res, {
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.1-flash-lite-preview',
             systemInstruction
           });
           console.log('✅ [Assistant Chat] Structured Output 成功');
@@ -250,7 +250,7 @@ exports.chatWithStreaming = async (req, res) => {
           console.error('  錯誤詳情:', structuredError.message);
           const prompt = promptBuilder.forGemini(message);
           result = await streamGeminiResponse(prompt, res, {
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.1-flash-lite-preview',
             systemInstruction
           });
         }
@@ -262,7 +262,7 @@ exports.chatWithStreaming = async (req, res) => {
         console.log(`📊 [Token Monitor] Prompt 大小: ${contextSize} 字元, ~${promptTokens} tokens`);
 
         result = await streamGeminiResponse(prompt, res, {
-          model: 'gemini-2.5-flash',
+          model: 'gemini-3.1-flash-lite-preview',
           systemInstruction
         });
       }

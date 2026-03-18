@@ -381,7 +381,7 @@ setMessages(prev => {
 
 **原因：** 舊版模型名稱
 
-**解決：** 已更新為 `gemini-2.5-flash`
+**解決：** 已更新為 `gemini-3.1-flash-lite-preview`
 
 ### 📊 除錯日誌
 
@@ -410,7 +410,7 @@ docker logs sdls_fullstack_remix-api-1 -f
 ✅ [Assistant Chat] 所有資料撈取完成
 👤 [Assistant Chat] 使用者名字: xxx
 🚀 [Assistant Chat] 使用 Gemini 開始串流...
-🤖 [Gemini] 開始串流回應 - 使用模型: gemini-2.5-flash
+🤖 [Gemini] 開始串流回應 - 使用模型: gemini-3.1-flash-lite-preview
 ✅ [Gemini] generateContentStream 回應成功
 ✅ [Gemini] 串流完成 - 總共 xx 個 chunks, xxx 個字元
 ```
@@ -424,7 +424,7 @@ docker logs sdls_fullstack_remix-api-1 -f
 ### 🔧 目前配置
 
 **後端模型：**
-- Gemini: `gemini-2.5-flash` (預設)
+- Gemini: `gemini-3.1-flash-lite-preview` (預設)
 - OpenAI: `gpt-4o-mini` (備選)
 
 **前端設定：**

@@ -113,7 +113,7 @@ function buildSystemPrompt(agentType) {
 
 /**
  * 智能 AI 調用 with Fallback（使用 llmGateway）
- * 優先順序: GPT-OSS-20b → Gemma-3-27b → Gemini-2.5-Flash
+ * 優先順序: GPT-OSS-20b → Gemma-3-27b → Gemini-3.1-Flash-Lite-Preview
  * 
  * KB Coach 特殊需求：
  * - vLLM 使用 jsonMode
@@ -149,7 +149,7 @@ async function callAIWithFallback(agentType, userPrompt) {
 
   // 第三層：Gemini (結構化輸出)
   try {
-    console.log('🤖 使用最終 fallback: Gemini-2.5-Flash');
+    console.log('🤖 使用最終 fallback: Gemini-3.1-Flash-Lite-Preview');
     const result = await gwCallGemini({
       prompt: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }],
       responseMimeType: 'application/json',
@@ -158,9 +158,9 @@ async function callAIWithFallback(agentType, userPrompt) {
     });
     const responseText = result.content || '';
     if (!responseText) throw new Error('Gemini 返回空回應');
-    return { data: JSON.parse(responseText), model: 'Gemini-2.5-Flash' };
+    return { data: JSON.parse(responseText), model: 'Gemini-3.1-Flash-Lite-Preview' };
   } catch (error) {
-    errors.push({ model: 'Gemini-2.5-Flash', error: error.message });
+    errors.push({ model: 'Gemini-3.1-Flash-Lite-Preview', error: error.message });
     console.error('❌ 所有模型都失敗了:', errors);
     throw new Error(`所有 AI 模型都無法回應。錯誤摘要: ${errors.map(e => `${e.model}: ${e.error}`).join('; ')}`);
   }

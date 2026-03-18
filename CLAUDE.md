@@ -10,7 +10,7 @@ SDL (Self-Directed Learning) 是一個全端學習平台,結合科學探究五�
 - 前端: React 18 + Vite 5 + TailwindCSS + Socket.io Client
 - 後端: Node.js + Express + PostgreSQL + Sequelize ORM v6 + Socket.io v4.6
 - 檔案儲存: MinIO (S3 相容的對象儲存)
-- AI 整合: Google Gemini 2.5-flash
+- AI 整合: Google Gemini 3.1-flash-lite-preview
 - DevOps: Docker Compose + Nginx 反向代理
 
 ## 常用開發指令
@@ -173,7 +173,7 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 **專案助理系統 (Project Assistant):**
 - **RAG 整合**: 自動收集專案資料(看板任務、想法牆、提交記錄、對話歷史)注入 Prompt
 - **Streaming 回應**: 使用 `streamingService.js` 逐字串流,提供即時反饋
-- **AI 引擎**: 使用 Google Gemini 2.5-flash
+- **AI 引擎**: 使用 Google Gemini 3.1-flash-lite-preview
 - **個人化稱呼**: 系統自動帶入使用者名稱
 
 **5Rs 反思分析系統:**

@@ -1,7 +1,7 @@
 /**
  * Structured Streaming Service (Experimental)
  *
- * 使用 Gemini 2.5 的 Structured Output 功能，確保 AI 輸出符合預期格式
+ * 使用 Gemini 3.1 的 Structured Output 功能，確保 AI 輸出符合預期格式
  *
  * 優勢：
  * - 零文字解析（no regex, no XML parsing）
@@ -9,7 +9,7 @@
  * - 消除 fallback 需求
  *
  * 限制：
- * - 需要 Gemini 2.5+
+ * - 需要 Gemini 3.1+
  * - JSON streaming 需要特殊處理
  *
  * @version 1.0.0 (Experimental)
@@ -34,7 +34,7 @@ const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
  * @returns {Object} { thinkingContent, assistantContent }
  */
 async function streamGeminiResponseStructured(prompt, res, options = {}) {
-  const { model = 'gemini-2.5-flash', systemInstruction } = options;
+  const { model = 'gemini-3.1-flash-lite-preview', systemInstruction } = options;
 
   console.log(`🧪 [Gemini Structured] 開始串流回應 - 使用模型: ${model}`);
   console.log(`📝 [Gemini Structured] Prompt 長度: ${prompt.length} 字元`);

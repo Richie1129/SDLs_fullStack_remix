@@ -9,7 +9,7 @@ GPT-OSS-20B (Layer 1)
     ↓ (失敗時)
 Gemma-3-27B (Layer 2)
     ↓ (失敗時)
-Gemini-2.5-Flash (Layer 3 - 最終保障)
+Gemini-3.1-Flash-Lite-Preview (Layer 3 - 最終保障)
 ```
 
 ## 新功能：歷史記錄系統
@@ -101,8 +101,8 @@ Response: 完整的歷史記錄詳情
   VLLM_MODEL_NAME=ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g
   ```
 
-### Layer 3: Gemini-2.5-Flash (終極 Fallback)
-- **模型**: `gemini-2.5-flash`
+### Layer 3: Gemini-3.1-Flash-Lite-Preview (終極 Fallback)
+- **模型**: `gemini-3.1-flash-lite-preview`
 - **API 端點**: Google AI Studio
 - **環境變數**:
   ```bash
@@ -117,7 +117,7 @@ graph TD
     B -->|成功| C[返回結果 + 儲存歷史 ✓]
     B -->|失敗| D{嘗試 Gemma-3-27B}
     D -->|成功| E[返回結果 + 儲存歷史 ✓]
-    D -->|失敗| F{嘗試 Gemini-2.5-Flash}
+    D -->|失敗| F{嘗試 Gemini-3.1-Flash-Lite-Preview}
     F -->|成功| G[返回結果 + 儲存歷史 ✓]
     F -->|失敗| H[返回錯誤訊息 ✗]
     
@@ -244,7 +244,7 @@ LIMIT 10;
 ```json
 {
   "metadata": {
-    "model": "GPT-OSS-20B",  // 或 "Gemma-3-27B" 或 "Gemini-2.5-Flash"
+    "model": "GPT-OSS-20B",  // 或 "Gemma-3-27B" 或 "Gemini-3.1-Flash-Lite-Preview"
     "timestamp": "2026-02-06T10:30:00Z"
   }
 }

@@ -6,7 +6,7 @@
 
 const { callGemini } = require('./llmGateway');
 
-const PRIMARY_MODEL = "gemini-2.5-flash";
+const PRIMARY_MODEL = "gemini-3.1-flash-lite-preview";
 
 /**
  * Generate AI intervention for IdeaWall Chat

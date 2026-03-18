@@ -51,7 +51,7 @@ function parsePlainTextThinking(text) {
  * @returns {Object} { thinkingContent, assistantContent } - 累積的思考過程和最終答案
  */
 async function streamGeminiResponse(prompt, res, options = {}) {
-  const { model = 'gemini-2.5-flash', systemInstruction } = options;
+  const { model = 'gemini-3.1-flash-lite-preview', systemInstruction } = options;
 
   console.log(`🤖 [Gemini] 開始串流回應 - 使用模型: ${model}`);
   console.log(`📝 [Gemini] Prompt 長度: ${prompt.length} 字元`);

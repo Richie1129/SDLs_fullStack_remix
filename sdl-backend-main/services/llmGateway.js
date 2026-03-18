@@ -44,7 +44,7 @@ const VLLM_MODELS = {
 // Gemini 配置（Singleton）
 // ============================================================================
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
 /** @returns {string[]} 可用的 Gemini API key 列表 */
 function getGeminiKeys() {
@@ -323,7 +323,7 @@ async function callGemini(options = {}) {
 const DEFAULT_FALLBACK_CHAIN = [
     { type: 'vllm', key: 'gpt-oss', label: 'GPT-OSS-20B' },
     { type: 'vllm', key: 'gemma', label: 'Gemma-3-27B' },
-    { type: 'gemini', label: 'Gemini-2.5-Flash' },
+    { type: 'gemini', label: 'Gemini-3.1-Flash-Lite-Preview' },
 ];
 
 /**

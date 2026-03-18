@@ -56,7 +56,7 @@ SDL 提供完整的學習與協作流程，包含：
 - 前端：React 18、Vite 5、TailwindCSS、Socket.IO Client
 - 後端：Node.js、Express、PostgreSQL、Sequelize v6、Socket.IO v4.6
 - 儲存：MinIO（S3 相容）
-- AI：vLLM（本地）+ gemini-2.5-flash（雲端）
+- AI：vLLM（本地）+ gemini-3.1-flash-lite-preview（雲端）
 - 部署：Docker Compose、Nginx、GitHub Actions
 
 ## 快速開始

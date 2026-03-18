@@ -106,7 +106,7 @@ controllers/assistant.js
     │
     ├─→ PromptBuilder ─────────→ 組裝 Prompt (v2.0 優化)
     │
-    └─→ callGeminiAPI() ────────→ Gemini 2.5 Flash
+    └─→ callGeminiAPI() ────────→ Gemini 3.1 Flash-Lite-Preview
          │
          └─→ 串流回傳結果
 ```

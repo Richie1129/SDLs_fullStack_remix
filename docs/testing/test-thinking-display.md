@@ -140,7 +140,7 @@ npm start
 
 **預期看到**：
 ```
-🤖 [Gemini] 開始串流回應 - 使用模型: gemini-2.5-flash
+🤖 [Gemini] 開始串流回應 - 使用模型: gemini-3.1-flash-lite-preview
 📝 [Gemini] Prompt 長度: XXXX 字元
 ✅ [Gemini] generateContentStream 回應成功
 🔍 [Gemini] 偵測到 <thinking> 標籤，開始收集思考內容
@@ -305,7 +305,7 @@ data: {"type":"done"}
 
 **解決方法**：
 1. 檢查 `promptBuilder.js` 是否正確修改
-2. 嘗試切換 model（例如從 gemini-2.5-flash 到 gpt-4o-mini）
+2. 嘗試切換 model（例如從 gemini-3.1-flash-lite-preview 到 gpt-4o-mini）
 3. 檢查 `systemInstruction` 是否與 `THINKING_INSTRUCTION` 衝突
 4. 考慮啟用 Structured Output（強制 JSON 格式）
 
