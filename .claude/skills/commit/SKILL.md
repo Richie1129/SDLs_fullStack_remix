@@ -30,7 +30,11 @@ git log --oneline -3
 <類型>: <簡短描述（繁體中文，25字以內）>
 
 <詳細說明（若有必要）>
+
+Co-Authored-By: <當前模型名稱，例如 Claude Sonnet 4.6 / Claude Opus 4.6 / Claude Haiku 4.5> <noreply@anthropic.com>
 ```
+
+**注意：** `Co-Authored-By` 行必須填入**實際執行此次任務的模型名稱**（依系統環境中的 model ID 判斷），不可省略。
 
 **類型前綴（使用中文或英文皆可）：**
 - `feat` / `功能` - 新功能
@@ -46,9 +50,17 @@ git log --oneline -3
 - 訊息過於籠統（如「更新檔案」）
 
 ### 步驟 4：執行 commit
+使用 HEREDOC 傳入訊息以確保格式正確（含 `Co-Authored-By`）：
 ```bash
 git add <相關檔案>   # 依實際情況加入
-git commit -m "<生成的訊息>"
+git commit -m "$(cat <<'EOF'
+<類型>: <簡短描述>
+
+<詳細說明（若有）>
+
+Co-Authored-By: <當前模型名稱> <noreply@anthropic.com>
+EOF
+)"
 ```
 
 ### 步驟 5：推送到遠端
