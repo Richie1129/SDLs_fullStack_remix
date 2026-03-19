@@ -3,66 +3,37 @@ import { FiCpu, FiInfo, FiClipboard, FiFileText, FiUsers } from 'react-icons/fi'
 
 /**
  * 團隊統計卡片組件
- * @param {object} teamStats - 團隊統計數據
- * @returns {JSX.Element} 團隊統計卡片
+ * 設計：customgray 底色 + 左側 4px customgreen accent 線 + 淡綠圖示背景
  */
+const StatCard = ({ label, value, unit, icon }) => (
+  <div className="bg-customgray rounded-xl border border-gray-200 hover:border-gray-400 transition-colors duration-fast border-l-4 border-l-customgreen p-component-sm sm:p-component-md">
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <p className="text-caption text-[#888780]">{label}</p>
+        <p className="metric-value text-h2 font-medium text-[#2C2C2A] leading-tight">{value}</p>
+        <p className="text-caption text-[#888780]">{unit}</p>
+      </div>
+      <div className="w-7 h-7 rounded-lg bg-[#E1F5EE] text-customgreen flex items-center justify-center flex-shrink-0">
+        {icon}
+      </div>
+    </div>
+  </div>
+);
+
 const TeamStats = ({ teamStats }) => {
+  const stats = [
+    { label: '團隊AI諮詢', value: teamStats.teamAiInteractions, unit: '次數', icon: <FiCpu className="w-4 h-4" /> },
+    { label: '想法節點',   value: teamStats.ideaNodes,           unit: '個數', icon: <FiInfo className="w-4 h-4" /> },
+    { label: '看板卡片',   value: teamStats.kanbanTasks,         unit: '張數', icon: <FiClipboard className="w-4 h-4" /> },
+    { label: '個人反思',   value: teamStats.personalReflections, unit: '篇數', icon: <FiFileText className="w-4 h-4" /> },
+    { label: '團隊反思',   value: teamStats.teamReflections,     unit: '篇數', icon: <FiUsers className="w-4 h-4" /> },
+  ];
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
-      <div className="bg-customgreen p-component-sm sm:p-component-md rounded-xl text-white shadow-lg hover:shadow-xl transition-shadow duration-fast">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-caption">團隊AI諮詢</p>
-            <p className="text-body-lg sm:text-h2 font-bold">{teamStats.teamAiInteractions}</p>
-            <p className="text-white/70 text-caption">次數</p>
-          </div>
-          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiCpu className="w-5 h-5" /></div>
-        </div>
-      </div>
-
-      <div className="bg-customgreen p-component-sm sm:p-component-md rounded-xl text-white shadow-lg hover:shadow-xl transition-shadow duration-fast">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-caption">想法節點</p>
-            <p className="text-body-lg sm:text-h2 font-bold">{teamStats.ideaNodes}</p>
-            <p className="text-white/70 text-caption">個數</p>
-          </div>
-          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiInfo className="w-5 h-5" /></div>
-        </div>
-      </div>
-
-      <div className="bg-customgreen p-component-sm sm:p-component-md rounded-xl text-white shadow-lg hover:shadow-xl transition-shadow duration-fast">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-caption">看板卡片</p>
-            <p className="text-body-lg sm:text-h2 font-bold">{teamStats.kanbanTasks}</p>
-            <p className="text-white/70 text-caption">張數</p>
-          </div>
-          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiClipboard className="w-5 h-5" /></div>
-        </div>
-      </div>
-
-      <div className="bg-customgreen p-component-sm sm:p-component-md rounded-xl text-white shadow-lg hover:shadow-xl transition-shadow duration-fast">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-caption">個人反思</p>
-            <p className="text-body-lg sm:text-h2 font-bold">{teamStats.personalReflections}</p>
-            <p className="text-white/70 text-caption">篇數</p>
-          </div>
-          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiFileText className="w-5 h-5" /></div>
-        </div>
-      </div>
-
-      <div className="bg-customgreen p-component-sm sm:p-component-md rounded-xl text-white shadow-lg hover:shadow-xl transition-shadow duration-fast">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-white/80 text-caption">團隊反思</p>
-            <p className="text-body-lg sm:text-h2 font-bold">{teamStats.teamReflections}</p>
-            <p className="text-white/70 text-caption">篇數</p>
-          </div>
-          <div className="bg-white/20 rounded-full w-10 h-10 flex items-center justify-center"><FiUsers className="w-5 h-5" /></div>
-        </div>
-      </div>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
+      {stats.map((s) => (
+        <StatCard key={s.label} {...s} />
+      ))}
     </div>
   );
 };

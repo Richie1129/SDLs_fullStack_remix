@@ -7,21 +7,33 @@
 export const normalizeUserData = (item) => {
   if (!item) return null;
 
-  // 統一使用者ID - 按優先順序選擇最可靠的
-  const userId = item.id || item.user_id || item.userId;
-  
-  // 統一使用者名稱
-  const username = item.username || item.user_name || item.name;
-  
+  // 統一使用者ID
+  // userId / user_id 優先（外鍵），再從嵌套 User 物件取，最後才用記錄自身的 id
+  const userId = item.userId || item.user_id || item.User?.id || item.id;
+
+  // 統一使用者名稱，涵蓋所有已知欄位命名慣例：
+  //   username / user_name / name       — 一般 API
+  //   author                            — Chatroom_message 模型
+  //   owner                             — Task / IdeaWall Node 模型
+  //   User.username                     — Sequelize include 嵌套格式（reflection / daily）
+  const username =
+    item.username     ||
+    item.user_name    ||
+    item.name         ||
+    item.author       ||
+    item.owner        ||
+    item.User?.username ||
+    item.User?.name;
+
   return {
     ...item,
     userId,
     username,
     // 保留原始欄位以防後端依賴
-    id: userId,
+    id: item.id,        // 保留記錄自身的 id，不覆蓋為 userId
     user_id: userId,
     user_name: username,
-    name: username
+    name: username,
   };
 };
 

@@ -14,6 +14,7 @@ import LearningGoals from "./components/LearningGoals";
 import TeammatesList from "./components/TeammatesList";
 import Achievements from "./components/Achievements";
 import QuickStats from "./components/QuickStats";
+import LearningProgressRing from "./components/LearningProgressRing";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
 
@@ -105,6 +106,9 @@ const StudentDashboard = () => {
 
             {/* 右側側邊欄 */}
             <div className="space-y-stack-sm sm:space-y-stack-md-lg">
+              {/* 個人完成率環形圖 */}
+              <LearningProgressRing progressPercentage={personalData?.progressPercentage || 0} />
+
               {/* 團隊成員狀況 */}
               <TeammatesList teammates={teammates} personalData={personalData} />
 

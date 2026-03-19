@@ -1,4 +1,5 @@
 const Submit = require('../models/submit');
+const User = require('../models/user');
 const Project = require('../models/project');
 const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
@@ -199,6 +200,10 @@ exports.getAllSubmit = async(req, res) => {
     try {
         const allSubmit = await Submit.findAll({
             where: { projectId: projectId },
+            include: [{
+                model: User,
+                attributes: ['id', 'username'],
+            }],
             order: [['createdAt', 'ASC']]
         });
 

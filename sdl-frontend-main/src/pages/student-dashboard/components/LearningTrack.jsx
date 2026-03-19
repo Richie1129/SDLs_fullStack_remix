@@ -13,7 +13,7 @@ const LearningTrack = ({ learningTrack }) => {
         <span className="w-1 h-6 bg-gradient-to-b from-customgreen to-teal-600 rounded-full mr-3"></span>
         近期學習軌跡
       </h2>
-      <div className="space-y-stack-sm sm:space-y-stack-md max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
+      <div className="space-y-stack-sm sm:space-y-stack-md max-h-96 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
         {learningTrack && Array.isArray(learningTrack) && learningTrack.map((day, dayIndex) => (
           <div key={dayIndex}>
             <div className="flex items-center mb-3">

@@ -15,3 +15,20 @@
 body {
     @apply bg-[#F8FAFB];
 }
+
+/* =====================================================
+   全域排版修正
+   ===================================================== */
+
+/* 數字等寬對齊：防止數字跳動 */
+.metric-value,
+.stat-number,
+td.numeric,
+[class*="progress-value"] {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* caption 字距：改善 12px 以下可讀性 */
+.text-caption {
+  letter-spacing: 0.03em;
+}
