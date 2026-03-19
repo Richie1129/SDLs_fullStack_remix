@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AiOutlineCloudDownload, AiOutlineRobot } from 'react-icons/ai';
-import { FiTrash2, FiFlag, FiFileText, FiCpu, FiZap, FiSliders, FiShield } from 'react-icons/fi';
+import { FiTrash2, FiFlag, FiFileText } from 'react-icons/fi';
 import { formatTime } from '../../utils/timeUtils';
 import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.js';
 import FileDownload from 'js-file-download';
@@ -29,6 +29,7 @@ const LogCard = ({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
   const [selectedProvider, setSelectedProvider] = useState('auto');
+  const [showProviderPicker, setShowProviderPicker] = useState(false);
 
   // 權限檢查：判斷當前用戶是否可以編輯此日誌
   const currentUserId = getCurrentUserId();
@@ -61,30 +62,12 @@ const LogCard = ({
 
   const renderContent = () => {
     if (is5Rs) {
-      const parsed = parse5RsContent(item.content);
-      const hasAIFeedback = parsed?.feedback && (
-        parsed.feedback.overall || 
-        parsed.feedback.suggestions?.length > 0
-      );
-      
       return (
         <div className="space-y-stack-xs">
-          <div className="flex items-center justify-between">
-            <p className="text-gray-600 text-body-sm mb-2">
-              5Rs 結構化反思內容
-            </p>
-            {hasAIFeedback ? (
-              <span className="px-2 py-1 bg-green-100 text-green-800 text-caption font-medium rounded-full flex items-center">
-                <AiOutlineRobot className="w-3 h-3 mr-1" />
-                已分析
-              </span>
-            ) : (
-              <span className="px-2 py-1 bg-gray-100 text-gray-600 text-caption font-medium rounded-full">
-                未分析
-              </span>
-            )}
-          </div>
-          <div className="text-gray-700 line-clamp-6">
+          <p className="text-gray-600 text-body-sm mb-2">
+            5Rs 結構化反思內容
+          </p>
+          <div className="text-gray-700 line-clamp-3">
             {extract5RsText(item.content)}
           </div>
           <button
@@ -145,22 +128,6 @@ const LogCard = ({
 
   const cardStyles = getCardStyles();
 
-  // 獲取 AI 模型對應的圖示
-  const getProviderIcon = (provider) => {
-    switch (provider) {
-      case 'auto':
-        return <FiCpu className="w-3.5 h-3.5" />;
-      case 'gemma-3':
-        return <FiZap className="w-3.5 h-3.5" />;
-      case 'gpt-oss-20b':
-        return <FiSliders className="w-3.5 h-3.5" />;
-      case 'gemini':
-        return <FiShield className="w-3.5 h-3.5" />;
-      default:
-        return <FiCpu className="w-3.5 h-3.5" />;
-    }
-  };
-
   // 格式化階段名稱 - 使用專案統一的階段名稱（包含階段編號）
   const formatStageName = (stage) => {
     if (!stage) return null;
@@ -179,7 +146,7 @@ const LogCard = ({
       transition={SPRING_OPTIONS}
       className="aspect-video w-full shrink-0 rounded-xl object-cover"
     >
-      <div className={`${cardStyles.bgClass} ${cardStyles.borderClass} rounded-lg shadow-lg p-component-sm sm:p-component-md lg:p-component-lg m-1 sm:m-2 w-full h-full flex flex-col min-h-[400px] sm:min-h-[450px] lg:min-h-[500px]`}>
+      <div className={`${cardStyles.bgClass} ${cardStyles.borderClass} rounded-lg shadow-lg p-component-sm sm:p-component-md m-1 sm:m-2 w-full h-full flex flex-col min-h-[320px] sm:min-h-[360px]`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-2">
           <h5 className={`text-body-lg sm:text-h3 font-bold ${cardStyles.titleClass} py-2`}>
@@ -280,44 +247,76 @@ const LogCard = ({
           {showAIAnalysis && is5Rs && (() => {
             const parsed = parse5RsContent(item.content);
             const hasAIFeedback = parsed?.feedback && (
-              parsed.feedback.overall || 
+              parsed.feedback.overall ||
               parsed.feedback.suggestions?.length > 0
             );
-            
+
+            const PROVIDERS = [
+              { value: 'auto', label: '自動選擇' },
+              { value: 'gemma-3', label: 'Gemma-3' },
+              { value: 'gpt-oss-20b', label: 'GPT-OSS-20b' },
+              { value: 'gemini', label: 'Gemini' },
+            ];
+
             return (
-              <div className="mb-3 p-component-sm bg-gradient-to-br from-purple-50/80 to-pink-50/80 border border-purple-200/50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <AiOutlineRobot className="w-4 h-4 text-purple-600 flex-shrink-0" />
-                  <span className="text-caption font-semibold text-purple-900">AI 智能分析</span>
-                  {hasAIFeedback && (
-                    <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">
-                      已分析
-                    </span>
-                  )}
-                  <div className="flex-1 flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-purple-700">
-                      {getProviderIcon(selectedProvider)}
-                    </div>
-                    <select
-                      value={selectedProvider}
-                      onChange={(e) => setSelectedProvider(e.target.value)}
-                      className="flex-1 text-caption border border-purple-300/50 rounded px-2 py-0.5 bg-white/80 focus:outline-none focus:ring-1 focus:ring-purple-400 focus:bg-white transition-colors"
-                    >
-                      <option value="auto">自動選擇</option>
-                      <option value="gemma-3">Gemma-3 (推薦)</option>
-                      <option value="gpt-oss-20b">GPT-OSS-20b (均衡)</option>
-                      <option value="gemini">Gemini-3.1-flash-lite-preview</option>
-                    </select>
+              <>
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <AiOutlineRobot className="w-4 h-4 text-purple-600" />
+                    <span className="text-caption font-semibold text-purple-800">AI 分析</span>
+                    {hasAIFeedback ? (
+                      <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">已分析</span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">未分析</span>
+                    )}
                   </div>
+                  <button
+                    onClick={() => setShowProviderPicker(true)}
+                    className="ml-auto flex-shrink-0 text-caption font-medium px-3 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-md transition-colors duration-fast flex items-center gap-1"
+                  >
+                    <AiOutlineRobot className="w-3.5 h-3.5" />
+                    {hasAIFeedback ? '重新分析' : '開始分析'}
+                  </button>
                 </div>
-                <button
-                  onClick={() => onRequestAIAnalysis(item, selectedProvider)}
-                  className="w-full bg-white hover:bg-purple-50 text-purple-700 border-2 border-purple-300 hover:border-purple-400 py-1.5 px-3 rounded-md transition-all duration-fast text-caption font-medium flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  <AiOutlineRobot className="w-3.5 h-3.5" />
-                  <span>{hasAIFeedback ? '重新分析' : '開始分析'}</span>
-                </button>
-              </div>
+
+                {/* 模型選擇彈出框 */}
+                {showProviderPicker && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowProviderPicker(false)}>
+                    <div className="bg-white rounded-xl shadow-xl p-component-md w-72" onClick={(e) => e.stopPropagation()}>
+                      <h3 className="text-body font-semibold text-gray-800 mb-3">選擇 AI 模型</h3>
+                      <div className="space-y-2 mb-4">
+                        {PROVIDERS.map((p) => (
+                          <label key={p.value} className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer border transition-colors ${selectedProvider === p.value ? 'border-purple-400 bg-purple-50' : 'border-gray-200 hover:bg-gray-50'}`}>
+                            <input
+                              type="radio"
+                              name="provider"
+                              value={p.value}
+                              checked={selectedProvider === p.value}
+                              onChange={() => setSelectedProvider(p.value)}
+                              className="accent-purple-600"
+                            />
+                            <span className="text-body-sm text-gray-700">{p.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => setShowProviderPicker(false)}
+                          className="px-3 py-1.5 text-body-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          取消
+                        </button>
+                        <button
+                          onClick={() => { setShowProviderPicker(false); onRequestAIAnalysis(item, selectedProvider); }}
+                          className="px-3 py-1.5 text-body-sm font-medium bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                        >
+                          開始分析
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             );
           })()}
 

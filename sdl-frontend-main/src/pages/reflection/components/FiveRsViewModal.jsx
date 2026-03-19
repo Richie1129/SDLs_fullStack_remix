@@ -20,27 +20,33 @@ export function FiveRsViewModal({
       onClose={onClose}
       opacity={true}
       position={"justify-center items-center"}
-      custom="w-[60vw] max-w-none"
+      custom="w-11/12 md:w-3/4 lg:w-[52vw] max-w-4xl"
+      enableScroll={false}
+      noPadding={true}
     >
-      <div className="max-w-6xl max-h-[90vh]">
-        <div className="flex justify-between items-center mb-4 p-component-base border-b">
+      <div className="flex flex-col max-h-[90vh]">
+        {/* 固定 header，不隨內容滾動 */}
+        <div className="flex justify-between items-center px-component-base py-4 border-b flex-shrink-0">
           <h2 className="text-h2 font-bold text-gray-800">
             {selectedReflection?.title || "5Rs 反思檢視"}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 hover:text-gray-700 flex-shrink-0"
           >
             <GrFormClose size={24} />
           </button>
         </div>
+        {/* 可滾動內容區 */}
         {selectedReflection && (
-          <FiveRsReflectionDisplay
-            content={selectedReflection.content}
-            showFeedback={true}
-            isTeacher={isTeacher}
-            record={selectedReflection}
-          />
+          <div className="overflow-y-auto flex-1 p-component-md">
+            <FiveRsReflectionDisplay
+              content={selectedReflection.content}
+              showFeedback={true}
+              isTeacher={isTeacher}
+              record={selectedReflection}
+            />
+          </div>
         )}
       </div>
     </Modal>
