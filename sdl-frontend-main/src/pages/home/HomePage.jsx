@@ -36,6 +36,7 @@ export default function HomePage() {
   // 使用自定義 Hook 獲取資料
   const {
     projectData,
+    allStudentProjects,
     teachers,
     members,
     viewableProjects,
@@ -76,10 +77,10 @@ export default function HomePage() {
     done: done
   }), [viewableProjects, ongoing, completed, done]);
 
-  // 學生可用學期清單（從已載入的專案資料推導）
+  // 學生可用學期清單（從所有學期資料推導，不受 semesterFilter 影響）
   const studentAvailableSemesters = useMemo(() => (
-    [...new Set(projectData.map(p => p.semester).filter(Boolean))]
-  ), [projectData]);
+    [...new Set(allStudentProjects.map(p => p.semester).filter(Boolean))]
+  ), [allStudentProjects]);
 
   // 檢查是否是第一次使用
   useEffect(() => {

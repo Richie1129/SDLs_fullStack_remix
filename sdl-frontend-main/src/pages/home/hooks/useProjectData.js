@@ -17,7 +17,7 @@ export const useProjectData = () => {
   const [classFilter, setClassFilter] = useState('all');
   const [completedSearch, setCompletedSearch] = useState('');
   const [doneSearch, setDoneSearch] = useState('');
-  const [semesterFilter, setSemesterFilter] = useState('all');
+  const [semesterFilter, setSemesterFilter] = useState(getCurrentSemester());
 
   const role = getCurrentUserRole();
   const userName = getCurrentUsername();
@@ -185,6 +185,16 @@ export const useProjectData = () => {
     fetchMembers();
   }, [role, projectData]);
 
+  // 學生端：取得所有學期的專案（只用於產生學期下拉選單，不受 semesterFilter 影響）
+  const { data: allStudentProjects = [] } = useQuery(
+    ['allStudentProjectsForSemesters'],
+    () => getAllProject({ params: { userId: getCurrentUserId(), semester: 'all' } }),
+    {
+      enabled: role === 'student' && !!userName,
+      staleTime: 10 * 60 * 1000,
+    }
+  );
+
   // 可觀摩專案查詢 - 加入學期過濾
   const { data: viewableProjectsData = [] } = useQuery(
     ['viewableProjects', userClass, role, semesterFilter],
@@ -229,6 +239,7 @@ export const useProjectData = () => {
   return {
     // 資料狀態
     projectData,
+    allStudentProjects,
     teachers,
     members,
     viewableProjects,
