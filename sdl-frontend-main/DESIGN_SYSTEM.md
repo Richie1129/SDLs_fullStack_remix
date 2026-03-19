@@ -23,24 +23,21 @@
 ### 字體家族
 
 **雙字體策略：**
-- **主要字體（內容）**: Noto Serif TC - 適合顯示繁體中文內容，提供優雅的閱讀體驗
-- **輔助字體（介面）**: Inter - 用於 UI 控制元素，清晰易讀
+- **英文字體**: Playfair Display - 優雅的襯線英文字體，適合標題與內容
+- **中文字體**: Noto Serif TC - 適合顯示繁體中文內容，提供優雅的閱讀體驗
 
 ```css
-/* 預設字體（UI 元素）- 已在 tailwind.config.cjs 中設定 */
-font-family: 'Inter', 'Noto Sans TC', '微軟正黑體', 'Microsoft JhengHei', sans-serif
-
-/* 內容字體（中文內容） */
-font-family: 'Noto Serif TC', serif
+/* 預設字體（英文 + 中文）- 已在 tailwind.config.cjs 中設定 */
+font-family: 'Playfair Display', 'Noto Serif TC', serif
 ```
 
 ### 字體使用規範
 
 | 使用場景 | 字體 | Tailwind Class | 說明 |
 |---------|------|---------------|------|
-| 標題、正文內容 | Noto Serif TC | `font-serif` | 文章、反思記錄、長文內容 |
-| 按鈕、標籤、表單 | Inter | `font-sans`（預設） | UI 控制元素 |
-| 導航、選單 | Inter | `font-sans`（預設） | 介面導航元素 |
+| 英文標題、英文內容 | Playfair Display | `font-sans` / `font-serif`（預設） | 英文字元自動套用 |
+| 中文標題、中文正文 | Noto Serif TC | `font-sans` / `font-serif`（預設） | 中文字元自動 fallback |
+| 導航、選單、UI 元素 | Playfair Display + Noto Serif TC | `font-sans`（預設） | 介面元素 |
 
 ### 語意化字體大小
 
@@ -62,7 +59,7 @@ font-family: 'Noto Serif TC', serif
 {/* 內容顯示 - 使用 serif */}
 <h1 className="text-h1 font-serif">頁面標題</h1>
 <h2 className="text-h2 font-serif">區塊標題</h2>
-<p className="text-body font-serif">這是正文內容，使用 Noto Serif TC 提供更好的閱讀體驗。</p>
+<p className="text-body font-serif">這是正文內容，中文使用 Noto Serif TC、英文使用 Playfair Display 提供更好的閱讀體驗。</p>
 
 {/* UI 控制元素 - 使用 sans（預設） */}
 <button className="text-ui">確認</button>
@@ -75,10 +72,10 @@ font-family: 'Noto Serif TC', serif
 字體通過 Google Fonts CDN 載入，已在 `index.css` 中配置：
 
 ```css
-/* 主要字體：Noto Serif TC（繁體中文內容） */
+/* 英文字體：Playfair Display */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&display=swap');
+/* 中文字體：Noto Serif TC */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500;600;700;900&display=swap');
-/* 輔助字體：Inter（介面元素） */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 ```
 
 ---

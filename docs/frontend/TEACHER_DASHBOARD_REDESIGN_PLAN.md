@@ -69,11 +69,11 @@ Primary:    #5BA491  /* Custom Green - 保留作為品牌色 */
 #### 4. **字體建議** (Professional Modern)
 ```javascript
 // 當前已在使用
-Heading: 'Noto Serif TC'  // 保持
-Body: 'Inter'             // 保持
+English: 'Playfair Display'  // 英文字體
+Chinese: 'Noto Serif TC'     // 中文字體
 
-// 建議補充
-Data/Numbers: 'Poppins'   // 數字更清晰
+// 補充
+Data/Numbers: 'Poppins'      // 數字更清晰
 ```
 
 #### 5. **圖表類型建議**

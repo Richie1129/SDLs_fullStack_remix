@@ -241,7 +241,7 @@ python3 -m http.server 8080
 #### 3. 現有設計系統
 - 保留品牌色 `#5BA491`（customgreen）
 - 遵循現有間距系統
-- 維持字體策略（Noto Serif TC + Inter）
+- 維持字體策略（英文 Playfair Display + 中文 Noto Serif TC）
 
 ---
 
