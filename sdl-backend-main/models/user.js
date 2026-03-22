@@ -99,4 +99,8 @@ const HelpSeekingAvoidanceRisk = require('./help_seeking_avoidance_risk');
 User.hasMany(HelpSeekingAvoidanceRisk, { foreignKey: 'userId' });
 HelpSeekingAvoidanceRisk.belongsTo(User, { foreignKey: 'userId' });
 
+const Submit = require('./submit');
+User.hasMany(Submit, { foreignKey: 'userId' });
+Submit.belongsTo(User, { foreignKey: 'userId' });
+
 module.exports = User;
