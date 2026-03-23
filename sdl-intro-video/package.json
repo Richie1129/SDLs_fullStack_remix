@@ -1,0 +1,23 @@
+{
+  "name": "sdl-intro-video",
+  "version": "1.0.0",
+  "description": "SDL 學習平台介紹影片 - 使用 Remotion 製作",
+  "scripts": {
+    "start": "npx remotion studio",
+    "build": "npx remotion render",
+    "render": "npx remotion render src/index.ts SDLIntro out/sdl-intro.mp4"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.58.2",
+    "@remotion/cli": "4.0.290",
+    "playwright": "^1.58.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.290"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.1",
+    "@types/react-dom": "18.3.1",
+    "typescript": "5.4.5"
+  }
+}
