@@ -58,7 +58,7 @@ export function PersonalDailyModal({
       onClose={onClose}
       opacity={true}
       position={"justify-center items-center"}
-      custom="w-[80vw] max-w-5xl"
+      custom="w-[80vw] max-w-5xl max-h-[88vh] flex flex-col"
     >
       <button
         onClick={onClose}
@@ -66,7 +66,7 @@ export function PersonalDailyModal({
       >
         <GrFormClose className="w-6 h-6" />
       </button>
-      <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 min-h-[60vh]">
+      <div className="flex flex-col px-2 sm:px-4 lg:px-6 py-2 sm:py-4 overflow-y-auto flex-1">
         <h3 className="font-bold text-body sm:text-body-lg mb-3 text-center">
           {isTeacher ? "查看個人反思日誌" : "個人反思日誌"}
         </h3>

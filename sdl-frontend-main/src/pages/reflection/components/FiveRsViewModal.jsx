@@ -20,11 +20,11 @@ export function FiveRsViewModal({
       onClose={onClose}
       opacity={true}
       position={"justify-center items-center"}
-      custom="w-11/12 md:w-3/4 lg:w-[52vw] max-w-4xl"
+      custom="w-[80vw] max-w-5xl max-h-[88vh] flex flex-col"
       enableScroll={false}
       noPadding={true}
     >
-      <div className="flex flex-col max-h-[90vh]">
+      <div className="flex flex-col flex-1 overflow-hidden">
         {/* 固定 header，不隨內容滾動 */}
         <div className="flex justify-between items-center px-component-base py-4 border-b flex-shrink-0">
           <h2 className="text-h2 font-bold text-gray-800">

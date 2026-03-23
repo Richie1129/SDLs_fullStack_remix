@@ -34,7 +34,7 @@ export default function StageSelector({
   });
 
   return (
-    <div>
+    <div className="mb-3">
       <label className="block font-semibold text-body text-gray-800 mb-2">
         關聯階段 
         <span className="text-gray-400 text-caption font-normal ml-1">
@@ -57,7 +57,7 @@ export default function StageSelector({
           `}
         >
           <option value="">無特定階段</option>
-          
+
           {Object.entries(stageGroups).map(([stageNum, group]) => (
             <optgroup key={stageNum} label={group.name}>
               {group.stages.map(({ key, name }) => (
@@ -68,39 +68,39 @@ export default function StageSelector({
             </optgroup>
           ))}
         </select>
-        
+
         {/* Dropdown arrow */}
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
-        
-        {/* 智能推薦提示 - 更簡潔 */}
-        {recommendedStage && !value && (
-          <button
-            type="button"
-            onClick={() => onChange(recommendedStage)}
-            className="mt-2 w-full px-3 py-2 text-caption text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-fast group"
-          >
-            <span className="text-blue-700">
-              <FiInfo className="w-3.5 h-3.5 inline mr-1.5" />
-              <span className="font-medium">推薦：</span>
-              <span className="group-hover:underline">{recommendedStage} {STAGE_NAMES[recommendedStage]}</span>
-            </span>
-          </button>
-        )}
-        
-        {/* 已選擇階段 - 更簡潔 */}
-        {value && (
-          <div className="mt-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg">
-            <p className="text-caption text-teal-700">
-              <FiCheckCircle className="w-3.5 h-3.5 inline mr-1" />
-              已關聯：{value} {STAGE_NAMES[value]}
-            </p>
-          </div>
-        )}
       </div>
+
+      {/* 智能推薦提示 */}
+      {recommendedStage && !value && (
+        <button
+          type="button"
+          onClick={() => onChange(recommendedStage)}
+          className="mt-2 w-full px-3 py-2 text-caption text-left bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors duration-fast group"
+        >
+          <span className="text-blue-700">
+            <FiInfo className="w-3.5 h-3.5 inline mr-1.5" />
+            <span className="font-medium">推薦：</span>
+            <span className="group-hover:underline">{recommendedStage} {STAGE_NAMES[recommendedStage]}</span>
+          </span>
+        </button>
+      )}
+
+      {/* 已選擇階段 */}
+      {value && (
+        <div className="mt-2 px-3 py-1.5 bg-teal-50 border border-teal-200 rounded-lg">
+          <p className="text-caption text-teal-700">
+            <FiCheckCircle className="w-3.5 h-3.5 inline mr-1" />
+            已關聯：{value} {STAGE_NAMES[value]}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

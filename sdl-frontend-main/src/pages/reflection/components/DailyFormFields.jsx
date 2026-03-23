@@ -52,7 +52,7 @@ export function DailyFormFields({
       
       <textarea
         className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto"
-        rows={10}
+        rows={7}
         placeholder="撰寫您的日誌..."
         name="content"
         value={content}

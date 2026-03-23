@@ -7,11 +7,67 @@ import { FaBrain, FaGraduationCap } from 'react-icons/fa';
  * 反思類型選擇器 - 雙卡片設計
  * 清楚區分「傳統日誌」和「5Rs 結構反思」的定位
  */
-export function ReflectionTypeSelector({ 
-  onSelectTraditional, 
+export function ReflectionTypeSelector({
+  onSelectTraditional,
   onSelect5Rs,
-  className = "" 
+  compact = false,
+  className = ""
 }) {
+  if (compact) {
+    return (
+      <div className={`grid grid-cols-2 gap-3 ${className}`}>
+        {/* 傳統日誌 - 緊湊版 */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          data-track
+          data-track-action="REFLECTION_TYPE_TRADITIONAL"
+          data-track-type="reflection"
+          className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#5BA491] transition-all duration-normal shadow-sm hover:shadow-md cursor-pointer p-4 flex flex-col items-center text-center gap-2"
+          onClick={onSelectTraditional}
+        >
+          <div className="w-10 h-10 rounded-lg bg-[#5BA491]/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-[#5BA491]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-body font-bold text-gray-800">傳統日誌</h3>
+            <p className="text-caption text-gray-500 mt-0.5">快速記錄 · 5-10 分鐘</p>
+          </div>
+          <button className="w-full py-2 bg-[#5BA491] hover:bg-[#5BA491]/90 text-white text-caption font-medium rounded-lg transition-colors duration-fast mt-auto">
+            撰寫
+          </button>
+        </motion.div>
+
+        {/* 5Rs 反思 - 緊湊版 */}
+        <motion.div
+          whileHover={{ y: -2 }}
+          data-track
+          data-track-action="REFLECTION_TYPE_5RS"
+          data-track-type="reflection"
+          className="group bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-purple-200 hover:border-purple-400 transition-all duration-normal shadow-sm hover:shadow-md cursor-pointer p-4 flex flex-col items-center text-center gap-2 relative"
+          onClick={onSelect5Rs}
+        >
+          <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] font-bold rounded-full">
+            AI
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-body font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">5Rs 反思</h3>
+            <p className="text-caption text-gray-500 mt-0.5">深度分析 · 10-15 分鐘</p>
+          </div>
+          <button className="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-caption font-medium rounded-lg transition-all duration-fast mt-auto">
+            撰寫
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className={`grid grid-cols-1 md:grid-cols-2 gap-stack-base sm:gap-stack-md ${className}`}>
       {/* 傳統日誌卡片 - 綠色主題 */}

@@ -35,7 +35,8 @@ export default function ReflectionRefactored() {
   const [attachFile, setAttachFile] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [dailyData, setDailyData] = useState({});
-  const [stage, setStage] = useState("");  // 選擇的階段
+  const [stage, setStage] = useState("");      // 個人日誌選擇的階段
+  const [teamStage, setTeamStage] = useState(""); // 小組日誌選擇的階段
   
   // 智能推薦：從專案進度獲取當前階段
   const { currentStage, currentSubStage } = getStageInfo();
@@ -187,6 +188,9 @@ export default function ReflectionRefactored() {
       const formData = new FormData();
       formData.append("projectId", projectId);
       formData.append("creator", getCurrentUsername());
+      if (teamStage) {
+        formData.append("stage", teamStage);
+      }
       if (attachFile) {
         for (let i = 0; i < attachFile.length; i++) {
           formData.append("attachFile", attachFile[i]);
@@ -212,6 +216,9 @@ export default function ReflectionRefactored() {
     formData.append("id", Number(editingId));
     formData.append("title", title);
     formData.append("content", content);
+    if (teamStage) {
+      formData.append("stage", teamStage);
+    }
 
     if (attachFile && attachFile.length > 0) {
       for (let i = 0; i < attachFile.length; i++) {
@@ -225,6 +232,7 @@ export default function ReflectionRefactored() {
         setEditingId(null);
         setTeamDailyModalOpen(false);
         setAttachFile(null);
+        setTeamStage("");
         toast.success("小組日誌更新成功");
       },
       onError: (error) => {
@@ -245,6 +253,7 @@ export default function ReflectionRefactored() {
     setContent(item.content || "");
     setAttachFile(null);
     setEditingId(item.id);
+    setTeamStage(item.stage || "");
     setTeamDailyModalOpen(true);
   };
 
@@ -282,6 +291,7 @@ export default function ReflectionRefactored() {
     setTitle("");
     setContent("");
     setAttachFile(null);
+    setTeamStage("");
     setTeamDailyModalOpen(true);
     setDailyData((prev) => ({
       ...prev,
@@ -355,7 +365,14 @@ export default function ReflectionRefactored() {
       {/* Team Daily Modal */}
       <TeamDailyModal
         open={teamDailyModalOpen}
-        onClose={() => setTeamDailyModalOpen(false)}
+        onClose={() => {
+          setTeamDailyModalOpen(false);
+          setTitle("");
+          setContent("");
+          setEditingId(null);
+          setAttachFile(null);
+          setTeamStage("");
+        }}
         title={title}
         content={content}
         onChange={handleChange}
@@ -367,6 +384,8 @@ export default function ReflectionRefactored() {
         currentRecord={currentEditingTeam}
         onRemoveAttachment={() => teamDaily.handleRemoveAttachment(editingId)}
         userRole={userRole}
+        stage={teamStage}
+        onStageChange={setTeamStage}
       />
 
       {/* 5Rs Edit Modal */}

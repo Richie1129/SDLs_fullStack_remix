@@ -108,6 +108,7 @@ export function ReflectionLayout({
             {!isTeacher && showTypeSelector && (
               <div className="mb-stack-md">
                 <ReflectionTypeSelector
+                  compact
                   onSelectTraditional={() => {
                     setShowTypeSelector(false);
                     onOpenPersonalModal();
@@ -179,7 +180,7 @@ export function ReflectionLayout({
                     data-track-action="REFLECTION_TEAM_CREATE_OPEN"
                     data-track-type="reflection"
                     onClick={onOpenTeamModal}
-                    className="flex items-center justify-center px-3 sm:px-4 py-2 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-fast shadow-sm text-body-sm sm:text-body w-full sm:w-auto"
+                    className="flex items-center justify-center px-3 sm:px-4 py-2.5 bg-[#5BA491] hover:bg-[#5BA491]/80 text-white font-medium rounded-lg transition-colors duration-fast shadow-sm text-body-sm sm:text-body w-full sm:w-auto"
                   >
                     <svg
                       className="w-4 h-4 mr-2"

@@ -154,12 +154,14 @@ export default function SubmitTask() {
     }
 
     return (
-        <div className='flex h-full w-full justify-center items-center p-component-base sm:p-component-md-lg lg:p-component-lg overflow-y-auto'>
+        <div className='flex flex-col h-full w-full overflow-y-auto p-component-base sm:p-component-md-lg lg:p-component-lg'>
             {getSubStageQuery.isLoading ? (
-                <Loader />
+                <div className='flex flex-1 justify-center items-center'>
+                    <Loader />
+                </div>
             ) : (
                 // 表單和引導面板並排的容器（響應式：移動版垂直，桌面版並排）
-                <div className='flex flex-col lg:flex-row gap-stack-sm sm:gap-stack-md lg:gap-stack-md-lg items-stretch max-w-7xl w-full'>
+                <div className='flex flex-col lg:flex-row gap-stack-sm sm:gap-stack-md lg:gap-stack-md-lg items-stretch max-w-7xl w-full mx-auto my-auto'>
                     {/* 主要表單卡片 */}
                     <div className='flex-1 w-full flex flex-col p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg min-h-0'>
                         <h3 className='font-bold text-body-lg sm:text-h3 text-center mb-4 text-gray-800'>

@@ -236,7 +236,7 @@ const STAGE_GUIDES = {
 };
 
 const StageReflectionGuide = ({ stage, className = '' }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [showExamples, setShowExamples] = useState({});
 
   if (!stage || stage === '') {
@@ -275,7 +275,7 @@ const StageReflectionGuide = ({ stage, className = '' }) => {
                 <FiBookOpen className="w-4 h-4" /> 階段 {guide.stageNumber} - {guide.stageName} 反思引導
               </h4>
               <p className="text-caption text-purple-700">
-                點擊展開查看詳細引導
+                {isExpanded ? '點擊收合' : '點擊展開查看詳細引導'}
               </p>
             </div>
           </div>
