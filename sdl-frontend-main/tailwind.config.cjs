@@ -45,12 +45,8 @@ module.exports = {
       // 字體系統
       // ========================================
       fontFamily: {
-        // 預設字體：英文 Playfair Display + 中文 Noto Serif TC
-        sans: ['Playfair Display', 'Noto Serif TC', 'serif'],
-        // 內容字體（與 sans 相同，保留語意化別名）
+        sans: ['Noto Serif TC', 'sans-serif'],
         serif: ['Playfair Display', 'Noto Serif TC', 'serif'],
-        // 數字字體（數據展示）：Poppins
-        poppins: ['Poppins', 'sans-serif'],
       },
       fontSize: {
         // 語意化字體大小
