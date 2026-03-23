@@ -225,6 +225,7 @@ app.use('/api/llm', require('./routes/llm'));
 app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
 app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
 app.use('/api/teacher/help-seeking', require('./routes/teacherHelpSeeking')); // Teacher Help-Seeking Dashboard
+app.use('/api/teacher-agent', require('./routes/teacherAgent')); // Teacher Analytics Agent
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));

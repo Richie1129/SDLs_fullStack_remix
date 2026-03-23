@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { getProject } from "../../api/project";
 import { FiBarChart2, FiHelpCircle, FiLink, FiUser, FiUsers } from 'react-icons/fi';
 
 // Hooks
@@ -15,6 +16,7 @@ import GroupsView from "./components/GroupsView";
 import IndividualView from "./components/IndividualView";
 import AnalyticsView from "./components/AnalyticsView";
 import HelpSeekingView from "./components/HelpSeekingView";
+import AgentInsightsPanel from "./components/AgentInsightsPanel";
 import { DashboardErrorBoundary } from "../../components/ErrorBoundary";
 import { SkeletonDashboard } from "../../components/SkeletonLoader";
 import { FiAlertTriangle } from 'react-icons/fi';
@@ -54,7 +56,20 @@ const TeacherManagementDashboard = () => {
   
   // 用戶角色
   const userRole = getCurrentUserRole();
-  
+
+  // 目前專案的 stage 資料（project 層級，不在學生資料內）
+  const [currentProjectStage, setCurrentProjectStage] = useState(null);
+  useEffect(() => {
+    if (!parsedProjectId) return;
+    getProject(parsedProjectId)
+      .then(data => {
+        if (data?.currentStage && data?.currentSubStage) {
+          setCurrentProjectStage({ stage: Number(data.currentStage), subStage: Number(data.currentSubStage) });
+        }
+      })
+      .catch(() => {});
+  }, [parsedProjectId]);
+
   // 使用新的統合Hook獲取資料
   const {
     realData,
@@ -71,130 +86,16 @@ const TeacherManagementDashboard = () => {
     if (userRole !== 'teacher' || !Array.isArray(enhancedStudents) || enhancedStudents.length === 0) {
       return null;
     }
+    if (!currentProjectStage) return null;
 
-    const toInteger = (value) => {
-      if (value === null || value === undefined) return null;
-      const numeric = Number(value);
-      if (Number.isInteger(numeric)) return numeric;
-      const matched = String(value).match(/\d+/);
-      return matched ? Number(matched[0]) : null;
-    };
-
-    const normalizeStage = (value) => {
-      const num = toInteger(value);
-      if (!num) return null;
-      if (num === 5) return 4;
-      if (num >= 1 && num <= 4) return num;
-      return null;
-    };
-
-    const normalizeSubStage = (value) => {
-      const num = toInteger(value);
-      if (!num) return null;
-      if (num >= 1 && num <= 3) return num;
-      if (num >= 1 && num <= 12) return ((num - 1) % 3) + 1;
-      return null;
-    };
-
-    const parseCompositeStage = (value) => {
-      if (value === null || value === undefined) return { stage: null, subStage: null };
-      const text = String(value).trim();
-      if (!text.includes('-') && !text.includes('/')) {
-        return { stage: null, subStage: null };
-      }
-      const parts = text.split(/[-/]/);
-      if (parts.length < 2) return { stage: null, subStage: null };
-      return {
-        stage: normalizeStage(parts[0]),
-        subStage: normalizeSubStage(parts[1])
-      };
-    };
-
-    const resolveStageAndSubStage = (student) => {
-      const subCandidates = [
-        student?.currentSubStage,
-        student?.current_sub_stage,
-        student?.subStage,
-        student?.sub_stage,
-        student?.currentSubStageIndex,
-        student?.current_sub_stage_index,
-        student?.projectCurrentSubStage,
-        student?.project?.currentSubStage,
-        student?.project?.current_sub_stage
-      ];
-
-      for (const candidate of subCandidates) {
-        const { stage, subStage } = parseCompositeStage(candidate);
-        if (stage && subStage) {
-          return { stage, subStage };
-        }
-      }
-
-      const stageCandidates = [
-        student?.currentStage,
-        student?.current_stage,
-        student?.stage,
-        student?.stageIndex,
-        student?.stage_index,
-        student?.projectCurrentStage,
-        student?.project?.currentStage,
-        student?.project?.current_stage
-      ];
-
-      let stage = null;
-      for (const candidate of stageCandidates) {
-        stage = normalizeStage(candidate);
-        if (stage) break;
-      }
-
-      let subStage = null;
-      for (const candidate of subCandidates) {
-        subStage = normalizeSubStage(candidate);
-        if (subStage) break;
-      }
-
-      if (!stage) {
-        const progress = Number(student?.progressPercentage);
-        if (!Number.isNaN(progress) && progress >= 0) {
-          const safeProgress = Math.min(progress, 100);
-          stage = Math.max(1, Math.min(4, Math.ceil(Math.max(safeProgress, 1) / 25)));
-          const stageBase = (stage - 1) * 25;
-          const stageProgress = Math.max(0, Math.min(25, safeProgress - stageBase));
-          subStage = Math.max(1, Math.min(3, Math.ceil((Math.max(stageProgress, 1) / 25) * 3)));
-        }
-      }
-
-      if (!subStage) subStage = 1;
-      if (!stage) return null;
-
-      return { stage, subStage };
-    };
-
-    const stageSubCount = new Map();
-
-    enhancedStudents.forEach((student) => {
-      const resolved = resolveStageAndSubStage(student);
-      if (!resolved) return;
-      const key = `${resolved.stage}-${resolved.subStage}`;
-      stageSubCount.set(key, (stageSubCount.get(key) || 0) + 1);
-    });
-
-    if (stageSubCount.size === 0) return null;
-
-    const [dominantKey, dominantCount] = [...stageSubCount.entries()]
-      .sort((a, b) => b[1] - a[1])[0];
-
-    const [stageNumText, subStageNumText] = dominantKey.split('-');
-    const stageNum = Number(stageNumText);
-    const subStageNum = Number(subStageNumText);
-
+    const { stage: stageNum, subStage: subStageNum } = currentProjectStage;
+    const key = `${stageNum}-${subStageNum}`;
     return {
       stageLabel: STAGE_LABELS[stageNum] || `${stageNum} 階段`,
-      subStageLabel: SUB_STAGE_LABELS[dominantKey] || `子階段 ${subStageNum}`,
-      count: dominantCount,
-      total: enhancedStudents.length
+      subStageLabel: SUB_STAGE_LABELS[key] || `子階段 ${subStageNum}`,
+      stageCode: key
     };
-  }, [enhancedStudents, userRole]);
+  }, [currentProjectStage, enhancedStudents, userRole]);
 
   // 載入狀態
   if (loading) {
@@ -384,6 +285,12 @@ const TeacherManagementDashboard = () => {
               {renderAnalyticsContent()}
             </>
           );
+        case 'ai-insights':
+          return (
+            <DashboardErrorBoundary>
+              <AgentInsightsPanel projectId={parsedProjectId} />
+            </DashboardErrorBoundary>
+          );
         default:
           return (
             <DashboardErrorBoundary>
@@ -429,7 +336,7 @@ const TeacherManagementDashboard = () => {
                       {dominantStageInfo.stageLabel}・{dominantStageInfo.subStageLabel}
                     </span>
                     <span className="text-caption text-teal-600">
-                      {dominantStageInfo.count}/{dominantStageInfo.total}
+                      {dominantStageInfo.stageCode}
                     </span>
                   </div>
                 )}

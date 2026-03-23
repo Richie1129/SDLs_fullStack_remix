@@ -1,11 +1,12 @@
 import React from 'react';
-import { FiHome, FiUsers, FiBarChart2 } from 'react-icons/fi';
+import { FiHome, FiUsers, FiBarChart2, FiCpu } from 'react-icons/fi';
 
 const ViewModeButtons = ({ viewMode, setViewMode }) => {
   const modes = [
     { key: 'overview', label: '總覽', icon: <FiHome className="w-4 h-4" /> },
     { key: 'students', label: '學生', icon: <FiUsers className="w-4 h-4" /> },
-    { key: 'analytics', label: '分析', icon: <FiBarChart2 className="w-4 h-4" /> }
+    { key: 'analytics', label: '分析', icon: <FiBarChart2 className="w-4 h-4" /> },
+    { key: 'ai-insights', label: 'AI 洞察', icon: <FiCpu className="w-4 h-4" /> },
   ];
 
   return (
