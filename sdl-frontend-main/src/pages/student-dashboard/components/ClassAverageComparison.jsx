@@ -12,42 +12,27 @@ import { FiUsers, FiChevronDown, FiChevronUp } from 'react-icons/fi';
  * - 提供情境脈絡（「這樣算好嗎？」），不製造競爭壓力
  * - 使用鼓勵性語氣，低於平均用琥珀色（非紅色）
  *
- * 計算方式（純前端，無需新 API）：
- * - 想法節點：所有節點總數 / 成員數
- * - 看板任務：所有任務總數 / 成員數
- * - 週反思：最近 7 天反思總數 / 成員數
- *   （若偵測到多名用戶的反思資料則可靠；若僅有個人資料則顯示說明）
+ * 週反思平均來自後端 /daily/class-summary（GROUP BY userId 聚合），
+ * 確保是真實全班數據而非個人資料。
  */
 const ClassAverageComparison = ({
   personalData,
   teamMembers = [],
   ideaNodes = [],
   kanbanTasks = [],
-  personalReflections = [],
+  classSummary = null,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
 
   const { metrics, memberCount } = useMemo(() => {
     const count = Math.max(teamMembers.length, 1);
-    const oneWeekAgo = new Date(Date.now() - 7 * 86_400_000);
 
     // ── 班級平均計算 ────────────────────────────────────────
     const avgNodes = parseFloat((ideaNodes.length / count).toFixed(1));
     const avgTasks = parseFloat((kanbanTasks.length / count).toFixed(1));
 
-    const recentReflections = personalReflections.filter(
-      r => r?.createdAt && new Date(r.createdAt) >= oneWeekAgo
-    );
-    // 偵測是否有多名用戶的反思資料
-    const uniqueAuthors = new Set(
-      recentReflections
-        .map(r => r.userId || r.user_id || r.username || r.User?.id)
-        .filter(Boolean)
-    );
-    const hasMultiUserReflections = uniqueAuthors.size > 1;
-    const avgReflections = hasMultiUserReflections
-      ? parseFloat((recentReflections.length / count).toFixed(1))
-      : null; // 單人資料，無法可靠計算班級平均
+    // 週反思平均來自後端匿名聚合 API
+    const avgReflections = classSummary?.avgWeeklyReflections ?? null;
 
     // ── 我的數據 ─────────────────────────────────────────────
     const myNodes       = personalData?.ideaNodes || 0;
@@ -91,7 +76,7 @@ const ClassAverageComparison = ({
     ];
 
     return { metrics: items, memberCount: count };
-  }, [personalData, teamMembers, ideaNodes, kanbanTasks, personalReflections]);
+  }, [personalData, teamMembers, ideaNodes, kanbanTasks, classSummary]);
 
   const statusConfig = {
     above:   { text: '高於平均', textColor: 'text-customgreen',  rowBg: 'bg-green-50',  rowBorder: 'border-green-200' },

@@ -2,8 +2,62 @@
 const Daily_personal = require('../models/daily_personal');
 const Daily_team = require('../models/daily_team');
 const User = require('../models/user');
+const Project = require('../models/project');
+const { Op, fn, col } = require('sequelize');
 const dailyService = require('../services/dailyService');
 const { createErrorResponse } = require('../constants/dailyErrorCodes');
+
+/**
+ * 班級反思匿名統計
+ * GET /daily/class-summary?projectId=X
+ *
+ * 只回傳聚合數字，不含任何個人內容或姓名。
+ * 供學生端「班級情境參考」元件使用，讓學生了解班級均值而不暴露他人資料。
+ *
+ * 回傳：
+ *   { avgWeeklyReflections, totalWeeklyReflections, memberCount }
+ */
+exports.getClassSummary = async (req, res) => {
+    const { projectId } = req.query;
+    if (!projectId) return res.status(400).json({ message: '缺少 projectId' });
+
+    try {
+        const oneWeekAgo = new Date(Date.now() - 7 * 86_400_000);
+
+        // 本週各成員反思篇數（GROUP BY userId）
+        const perUserCounts = await Daily_personal.findAll({
+            where: { projectId, createdAt: { [Op.gte]: oneWeekAgo } },
+            attributes: ['userId', [fn('COUNT', col('id')), 'count']],
+            group: ['userId'],
+            raw: true,
+        });
+
+        // 本週反思總篇數
+        const totalWeeklyReflections = perUserCounts.reduce(
+            (sum, row) => sum + parseInt(row.count, 10), 0
+        );
+
+        // 專案成員總人數（含老師/學生均計，與前端 teamMembers 一致）
+        const memberCount = await User.count({
+            include: [{
+                model: Project,
+                where: { id: projectId },
+                through: { attributes: [] },
+                attributes: [],
+            }],
+        });
+
+        const avgWeeklyReflections =
+            memberCount > 0
+                ? Math.round((totalWeeklyReflections / memberCount) * 10) / 10
+                : 0;
+
+        res.status(200).json({ avgWeeklyReflections, totalWeeklyReflections, memberCount });
+    } catch (err) {
+        console.error('❌ 取得班級反思統計失敗:', err);
+        res.status(500).json({ message: '伺服器錯誤', error: err.message });
+    }
+};
 
 exports.getPersonalDaily = async (req, res) => {
     const { userId, projectId, isTeacher } = req.query;

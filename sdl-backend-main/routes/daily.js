@@ -86,8 +86,11 @@ const getProjectIdFromDaily = async (req, res, next) => {
 };
 
 // 只讀路由 - 允許觀摩者存取（需要在 query 或 body 中包含 projectId）
-router.get('/', optionalAuth, optionalProjectPermission, controller.getPersonalDaily); 
+router.get('/', optionalAuth, optionalProjectPermission, controller.getPersonalDaily);
 router.get('/team', optionalAuth, optionalProjectPermission, controller.getTeamDaily);
+
+// 班級反思匿名聚合統計（只回傳數字，不含個人資料）
+router.get('/class-summary', validateToken, checkProjectViewingPermission, controller.getClassSummary);
 
 // 寫入路由 - 需要完整權限，禁止觀摩者操作
 router.post('/', validateToken, checkProjectViewingPermission, checkWritePermission, uploadToMinio('attachFile'), controller.createPersonalDaily);

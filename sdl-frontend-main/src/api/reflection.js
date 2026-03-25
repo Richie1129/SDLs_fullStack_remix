@@ -1,6 +1,14 @@
 //api/reflection.js
 import apiClient from './client';
 
+// 取得班級反思匿名聚合統計（avgWeeklyReflections, totalWeeklyReflections, memberCount）
+export const getClassReflectionSummary = async (projectId) => {
+    const response = await apiClient.get('/daily/class-summary', {
+        params: { projectId },
+    });
+    return response.data;
+};
+
 // 取得所有個人日報
 export const getAllPersonalDaily = async (config) => {
     const response = await apiClient.get(`/daily`, {

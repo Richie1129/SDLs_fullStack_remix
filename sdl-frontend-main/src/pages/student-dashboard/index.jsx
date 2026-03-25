@@ -60,7 +60,7 @@ const StudentDashboard = () => {
   
   // 獲取專案數據
   const projectData = useProjectData(projectId, userId);
-  const { loading, ideaNodes, kanbanTasks, teamMembers, personalReflections, teamReflections, chatHistory } = projectData;
+  const { loading, ideaNodes, kanbanTasks, teamMembers, personalReflections, teamReflections, chatHistory, classSummary } = projectData;
   // 啟用精準使用時間記錄（心跳）
   useUsageSession(projectId, userId);
   
@@ -119,7 +119,7 @@ const StudentDashboard = () => {
                 teamMembers={teamMembers}
                 ideaNodes={ideaNodes}
                 kanbanTasks={kanbanTasks}
-                personalReflections={personalReflections}
+                classSummary={classSummary}
               />
             </div>
 

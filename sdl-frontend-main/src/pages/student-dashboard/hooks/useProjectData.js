@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getKanbanColumns, getProjectActivity } from "../../../api/kanban";
 import { getNodes } from "../../../api/nodes";
 import { getIdeaWall } from "../../../api/ideaWall";
-import { getAllPersonalDaily, getAllTeamDaily } from "../../../api/reflection";
+import { getAllPersonalDaily, getAllTeamDaily, getClassReflectionSummary } from "../../../api/reflection";
 import { getChatroomHistory } from "../../../api/chatroom";
 import { getRagMessageHistory } from "../../../api/rag";
 import { getProjectUser } from "../../../api/users";
@@ -52,6 +52,7 @@ export function useProjectData(projectId, userId) {
   const [projectComments, setProjectComments] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [usageSummary, setUsageSummary] = useState(null);
+  const [classSummary, setClassSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // 獲取所有專案資料
@@ -162,13 +163,13 @@ export function useProjectData(projectId, userId) {
         setTeamReflections(teamRefl);
         setSubmissions(submitList);
 
-        // 取得使用時間統計（精準版）
-        try {
-          const summary = await getUsageSummary({ userId, projectId });
-          setUsageSummary(summary);
-        } catch (e) {
-          setUsageSummary(null);
-        }
+        // 取得使用時間統計（精準版）與班級反思匿名統計（並行）
+        const [usageResult, classSummaryResult] = await Promise.allSettled([
+          getUsageSummary({ userId, projectId }),
+          getClassReflectionSummary(projectId),
+        ]);
+        setUsageSummary(usageResult.status === 'fulfilled' ? usageResult.value : null);
+        setClassSummary(classSummaryResult.status === 'fulfilled' ? classSummaryResult.value : null);
 
         // 獲取團隊所有成員的AI互動記錄
         if (members.length > 0) {
@@ -240,7 +241,8 @@ export function useProjectData(projectId, userId) {
     projectComments,
     submissions,
     usageSummary,
-    
+    classSummary,
+
     // 狀態
     loading
   };
