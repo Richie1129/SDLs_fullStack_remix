@@ -38,11 +38,24 @@ const StudentOverview = () => {
   const [ideaNodes, setIdeaNodes] = useState([]);
   const [kanbanTasks, setKanbanTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSemester, setSelectedSemester] = useState('all');
+
+  // 從所有專案中提取可用學期（降序排列）
+  const availableSemesters = React.useMemo(() => {
+    const semesters = [...new Set(allProjects.map(p => p.semester).filter(Boolean))];
+    return semesters.sort((a, b) => b.localeCompare(a));
+  }, [allProjects]);
+
+  // 根據學期篩選後的專案
+  const filteredProjects = React.useMemo(() => {
+    if (selectedSemester === 'all') return allProjects;
+    return allProjects.filter(p => p.semester === selectedSemester);
+  }, [allProjects, selectedSemester]);
 
   // 獲取學生的所有專案
   const { data: projectData, isLoading: projectsLoading } = useQuery(
     "studentAllProjects", 
-    () => getAllProject({ params: { userId } }),
+    () => getAllProject({ params: { userId, semester: 'all' } }),
     {
       onSuccess: (data) => {
         setAllProjects(data || []);
@@ -177,44 +190,52 @@ const StudentOverview = () => {
 
     if (allProjects.length > 0) {
       fetchAllData();
+    } else {
+      setLoading(false);
     }
   }, [allProjects, userId]);
 
   // 計算個人統計（增強版）
   const personalStats = React.useMemo(() => {
-    const totalProjects = allProjects.length;
-    const completedProjects = allProjects.filter(p => p.ProjectEnd).length;
+    const filteredProjectIds = new Set(filteredProjects.map(p => p.id));
+    const totalProjects = filteredProjects.length;
+    const completedProjects = filteredProjects.filter(p => p.ProjectEnd).length;
     const inProgressProjects = totalProjects - completedProjects;
     
     const averageProgress = totalProjects > 0 ? 
-      Math.round(allProjects.reduce((sum, project) => {
+      Math.round(filteredProjects.reduce((sum, project) => {
         return sum + calculateProgress(project.currentStage, project.currentSubStage);
       }, 0) / totalProjects) : 0;
 
-    const totalReflections = allReflections.length;
-    const thisWeekReflections = allReflections.filter(r => {
+    // 依篩選學期過濾次要資料
+    const filteredChatHistory = chatHistory.filter(c => filteredProjectIds.has(c.projectId));
+    const filteredKanbanTasks = kanbanTasks.filter(t => filteredProjectIds.has(t.projectId));
+    const filteredIdeaNodes = ideaNodes.filter(n => filteredProjectIds.has(n.projectId));
+    const filteredReflections = allReflections.filter(r => filteredProjectIds.has(r.projectId));
+
+    const totalReflections = filteredReflections.length;
+    const thisWeekReflections = filteredReflections.filter(r => {
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
       return new Date(r.createdAt) > oneWeekAgo;
     }).length;
 
-    // 新增的統計
-    const totalChatMessages = chatHistory.filter(chat => chat.author === userName).length;
+    const totalChatMessages = filteredChatHistory.filter(chat => chat.author === userName).length;
     const totalAiInteractions = aiInteractions.length;
-    const totalIdeaNodes = ideaNodes.length;
+    const totalIdeaNodes = filteredIdeaNodes.length;
     
     // 動態任務統計 - 基於真實的Kanban列表
     const tasksByStatus = {};
-    const allColumnNames = [...new Set(kanbanTasks.map(task => task.columnName))].filter(Boolean);
+    const allColumnNames = [...new Set(filteredKanbanTasks.map(task => task.columnName))].filter(Boolean);
     
     // 為每個列表統計任務數量
     allColumnNames.forEach(columnName => {
-      tasksByStatus[columnName] = kanbanTasks.filter(task => task.columnName === columnName);
+      tasksByStatus[columnName] = filteredKanbanTasks.filter(task => task.columnName === columnName);
     });
 
-    const totalTasks = kanbanTasks.length;
+    const totalTasks = filteredKanbanTasks.length;
     // 嘗試識別完成狀態的任務（支援多種命名方式）
-    const completedTasks = kanbanTasks.filter(task => 
+    const completedTasks = filteredKanbanTasks.filter(task => 
       isCompletedStatus(task.columnName)
     ).length;
 
@@ -233,7 +254,7 @@ const StudentOverview = () => {
       tasksByStatus,
       allColumnNames // 新增：所有列表名稱
     };
-  }, [allProjects, allReflections, chatHistory, aiInteractions, ideaNodes, kanbanTasks, userName]);
+  }, [filteredProjects, allReflections, chatHistory, aiInteractions, ideaNodes, kanbanTasks, userName]);
 
   // 最近學習活動（增強版）
   const recentActivities = React.useMemo(() => {
@@ -359,65 +380,125 @@ const StudentOverview = () => {
               </div>
             </div>
 
-            {/* 統計卡片區域（增強版） */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
-              <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-teal-100 text-caption sm:text-body-sm">參與專案</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalProjects}</p>
+            {/* 學期篩選 */}
+            {availableSemesters.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-body-sm text-gray-500 font-medium">學期：</span>
+                <button
+                  onClick={() => setSelectedSemester('all')}
+                  className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                    selectedSemester === 'all'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600'
+                  }`}
+                >
+                  全部學期
+                </button>
+                {availableSemesters.map(sem => (
+                  <button
+                    key={sem}
+                    onClick={() => setSelectedSemester(sem)}
+                    className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                      selectedSemester === sem
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600'
+                    }`}
+                  >
+                    {sem}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* 統計卡片區域 */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
+              {/* 參與專案 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">參與專案</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-teal-600">
+                    <FiBookOpen className="w-4 h-4" />
                   </div>
-                  <FiBookOpen className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{personalStats.totalProjects}</p>
+                <p className="text-caption text-[#888780] mb-3">進行中 {personalStats.inProgressProjects} 個</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-500" style={{ width: `${personalStats.totalProjects > 0 ? 100 : 0}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-caption sm:text-body-sm">平均進度</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.averageProgress}%</p>
+              {/* 平均進度 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">平均進度</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-customgreen">
+                    <FiTrendingUp className="w-4 h-4" />
                   </div>
-                  <FiTrendingUp className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{personalStats.averageProgress}%</p>
+                <p className="text-caption text-[#888780] mb-3">完成 {personalStats.completedProjects} 個</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-customgreen" style={{ width: `${personalStats.averageProgress}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-green-500 to-green-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-100 text-caption sm:text-body-sm">總任務數</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalTasks}</p>
+              {/* 總任務數 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">總任務數</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E6F1FB] text-blue-600">
+                    <FiClipboard className="w-4 h-4" />
                   </div>
-                  <FiClipboard className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{personalStats.totalTasks}</p>
+                <p className="text-caption text-[#888780] mb-3">完成 {personalStats.completedTasks} 項</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-blue-400" style={{ width: `${personalStats.totalTasks > 0 ? Math.round((personalStats.completedTasks / personalStats.totalTasks) * 100) : 0}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-100 text-caption sm:text-body-sm">聊天互動</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalChatMessages}</p>
+              {/* 聊天互動 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">聊天互動</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-teal-600">
+                    <FiMessageSquare className="w-4 h-4" />
                   </div>
-                  <FiMessageSquare className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{personalStats.totalChatMessages}</p>
+                <p className="text-caption text-[#888780] mb-3">本人發言</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-400" style={{ width: '70%' }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-caption sm:text-body-sm">想法節點</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalIdeaNodes}</p>
+              {/* 想法節點 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">想法節點</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#EAF3DE] text-teal-600">
+                    <FiInfo className="w-4 h-4" />
                   </div>
-                  <FiInfo className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{personalStats.totalIdeaNodes}</p>
+                <p className="text-caption text-[#888780] mb-3">創意發想</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-400" style={{ width: '60%' }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-pink-100 text-caption sm:text-body-sm">AI互動</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{personalStats.totalAiInteractions}</p>
+              {/* AI互動 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">AI互動</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#FAEEDA] text-amber-600">
+                    <FiCpu className="w-4 h-4" />
                   </div>
-                  <FiCpu className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{personalStats.totalAiInteractions}</p>
+                <p className="text-caption text-[#888780] mb-3">AI諮詢次數</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-amber-400" style={{ width: '80%' }} />
                 </div>
               </div>
             </div>
@@ -430,14 +511,21 @@ const StudentOverview = () => {
                 <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                   <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">我的專案</h2>
                   <div className="space-y-stack-sm max-h-96 overflow-y-auto">
-                    {allProjects.length > 0 ? (
-                      allProjects.map((project, index) => {
+                    {filteredProjects.length > 0 ? (
+                      filteredProjects.map((project, index) => {
                         const progress = calculateProgress(project.currentStage, project.currentSubStage);
                         const members = projectMembers[project.id] || [];
                         return (
                           <div key={index} className="border border-gray-200 rounded-lg p-component-base hover:shadow-md transition-shadow">
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-stack-xs sm:space-y-0">
-                              <h3 className="font-semibold text-gray-800 text-body sm:text-body-lg">{project.name}</h3>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold text-gray-800 text-body sm:text-body-lg">{project.name}</h3>
+                                {project.semester && (
+                                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-caption font-medium rounded-full border border-indigo-200">
+                                    {project.semester}
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center space-x-stack-xs">
                                 <span className={`px-2 py-1 rounded-full text-caption font-medium ${getStatusColor(progress)}`}>
                                   {project.ProjectEnd ? "已完成" : `${progress}%`}
@@ -491,13 +579,15 @@ const StudentOverview = () => {
                       })
                     ) : (
                       <div className="text-center py-8 text-gray-500">
-                        <p>尚未參與任何專案</p>
-                        <button
-                          onClick={() => navigate("/homepage")}
-                          className="mt-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
-                        >
-                          前往首頁加入專案
-                        </button>
+                        <p>{selectedSemester === 'all' ? '尚未參與任何專案' : `${selectedSemester} 學期無專案`}</p>
+                        {selectedSemester === 'all' && (
+                          <button
+                            onClick={() => navigate("/homepage")}
+                            className="mt-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                          >
+                            前往首頁加入專案
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -507,12 +597,19 @@ const StudentOverview = () => {
                 <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                   <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">學習進度軌跡</h2>
                   <div className="space-y-stack-sm">
-                    {allProjects.map((project, index) => {
+                    {filteredProjects.map((project, index) => {
                       const progress = calculateProgress(project.currentStage, project.currentSubStage);
                       return (
                         <div key={index} className="bg-gray-50 p-component-base rounded-lg">
                           <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium text-gray-700">{project.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-700">{project.name}</span>
+                              {project.semester && (
+                                <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-caption font-medium rounded border border-indigo-200">
+                                  {project.semester}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-body-sm text-gray-500">{progress}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">

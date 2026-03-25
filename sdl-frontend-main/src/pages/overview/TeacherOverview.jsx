@@ -28,11 +28,24 @@ const TeacherOverview = () => {
   const [allActivities, setAllActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('overview'); // 'overview', 'students', 'projects', 'analytics'
+  const [selectedSemester, setSelectedSemester] = useState('all');
+
+  // 從所有專案中提取可用學期（降序排列）
+  const availableSemesters = React.useMemo(() => {
+    const semesters = [...new Set(allProjects.map(p => p.semester).filter(Boolean))];
+    return semesters.sort((a, b) => b.localeCompare(a));
+  }, [allProjects]);
+
+  // 根據學期篩選後的專案
+  const filteredProjects = React.useMemo(() => {
+    if (selectedSemester === 'all') return allProjects;
+    return allProjects.filter(p => p.semester === selectedSemester);
+  }, [allProjects, selectedSemester]);
 
   // 獲取教師的所有專案
   const { data: projectData, isLoading: projectsLoading } = useQuery(
     "teacherAllProjects", 
-    () => getProjectsByMentor(userName),
+    () => getProjectsByMentor(userName, 'all'),
     {
       onSuccess: (data) => {
         setAllProjects(data || []);
@@ -139,23 +152,30 @@ const TeacherOverview = () => {
 
     if (allProjects.length > 0) {
       fetchAllData();
+    } else {
+      setLoading(false);
     }
   }, [allProjects]);
 
   // 計算教學統計
   const teachingStats = React.useMemo(() => {
-    const totalProjects = allProjects.length;
-    const totalStudents = allStudents.length;
-    const uniqueStudents = new Set(allStudents.map(s => s.id)).size;
+    const filteredProjectIds = new Set(filteredProjects.map(p => p.id));
+    const filteredStudents = allStudents.filter(s => filteredProjectIds.has(s.projectId));
+    const filteredReflections = allReflections.filter(r => filteredProjectIds.has(r.projectId));
+    const filteredSubmissions = allSubmissions.filter(s => filteredProjectIds.has(s.projectId));
+
+    const totalProjects = filteredProjects.length;
+    const totalStudents = filteredStudents.length;
+    const uniqueStudents = new Set(filteredStudents.map(s => s.id)).size;
     
     const averageProgress = totalProjects > 0 ? 
-      Math.round(allProjects.reduce((sum, project) => {
+      Math.round(filteredProjects.reduce((sum, project) => {
         return sum + calculateProgress(project.currentStage, project.currentSubStage);
       }, 0) / totalProjects) : 0;
 
-    const completedProjects = allProjects.filter(p => p.ProjectEnd).length;
-    const totalReflections = allReflections.length;
-    const totalSubmissions = allSubmissions.length;
+    const completedProjects = filteredProjects.filter(p => p.ProjectEnd).length;
+    const totalReflections = filteredReflections.length;
+    const totalSubmissions = filteredSubmissions.length;
     
     const thisWeekReflections = allReflections.filter(r => {
       const oneWeekAgo = new Date();
@@ -164,12 +184,12 @@ const TeacherOverview = () => {
     }).length;
 
     // 需要關注的學生（進度低於30%）
-    const needAttentionStudents = allStudents.filter(student => {
+    const needAttentionStudents = filteredStudents.filter(student => {
       return student.projectProgress < 30;
     }).length;
 
     // 優秀學生（進度高於80%）
-    const excellentStudents = allStudents.filter(student => {
+    const excellentStudents = filteredStudents.filter(student => {
       return student.projectProgress >= 80;
     }).length;
 
@@ -185,7 +205,7 @@ const TeacherOverview = () => {
       needAttentionStudents,
       excellentStudents
     };
-  }, [allProjects, allStudents, allReflections, allSubmissions]);
+  }, [filteredProjects, allStudents, allReflections, allSubmissions]);
 
   // 最近教學活動
   const recentActivities = React.useMemo(() => {
@@ -227,7 +247,7 @@ const TeacherOverview = () => {
     return activities
       .sort((a, b) => new Date(b.createdAt || b.updatedAt) - new Date(a.createdAt || a.updatedAt))
       .slice(0, 10);
-  }, [allReflections, allSubmissions, allActivities, formatRelativeTime]);
+  }, [allReflections, allSubmissions, allActivities]);
 
   // 獲取專案狀態顏色
   const getProjectStatusColor = (status) => {
@@ -314,65 +334,125 @@ const TeacherOverview = () => {
               </div>
             </div>
 
+            {/* 學期篩選 */}
+            {availableSemesters.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <span className="text-body-sm text-gray-500 font-medium">學期：</span>
+                <button
+                  onClick={() => setSelectedSemester('all')}
+                  className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                    selectedSemester === 'all'
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600'
+                  }`}
+                >
+                  全部學期
+                </button>
+                {availableSemesters.map(sem => (
+                  <button
+                    key={sem}
+                    onClick={() => setSelectedSemester(sem)}
+                    className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                      selectedSemester === sem
+                        ? 'bg-teal-600 text-white'
+                        : 'bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600'
+                    }`}
+                  >
+                    {sem}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* 統計卡片區域 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
-              <div className="bg-gradient-to-r from-teal-500 to-teal-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-teal-100 text-caption sm:text-body-sm">指導專案</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{teachingStats.totalProjects}</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
+              {/* 指導專案 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">指導專案</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-teal-600">
+                    <FiBookOpen className="w-4 h-4" />
                   </div>
-                  <FiBookOpen className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.totalProjects}</p>
+                <p className="text-caption text-[#888780] mb-3">完成 {teachingStats.completedProjects} 個</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-500" style={{ width: `${teachingStats.totalProjects > 0 ? 100 : 0}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-blue-100 text-caption sm:text-body-sm">指導學生</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{teachingStats.uniqueStudents}</p>
+              {/* 指導學生 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">指導學生</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E6F1FB] text-blue-600">
+                    <FiUsers className="w-4 h-4" />
                   </div>
-                  <FiUsers className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.uniqueStudents}</p>
+                <p className="text-caption text-[#888780] mb-3">活躍學生數</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-blue-400" style={{ width: `${teachingStats.uniqueStudents > 0 ? Math.min(100, teachingStats.uniqueStudents * 5) : 0}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-green-500 to-green-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-green-100 text-caption sm:text-body-sm">平均進度</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{teachingStats.averageProgress}%</p>
+              {/* 平均進度 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">平均進度</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-customgreen">
+                    <FiTrendingUp className="w-4 h-4" />
                   </div>
-                  <FiTrendingUp className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.averageProgress}%</p>
+                <p className="text-caption text-[#888780] mb-3">整體進度</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-customgreen" style={{ width: `${teachingStats.averageProgress}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-orange-100 text-caption sm:text-body-sm">需關注</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{teachingStats.needAttentionStudents}</p>
+              {/* 需關注 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">需關注</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#FAEEDA] text-amber-600">
+                    <FiAlertTriangle className="w-4 h-4" />
                   </div>
-                  <FiAlertTriangle className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.needAttentionStudents}</p>
+                <p className="text-caption text-[#888780] mb-3">進度 &lt;30%</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${teachingStats.uniqueStudents > 0 ? Math.round((teachingStats.needAttentionStudents / teachingStats.uniqueStudents) * 100) : 0}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-purple-100 text-caption sm:text-body-sm">優秀學生</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{teachingStats.excellentStudents}</p>
+              {/* 優秀學生 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">優秀學生</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#EAF3DE] text-teal-600">
+                    <FiStar className="w-4 h-4" />
                   </div>
-                  <FiStar className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.excellentStudents}</p>
+                <p className="text-caption text-[#888780] mb-3">進度 ≥80%</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-400" style={{ width: `${teachingStats.uniqueStudents > 0 ? Math.round((teachingStats.excellentStudents / teachingStats.uniqueStudents) * 100) : 0}%` }} />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-pink-500 to-pink-600 p-component-base sm:p-component-md-lg rounded-xl text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-pink-100 text-caption sm:text-body-sm">本週反思</p>
-                    <p className="text-h2 sm:text-h1 font-bold">{teachingStats.thisWeekReflections}</p>
+              {/* 本週反思 */}
+              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-caption text-[#888780]">本週反思</h3>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-teal-600">
+                    <FiFileText className="w-4 h-4" />
                   </div>
-                  <FiFileText className="w-8 h-8 opacity-80" />
+                </div>
+                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.thisWeekReflections}</p>
+                <p className="text-caption text-[#888780] mb-3">共 {teachingStats.totalReflections} 篇</p>
+                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-400" style={{ width: '65%' }} />
                 </div>
               </div>
             </div>
@@ -386,8 +466,8 @@ const TeacherOverview = () => {
                   <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                     <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">專案進度概覽</h2>
                     <div className="space-y-stack-sm max-h-96 overflow-y-auto">
-                      {allProjects.length > 0 ? (
-                        allProjects.map((project, index) => {
+                      {filteredProjects.length > 0 ? (
+                        filteredProjects.map((project, index) => {
                           const progress = calculateProgress(project.currentStage, project.currentSubStage);
                           const projectStudents = allStudents.filter(s => s.projectId === project.id);
                           const status = progress >= 80 ? "優秀" : progress >= 50 ? "良好" : "需關注";
@@ -395,7 +475,14 @@ const TeacherOverview = () => {
                           return (
                             <div key={index} className="border border-gray-200 rounded-lg p-component-base hover:shadow-md transition-shadow">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-stack-xs sm:space-y-0">
-                                <h3 className="font-semibold text-gray-800 text-body sm:text-body-lg">{project.name}</h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-semibold text-gray-800 text-body sm:text-body-lg">{project.name}</h3>
+                                  {project.semester && (
+                                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-caption font-medium rounded-full border border-indigo-200">
+                                      {project.semester}
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="flex items-center space-x-stack-xs">
                                   <span className={`px-2 py-1 rounded-full text-caption font-medium ${getProjectStatusColor(status)}`}>
                                     {status}
@@ -449,7 +536,7 @@ const TeacherOverview = () => {
                         })
                       ) : (
                         <div className="text-center py-8 text-gray-500">
-                          <p>尚未指導任何專案</p>
+                          <p>{selectedSemester === 'all' ? '尚未指導任何專案' : `${selectedSemester} 學期無專案`}</p>
                         </div>
                       )}
                     </div>
@@ -536,6 +623,7 @@ const TeacherOverview = () => {
                     <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">需要關注</h2>
                     <div className="space-y-3 max-h-64 overflow-y-auto">
                       {allStudents
+                        .filter(s => filteredProjects.some(p => p.id === s.projectId))
                         .filter(student => student.projectProgress < 50)
                         .slice(0, 5)
                         .map((student, index) => (
@@ -561,7 +649,7 @@ const TeacherOverview = () => {
               <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                 <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">所有學生管理</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-sm max-h-96 overflow-y-auto">
-                  {allStudents.map((student, index) => (
+                  {allStudents.filter(s => filteredProjects.some(p => p.id === s.projectId)).map((student, index) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-component-base">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-medium text-gray-800">{student.username}</h3>
@@ -593,7 +681,7 @@ const TeacherOverview = () => {
               <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                 <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">專案監控</h2>
                 <div className="space-y-stack-sm max-h-96 overflow-y-auto">
-                  {allProjects.map((project, index) => {
+                  {filteredProjects.map((project, index) => {
                     const progress = calculateProgress(project.currentStage, project.currentSubStage);
                     const projectStudents = allStudents.filter(s => s.projectId === project.id);
                     const avgStudentProgress = projectStudents.length > 0 ? 
@@ -602,7 +690,14 @@ const TeacherOverview = () => {
                     return (
                       <div key={index} className="border border-gray-200 rounded-lg p-component-base">
                         <div className="flex justify-between items-center mb-3">
-                          <h3 className="font-semibold text-gray-800">{project.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-gray-800">{project.name}</h3>
+                            {project.semester && (
+                              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-caption font-medium rounded-full border border-indigo-200">
+                                {project.semester}
+                              </span>
+                            )}
+                          </div>
                           <button
                             onClick={() => navigate(`/project/${project.id}/teacherDashboard`)}
                             className="px-3 py-1 bg-teal-600 text-white text-caption rounded hover:bg-teal-700 transition-colors"
