@@ -269,7 +269,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
           />
         </div>
 
-        {/* ③ 全班 5Rs 反思深度聚合雷達圖 */}
+        {/* ③ 本組 5Rs 反思深度聚合雷達圖 */}
         <div>
           <ClassFiveRsRadarChart reflections={safeReflections} />
         </div>

@@ -18,12 +18,12 @@ const DIMENSIONS = [
 ];
 
 /**
- * 全班 5Rs 反思深度聚合雷達圖（教師儀表板）
+ * 本組 5Rs 反思深度聚合雷達圖（教師儀表板）
  *
  * 研究依據（CARE-LAD 框架 · 診斷性層次）：
  *   學生端雷達圖顯示「個人的 5Rs 強弱」→ 個人自我覺察
- *   本元件顯示「全班的 5Rs 平均」→ 課程教學焦點決策
- *   教師可一眼識別哪個 R 層次全班普遍偏弱，作為下一步教學調整依據。
+ *   本元件顯示「本組的 5Rs 平均」→ 課程教學焦點決策
+ *   教師可一眼識別哪個 R 層次本組普遍偏弱，作為下一步教學調整依據。
  *
  * 資料來源：reflections[].content → parse5RsContent → feedback.scores
  * 每個維度：跨所有已分析反思取平均值（依篇數加權，非依學生數加權）
@@ -96,12 +96,12 @@ const ClassFiveRsRadarChart = ({ reflections = [] }) => {
     return (
       <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-lg text-caption">
         <p className="font-semibold text-gray-800 mb-0.5">{dim?.fullLabel}</p>
-        <p className="text-purple-600 font-bold">{d.value} 分（全班平均）</p>
+        <p className="text-purple-600 font-bold">{d.value} 分（本組平均）</p>
         <p className="text-gray-400">
-          {d.value >= 80 ? '全班表現優秀'
+          {d.value >= 80 ? '本組表現優秀'
            : d.value >= 60 ? '整體良好'
            : d.value >= 40 ? '建議加強教學'
-           : '全班普遍薄弱'}
+           : '本組普遍薄弱'}
         </p>
       </div>
     );
@@ -112,7 +112,7 @@ const ClassFiveRsRadarChart = ({ reflections = [] }) => {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">全班 5Rs 反思深度</h2>
+          <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">本組 5Rs 反思深度</h2>
           <p className="text-caption text-gray-400 mt-0.5">
             共 {totalCount} 篇反思，已分析 {analyzedCount} 篇
             {analyzedStudentCount > 0 && `（${analyzedStudentCount} 位學生）`}
@@ -121,7 +121,7 @@ const ClassFiveRsRadarChart = ({ reflections = [] }) => {
         {!noData && (
           <div className="text-right shrink-0">
             <p className="text-h2 font-bold text-purple-600">{overall}</p>
-            <p className="text-caption text-gray-400">全班平均</p>
+            <p className="text-caption text-gray-400">本組平均</p>
           </div>
         )}
       </div>
@@ -198,7 +198,7 @@ const ClassFiveRsRadarChart = ({ reflections = [] }) => {
           {strongest && weakest && strongest.key !== weakest.key && (
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-component-sm">
-                <p className="text-caption text-purple-400 mb-0.5">全班最強維度</p>
+                <p className="text-caption text-purple-400 mb-0.5">本組最強維度</p>
                 <p className="text-body-sm font-semibold text-purple-700">{strongest.fullLabel}</p>
                 <p className="text-caption text-purple-600">{strongest.score} 分</p>
               </div>
