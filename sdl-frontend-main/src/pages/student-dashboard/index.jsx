@@ -15,6 +15,9 @@ import TeammatesList from "./components/TeammatesList";
 import Achievements from "./components/Achievements";
 import QuickStats from "./components/QuickStats";
 import LearningProgressRing from "./components/LearningProgressRing";
+import StudentSelfRiskAlert from "./components/StudentSelfRiskAlert";
+import FiveRsRadarChart from "./components/FiveRsRadarChart";
+import StageSuggestions from "./components/StageSuggestions";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
 
@@ -84,6 +87,9 @@ const StudentDashboard = () => {
             )}
           </div>
 
+          {/* ④ 個人自我風險提示 */}
+          <StudentSelfRiskAlert personalData={personalData} projectId={projectId} />
+
           {/* 小組統計卡片區域 */}
           <TeamStats teamStats={teamStats} />
 
@@ -100,12 +106,18 @@ const StudentDashboard = () => {
               {/* 學習軌跡 */}
               <LearningTrack learningTrack={learningTrack} />
 
+              {/* ⑥ 5Rs 反思深度雷達圖 */}
+              <FiveRsRadarChart personalReflections={personalReflections} />
+
               {/* 學習目標 */}
               <LearningGoals learningGoals={learningGoals} />
             </div>
 
             {/* 右側側邊欄 */}
             <div className="space-y-stack-sm sm:space-y-stack-md-lg">
+              {/* ⑦ 階段感知可操作建議 */}
+              <StageSuggestions personalData={personalData} projectId={projectId} />
+
               {/* 個人完成率環形圖 */}
               <LearningProgressRing progressPercentage={personalData?.progressPercentage || 0} />
 

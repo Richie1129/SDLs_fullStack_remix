@@ -23,6 +23,33 @@ import {
   isCompletedStatus 
 } from './utils/overviewUtils';
 
+const SDL_STAGES = {
+  1: { name: '定標', bg: 'bg-blue-100',   text: 'text-blue-700',   border: 'border-blue-200' },
+  2: { name: '擇策', bg: 'bg-teal-100',   text: 'text-teal-700',   border: 'border-teal-200' },
+  3: { name: '監評', bg: 'bg-amber-100',  text: 'text-amber-700',  border: 'border-amber-200' },
+  4: { name: '調節', bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-200' },
+};
+
+const SUB_STAGE_NAMES = {
+  1: ['提出研究主題', '提出研究目的', '提出研究問題'],
+  2: ['訂定研究構想表', '設計研究記錄表格', '規劃研究排程'],
+  3: ['進行嘗試性研究', '分析資料與繪圖', '撰寫研究結果'],
+  4: ['檢視研究進度', '進行研究討論', '撰寫研究結論'],
+};
+
+const SdlStageBadge = ({ stage, subStage }) => {
+  const s = SDL_STAGES[stage];
+  if (!s) return <span className="text-caption text-gray-400">未開始</span>;
+  const subStageName = subStage ? SUB_STAGE_NAMES[stage]?.[subStage - 1] : null;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption font-semibold border ${s.bg} ${s.text} ${s.border}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.text.replace('text-', 'bg-')}`} />
+      {s.name}
+      {subStageName ? <span className="opacity-60">· {subStageName}</span> : null}
+    </span>
+  );
+};
+
 const StudentOverview = () => {
   const navigate = useNavigate();
   const userId = getCurrentUserId();
@@ -542,7 +569,7 @@ const StudentOverview = () => {
                             <p className="text-gray-600 text-body-sm mb-2 truncate">{project.describe}</p>
                             
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-caption text-gray-500 space-y-1 sm:space-y-0">
-                              <span>階段: {project.currentStage}-{project.currentSubStage}</span>
+                              <SdlStageBadge stage={project.currentStage} subStage={project.currentSubStage} />
                               <span>指導老師: {project.mentor}</span>
                             </div>
                             

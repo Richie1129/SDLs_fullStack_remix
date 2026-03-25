@@ -157,6 +157,25 @@ const TeacherOverview = () => {
     }
   }, [allProjects]);
 
+  // SDL 四階段分布
+  const stageDistribution = React.useMemo(() => {
+    const stages = [
+      { key: 1, name: '定標', color: 'bg-blue-400',   barBg: 'bg-blue-50',   text: 'text-blue-700',  border: 'border-blue-200' },
+      { key: 2, name: '擇策', color: 'bg-teal-400',   barBg: 'bg-teal-50',   text: 'text-teal-700',  border: 'border-teal-200' },
+      { key: 3, name: '監評', color: 'bg-amber-400',  barBg: 'bg-amber-50',  text: 'text-amber-700', border: 'border-amber-200' },
+      { key: 4, name: '調節', color: 'bg-purple-400', barBg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+    ];
+    const total = filteredProjects.length;
+    const maxCount = Math.max(...stages.map(s => filteredProjects.filter(p => p.currentStage === s.key).length), 1);
+    return stages.map(stage => {
+      const count = filteredProjects.filter(p => p.currentStage === stage.key).length;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const barWidth = Math.round((count / maxCount) * 100);
+      const isMax = count === maxCount && count > 0;
+      return { ...stage, count, pct, barWidth, isMax };
+    });
+  }, [filteredProjects]);
+
   // 計算教學統計
   const teachingStats = React.useMemo(() => {
     const filteredProjectIds = new Set(filteredProjects.map(p => p.id));
@@ -184,9 +203,8 @@ const TeacherOverview = () => {
     }).length;
 
     // 需要關注的學生（進度低於30%）
-    const needAttentionStudents = filteredStudents.filter(student => {
-      return student.projectProgress < 30;
-    }).length;
+    const needAttentionList = filteredStudents.filter(student => student.projectProgress < 30);
+    const needAttentionStudents = needAttentionList.length;
 
     // 優秀學生（進度高於80%）
     const excellentStudents = filteredStudents.filter(student => {
@@ -203,6 +221,7 @@ const TeacherOverview = () => {
       totalSubmissions,
       thisWeekReflections,
       needAttentionStudents,
+      needAttentionList,
       excellentStudents
     };
   }, [filteredProjects, allStudents, allReflections, allSubmissions]);
@@ -459,6 +478,45 @@ const TeacherOverview = () => {
 
             {/* 根據viewMode顯示不同內容 */}
             {viewMode === 'overview' && (
+              <div className="space-y-stack-md sm:space-y-stack-md-lg">
+              {/* ① SDL 四階段分布圖 */}
+              <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">SDL 階段分布</h2>
+                  <span className="text-caption text-gray-400">共 {filteredProjects.length} 個專案</span>
+                </div>
+                {filteredProjects.length === 0 ? (
+                  <p className="text-center text-gray-400 py-4 text-body-sm">尚無專案資料</p>
+                ) : (
+                  <div className="space-y-3">
+                    {stageDistribution.map(stage => (
+                      <div key={stage.key} className="flex items-center gap-3">
+                        <span className={`w-10 text-right text-body-sm font-semibold shrink-0 ${stage.text}`}>
+                          {stage.name}
+                        </span>
+                        <div className="flex-1 relative h-8 bg-gray-100 rounded-lg overflow-hidden">
+                          <div
+                            className={`h-full ${stage.color} rounded-lg transition-all duration-slow flex items-center`}
+                            style={{ width: stage.count === 0 ? '0%' : `${Math.max(stage.barWidth, 4)}%` }}
+                          />
+                          {stage.isMax && stage.count > 0 && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-caption font-medium text-gray-500 whitespace-nowrap">
+                              ← 本週重點關注
+                            </span>
+                          )}
+                        </div>
+                        <div className="shrink-0 flex items-center gap-1.5 w-24 justify-end">
+                          <span className={`text-body-sm font-bold ${stage.count > 0 ? stage.text : 'text-gray-300'}`}>
+                            {stage.count} 組
+                          </span>
+                          <span className="text-caption text-gray-400">({stage.pct}%)</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-md sm:gap-stack-md-lg">
                 {/* 左側 - 專案總覽 */}
                 <div className="lg:col-span-2 space-y-stack-md sm:space-y-stack-md-lg">
@@ -618,29 +676,54 @@ const TeacherOverview = () => {
                     </div>
                   </div>
 
-                  {/* 需要關注的學生 */}
+                  {/* ② 需要關注的學生 - 具名清單 */}
                   <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                    <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">需要關注</h2>
-                    <div className="space-y-3 max-h-64 overflow-y-auto">
-                      {allStudents
-                        .filter(s => filteredProjects.some(p => p.id === s.projectId))
-                        .filter(student => student.projectProgress < 50)
-                        .slice(0, 5)
-                        .map((student, index) => (
-                          <div key={index} className="bg-red-50 p-component-sm rounded-lg">
-                            <div className="flex justify-between items-start mb-2">
-                              <span className="text-body-sm font-medium text-red-800">{student.username}</span>
-                              <span className="text-caption text-red-600">{student.projectProgress}%</span>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">需要關注</h2>
+                      {teachingStats.needAttentionStudents > 0 && (
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-caption font-medium rounded-full">
+                          {teachingStats.needAttentionStudents} 人
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-2 max-h-72 overflow-y-auto">
+                      {teachingStats.needAttentionStudents === 0 ? (
+                        <p className="text-gray-500 text-center py-4 text-body-sm">所有學生表現良好</p>
+                      ) : (
+                        teachingStats.needAttentionList.slice(0, 8).map((student, index) => {
+                          const riskReason = student.projectProgress < 10
+                            ? '幾乎無進度，需立即關注'
+                            : student.projectProgress < 20
+                            ? `進度僅 ${student.projectProgress}%，嚴重落後`
+                            : `進度 ${student.projectProgress}%，低於門檻 30%`;
+                          return (
+                            <div key={index} className="border border-amber-200 bg-amber-50 rounded-lg p-component-sm">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="min-w-0">
+                                  <span className="text-body-sm font-semibold text-gray-800 block truncate">
+                                    {student.username}
+                                  </span>
+                                  <span className="text-caption text-gray-500 block truncate">{student.projectName}</span>
+                                </div>
+                                <span className="shrink-0 text-caption font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                                  {student.projectProgress}%
+                                </span>
+                              </div>
+                              <p className="text-caption text-amber-700 mb-2">{riskReason}</p>
+                              <button
+                                onClick={() => navigate(`/project/${student.projectId}/teacherDashboard`)}
+                                className="w-full text-caption bg-teal-600 text-white py-1 rounded hover:bg-teal-700 transition-colors duration-fast"
+                              >
+                                前往查看
+                              </button>
                             </div>
-                            <p className="text-caption text-gray-600">{student.projectName}</p>
-                          </div>
-                        ))}
-                      {teachingStats.needAttentionStudents === 0 && (
-                        <p className="text-gray-500 text-center py-4">所有學生表現良好</p>
+                          );
+                        })
                       )}
                     </div>
                   </div>
                 </div>
+              </div>
               </div>
             )}
 
