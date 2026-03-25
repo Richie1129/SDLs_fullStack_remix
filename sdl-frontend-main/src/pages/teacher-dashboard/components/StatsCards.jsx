@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FiUsers, FiBarChart2, FiFileText, FiZap, FiClock, FiInfo } from 'react-icons/fi';
+import { FiUsers, FiBarChart2, FiFileText, FiZap, FiClock, FiInfo, FiArrowUp, FiArrowDown, FiMinus } from 'react-icons/fi';
 
 const Tooltip = ({ text }) => {
   const [show, setShow] = useState(false);
@@ -27,70 +27,94 @@ const Tooltip = ({ text }) => {
   );
 };
 
+const TrendBadge = ({ delta }) => {
+  if (delta === null || delta === undefined) return null;
+  if (delta === 0) return (
+    <span className="inline-flex items-center gap-0.5 text-caption text-gray-400">
+      <FiMinus className="w-3 h-3" />持平
+    </span>
+  );
+  const isUp = delta > 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-caption font-medium ${isUp ? 'text-customgreen' : 'text-red-400'}`}>
+      {isUp ? <FiArrowUp className="w-3 h-3" /> : <FiArrowDown className="w-3 h-3" />}
+      {isUp ? '+' : ''}{delta} 較上週
+    </span>
+  );
+};
+
 /**
  * 教師儀表板統計指標卡
  * 設計：白色底 + 輕邊框 + icon 色塊區分（無 glassmorphism）
  * 色彩系統：品牌綠 + 信任藍 + 警示琥珀（不用紫色/橙色）
  */
-const cards_config = (classStats) => [
-  {
-    title: '總學生數',
-    value: classStats.totalStudents,
-    subtitle: `活躍 ${classStats.activeStudents} 人`,
-    tooltip: '加入本專案的學生總人數。「活躍」指近 7 天有任何互動記錄的學生。',
-    icon: <FiUsers className="w-4 h-4" />,
-    iconBg: 'bg-[#E6F1FB]',
-    iconColor: 'text-trust-blue-600',
-    progress: classStats.activeStudents && classStats.totalStudents
-      ? Math.round((classStats.activeStudents / classStats.totalStudents) * 100)
-      : 0,
-    progressColor: 'bg-trust-blue-500',
-  },
-  {
-    title: '平均進度',
-    value: `${classStats.averageProgress}%`,
-    subtitle: `需關注 ${classStats.needAttentionStudents} 人`,
-    tooltip: '所有學生個人學習進度的平均值（0–100%）。低於 60% 的學生會被標記為「需關注」。健康參考值：整體平均應達 60% 以上。',
-    icon: <FiBarChart2 className="w-4 h-4" />,
-    iconBg: 'bg-[#E1F5EE]',
-    iconColor: 'text-customgreen',
-    progress: classStats.averageProgress,
-    progressColor: 'bg-customgreen',
-  },
-  {
-    title: '反思記錄',
-    value: classStats.totalReflections,
-    subtitle: '本週累計',
-    tooltip: '本週所有學生提交的個人反思日誌總篇數。反思頻率是衡量自我調節學習行為的核心指標，建議每人每週至少 1 篇。',
-    icon: <FiFileText className="w-4 h-4" />,
-    iconBg: 'bg-[#E1F5EE]',
-    iconColor: 'text-customgreen',
-    progress: 65,
-    progressColor: 'bg-customgreen',
-  },
-  {
-    title: '想法節點',
-    value: classStats.totalIdeaNodes,
-    subtitle: '創意發想',
-    tooltip: '在想法牆（IdeaWall）上創建的節點總數，反映團隊創意思考的深度與廣度。數量越多代表探索越充分。',
-    icon: <FiZap className="w-4 h-4" />,
-    iconBg: 'bg-[#EAF3DE]',
-    iconColor: 'text-teal-600',
-    progress: 78,
-    progressColor: 'bg-teal-500',
-  },
-  {
-    title: '使用時長',
-    value: `${classStats.totalUsageHours}h`,
-    subtitle: `平均 ${classStats.averageUsageHours}h/人`,
-    tooltip: '透過 Session 心跳追蹤計算的累計學習時數，僅計算在系統中的活躍時間。健康參考值：每週平均 2h+ 表示高度參與。',
-    icon: <FiClock className="w-4 h-4" />,
-    iconBg: 'bg-[#FAEEDA]',
-    iconColor: 'text-amber-600',
-    progress: 82,
-    progressColor: 'bg-amber-400',
-  },
-];
+const cards_config = (classStats) => {
+  const trend = classStats.weekTrend || {};
+  return [
+    {
+      title: '總學生數',
+      value: classStats.totalStudents,
+      subtitle: `活躍 ${classStats.activeStudents} 人`,
+      trend: trend.activeStudents,
+      tooltip: '加入本專案的學生總人數。「活躍」指近 7 天有任何互動記錄的學生。',
+      icon: <FiUsers className="w-4 h-4" />,
+      iconBg: 'bg-[#E6F1FB]',
+      iconColor: 'text-trust-blue-600',
+      progress: classStats.activeStudents && classStats.totalStudents
+        ? Math.round((classStats.activeStudents / classStats.totalStudents) * 100)
+        : 0,
+      progressColor: 'bg-trust-blue-500',
+    },
+    {
+      title: '平均進度',
+      value: `${classStats.averageProgress}%`,
+      subtitle: `需關注 ${classStats.needAttentionStudents} 人`,
+      trend: null,
+      tooltip: '所有學生個人學習進度的平均值（0–100%）。低於 60% 的學生會被標記為「需關注」。健康參考值：整體平均應達 60% 以上。',
+      icon: <FiBarChart2 className="w-4 h-4" />,
+      iconBg: 'bg-[#E1F5EE]',
+      iconColor: 'text-customgreen',
+      progress: classStats.averageProgress,
+      progressColor: 'bg-customgreen',
+    },
+    {
+      title: '反思記錄',
+      value: classStats.totalReflections,
+      subtitle: '本週累計',
+      trend: trend.totalReflections,
+      tooltip: '本週所有學生提交的個人反思日誌總篇數。反思頻率是衡量自我調節學習行為的核心指標，建議每人每週至少 1 篇。',
+      icon: <FiFileText className="w-4 h-4" />,
+      iconBg: 'bg-[#E1F5EE]',
+      iconColor: 'text-customgreen',
+      progress: 65,
+      progressColor: 'bg-customgreen',
+    },
+    {
+      title: '想法節點',
+      value: classStats.totalIdeaNodes,
+      subtitle: '創意發想',
+      trend: trend.totalIdeaNodes,
+      tooltip: '在想法牆（IdeaWall）上創建的節點總數，反映團隊創意思考的深度與廣度。數量越多代表探索越充分。',
+      icon: <FiZap className="w-4 h-4" />,
+      iconBg: 'bg-[#EAF3DE]',
+      iconColor: 'text-teal-600',
+      progress: 78,
+      progressColor: 'bg-teal-500',
+    },
+    {
+      title: '使用時長',
+      value: `${classStats.totalUsageHours}h`,
+      subtitle: `平均 ${classStats.averageUsageHours}h/人`,
+      trend: null,
+      tooltip: '透過 Session 心跳追蹤計算的累計學習時數，僅計算在系統中的活躍時間。健康參考值：每週平均 2h+ 表示高度參與。',
+      icon: <FiClock className="w-4 h-4" />,
+      iconBg: 'bg-[#FAEEDA]',
+      iconColor: 'text-amber-600',
+      progress: 82,
+      progressColor: 'bg-amber-400',
+    },
+  ];
+};
 
 const StatsCards = ({ classStats }) => {
   const cards = cards_config(classStats);
@@ -118,8 +142,11 @@ const StatsCards = ({ classStats }) => {
             {card.value}
           </p>
 
-          {/* Subtitle */}
-          <p className="text-caption text-[#888780] mb-3">{card.subtitle}</p>
+          {/* Subtitle + Trend */}
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-caption text-[#888780]">{card.subtitle}</p>
+            <TrendBadge delta={card.trend} />
+          </div>
 
           {/* Progress Bar */}
           <div className="h-1 bg-gray-100 rounded-full overflow-hidden">

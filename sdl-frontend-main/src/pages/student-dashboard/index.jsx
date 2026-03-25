@@ -18,6 +18,7 @@ import LearningProgressRing from "./components/LearningProgressRing";
 import StudentSelfRiskAlert from "./components/StudentSelfRiskAlert";
 import FiveRsRadarChart from "./components/FiveRsRadarChart";
 import StageSuggestions from "./components/StageSuggestions";
+import ClassAverageComparison from "./components/ClassAverageComparison";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
 
@@ -59,7 +60,7 @@ const StudentDashboard = () => {
   
   // 獲取專案數據
   const projectData = useProjectData(projectId, userId);
-  const { loading, ideaNodes, kanbanTasks, teamMembers, personalReflections, teamReflections } = projectData;
+  const { loading, ideaNodes, kanbanTasks, teamMembers, personalReflections, teamReflections, chatHistory } = projectData;
   // 啟用精準使用時間記錄（心跳）
   useUsageSession(projectId, userId);
   
@@ -111,6 +112,15 @@ const StudentDashboard = () => {
 
               {/* 學習目標 */}
               <LearningGoals learningGoals={learningGoals} />
+
+              {/* ② 班級情境參考（匿名平均值對比） */}
+              <ClassAverageComparison
+                personalData={personalData}
+                teamMembers={teamMembers}
+                ideaNodes={ideaNodes}
+                kanbanTasks={kanbanTasks}
+                personalReflections={personalReflections}
+              />
             </div>
 
             {/* 右側側邊欄 */}

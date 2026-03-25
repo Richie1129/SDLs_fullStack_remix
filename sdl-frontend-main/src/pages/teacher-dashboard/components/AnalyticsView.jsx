@@ -14,6 +14,7 @@ import {
   ProgressLineChart,
   ReflectionBarChart
 } from '../../../components/charts';
+import ClassFiveRsRadarChart from './ClassFiveRsRadarChart';
 
 // 互動元件
 import FilterBar from './FilterBar';
@@ -266,6 +267,11 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
             enhancedStudents={filteredStudents}
             realData={filteredData}
           />
+        </div>
+
+        {/* ③ 全班 5Rs 反思深度聚合雷達圖 */}
+        <div>
+          <ClassFiveRsRadarChart reflections={safeReflections} />
         </div>
       </div>
 

@@ -134,6 +134,7 @@ export const useMetricsData = (studentData, projectData) => {
   const classStats = useMemo(() => {
     const { tasks, nodes } = projectData;
     const { allProjects, allProjectMembers } = projectData;
+    const reflections = studentData.reflections || [];
 
     const totalStudents = enhancedStudents.length;
     const activeStudents = enhancedStudents.filter(s =>
@@ -155,6 +156,31 @@ export const useMetricsData = (studentData, projectData) => {
     const totalUsageHours = enhancedStudents.reduce((sum, s) => sum + (s.usageHours || 0), 0);
     const averageUsageHours = totalStudents > 0 ? Math.round((totalUsageHours / totalStudents) * 10) / 10 : 0;
 
+    // ── 本週 vs 上週趨勢計算 ──────────────────────────────
+    const now = new Date();
+    const daysSinceMon = (now.getDay() + 6) % 7; // 週一 = 0
+    const thisWeekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysSinceMon);
+    const lastWeekStart = new Date(thisWeekStart.getFullYear(), thisWeekStart.getMonth(), thisWeekStart.getDate() - 7);
+
+    const inRange = (dateStr, from, to) => {
+      const d = new Date(dateStr);
+      return d >= from && d < to;
+    };
+
+    // 反思：本週 vs 上週篇數差
+    const thisWeekReflections = reflections.filter(r => new Date(r.createdAt) >= thisWeekStart).length;
+    const lastWeekReflections = reflections.filter(r => inRange(r.createdAt, lastWeekStart, thisWeekStart)).length;
+
+    // 想法節點：本週 vs 上週新增數差
+    const thisWeekNodes = nodes.filter(n => new Date(n.createdAt) >= thisWeekStart).length;
+    const lastWeekNodes = nodes.filter(n => inRange(n.createdAt, lastWeekStart, thisWeekStart)).length;
+
+    // 活躍學生：本週有活動 vs 上週有活動
+    const lastWeekActiveStudents = enhancedStudents.filter(s => {
+      if (!s.lastActivity) return false;
+      return inRange(s.lastActivity, lastWeekStart, thisWeekStart);
+    }).length;
+
     console.log("📈 班級統計計算完成:", {
       總學生數: totalStudents,
       活躍學生: activeStudents,
@@ -171,9 +197,14 @@ export const useMetricsData = (studentData, projectData) => {
       totalTasks,
       totalProjects,
       totalUsageHours,
-      averageUsageHours
+      averageUsageHours,
+      weekTrend: {
+        activeStudents: activeStudents - lastWeekActiveStudents,
+        totalReflections: thisWeekReflections - lastWeekReflections,
+        totalIdeaNodes: thisWeekNodes - lastWeekNodes,
+      },
     };
-  }, [enhancedStudents, projectData]);
+  }, [enhancedStudents, projectData, studentData]);
 
   return {
     enhancedStudents,
