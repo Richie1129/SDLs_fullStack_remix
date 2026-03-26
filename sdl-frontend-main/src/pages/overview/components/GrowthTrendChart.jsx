@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { FiTrendingUp, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { assigneesIncludesUser } from '../../student-dashboard/hooks/utils/dataUtils';
 
 // 往前推算 N 個月，回傳 { label: '3月', key: '2026-03' } 陣列（舊→新）
 function buildMonthRange(numMonths) {
@@ -67,6 +68,7 @@ const GrowthTrendChart = ({
   aiInteractions = [],
   ideaNodes = [],
   userName = '',
+  userId = null,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [activeSeries, setActiveSeries] = useState(null);
@@ -86,12 +88,15 @@ const GrowthTrendChart = ({
     });
 
     kanbanTasks.forEach(t => {
-      const k = toMonthKey(t.createdAt);
-      if (!k || !validKeys.has(k)) return;
-      if (t.owner === userName) buckets[k].ownedCards++;
-      const assignees = t.assignees;
-      if (Array.isArray(assignees) && assignees.some(a => a === userName)) {
-        buckets[k].assignedCards++;
+      // 建立卡片：依建立時間計入
+      const createdKey = toMonthKey(t.createdAt);
+      if (createdKey && validKeys.has(createdKey) && t.owner === userName) {
+        buckets[createdKey].ownedCards++;
+      }
+      // 被指派卡片：依更新時間（指派發生的時間）計入
+      const assignedKey = toMonthKey(t.updatedAt || t.createdAt);
+      if (assignedKey && validKeys.has(assignedKey) && assigneesIncludesUser(t.assignees, userId, userName)) {
+        buckets[assignedKey].assignedCards++;
       }
     });
 

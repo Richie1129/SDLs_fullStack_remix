@@ -620,9 +620,12 @@ const StudentOverview = () => {
                 <GrowthTrendChart
                   allReflections={allReflections.filter(r => filteredProjectIds.has(r.projectId))}
                   kanbanTasks={kanbanTasks.filter(t => filteredProjectIds.has(t.projectId))}
-                  aiInteractions={aiInteractions}
+                  aiInteractions={aiInteractions.filter(a =>
+                    selectedSemester === 'all' || (a.project_id && filteredProjectIds.has(a.project_id))
+                  )}
                   ideaNodes={ideaNodes.filter(n => filteredProjectIds.has(n.projectId) && n.owner === userName)}
                   userName={userName}
+                  userId={userId}
                 />
 
               </div>
