@@ -310,7 +310,7 @@ const QuickActions = ({
       )}
 
       {/* Toast 動畫樣式 */}
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from {
             opacity: 0;
