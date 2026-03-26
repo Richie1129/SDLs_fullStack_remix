@@ -45,10 +45,10 @@ export const submitFeedback = async (data) => {
 /**
  * Get help-seeking stats for a user
  */
-export const getHelpSeekingStats = async (userId, timeRange = '7d') => {
+export const getHelpSeekingStats = async (userId, { timeRange = '30d', projectId } = {}) => {
   try {
     const response = await client.get(`/ai-task-assistant/help-seeking-stats/${userId}`, {
-      params: { timeRange }
+      params: { timeRange, ...(projectId && { projectId }) }
     });
     return response.data;
   } catch (error) {

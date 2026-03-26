@@ -91,7 +91,10 @@ const FiveRsRadarChart = ({ personalReflections = [] }) => {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
-          <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">5Rs 反思深度</h2>
+          <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 flex items-center">
+            <span className="w-1 h-6 bg-gradient-to-b from-customgreen to-teal-600 rounded-full mr-3" />
+            5Rs 反思深度
+          </h2>
           <p className="text-caption text-gray-400 mt-0.5">
             共 {totalCount} 篇反思，其中 {analyzedCount} 篇已獲 AI 分析
           </p>

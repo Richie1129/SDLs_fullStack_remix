@@ -17,6 +17,7 @@ import StudentSelfRiskAlert from "./components/StudentSelfRiskAlert";
 import FiveRsRadarChart from "./components/FiveRsRadarChart";
 import StageSuggestions from "./components/StageSuggestions";
 import ClassAverageComparison from "./components/ClassAverageComparison";
+import HelpSeekingAwareness from "./components/HelpSeekingAwareness";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
 
@@ -128,6 +129,9 @@ const StudentDashboard = () => {
 
               {/* 近期成就 */}
               <Achievements achievements={achievements} />
+
+              {/* 求助行為自我覺察 */}
+              <HelpSeekingAwareness userId={userId} projectId={projectId} />
 
             </div>
           </div>

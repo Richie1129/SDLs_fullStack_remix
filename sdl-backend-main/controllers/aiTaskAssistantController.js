@@ -49,8 +49,8 @@ function generateInsights(stats, qualityScore) {
   if (stats.expedient > stats.adaptive) {
     insights.push({
       type: 'warning',
-      message: '你傾向直接要答案。建議先思考 5 分鐘再求助，學習效果會更好。',
-      reference: 'Won (2024) 研究指出，便宜行事型求助會負向預測學習成效。'
+      message: '你傾向直接尋求解答。建議先思考 5 分鐘再求助，學習效果會更好。',
+      reference: 'Won (2024) 研究指出，跳過自我思考的求助方式會降低學習成效。'
     });
   }
 
@@ -227,18 +227,25 @@ async function submitFeedback(req, res) {
 async function getHelpSeekingStats(req, res) {
   try {
     const { userId } = req.params;
-    const { timeRange = '7d' } = req.query;
+    const { timeRange = '7d', projectId } = req.query;
+
+    // 授權檢查：只能查自己，或教師角色
+    if (parseInt(userId) !== req.user.id && req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Not authorized to view this data' });
+    }
 
     // Calculate start date
     const startDate = calculateStartDate(timeRange);
 
+    // 建立查詢條件（可選 projectId 過濾）
+    const where = {
+      userId,
+      createdAt: { [Op.gte]: startDate }
+    };
+    if (projectId) where.projectId = projectId;
+
     // Query logs
-    const logs = await HelpSeekingLog.findAll({
-      where: {
-        userId,
-        createdAt: { [Op.gte]: startDate }
-      }
-    });
+    const logs = await HelpSeekingLog.findAll({ where });
 
     // Calculate stats
     const stats = {
@@ -246,18 +253,20 @@ async function getHelpSeekingStats(req, res) {
       adaptive: logs.filter(l => l.helpSeekingType === 'adaptive').length,
       expedient: logs.filter(l => l.helpSeekingType === 'expedient').length,
       mixed: logs.filter(l => l.helpSeekingType === 'mixed').length,
-      askedPeers: logs.filter(l => {
-        const sources = l.askedSources || [];
-        return sources.includes('同學');
-      }).length,
-      askedTeacher: logs.filter(l => {
-        const sources = l.askedSources || [];
-        return sources.includes('老師');
-      }).length,
-      askedNone: logs.filter(l => {
-        const sources = l.askedSources || [];
-        return sources.includes('還沒問任何人');
-      }).length
+      askedPeers: logs.filter(l => (l.askedSources || []).includes('同學')).length,
+      askedTeacher: logs.filter(l => (l.askedSources || []).includes('老師')).length,
+      askedResources: logs.filter(l => (l.askedSources || []).includes('查資料')).length,
+      askedNone: logs.filter(l => (l.askedSources || []).includes('還沒問任何人')).length
+    };
+
+    // 求助成效統計
+    const logsWithScore = logs.filter(l => l.effectivenessScore !== null);
+    const effectivenessStats = {
+      checked: logsWithScore.length,
+      resolved: logs.filter(l => l.statusChanged === true).length,
+      avgScore: logsWithScore.length > 0
+        ? Math.round(logsWithScore.reduce((sum, l) => sum + l.effectivenessScore, 0) / logsWithScore.length)
+        : null
     };
 
     // Calculate quality score
@@ -269,6 +278,7 @@ async function getHelpSeekingStats(req, res) {
     res.json({
       stats,
       qualityScore,
+      effectivenessStats,
       insights
     });
 
