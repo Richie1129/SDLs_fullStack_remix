@@ -10,7 +10,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { FiTrendingUp, FiChevronDown, FiChevronUp } from 'react-icons/fi';
-import { isCompletedStatus } from '../utils/overviewUtils';
 
 // 往前推算 N 個月，回傳 { label: '3月', key: '2026-03' } 陣列（舊→新）
 function buildMonthRange(numMonths) {
@@ -33,10 +32,11 @@ function toMonthKey(dateStr) {
 }
 
 const SERIES = [
-  { key: 'reflections', label: '反思篇數',  color: '#0d9488' }, // teal-600
-  { key: 'tasks',       label: '完成任務',  color: '#2563eb' }, // blue-600
-  { key: 'ai',          label: 'AI 互動',   color: '#d97706' }, // amber-600
-  { key: 'ideas',       label: '想法節點',  color: '#7c3aed' }, // purple-600
+  { key: 'reflections',   label: '反思篇數',  color: '#0d9488' }, // teal-600
+  { key: 'ownedCards',    label: '建立卡片',  color: '#2563eb' }, // blue-600
+  { key: 'assignedCards', label: '被指派卡片', color: '#16a34a' }, // green-600
+  { key: 'ai',            label: 'AI 互動',   color: '#d97706' }, // amber-600
+  { key: 'ideas',         label: '想法節點',  color: '#7c3aed' }, // purple-600
 ];
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -66,15 +66,17 @@ const GrowthTrendChart = ({
   kanbanTasks = [],
   aiInteractions = [],
   ideaNodes = [],
+  userName = '',
 }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [activeSeries, setActiveSeries] = useState(null);
   const NUM_MONTHS = 5;
 
   const { chartData, hasMeaningfulData, trendInsight } = useMemo(() => {
     const months = buildMonthRange(NUM_MONTHS);
     const buckets = {};
     months.forEach(({ key }) => {
-      buckets[key] = { reflections: 0, tasks: 0, ai: 0, ideas: 0 };
+      buckets[key] = { reflections: 0, ownedCards: 0, assignedCards: 0, ai: 0, ideas: 0 };
     });
     const validKeys = new Set(months.map(m => m.key));
 
@@ -83,9 +85,14 @@ const GrowthTrendChart = ({
       if (k && validKeys.has(k)) buckets[k].reflections++;
     });
 
-    kanbanTasks.filter(t => isCompletedStatus(t.columnName)).forEach(t => {
-      const k = toMonthKey(t.updatedAt || t.createdAt);
-      if (k && validKeys.has(k)) buckets[k].tasks++;
+    kanbanTasks.forEach(t => {
+      const k = toMonthKey(t.createdAt);
+      if (!k || !validKeys.has(k)) return;
+      if (t.owner === userName) buckets[k].ownedCards++;
+      const assignees = t.assignees;
+      if (Array.isArray(assignees) && assignees.some(a => a === userName)) {
+        buckets[k].assignedCards++;
+      }
     });
 
     aiInteractions.forEach(a => {
@@ -101,7 +108,9 @@ const GrowthTrendChart = ({
     const data = months.map(({ key, label }) => ({ month: label, ...buckets[key] }));
 
     // 至少有兩個月有任何資料才算有意義
-    const nonZeroMonths = data.filter(d => d.reflections + d.tasks + d.ai + d.ideas > 0).length;
+    const nonZeroMonths = data.filter(d =>
+      d.reflections + d.ownedCards + d.assignedCards + d.ai + d.ideas > 0
+    ).length;
 
     // 計算反思趨勢（最近 2 個月比較）
     let trendInsight = null;
@@ -115,7 +124,7 @@ const GrowthTrendChart = ({
     }
 
     return { chartData: data, hasMeaningfulData: nonZeroMonths >= 2, trendInsight };
-  }, [allReflections, kanbanTasks, aiInteractions, ideaNodes]);
+  }, [allReflections, kanbanTasks, aiInteractions, ideaNodes, userName]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -171,20 +180,28 @@ const GrowthTrendChart = ({
                   <Legend
                     iconType="circle"
                     iconSize={8}
-                    wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
+                    wrapperStyle={{ fontSize: '12px', paddingTop: '8px', cursor: 'pointer' }}
+                    onClick={(entry) => setActiveSeries(prev => prev === entry.dataKey ? null : entry.dataKey)}
                   />
-                  {SERIES.map(s => (
-                    <Line
-                      key={s.key}
-                      type="monotone"
-                      dataKey={s.key}
-                      name={s.label}
-                      stroke={s.color}
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: s.color, strokeWidth: 0 }}
-                      activeDot={{ r: 5 }}
-                    />
-                  ))}
+                  {SERIES.map(s => {
+                    const isActive = activeSeries === s.key;
+                    const isDimmed = activeSeries !== null && !isActive;
+                    return (
+                      <Line
+                        key={s.key}
+                        type="monotone"
+                        dataKey={s.key}
+                        name={s.label}
+                        stroke={s.color}
+                        strokeWidth={isActive ? 3 : 2}
+                        strokeOpacity={isDimmed ? 0.15 : 1}
+                        dot={{ r: isActive ? 4 : 3, fill: s.color, strokeWidth: 0, fillOpacity: isDimmed ? 0.15 : 1 }}
+                        activeDot={{ r: isActive ? 6 : 5 }}
+                        onClick={() => setActiveSeries(prev => prev === s.key ? null : s.key)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    );
+                  })}
                 </LineChart>
               </ResponsiveContainer>
 

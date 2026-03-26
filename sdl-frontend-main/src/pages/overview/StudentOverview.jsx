@@ -244,7 +244,7 @@ const StudentOverview = () => {
     // 依篩選學期過濾次要資料
     const filteredChatHistory = chatHistory.filter(c => filteredProjectIds.has(c.projectId));
     const filteredKanbanTasks = kanbanTasks.filter(t => filteredProjectIds.has(t.projectId));
-    const filteredIdeaNodes = ideaNodes.filter(n => filteredProjectIds.has(n.projectId));
+    const filteredIdeaNodes = ideaNodes.filter(n => filteredProjectIds.has(n.projectId) && n.owner === userName);
     const filteredReflections = allReflections.filter(r => filteredProjectIds.has(r.projectId));
 
     const totalReflections = filteredReflections.length;
@@ -621,7 +621,8 @@ const StudentOverview = () => {
                   allReflections={allReflections.filter(r => filteredProjectIds.has(r.projectId))}
                   kanbanTasks={kanbanTasks.filter(t => filteredProjectIds.has(t.projectId))}
                   aiInteractions={aiInteractions}
-                  ideaNodes={ideaNodes.filter(n => filteredProjectIds.has(n.projectId))}
+                  ideaNodes={ideaNodes.filter(n => filteredProjectIds.has(n.projectId) && n.owner === userName)}
+                  userName={userName}
                 />
 
               </div>
