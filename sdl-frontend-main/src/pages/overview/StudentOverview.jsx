@@ -14,12 +14,13 @@ import { FiBookOpen, FiTrendingUp, FiClipboard, FiMessageSquare, FiInfo, FiCpu }
 import TopBar from "../../components/TopBar";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
+import CrossProjectSuggestions from './components/CrossProjectSuggestions';
+import GrowthTrendChart from './components/GrowthTrendChart';
 import { 
   calculateProgress, 
   formatRelativeTime, 
   getStatusColor, 
   getActivityIcon, 
-  getColumnStyle,
   isCompletedStatus 
 } from './utils/overviewUtils';
 
@@ -222,10 +223,16 @@ const StudentOverview = () => {
     }
   }, [allProjects, userId]);
 
+  // 篩選後的專案 ID 集合（供 personalStats 與 GrowthTrendChart 共用）
+  const filteredProjectIds = React.useMemo(
+    () => new Set(filteredProjects.map(p => p.id)),
+    [filteredProjects]
+  );
+
   // 計算個人統計（增強版）
   const personalStats = React.useMemo(() => {
-    const filteredProjectIds = new Set(filteredProjects.map(p => p.id));
     const totalProjects = filteredProjects.length;
+
     const completedProjects = filteredProjects.filter(p => p.ProjectEnd).length;
     const inProgressProjects = totalProjects - completedProjects;
     
@@ -251,15 +258,6 @@ const StudentOverview = () => {
     const totalAiInteractions = aiInteractions.length;
     const totalIdeaNodes = filteredIdeaNodes.length;
     
-    // 動態任務統計 - 基於真實的Kanban列表
-    const tasksByStatus = {};
-    const allColumnNames = [...new Set(filteredKanbanTasks.map(task => task.columnName))].filter(Boolean);
-    
-    // 為每個列表統計任務數量
-    allColumnNames.forEach(columnName => {
-      tasksByStatus[columnName] = filteredKanbanTasks.filter(task => task.columnName === columnName);
-    });
-
     const totalTasks = filteredKanbanTasks.length;
     // 嘗試識別完成狀態的任務（支援多種命名方式）
     const completedTasks = filteredKanbanTasks.filter(task => 
@@ -278,10 +276,8 @@ const StudentOverview = () => {
       totalIdeaNodes,
       completedTasks,
       totalTasks,
-      tasksByStatus,
-      allColumnNames // 新增：所有列表名稱
     };
-  }, [filteredProjects, allReflections, chatHistory, aiInteractions, ideaNodes, kanbanTasks, userName]);
+  }, [filteredProjects, filteredProjectIds, allReflections, chatHistory, aiInteractions, ideaNodes, kanbanTasks, userName]);
 
   // 最近學習活動（增強版）
   const recentActivities = React.useMemo(() => {
@@ -620,43 +616,26 @@ const StudentOverview = () => {
                   </div>
                 </div>
 
-                {/* 學習軌跡圖表 */}
-                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">學習進度軌跡</h2>
-                  <div className="space-y-stack-sm">
-                    {filteredProjects.map((project, index) => {
-                      const progress = calculateProgress(project.currentStage, project.currentSubStage);
-                      return (
-                        <div key={index} className="bg-gray-50 p-component-base rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-700">{project.name}</span>
-                              {project.semester && (
-                                <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-caption font-medium rounded border border-indigo-200">
-                                  {project.semester}
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-body-sm text-gray-500">{progress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-gradient-to-r from-teal-500 to-teal-600 h-3 rounded-full transition-all duration-slow" 
-                              style={{ width: `${progress}%` }}
-                            ></div>
-                          </div>
-                          <div className="mt-2 text-caption text-gray-500">
-                            目前階段: 第{project.currentStage}階段 - 子階段{project.currentSubStage}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* 月度成長趨勢折線圖（診斷性層次，隨學期篩選變動） */}
+                <GrowthTrendChart
+                  allReflections={allReflections.filter(r => filteredProjectIds.has(r.projectId))}
+                  kanbanTasks={kanbanTasks.filter(t => filteredProjectIds.has(t.projectId))}
+                  aiInteractions={aiInteractions}
+                  ideaNodes={ideaNodes.filter(n => filteredProjectIds.has(n.projectId))}
+                />
+
               </div>
 
               {/* 右側 - 最近活動（增強版） */}
               <div className="space-y-stack-md sm:space-y-stack-md-lg">
+                {/* 跨專案可操作建議 */}
+                <CrossProjectSuggestions
+                  activeProjects={filteredProjects.filter(p => !p.ProjectEnd)}
+                  allReflections={allReflections}
+                  kanbanTasks={kanbanTasks}
+                  aiInteractions={aiInteractions}
+                />
+
                 {/* 最近學習活動 */}
                 <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                   <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">最近活動</h2>
@@ -709,64 +688,6 @@ const StudentOverview = () => {
                   </div>
                 </div>
 
-                {/* 學習統計（增強版） */}
-                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">學習統計</h2>
-                  <div className="space-y-stack-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">總反思數</span>
-                      <span className="font-semibold text-gray-800">{personalStats.totalReflections}篇</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">平均專案進度</span>
-                      <span className="font-semibold text-gray-800">{personalStats.averageProgress}%</span>
-                    </div>
-                    
-                    {/* 任務狀況詳細分解 */}
-                    <div className="border-t pt-3">
-                      <h3 className="text-body-sm font-medium text-gray-700 mb-3">任務狀況分布</h3>
-                      <div className="space-y-stack-xs">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-body-sm flex items-center gap-1"><FiClipboard className="w-3.5 h-3.5" /> 總任務</span>
-                          <span className="font-semibold text-gray-800">{personalStats.totalTasks}</span>
-                        </div>
-                        {personalStats.allColumnNames.map(columnName => {
-                          const style = getColumnStyle(columnName);
-                          return (
-                            <div key={columnName} className="flex justify-between items-center">
-                              <span className="text-gray-600 text-body-sm">
-                                {style.icon} {columnName}
-                              </span>
-                              <span className={`font-semibold ${style.color}`}>
-                                {personalStats.tasksByStatus[columnName].length}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">團隊互動</span>
-                      <span className="font-semibold text-gray-800">{personalStats.totalChatMessages}次</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">創意想法</span>
-                      <span className="font-semibold text-gray-800">{personalStats.totalIdeaNodes}個</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">AI諮詢</span>
-                      <span className="font-semibold text-gray-800">{personalStats.totalAiInteractions}次</span>
-                    </div>
-                    <hr className="my-2" />
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-700 font-medium">學習活躍度</span>
-                      <span className="font-semibold text-green-600">
-                        {personalStats.thisWeekReflections > 0 ? "高" : "待提升"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
