@@ -258,7 +258,7 @@ async function calculateHelpSeekingActivity(userId, projectId, courseConfig) {
     // 2. 科學助手對話次數（新增！）
     const scienceAssistantCount = await RAGMessage.count({
       where: {
-        user_id: userId,
+        userId: userId,
         project_id: projectId,
         createdAt: { [Op.gte]: analysisStartDate }
       }
