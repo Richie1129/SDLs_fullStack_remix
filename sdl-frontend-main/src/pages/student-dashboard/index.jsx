@@ -127,16 +127,7 @@ const StudentDashboard = () => {
               <TeammatesList teammates={teammates} personalData={personalData} />
 
               {/* 近期成就 */}
-              <Achievements
-                achievements={achievements}
-                enhancedStudents={teamMembers}
-                realData={{
-                  nodes: ideaNodes,
-                  tasks: kanbanTasks,
-                  nodeRelations: [],
-                  reflections: [...personalReflections, ...teamReflections]
-                }}
-              />
+              <Achievements achievements={achievements} />
 
             </div>
           </div>
