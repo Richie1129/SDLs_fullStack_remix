@@ -17,29 +17,21 @@ import { FiUsers, FiChevronDown, FiChevronUp } from 'react-icons/fi';
  */
 const ClassAverageComparison = ({
   personalData,
-  teamMembers = [],
-  ideaNodes = [],
-  kanbanTasks = [],
   classSummary = null,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
 
-  const { metrics, memberCount } = useMemo(() => {
-    const count = Math.max(teamMembers.length, 1);
-
-    // ── 班級平均計算 ────────────────────────────────────────
-    const avgNodes = parseFloat((ideaNodes.length / count).toFixed(1));
-    const avgTasks = parseFloat((kanbanTasks.length / count).toFixed(1));
-
-    // 週反思平均來自後端匿名聚合 API
+  const { metrics } = useMemo(() => {
+    // 全部來自後端 classSummary，無前端自行計算
     const avgReflections = classSummary?.avgWeeklyReflections ?? null;
+    const avgNodes       = classSummary?.avgIdeaNodes ?? null;
+    const avgTasks       = classSummary?.avgKanbanTasks ?? null;
+    const count          = classSummary?.memberCount ?? 0;
 
-    // ── 我的數據 ─────────────────────────────────────────────
     const myNodes       = personalData?.ideaNodes || 0;
     const myTasks       = personalData?.totalTasks || 0;
     const myReflections = personalData?.weeklyReflections || 0;
 
-    // ── 指標狀態判定 ─────────────────────────────────────────
     const indicator = (mine, avg) => {
       if (avg === null || avg === 0) return 'neutral';
       const ratio = mine / avg;
@@ -63,7 +55,7 @@ const ClassAverageComparison = ({
         avg: avgNodes,
         mine: myNodes,
         status: indicator(myNodes, avgNodes),
-        noData: false,
+        noData: avgNodes === null,
       },
       {
         label: '看板任務',
@@ -71,12 +63,12 @@ const ClassAverageComparison = ({
         avg: avgTasks,
         mine: myTasks,
         status: indicator(myTasks, avgTasks),
-        noData: false,
+        noData: avgTasks === null,
       },
     ];
 
-    return { metrics: items, memberCount: count };
-  }, [personalData, teamMembers, ideaNodes, kanbanTasks, classSummary]);
+    return { metrics: items };
+  }, [personalData, classSummary]);
 
   const statusConfig = {
     above:   { text: '高於平均', textColor: 'text-customgreen',  rowBg: 'bg-green-50',  rowBorder: 'border-green-200' },
@@ -97,9 +89,6 @@ const ClassAverageComparison = ({
         <div className="flex items-center gap-2">
           <FiUsers className="w-4 h-4 text-blue-400 shrink-0" />
           <span className="text-body-sm font-semibold text-gray-800">班級情境參考</span>
-          <span className="text-caption px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 font-medium">
-            匿名 · {memberCount} 人
-          </span>
         </div>
         {collapsed
           ? <FiChevronDown className="w-4 h-4 text-gray-400" />

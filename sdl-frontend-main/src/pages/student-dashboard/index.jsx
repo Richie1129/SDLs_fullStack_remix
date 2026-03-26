@@ -13,8 +13,6 @@ import LearningTrack from "./components/LearningTrack";
 import LearningGoals from "./components/LearningGoals";
 import TeammatesList from "./components/TeammatesList";
 import Achievements from "./components/Achievements";
-import QuickStats from "./components/QuickStats";
-import LearningProgressRing from "./components/LearningProgressRing";
 import StudentSelfRiskAlert from "./components/StudentSelfRiskAlert";
 import FiveRsRadarChart from "./components/FiveRsRadarChart";
 import StageSuggestions from "./components/StageSuggestions";
@@ -112,15 +110,6 @@ const StudentDashboard = () => {
 
               {/* 學習目標 */}
               <LearningGoals learningGoals={learningGoals} />
-
-              {/* ② 班級情境參考（匿名平均值對比） */}
-              <ClassAverageComparison
-                personalData={personalData}
-                teamMembers={teamMembers}
-                ideaNodes={ideaNodes}
-                kanbanTasks={kanbanTasks}
-                classSummary={classSummary}
-              />
             </div>
 
             {/* 右側側邊欄 */}
@@ -128,8 +117,11 @@ const StudentDashboard = () => {
               {/* ⑦ 階段感知可操作建議 */}
               <StageSuggestions personalData={personalData} projectId={projectId} />
 
-              {/* 個人完成率環形圖 */}
-              <LearningProgressRing progressPercentage={personalData?.progressPercentage || 0} />
+              {/* ② 班級情境參考（匿名平均值對比） */}
+              <ClassAverageComparison
+                personalData={personalData}
+                classSummary={classSummary}
+              />
 
               {/* 團隊成員狀況 */}
               <TeammatesList teammates={teammates} personalData={personalData} />
@@ -146,8 +138,6 @@ const StudentDashboard = () => {
                 }}
               />
 
-              {/* 快速統計 */}
-              <QuickStats personalData={personalData} />
             </div>
           </div>
         </div>

@@ -3,6 +3,11 @@ const Daily_personal = require('../models/daily_personal');
 const Daily_team = require('../models/daily_team');
 const User = require('../models/user');
 const Project = require('../models/project');
+const Idea_wall = require('../models/idea_wall');
+const Node = require('../models/node');
+const Kanban = require('../models/kanban');
+const Column = require('../models/column');
+const Task = require('../models/task');
 const { Op, fn, col } = require('sequelize');
 const dailyService = require('../services/dailyService');
 const { createErrorResponse } = require('../constants/dailyErrorCodes');
@@ -52,7 +57,50 @@ exports.getClassSummary = async (req, res) => {
                 ? Math.round((totalWeeklyReflections / memberCount) * 10) / 10
                 : 0;
 
-        res.status(200).json({ avgWeeklyReflections, totalWeeklyReflections, memberCount });
+        // 全專案想法節點總數：先取所有 ideaWall id，再 count nodes
+        const ideaWalls = await Idea_wall.findAll({
+            where: { projectId },
+            attributes: ['id'],
+            raw: true,
+        });
+        const ideaWallIds = ideaWalls.map(w => w.id);
+        const totalIdeaNodes = ideaWallIds.length > 0
+            ? await Node.count({ where: { ideaWallId: { [Op.in]: ideaWallIds } } })
+            : 0;
+
+        // 全專案看板任務總數：Kanban → columns → tasks
+        const kanban = await Kanban.findOne({
+            where: { projectId },
+            attributes: ['id'],
+            raw: true,
+        });
+        let totalKanbanTasks = 0;
+        if (kanban) {
+            const columns = await Column.findAll({
+                where: { kanbanId: kanban.id },
+                attributes: ['id'],
+                raw: true,
+            });
+            const columnIds = columns.map(c => c.id);
+            if (columnIds.length > 0) {
+                totalKanbanTasks = await Task.count({
+                    where: { columnId: { [Op.in]: columnIds } },
+                });
+            }
+        }
+
+        const avgIdeaNodes =
+            memberCount > 0 ? Math.round((totalIdeaNodes / memberCount) * 10) / 10 : 0;
+        const avgKanbanTasks =
+            memberCount > 0 ? Math.round((totalKanbanTasks / memberCount) * 10) / 10 : 0;
+
+        res.status(200).json({
+            avgWeeklyReflections,
+            totalWeeklyReflections,
+            memberCount,
+            avgIdeaNodes,
+            avgKanbanTasks,
+        });
     } catch (err) {
         console.error('❌ 取得班級反思統計失敗:', err);
         res.status(500).json({ message: '伺服器錯誤', error: err.message });

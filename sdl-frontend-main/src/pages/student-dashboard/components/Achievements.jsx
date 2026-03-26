@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { FaTrophy, FaLightbulb, FaTasks, FaBookOpen, FaRobot, FaComments } from 'react-icons/fa';
-import RankingView from './RankingView';
 import ErrorBoundary from './ErrorBoundary';
-import { generateRankingData } from '../utils';
 
 /**
  * 成就展示組件
@@ -53,10 +51,9 @@ const levelLabel = (level) => {
 };
 
 const Achievements = ({ achievements, enhancedStudents, realData }) => {
-  const [mode, setMode] = useState('team'); // 'team' | 'personal' | 'ranking'
+  const [mode, setMode] = useState('team'); // 'team' | 'personal'
 
   const list = Array.isArray(achievements?.[mode]) ? achievements[mode] : [];
-  const rankingData = mode === 'ranking' ? generateRankingData(enhancedStudents, realData) : null;
 
   if (!achievements || (list.length === 0 && (!achievements.team || !achievements.personal))) {
     return (
@@ -92,21 +89,10 @@ const Achievements = ({ achievements, enhancedStudents, realData }) => {
           >
             個人
           </button>
-          <button
-            className={`px-2 py-1 rounded transition-all duration-200 ${mode === 'ranking' ? 'bg-gradient-to-r from-customgreen to-teal-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}
-            onClick={() => setMode('ranking')}
-          >
-            排行
-          </button>
         </div>
       </div>
       <div className="space-y-3 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100">
-        {mode === 'ranking' ? (
-          <ErrorBoundary>
-            <RankingView rankingData={rankingData} />
-          </ErrorBoundary>
-        ) : (
-          <>
+        <>
             {list.map((a) => {
               const style = levelStyles[a.level] || levelStyles.none;
               const totalForGold = a?.thresholds?.gold || 1;
@@ -145,7 +131,6 @@ const Achievements = ({ achievements, enhancedStudents, realData }) => {
               <div className="text-caption text-gray-500 text-center py-4">此分類暫無成就，持續努力加油！</div>
             )}
           </>
-        )}
       </div>
     </div>
   );

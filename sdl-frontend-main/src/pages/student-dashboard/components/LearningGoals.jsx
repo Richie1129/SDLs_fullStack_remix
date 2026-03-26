@@ -48,9 +48,7 @@ const LearningGoals = ({ learningGoals }) => {
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
                 <div
-                  className={`h-3 rounded-full transition-all duration-500 shadow-sm ${
-                    isDone ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-customgreen to-teal-600'
-                  }`}
+                  className="h-3 rounded-full transition-all duration-500 shadow-sm bg-gradient-to-r from-customgreen to-teal-600"
                   style={{ width: `${goal.progress}%` }}
                 ></div>
               </div>
@@ -61,14 +59,14 @@ const LearningGoals = ({ learningGoals }) => {
                 截止日期: <span className="font-medium ml-1">{deadlineText}</span>
               </span>
               {isDone && (
-                <span className="text-green-600 font-bold bg-green-100 px-2 py-1 rounded-full text-[10px] sm:text-caption inline-flex items-center gap-1">
+                <span className="text-customgreen font-bold bg-customgreen/10 px-2 py-1 rounded-full text-[10px] sm:text-caption inline-flex items-center gap-1">
                   達成 <FiCheckCircle className="w-3 h-3" />
                 </span>
               )}
             </div>
             {isDone && (
               <div className="absolute top-2 right-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <div className="w-3 h-3 bg-customgreen rounded-full animate-pulse"></div>
               </div>
             )}
           </div>
