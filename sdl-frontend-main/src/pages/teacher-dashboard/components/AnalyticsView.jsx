@@ -15,6 +15,7 @@ import {
   ReflectionBarChart
 } from '../../../components/charts';
 import ClassFiveRsRadarChart from './ClassFiveRsRadarChart';
+import ClassActivityHeatmap from './ClassActivityHeatmap';
 
 // 互動元件
 import FilterBar from './FilterBar';
@@ -273,6 +274,15 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
         <div>
           <ClassFiveRsRadarChart reflections={safeReflections} />
         </div>
+
+        {/* ④ 全班學習節律熱圖 */}
+        <div>
+          <ClassActivityHeatmap
+            reflections={safeReflections}
+            tasks={safeTasks}
+            nodes={safeNodes}
+          />
+        </div>
       </div>
 
       {/* 數據統計卡片 */}
@@ -310,19 +320,18 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
         </div>
       </div>
 
-      {/* 學生活動排行榜 */}
+      {/* 學生活動概況 */}
       <div className="bg-white p-component-base sm:p-component-md-lg rounded-lg shadow-md">
-        <h2 className="text-body-lg sm:text-h2 font-semibold mb-4 text-gray-700">學生活動排行榜</h2>
-        <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-50" 
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-body-lg sm:text-h2 font-semibold text-gray-700">學生活動概況</h2>
+          <span className="text-caption text-gray-400">教師管理參考，不對學生公開</span>
+        </div>
+        <div className="max-h-64 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-50"
              style={{ scrollBehavior: 'smooth' }}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-stack-sm">
             {studentActivity.slice(0, 10).map((student, index) => (
               <div key={index} className="flex items-center space-x-3 p-component-sm bg-gray-50 rounded-lg">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-body-sm font-bold text-white ${
-                  index === 0 ? 'bg-yellow-500' :
-                  index === 1 ? 'bg-gray-400' :
-                  index === 2 ? 'bg-orange-500' : 'bg-blue-500'
-                }`}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-body-sm font-bold text-white bg-teal-600">
                   {index + 1}
                 </div>
                 <div className="flex-1">

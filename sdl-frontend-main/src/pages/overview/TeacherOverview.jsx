@@ -7,7 +7,7 @@ import { getAllSubmit } from "../../api/submit";
 import { useQuery } from "react-query";
 import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
-import { FiBookOpen, FiUsers, FiTrendingUp, FiAlertTriangle, FiStar, FiFileText } from 'react-icons/fi';
+import { FiBookOpen, FiUsers, FiTrendingUp, FiAlertTriangle, FiStar, FiFileText, FiInfo } from 'react-icons/fi';
 import TopBar from "../../components/TopBar";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { 
@@ -15,6 +15,32 @@ import {
   formatRelativeTime, 
   getStatusColor 
 } from './utils/overviewUtils';
+
+const Tooltip = ({ text }) => {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative inline-flex ml-1">
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        onClick={() => setShow(v => !v)}
+        className="w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 flex items-center justify-center transition-colors duration-fast"
+        aria-label="說明"
+        type="button"
+      >
+        <FiInfo className="w-2.5 h-2.5" />
+      </button>
+      {show && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 bg-gray-800 text-white text-caption rounded-lg z-50 pointer-events-none shadow-lg leading-relaxed">
+          {text}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+        </div>
+      )}
+    </div>
+  );
+};
 
 const TeacherOverview = () => {
   const navigate = useNavigate();
@@ -27,7 +53,7 @@ const TeacherOverview = () => {
   const [allSubmissions, setAllSubmissions] = useState([]);
   const [allActivities, setAllActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('overview'); // 'overview', 'students', 'projects', 'analytics'
+  const [viewMode, setViewMode] = useState('overview'); // 'overview', 'students'
   const [selectedSemester, setSelectedSemester] = useState('all');
 
   // 從所有專案中提取可用學期（降序排列）
@@ -202,8 +228,24 @@ const TeacherOverview = () => {
       return new Date(r.createdAt) > oneWeekAgo;
     }).length;
 
-    // 需要關注的學生（進度低於30%）
-    const needAttentionList = filteredStudents.filter(student => student.projectProgress < 30);
+    // 需要關注的學生（進度低於30% 或 7天無反思活動）
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const needAttentionList = filteredStudents
+      .map(student => {
+        const studentReflections = allReflections.filter(r =>
+          r.projectId === student.projectId &&
+          (r.userId === student.id || r.user_id === student.id)
+        );
+        const lastReflection = studentReflections
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+        const lastActivityDate = lastReflection ? new Date(lastReflection.createdAt) : null;
+        const daysSinceActivity = lastActivityDate
+          ? Math.floor((Date.now() - lastActivityDate) / (1000 * 60 * 60 * 24))
+          : null;
+        const isSilent = daysSinceActivity === null || daysSinceActivity >= 7;
+        return { ...student, daysSinceActivity, isSilent };
+      })
+      .filter(student => student.projectProgress < 30 || student.isSilent);
     const needAttentionStudents = needAttentionList.length;
 
     // 優秀學生（進度高於80%）
@@ -225,6 +267,41 @@ const TeacherOverview = () => {
       excellentStudents
     };
   }, [filteredProjects, allStudents, allReflections, allSubmissions]);
+
+  // 各專案健康度評分（進度 33% + 本週反思率 33% + 最近活躍度 34%）
+  const projectHealthScores = React.useMemo(() => {
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+    return filteredProjects.map(project => {
+      const progress = calculateProgress(project.currentStage, project.currentSubStage);
+      const projectStudents = allStudents.filter(s => s.projectId === project.id);
+      const studentCount = Math.max(projectStudents.length, 1);
+      const projectReflections = allReflections.filter(r => r.projectId === project.id);
+      const projectActivities = allActivities.filter(a => a.projectId === project.id);
+      const weeklyReflections = projectReflections.filter(r => new Date(r.createdAt) > oneWeekAgo).length;
+      const hasWeeklyActivity =
+        projectReflections.some(r => new Date(r.createdAt) > oneWeekAgo) ||
+        projectActivities.some(a => new Date(a.createdAt || a.updatedAt) > oneWeekAgo);
+      const hasBiweeklyActivity =
+        projectReflections.some(r => new Date(r.createdAt) > twoWeeksAgo) ||
+        projectActivities.some(a => new Date(a.createdAt || a.updatedAt) > twoWeeksAgo);
+
+      const progressScore = (progress / 100) * 33;
+      const reflectionScore = Math.min(weeklyReflections / studentCount, 1) * 33;
+      const activityScore = hasWeeklyActivity ? 34 : hasBiweeklyActivity ? 17 : 0;
+      const healthScore = Math.round(progressScore + reflectionScore + activityScore);
+
+      return {
+        ...project,
+        healthScore,
+        progress,
+        studentCount: projectStudents.length,
+        weeklyReflections,
+        hasWeeklyActivity,
+      };
+    }).sort((a, b) => a.healthScore - b.healthScore);
+  }, [filteredProjects, allStudents, allReflections, allActivities]);
 
   // 最近教學活動
   const recentActivities = React.useMemo(() => {
@@ -329,26 +406,6 @@ const TeacherOverview = () => {
                   }`}
                 >
                   學生管理
-                </button>
-                <button
-                  onClick={() => setViewMode('projects')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg text-body-sm font-medium transition-colors ${
-                    viewMode === 'projects' 
-                      ? 'bg-teal-600 text-white' 
-                      : 'bg-white text-teal-600 border border-teal-600 hover:bg-teal-50'
-                  }`}
-                >
-                  專案監控
-                </button>
-                <button
-                  onClick={() => setViewMode('analytics')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg text-body-sm font-medium transition-colors ${
-                    viewMode === 'analytics' 
-                      ? 'bg-teal-600 text-white' 
-                      : 'bg-white text-teal-600 border border-teal-600 hover:bg-teal-50'
-                  }`}
-                >
-                  數據分析
                 </button>
               </div>
             </div>
@@ -517,6 +574,70 @@ const TeacherOverview = () => {
                 )}
               </div>
 
+              {/* ③ 各專案健康度橫向比較 */}
+              <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <div className="flex items-center">
+                      <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">各專案健康度一覽</h2>
+                      <Tooltip text="健康分（0–100）由三項加權：進度（33%）+ 本週每人平均反思數（33%）+ 近期活躍度（34%，涵蓋反思與活動記錄）。7 天內有動靜得 34 分，14 天內得 17 分，無活動得 0 分。分數越低排越前，方便優先關注。" />
+                    </div>
+                    <p className="text-caption text-gray-400 mt-0.5">綜合進度、本週反思率、最近動態 — 由低至高排列</p>
+                  </div>
+                  <span className="text-caption text-gray-400">{filteredProjects.length} 個專案</span>
+                </div>
+                {filteredProjects.length === 0 ? (
+                  <p className="text-center text-gray-400 py-4 text-body-sm">尚無專案資料</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-50">
+                    {projectHealthScores.map((project) => {
+                      const scoreStyle = project.healthScore >= 75
+                        ? { badge: 'bg-green-100 text-green-700 border-green-200', bar: 'bg-green-400', label: '運作良好' }
+                        : project.healthScore >= 45
+                        ? { badge: 'bg-amber-100 text-amber-700 border-amber-200', bar: 'bg-amber-400', label: '待關注' }
+                        : { badge: 'bg-red-100 text-red-700 border-red-200', bar: 'bg-red-400', label: '需介入' };
+
+                      return (
+                        <div key={project.id} className="flex items-center gap-3 p-component-xs border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors duration-fast">
+                          {/* 健康分數 */}
+                          <div className={`shrink-0 w-12 text-center px-1.5 py-1 rounded-lg border text-body-sm font-bold ${scoreStyle.badge}`}>
+                            {project.healthScore}
+                          </div>
+                          {/* 專案資訊 */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-body-sm font-medium text-gray-800 truncate">{project.name}</p>
+                              <span className={`shrink-0 text-caption px-1.5 py-0.5 rounded-full border ${scoreStyle.badge}`}>{scoreStyle.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full ${scoreStyle.bar} rounded-full transition-all duration-slow`} style={{ width: `${project.healthScore}%` }} />
+                              </div>
+                              <div className="flex gap-2 text-caption text-gray-500 shrink-0">
+                                <span>進度 {project.progress}%</span>
+                                <span>·</span>
+                                <span>本週反思 {project.weeklyReflections} 篇</span>
+                                <span>·</span>
+                                <span className={project.hasWeeklyActivity ? 'text-green-600' : 'text-amber-600'}>
+                                  {project.hasWeeklyActivity ? '本週活躍' : '近期沉寂'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {/* 進入按鈕 */}
+                          <button
+                            onClick={() => navigate(`/project/${project.id}/teacherDashboard`)}
+                            className="shrink-0 text-caption px-3 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors duration-fast"
+                          >
+                            查看
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-md sm:gap-stack-md-lg">
                 {/* 左側 - 專案總覽 */}
                 <div className="lg:col-span-2 space-y-stack-md sm:space-y-stack-md-lg">
@@ -600,28 +721,6 @@ const TeacherOverview = () => {
                     </div>
                   </div>
 
-                  {/* 學生學習表現分析 */}
-                  <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                    <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">學生表現分析</h2>
-                    <div className="space-y-stack-sm">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-stack-sm">
-                        <div className="bg-green-50 p-component-base rounded-lg text-center">
-                          <h3 className="text-body-lg font-bold text-green-600">{teachingStats.excellentStudents}</h3>
-                          <p className="text-body-sm text-gray-600">優秀學生 (≥80%)</p>
-                        </div>
-                        <div className="bg-yellow-50 p-component-base rounded-lg text-center">
-                          <h3 className="text-body-lg font-bold text-yellow-600">
-                            {teachingStats.uniqueStudents - teachingStats.excellentStudents - teachingStats.needAttentionStudents}
-                          </h3>
-                          <p className="text-body-sm text-gray-600">表現良好 (50-79%)</p>
-                        </div>
-                        <div className="bg-red-50 p-component-base rounded-lg text-center">
-                          <h3 className="text-body-lg font-bold text-red-600">{teachingStats.needAttentionStudents}</h3>
-                          <p className="text-body-sm text-gray-600">需要關注 (50%)</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 {/* 右側 - 最近活動和統計 */}
@@ -647,35 +746,6 @@ const TeacherOverview = () => {
                     </div>
                   </div>
 
-                  {/* 教學統計摘要 */}
-                  <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                    <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">教學統計</h2>
-                    <div className="space-y-stack-sm">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">總教學時數</span>
-                        <span className="font-semibold text-gray-800">{teachingStats.totalProjects * 40}小時</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">學生反思數量</span>
-                        <span className="font-semibold text-gray-800">{teachingStats.totalReflections}篇</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">作業提交數量</span>
-                        <span className="font-semibold text-gray-800">{teachingStats.totalSubmissions}份</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">平均學習進度</span>
-                        <span className="font-semibold text-gray-800">{teachingStats.averageProgress}%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600">教學效果</span>
-                        <span className={`font-semibold ${teachingStats.averageProgress >= 70 ? 'text-green-600' : teachingStats.averageProgress >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {teachingStats.averageProgress >= 70 ? "優秀" : teachingStats.averageProgress >= 50 ? "良好" : "待改善"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* ② 需要關注的學生 - 具名清單 */}
                   <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                     <div className="flex items-center justify-between mb-4">
@@ -691,13 +761,18 @@ const TeacherOverview = () => {
                         <p className="text-gray-500 text-center py-4 text-body-sm">所有學生表現良好</p>
                       ) : (
                         teachingStats.needAttentionList.slice(0, 8).map((student, index) => {
-                          const riskReason = student.projectProgress < 10
-                            ? '幾乎無進度，需立即關注'
-                            : student.projectProgress < 20
-                            ? `進度僅 ${student.projectProgress}%，嚴重落後`
-                            : `進度 ${student.projectProgress}%，低於門檻 30%`;
+                          const isLowProgress = student.projectProgress < 30;
+                          const riskReason = isLowProgress
+                            ? (student.projectProgress < 10
+                              ? '幾乎無進度，需立即關注'
+                              : student.projectProgress < 20
+                              ? `進度僅 ${student.projectProgress}%，嚴重落後`
+                              : `進度 ${student.projectProgress}%，低於門檻 30%`)
+                            : (student.daysSinceActivity === null
+                              ? '尚未在此專案撰寫任何反思'
+                              : `已 ${student.daysSinceActivity} 天無學習活動`);
                           return (
-                            <div key={index} className="border border-amber-200 bg-amber-50 rounded-lg p-component-sm">
+                            <div key={index} className={`border rounded-lg p-component-sm ${isLowProgress ? 'border-amber-200 bg-amber-50' : 'border-orange-200 bg-orange-50'}`}>
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <div className="min-w-0">
                                   <span className="text-body-sm font-semibold text-gray-800 block truncate">
@@ -705,11 +780,17 @@ const TeacherOverview = () => {
                                   </span>
                                   <span className="text-caption text-gray-500 block truncate">{student.projectName}</span>
                                 </div>
-                                <span className="shrink-0 text-caption font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-                                  {student.projectProgress}%
-                                </span>
+                                {isLowProgress ? (
+                                  <span className="shrink-0 text-caption font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                                    {student.projectProgress}%
+                                  </span>
+                                ) : (
+                                  <span className="shrink-0 text-caption font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded">
+                                    {student.daysSinceActivity === null ? '從未' : `${student.daysSinceActivity}天`}
+                                  </span>
+                                )}
                               </div>
-                              <p className="text-caption text-amber-700 mb-2">{riskReason}</p>
+                              <p className={`text-caption mb-2 ${isLowProgress ? 'text-amber-700' : 'text-orange-700'}`}>{riskReason}</p>
                               <button
                                 onClick={() => navigate(`/project/${student.projectId}/teacherDashboard`)}
                                 className="w-full text-caption bg-teal-600 text-white py-1 rounded hover:bg-teal-700 transition-colors duration-fast"
@@ -759,120 +840,6 @@ const TeacherOverview = () => {
               </div>
             )}
 
-            {/* 專案監控視圖 */}
-            {viewMode === 'projects' && (
-              <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">專案監控</h2>
-                <div className="space-y-stack-sm max-h-96 overflow-y-auto">
-                  {filteredProjects.map((project, index) => {
-                    const progress = calculateProgress(project.currentStage, project.currentSubStage);
-                    const projectStudents = allStudents.filter(s => s.projectId === project.id);
-                    const avgStudentProgress = projectStudents.length > 0 ? 
-                      Math.round(projectStudents.reduce((sum, s) => sum + s.projectProgress, 0) / projectStudents.length) : 0;
-                    
-                    return (
-                      <div key={index} className="border border-gray-200 rounded-lg p-component-base">
-                        <div className="flex justify-between items-center mb-3">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-gray-800">{project.name}</h3>
-                            {project.semester && (
-                              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-caption font-medium rounded-full border border-indigo-200">
-                                {project.semester}
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => navigate(`/project/${project.id}/teacherDashboard`)}
-                            className="px-3 py-1 bg-teal-600 text-white text-caption rounded hover:bg-teal-700 transition-colors"
-                          >
-                            詳細管理
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-stack-sm text-body-sm">
-                          <div>
-                            <span className="text-gray-500">專案進度</span>
-                            <div className="font-semibold">{progress}%</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">學生數量</span>
-                            <div className="font-semibold">{projectStudents.length}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">平均表現</span>
-                            <div className="font-semibold">{avgStudentProgress}%</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">階段</span>
-                            <div className="font-semibold">{project.currentStage}-{project.currentSubStage}</div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* 數據分析視圖 */}
-            {viewMode === 'analytics' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-stack-md">
-                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                  <h2 className="text-h3 font-semibold text-gray-800 mb-4">學習趨勢分析</h2>
-                  <div className="space-y-stack-sm">
-                    <div className="bg-blue-50 p-component-base rounded-lg">
-                      <h3 className="font-medium text-blue-800 mb-2">整體學習表現</h3>
-                      <p className="text-body-sm text-gray-600">
-                        平均進度: {teachingStats.averageProgress}%<br/>
-                        完成專案: {teachingStats.completedProjects}/{teachingStats.totalProjects}<br/>
-                        學習活躍度: {teachingStats.thisWeekReflections > 0 ? "高" : "需提升"}
-                      </p>
-                    </div>
-                    <div className="bg-green-50 p-component-base rounded-lg">
-                      <h3 className="font-medium text-green-800 mb-2">教學成效</h3>
-                      <p className="text-body-sm text-gray-600">
-                        優秀學生比例: {teachingStats.uniqueStudents > 0 ? Math.round((teachingStats.excellentStudents / teachingStats.uniqueStudents) * 100) : 0}%<br/>
-                        需關注學生: {teachingStats.needAttentionStudents}人<br/>
-                        反思參與度: {teachingStats.totalReflections > 0 ? "良好" : "待提升"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                  <h2 className="text-h3 font-semibold text-gray-800 mb-4">改進建議</h2>
-                  <div className="space-y-3">
-                    {teachingStats.needAttentionStudents > 0 && (
-                      <div className="bg-yellow-50 border-l-4 border-yellow-400 p-component-sm">
-                        <p className="text-body-sm text-yellow-800">
-                          建議加強對 {teachingStats.needAttentionStudents} 位進度落後學生的個別指導
-                        </p>
-                      </div>
-                    )}
-                    {teachingStats.thisWeekReflections < teachingStats.uniqueStudents && (
-                      <div className="bg-blue-50 border-l-4 border-blue-400 p-component-sm">
-                        <p className="text-body-sm text-blue-800">
-                          可考慮鼓勵學生更頻繁地撰寫學習反思
-                        </p>
-                      </div>
-                    )}
-                    {teachingStats.averageProgress < 50 && (
-                      <div className="bg-red-50 border-l-4 border-red-400 p-component-sm">
-                        <p className="text-body-sm text-red-800">
-                          整體進度偏慢，建議檢視教學方式或調整專案難度
-                        </p>
-                      </div>
-                    )}
-                    {teachingStats.excellentStudents / teachingStats.uniqueStudents > 0.7 && (
-                      <div className="bg-green-50 border-l-4 border-green-400 p-component-sm">
-                        <p className="text-body-sm text-green-800">
-                          教學成效優異！大部分學生表現優秀
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>

@@ -18,6 +18,7 @@ import FiveRsRadarChart from "./components/FiveRsRadarChart";
 import StageSuggestions from "./components/StageSuggestions";
 import ClassAverageComparison from "./components/ClassAverageComparison";
 import HelpSeekingAwareness from "./components/HelpSeekingAwareness";
+import ActivityHeatmap from "./components/ActivityHeatmap";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
 
@@ -59,7 +60,7 @@ const StudentDashboard = () => {
   
   // 獲取專案數據
   const projectData = useProjectData(projectId, userId);
-  const { loading, ideaNodes, kanbanTasks, teamMembers, personalReflections, teamReflections, chatHistory, classSummary } = projectData;
+  const { loading, ideaNodes, kanbanTasks, teamMembers, personalReflections, teamReflections, chatHistory, classSummary, aiInteractions } = projectData;
   // 啟用精準使用時間記錄（心跳）
   useUsageSession(projectId, userId);
   
@@ -105,6 +106,15 @@ const StudentDashboard = () => {
 
               {/* 學習軌跡 */}
               <LearningTrack learningTrack={learningTrack} />
+
+              {/* 4 週學習節律熱圖 */}
+              <ActivityHeatmap
+                personalReflections={personalReflections}
+                kanbanTasks={kanbanTasks}
+                ideaNodes={ideaNodes}
+                aiInteractions={aiInteractions}
+                userId={userId}
+              />
 
               {/* ⑥ 5Rs 反思深度雷達圖 */}
               <FiveRsRadarChart personalReflections={personalReflections} />
