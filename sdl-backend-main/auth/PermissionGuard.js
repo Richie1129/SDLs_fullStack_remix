@@ -79,8 +79,8 @@ class PermissionGuard {
             return { hasPermission: true, readOnly: false };
         }
 
-        // 檢查是否為指導教師（完全權限）
-        const isProjectMentor = project.mentor === user.username;
+        // 檢查是否為指導教師（以 mentorId 外鍵比對，避免 username 異動導致關聯斷裂）
+        const isProjectMentor = project.mentorId === user.id;
 
         if (isProjectMentor) {
             return { hasPermission: true, readOnly: false };

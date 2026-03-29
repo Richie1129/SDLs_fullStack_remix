@@ -103,7 +103,9 @@ exports.getProjectsByMentor = async (req, res) => {
     const semester = req.query.semester || getTaiwanSemester();
     console.log("mentorName:", mentorName, "semester:", semester);
     try {
-        const whereClause = { mentor: mentorName };
+        // 以 mentorId 外鍵查詢，避免 username 異動導致查不到資料
+        const mentorUser = await User.findOne({ where: { username: mentorName }, attributes: ['id'] });
+        const whereClause = mentorUser ? { mentorId: mentorUser.id } : { mentor: mentorName };
         if (semester !== 'all') {
             whereClause.semester = semester;
         }
@@ -138,8 +140,10 @@ exports.getProjectsByMentor = async (req, res) => {
 exports.getAvailableSemesters = async (req, res) => {
     try {
         const mentorName = req.params.mentor;
+        const mentorUser = await User.findOne({ where: { username: mentorName }, attributes: ['id'] });
+        const mentorWhereClause = mentorUser ? { mentorId: mentorUser.id } : { mentor: mentorName };
         const semesters = await Project.findAll({
-            where: { mentor: mentorName },
+            where: mentorWhereClause,
             attributes: [[sequelize.fn('DISTINCT', sequelize.col('semester')), 'semester']],
             order: [[sequelize.col('semester'), 'DESC']],
             raw: true
@@ -171,10 +175,18 @@ exports.createProject = async (req, res) => {
         const userId = req.body.userId;
         const creater = await User.findByPk(userId, { transaction: t });
 
+        // 解析 mentorId：優先用前端傳入的 ID，否則以 username 查詢（向下相容現有前端）
+        let resolvedMentorId = projectMentorId ? parseInt(projectMentorId) : null;
+        if (!resolvedMentorId && projectMentor) {
+            const mentorUser = await User.findOne({ where: { username: projectMentor }, transaction: t });
+            if (mentorUser) resolvedMentorId = mentorUser.id;
+        }
+
         const createdProject = await Project.create({
             name: projectName,
             describe: projectdescribe,
             mentor: projectMentor,
+            mentorId: resolvedMentorId,
             referral_code: referral_code,
             currentStage: 1,
             currentSubStage: 1,
@@ -450,7 +462,7 @@ exports.createProject = async (req, res) => {
 
 exports.updateProject = async (req, res) => {
     const projectId = req.params.projectId;
-    const { projectName, projectdescribe, projectMentor } = req.body;
+    const { projectName, projectdescribe, projectMentor, projectMentorId } = req.body;
 
     try {
         const project = await Project.findByPk(projectId);
@@ -462,6 +474,15 @@ exports.updateProject = async (req, res) => {
         project.name = projectName;
         project.describe = projectdescribe;
         project.mentor = projectMentor;
+
+        // 同步更新 mentorId（真正的外鍵）
+        if (projectMentorId) {
+            project.mentorId = parseInt(projectMentorId);
+        } else if (projectMentor) {
+            // 向下相容：若前端只送 username，做一次查詢取得 id
+            const mentorUser = await User.findOne({ where: { username: projectMentor } });
+            if (mentorUser) project.mentorId = mentorUser.id;
+        }
 
         await project.save();
 

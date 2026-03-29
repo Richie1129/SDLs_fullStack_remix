@@ -71,7 +71,7 @@ async function getProjectHelpSeekingStats(req, res) {
     }
 
     // 確認是該專案的導師
-    if (project.mentor !== req.user.username) {
+    if (project.mentorId !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized to view this project' });
     }
 
@@ -298,10 +298,11 @@ async function getTeacherHelpSeekingOverview(req, res) {
   try {
     const { timeRange = '30d' } = req.query;
     const teacherUsername = req.user.username;
+    const teacherId = req.user.id;
 
     // 獲取教師的所有專案
     const projects = await Project.findAll({
-      where: { mentor: teacherUsername },
+      where: { mentorId: teacherId },
       attributes: ['id', 'name', 'semester']
     });
 
@@ -428,11 +429,12 @@ async function getStudentHelpSeekingDetails(req, res) {
     const { userId } = req.params;
     const { projectId, timeRange = '30d' } = req.query;
     const teacherUsername = req.user.username;
+    const teacherId = req.user.id;
 
     // 驗證權限：確認學生在教師的專案中
     if (projectId) {
       const project = await Project.findByPk(projectId);
-      if (!project || project.mentor !== teacherUsername) {
+      if (!project || project.mentorId !== teacherId) {
         return res.status(403).json({ error: 'Not authorized' });
       }
     }
@@ -449,7 +451,7 @@ async function getStudentHelpSeekingDetails(req, res) {
     } else {
       // 如果沒有指定專案，只查詢教師的專案
       const teacherProjects = await Project.findAll({
-        where: { mentor: teacherUsername },
+        where: { mentorId: teacherId },
         attributes: ['id']
       });
       whereClause.projectId = { [Op.in]: teacherProjects.map(p => p.id) };
@@ -585,7 +587,7 @@ async function getProjectAvoidanceRisks(req, res) {
   try {
     const { projectId } = req.params;
     const { includeResolved = 'false', riskLevel = null } = req.query;
-    const teacherUsername = req.user.username;
+    const teacherId = req.user.id;
 
     // 驗證教師權限
     const project = await Project.findByPk(projectId);
@@ -593,7 +595,7 @@ async function getProjectAvoidanceRisks(req, res) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    if (project.mentor !== teacherUsername) {
+    if (project.mentorId !== teacherId) {
       return res.status(403).json({ error: 'Not authorized to view this project' });
     }
 
@@ -640,6 +642,7 @@ async function triggerAvoidanceDetection(req, res) {
   try {
     const { projectId } = req.params;
     const teacherUsername = req.user.username;
+    const teacherId = req.user.id;
 
     // 驗證教師權限
     const project = await Project.findByPk(projectId);
@@ -647,7 +650,7 @@ async function triggerAvoidanceDetection(req, res) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    if (project.mentor !== teacherUsername) {
+    if (project.mentorId !== teacherId) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -688,13 +691,13 @@ async function updateAvoidanceRisk(req, res) {
   try {
     const { riskId } = req.params;
     const { teacherViewed, teacherNotes, resolved } = req.body;
-    const teacherUsername = req.user.username;
+    const teacherId = req.user.id;
 
     // 查詢風險記錄和驗證權限
     const risk = await HelpSeekingAvoidanceRisk.findByPk(riskId, {
       include: [{
         model: Project,
-        attributes: ['mentor']
+        attributes: ['mentorId']
       }]
     });
 
@@ -702,7 +705,7 @@ async function updateAvoidanceRisk(req, res) {
       return res.status(404).json({ error: 'Risk record not found' });
     }
 
-    if (risk.project.mentor !== teacherUsername) {
+    if (risk.project.mentorId !== teacherId) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -752,7 +755,7 @@ async function getFollowUpNeededCases(req, res) {
   try {
     const { projectId } = req.params;
     const { limit = 50 } = req.query;
-    const teacherUsername = req.user.username;
+    const teacherId = req.user.id;
 
     // 驗證教師權限
     const project = await Project.findByPk(projectId);
@@ -760,7 +763,7 @@ async function getFollowUpNeededCases(req, res) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    if (project.mentor !== teacherUsername) {
+    if (project.mentorId !== teacherId) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -793,13 +796,13 @@ async function getFollowUpNeededCases(req, res) {
 async function triggerEffectivenessCheck(req, res) {
   try {
     const { logId } = req.params;
-    const teacherUsername = req.user.username;
+    const teacherId = req.user.id;
 
     // 查詢並驗證權限
     const log = await HelpSeekingLog.findByPk(logId, {
       include: [{
         model: Project,
-        attributes: ['mentor']
+        attributes: ['mentorId']
       }]
     });
 
@@ -807,7 +810,7 @@ async function triggerEffectivenessCheck(req, res) {
       return res.status(404).json({ error: 'Help-seeking log not found' });
     }
 
-    if (log.project.mentor !== teacherUsername) {
+    if (log.project.mentorId !== teacherId) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 

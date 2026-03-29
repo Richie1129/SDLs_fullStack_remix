@@ -454,7 +454,15 @@ exports.batchUpdateViewingSettings = async (req, res) => {
         const sourceUserIds = sourceUsers.map(user => user.id);
 
         // 2. 取得這些用戶參與的專案(需要是指定老師指導的，且為指定學期)
-        const projectWhereClause = { mentor: mentorName };
+        // 先以 mentorName 查出教師 id，再用 mentorId 外鍵過濾（防止 username 異動導致關聯斷裂）
+        const mentorUser = await User.findOne({
+            where: { username: mentorName },
+            attributes: ['id'],
+            transaction: t
+        });
+        const projectWhereClause = mentorUser
+            ? { mentorId: mentorUser.id }
+            : { mentor: mentorName }; // fallback：mentor id 尚未回填時仍可用
         if (semesterFilter !== 'all') {
             projectWhereClause.semester = semesterFilter;
         }

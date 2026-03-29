@@ -423,11 +423,9 @@ exports.getTeacherStudents = async (req, res) => {
             return res.status(403).json({ message: '權限不足' });
         }
 
-        const teacherUsername = req.user.username;
-
         // 找出此老師指導的所有專案
         const projects = await Project.findAll({
-            where: { mentor: teacherUsername },
+            where: { mentorId: req.user.id },
             attributes: ['id', 'name']
         });
 

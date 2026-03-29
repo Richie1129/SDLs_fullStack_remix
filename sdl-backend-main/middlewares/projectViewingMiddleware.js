@@ -57,8 +57,8 @@ const checkProjectViewingPermission = async (req, res, next) => {
             return next();
         }
 
-        // 檢查是否為指導教師
-        const isProjectMentor = project.mentor === user.username;
+        // 檢查是否為指導教師（以 mentorId 外鍵比對，避免 username 異動導致關聯斷裂）
+        const isProjectMentor = project.mentorId === user.id;
         console.log('isProjectMentor:', isProjectMentor);
 
         if (isProjectMentor) {

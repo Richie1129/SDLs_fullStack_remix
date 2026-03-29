@@ -71,6 +71,11 @@ const Project = sequelize.define('project', {
             analysis_window_sessions: 2     // 分析窗口（最近 N 堂課）
         },
         comment: '課程設定：用於求助迴避偵測的情境配置'
+    },
+    mentorId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: '指導教師 user.id（真正的外鍵，取代 mentor username 字串比對）'
     }
 },{
     timestamps: true,
