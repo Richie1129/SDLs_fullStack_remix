@@ -299,6 +299,25 @@ export function CardDetailModal({
                           </span>
                         </div>
                       )}
+                      <div className='flex justify-between items-center pt-1 border-t border-gray-100 mt-1'>
+                        <span className={cardData.dueDate && new Date(cardData.dueDate) < new Date() ? 'text-red-500 font-medium' : ''}>
+                          截止日期：
+                        </span>
+                        {permissions.canEdit ? (
+                          <input
+                            type="date"
+                            value={cardData.dueDate ? new Date(cardData.dueDate).toISOString().split('T')[0] : ''}
+                            onChange={(e) =>
+                              setCardData({ ...cardData, dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })
+                            }
+                            className="text-body-sm border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-customgreen"
+                          />
+                        ) : (
+                          <span className={cardData.dueDate && new Date(cardData.dueDate) < new Date() ? 'text-red-500 font-medium' : 'text-gray-600'}>
+                            {cardData.dueDate ? formatTime(cardData.dueDate, 'full') : '未設定'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

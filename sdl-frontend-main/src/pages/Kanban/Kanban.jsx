@@ -539,7 +539,7 @@ export default function Kanban() {
       )}
       
       <div className="flex-1 min-h-0 p-component-base sm:p-component-md-lg lg:p-component-lg overflow-visible md:overflow-hidden flex flex-col">
-        
+
         {/* View Controls Toolbar - 改良版 */}
         <div className="flex items-center justify-between mb-stack-sm">
           {/* 左側: 分組 Tab */}
@@ -578,10 +578,10 @@ export default function Kanban() {
           <div className="flex items-center gap-stack-xs">
             {/* 搜尋框 */}
             <div className="relative">
-              <svg 
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -614,7 +614,8 @@ export default function Kanban() {
               )}
             </div>
 
-            {/* 成員篩選按鈕 */}
+            {/* 成員篩選 + 清除篩選 */}
+            <>
             <div className="relative">
               <button
                 data-track
@@ -755,6 +756,7 @@ export default function Kanban() {
                 清除篩選
               </button>
             )}
+            </>
 
             {/* 導覽重播按鈕 */}
             {!isObservationMode && (
@@ -778,6 +780,7 @@ export default function Kanban() {
           </div>
         </div>
 
+        {/* 看板視圖 */}
         <DragDropContext onDragEnd={isObservationMode ? () => {} : onDragEnd}>
           
           <Droppable 

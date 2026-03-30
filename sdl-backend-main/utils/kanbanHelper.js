@@ -47,7 +47,7 @@ class KanbanHelper {
                 }
 
                 const tasks = await Task.findAll({
-                    attributes: ['id','title','content','labels','owner','assignees','images','files','createdAt','updatedAt'],
+                    attributes: ['id','title','content','labels','owner','assignees','images','files','dueDate','createdAt','updatedAt'],
                     where: { columnId: col.id }
                 });
 

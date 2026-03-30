@@ -30,3 +30,12 @@ td.numeric,
 .text-caption {
   letter-spacing: 0.03em;
 }
+
+/* 視圖切換淡入動畫 */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out both;
+}

@@ -51,8 +51,8 @@ class TaskHandler {
 
         // 任務提交
         SocketHandlerFactory.registerSimpleEvent(
-            socket, 
-            'taskSubmitted', 
+            socket,
+            'taskSubmitted',
             this.handleTaskSubmit
         );
     }

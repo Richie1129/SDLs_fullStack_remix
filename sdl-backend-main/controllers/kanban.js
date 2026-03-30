@@ -31,7 +31,7 @@ exports.getKanbanTask = async (req, res) => {
     try {
         const { columnId } = req.params;
         const tasks = await Task.findAll({
-            attributes: ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files', 'createdAt', 'updatedAt'],
+            attributes: ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files', 'dueDate', 'createdAt', 'updatedAt'],
             where: { columnId }
         });
         res.status(200).json(tasks);

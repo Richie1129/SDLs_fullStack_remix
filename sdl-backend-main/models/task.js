@@ -36,6 +36,10 @@ const Task = sequelize.define('task', {
         type: DataTypes.ARRAY(DataTypes.JSONB),
         defaultValue: [],
         allowNull: true,
+    },
+    dueDate: {
+        type: DataTypes.DATE,
+        allowNull: true,
     }
 }, {
     timestamps: true,

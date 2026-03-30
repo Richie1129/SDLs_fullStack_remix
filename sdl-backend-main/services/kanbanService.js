@@ -66,7 +66,7 @@ const getKanbanData = async (projectId) => {
     // 批量獲取所有列的任務
     const columnIds = sortedColumnData.map(c => c.id);
     const allTasks = await Task.findAll({
-        attributes: ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files', 'createdAt', 'updatedAt', 'columnId'],
+        attributes: ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files', 'dueDate', 'createdAt', 'updatedAt', 'columnId'],
         where: {
             columnId: { [Op.in]: columnIds }
         }
