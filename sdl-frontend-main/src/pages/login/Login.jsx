@@ -495,27 +495,25 @@ export default function Login() {
       {/* ════════════════════════════════════════════════════
           Footer
       ════════════════════════════════════════════════════ */}
-      <footer className="py-6 px-6 bg-gray-900 text-center">
-        <div className="flex flex-col items-center gap-2">
-          {/* 校徽 + 機構名稱 */}
-          <div className="flex items-center gap-2">
-            <img
-              src="/NCU_logo.jpg"
-              alt="國立中央大學校徽"
-              className="w-7 h-7 object-contain rounded-full"
-            />
-            <span className="text-gray-400 text-caption">
-              國立中央大學 網路學習科技研究所 WURET Team
-            </span>
+      <footer className="py-4 px-6 bg-gray-900 border-t border-gray-800">
+        <div className="max-w-6xl mx-auto flex flex-col items-center gap-2">
+          {/* 第一排：機構 + 版權 + 申請帳號 */}
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <div className="flex items-center gap-1.5">
+              <img src="/NCU_logo.jpg" alt="國立中央大學校徽" className="w-5 h-5 object-contain rounded-full" />
+              <span className="text-gray-500 text-caption">國立中央大學 網路學習科技研究所 WURET Team</span>
+            </div>
+            <span className="text-gray-700 text-caption">&middot;</span>
+            <span className="text-gray-600 text-caption">&copy; 2026 SDL Platform</span>
+            <span className="text-gray-700 text-caption">&middot;</span>
+            <Link to="/register" className="text-caption text-customgreen hover:opacity-80 transition-opacity duration-fast">
+              申請帳號
+            </Link>
           </div>
-          {/* 版權 */}
-          <p className="text-gray-600 text-caption">
-            &copy; 2026 SDL Platform &middot; 自主探究學習系統
+          {/* 第二排：AI 說明，視覺上更退後 */}
+          <p className="text-gray-600 text-caption border-t border-gray-800 pt-2 w-full text-center">
+            AI 建議僅供參考，不作為正式評量依據
           </p>
-          {/* 申請帳號 */}
-          <Link to="/register" className="text-caption text-customgreen hover:opacity-80 transition-opacity duration-fast">
-            申請帳號
-          </Link>
         </div>
       </footer>
 

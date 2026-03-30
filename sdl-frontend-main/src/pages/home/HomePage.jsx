@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation } from 'react-query';
 import Swal from 'sweetalert2';
 import { toast, Toaster } from 'react-hot-toast';
+import { FiInfo, FiX } from 'react-icons/fi';
 
 // 組件
 import TopBar from '../../components/TopBar';
@@ -82,6 +83,9 @@ export default function HomePage() {
     [...new Set(allStudentProjects.map(p => p.semester).filter(Boolean))]
   ), [allStudentProjects]);
 
+  // AI 說明浮動提示
+  const [showAITooltip, setShowAITooltip] = useState(false);
+
   // 檢查是否是第一次使用
   useEffect(() => {
     const hasSeenTour = storageService.get(`hasSeenTour_${role}_${userName}`);
@@ -89,6 +93,7 @@ export default function HomePage() {
       setShowOnboarding(true);
     }
   }, [role, userName]);
+
 
   const handleTourComplete = () => {
     setShowOnboarding(false);
@@ -294,6 +299,30 @@ export default function HomePage() {
   return (
     <div className='min-w-full min-h-screen bg-gray-100 overflow-auto scrollbar-hidden' data-tour={`${role}-dashboard`}>
       <TopBar />
+
+      {/* AI 使用說明（右下角常駐，點擊展開） */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+        {showAITooltip && (
+          <div className="flex flex-col gap-1 bg-white border border-gray-200 rounded-xl shadow-lg p-3 max-w-xs">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-body-sm font-medium text-gray-800">關於 AI 功能</span>
+              <button onClick={() => setShowAITooltip(false)} aria-label="關閉">
+                <FiX className="text-gray-400 hover:text-gray-600 transition-colors duration-fast" />
+              </button>
+            </div>
+            <p className="text-caption text-gray-500 leading-relaxed">
+              本系統使用 AI 輔助及用於分析學習活動，建議僅供參考，不作為正式評量依據。如有疑慮請向老師反映。
+            </p>
+          </div>
+        )}
+        <button
+          onClick={() => setShowAITooltip(prev => !prev)}
+          className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm hover:shadow-md transition-shadow duration-fast"
+        >
+          <FiInfo className="text-blue-500 text-sm" />
+          <span className="text-caption text-gray-500">AI 輔助中</span>
+        </button>
+      </div>
 
       <div className='flex flex-col my-10 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 2xl:px-40 py-10 w-full items-center'>
         <div className='flex flex-col w-full gap-stack-md'>

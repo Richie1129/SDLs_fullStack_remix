@@ -618,12 +618,15 @@ const FiveRsReflectionForm = ({
 
       {/* 操作按鈕 - 固定在底部 */}
       <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/80">
-        <div className="text-caption text-gray-500">
-          {getCompletedSteps() === 0 ? (
-            <span className="text-amber-600">⚠️ 請至少完成一個反思區塊</span>
-          ) : (
-            <span className="text-green-600">✓ 已完成 {getCompletedSteps()}/{steps.length} 個區塊</span>
-          )}
+        <div className="flex flex-col gap-1">
+          <div className="text-caption text-gray-500">
+            {getCompletedSteps() === 0 ? (
+              <span className="text-amber-600">⚠️ 請至少完成一個反思區塊</span>
+            ) : (
+              <span className="text-green-600">✓ 已完成 {getCompletedSteps()}/{steps.length} 個區塊</span>
+            )}
+          </div>
+          <span className="text-caption text-gray-400">儲存後系統將以 AI 分析您的反思內容，結果僅供參考</span>
         </div>
         <div className="flex gap-3">
           <button

@@ -749,7 +749,15 @@ const TeacherOverview = () => {
                   {/* ② 需要關注的學生 - 具名清單 */}
                   <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
                     <div className="flex items-center justify-between mb-4">
-                      <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">需要關注</h2>
+                      <div className="flex items-center gap-1.5">
+                        <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">需要關注</h2>
+                        <div className="group relative">
+                          <FiInfo className="text-gray-400 w-4 h-4 cursor-help" />
+                          <div className="absolute left-0 top-5 z-10 hidden group-hover:block w-64 bg-gray-800 text-white text-caption rounded-lg p-2.5 leading-relaxed shadow-lg">
+                            依 AI 多維度分析（進度、活動頻率、反思記錄）自動排序，請結合您的觀察後再採取行動。
+                          </div>
+                        </div>
+                      </div>
                       {teachingStats.needAttentionStudents > 0 && (
                         <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-caption font-medium rounded-full">
                           {teachingStats.needAttentionStudents} 人
