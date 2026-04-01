@@ -8,6 +8,7 @@ const Kanban = require('../models/kanban');
 const Daily_personal = require('../models/daily_personal');
 const Chatroom_message = require('../models/chatroom_message');
 const Idea_wall_message = require('../models/idea_wall_message');
+const Idea_wall = require('../models/idea_wall');
 const RAGMessage = require('../models/rag_message');
 const { Op } = require('sequelize');
 const sequelize = require('../util/database');
@@ -301,13 +302,17 @@ async function calculateHelpSeekingActivity(userId, projectId, courseConfig) {
       activityScore += Math.min(2, Math.floor(studentMessages / groupAverage));
     }
 
-    // 4. 想法牆互動次數
+    // 4. 想法牆互動次數（透過 idea_wall join 取得 projectId）
     const ideaWallCount = await Idea_wall_message.count({
       where: {
-        userId,
-        projectId,
+        senderId: userId,
         createdAt: { [Op.gte]: analysisStartDate }
-      }
+      },
+      include: [{
+        model: Idea_wall,
+        where: { projectId },
+        attributes: []
+      }]
     });
     details.ideaWall = ideaWallCount;
     activityScore += Math.min(1, ideaWallCount); // 最多加 1 分

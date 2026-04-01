@@ -39,8 +39,12 @@ export default function SubmitTask() {
             navigate(`/project/${projectId}/kanban`)
         },
         onError: (error) => {
-            console.log(error);
-            errorNotify(error.response.data.message)
+            console.error('Submit error:', error);
+            const msg = error?.response?.data?.message
+                || error?.response?.data?.error?.message
+                || error?.message
+                || '上傳失敗，請重新整理頁面後再試';
+            errorNotify(msg);
         }
     })
 

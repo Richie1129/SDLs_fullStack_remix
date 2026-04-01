@@ -15,6 +15,7 @@
  */
 
 const { SocketHandlerFactory } = require('../socketHandlers');
+const { writeSocketErrorReport } = require('../../utils/errorHandler');
 
 /**
  * AI Coach Socket 事件處理器
@@ -66,6 +67,7 @@ class AiCoachHandler {
 
         } catch (error) {
             console.error('Error recording AI feedback:', error);
+            writeSocketErrorReport(error, 'aiCoachFeedback', socket.user);
             socket.emit('aiCoachFeedbackResponse', {
                 success: false,
                 message: '記錄回饋時發生錯誤',

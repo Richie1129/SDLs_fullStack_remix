@@ -1,4 +1,5 @@
 const { SocketHandlerFactory } = require('../socketHandlers');
+const { writeSocketErrorReport } = require('../../utils/errorHandler');
 const Column = require('../../models/column');
 const Kanban = require('../../models/kanban');
 const Task = require('../../models/task');
@@ -117,6 +118,7 @@ class ColumnHandler {
 
         } catch (error) {
             console.error("處理欄位創建時出錯：", error);
+            writeSocketErrorReport(error, 'ColumnCreated', socket.user);
             this.emitError('columnCreate', {
                 message: '創建列表時發生錯誤',
                 code: 'COLUMN_CREATE_ERROR'
@@ -181,6 +183,7 @@ class ColumnHandler {
 
         } catch (error) {
             console.error("欄位順序變更錯誤:", error);
+            writeSocketErrorReport(error, 'columnOrderChanged', socket.user);
             this.emitError('columnOrderChange', {
                 message: '變更列表順序時發生錯誤',
                 code: 'COLUMN_ORDER_ERROR'
@@ -296,6 +299,7 @@ class ColumnHandler {
 
         } catch (error) {
             console.error("處理欄位刪除錯誤:", error);
+            writeSocketErrorReport(error, 'ColumnDelete', socket.user);
             this.emitError('columnDelete', {
                 message: '刪除列表時發生錯誤',
                 code: 'COLUMN_DELETE_ERROR'

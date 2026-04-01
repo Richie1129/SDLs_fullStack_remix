@@ -1,4 +1,5 @@
 const { SocketHandlerFactory } = require('../socketHandlers');
+const { writeSocketErrorReport } = require('../../utils/errorHandler');
 const Node = require('../../models/node');
 const Node_relation = require('../../models/node_relation');
 const Project = require('../../models/project');
@@ -155,7 +156,8 @@ class NodeHandler {
 
         } catch (error) {
             console.error("創建節點時發生錯誤:", error);
-            this.emitError('nodeCreate', { 
+            writeSocketErrorReport(error, 'nodeCreate', socket.user);
+            this.emitError('nodeCreate', {
                 message: '創建節點時發生錯誤',
                 code: 'NODE_CREATE_ERROR'
             });
@@ -214,7 +216,8 @@ class NodeHandler {
 
         } catch (error) {
             console.error("更新節點時發生錯誤:", error);
-            this.emitError('nodeUpdate', { 
+            writeSocketErrorReport(error, 'nodeUpdate', socket.user);
+            this.emitError('nodeUpdate', {
                 message: '更新節點時發生錯誤',
                 code: 'NODE_UPDATE_ERROR'
             });
@@ -300,8 +303,9 @@ class NodeHandler {
             console.error("錯誤訊息:", error.message);
             console.error("錯誤堆疊:", error.stack);
             console.error("節點資料:", { id, projectId, title, owner });
-            
-            this.emitError('nodeDelete', { 
+            writeSocketErrorReport(error, 'nodeDelete', socket.user);
+
+            this.emitError('nodeDelete', {
                 message: `刪除節點時發生錯誤: ${error.message}`,
                 code: 'NODE_DELETE_ERROR',
                 details: {
@@ -400,8 +404,9 @@ class NodeHandler {
 
         } catch (error) {
             console.error("❌ 建立節點連線時發生錯誤:", error.message);
-            
-            this.emitError('createNodeRelation', { 
+            writeSocketErrorReport(error, 'createNodeRelation', socket.user);
+
+            this.emitError('createNodeRelation', {
                 message: `建立連線時發生錯誤: ${error.message}`,
                 code: 'NODE_RELATION_CREATE_ERROR',
                 details: {
@@ -477,8 +482,9 @@ class NodeHandler {
 
         } catch (error) {
             console.error("❌ 刪除節點連線時發生錯誤:", error.message);
-            
-            this.emitError('deleteNodeRelation', { 
+            writeSocketErrorReport(error, 'deleteNodeRelation', socket.user);
+
+            this.emitError('deleteNodeRelation', {
                 message: `刪除連線時發生錯誤: ${error.message}`,
                 code: 'NODE_RELATION_DELETE_ERROR',
                 details: {

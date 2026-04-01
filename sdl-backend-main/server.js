@@ -16,7 +16,7 @@ const { validateToken } = require('./middlewares/AuthMiddleware');
 
 // 安全套件
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 // 監控系統 - Phase 2 監控基礎設施
 const PerformanceMonitor = require('./middlewares/performanceMonitor');
@@ -58,7 +58,7 @@ const loginLimiter = rateLimit({
     max: 5,
     keyGenerator: (req) => {
         const account = req.body?.account;
-        return account ? `login:account:${account}` : `login:ip:${req.ip}`;
+        return account ? `login:account:${account}` : `login:ip:${ipKeyGenerator(req.ip)}`;
     },
     message: { message: '登入嘗試次數過多，請稍後再試' },
     standardHeaders: true,
@@ -202,6 +202,10 @@ app.post('/api/upload', validateToken, uploadToMinio('files', 10), (req, res) =>
         res.status(500).json({ message: '檔案上傳失敗', error: error.message });
     }
 });
+
+// 全域錯誤攔截：所有 4xx/5xx 回應自動寫入 logs/errors/
+const { errorInterceptor } = require('./utils/errorHandler');
+app.use(errorInterceptor);
 
 // RAGFlow 代理路由
 const RAGFlowProxy = require('./routes/ragflowProxy');

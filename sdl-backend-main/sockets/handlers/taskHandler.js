@@ -1,4 +1,5 @@
 const { SocketHandlerFactory } = require('../socketHandlers');
+const { writeSocketErrorReport } = require('../../utils/errorHandler');
 const Task = require('../../models/task');
 const Column = require('../../models/column');
 const Kanban = require('../../models/kanban');
@@ -144,6 +145,7 @@ class TaskHandler {
 
         } catch (error) {
             console.error("創建任務錯誤:", error);
+            writeSocketErrorReport(error, 'taskItemCreated', socket.user);
             this.emitError('taskItemCreated', {
                 message: '創建任務時發生錯誤',
                 code: 'TASK_CREATE_ERROR'
@@ -236,7 +238,8 @@ class TaskHandler {
 
         } catch (error) {
             console.error("更新任務錯誤:", error);
-            this.emitError('taskUpdate', { 
+            writeSocketErrorReport(error, 'cardUpdated', socket.user);
+            this.emitError('taskUpdate', {
                 message: '更新任務時發生錯誤',
                 code: 'TASK_UPDATE_ERROR'
             });
@@ -349,6 +352,7 @@ class TaskHandler {
 
         } catch (error) {
             console.error('任務刪除錯誤:', error);
+            writeSocketErrorReport(error, 'cardDelete', socket.user);
             this.emitError('taskDelete', {
                 message: '刪除任務時發生錯誤',
                 code: 'TASK_DELETE_ERROR'
@@ -463,6 +467,7 @@ class TaskHandler {
 
         } catch (error) {
             console.error('任務拖拽錯誤:', error);
+            writeSocketErrorReport(error, 'cardItemDragged', socket.user);
             this.emitError('taskDrag', {
                 message: '拖拽任務時發生錯誤',
                 code: 'TASK_DRAG_ERROR'

@@ -221,36 +221,65 @@ exports.registerUser = async (req, res) => {
         // 加密密碼
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-        // 創建新用戶
-        const result = await User.create({
-            username,
-            account,
-            email,
-            password: hashedPassword,
-            role,
-            class: classField,
-            seatNumber,
-            school_id: schoolId
-        });
+        // 使用 transaction 確保 User + RefreshToken 原子寫入
+        const t = await sequelize.transaction();
+        try {
+            const result = await User.create({
+                username,
+                account,
+                email,
+                password: hashedPassword,
+                role,
+                class: classField,
+                seatNumber,
+                school_id: schoolId
+            }, { transaction: t });
 
-        const accessToken = sign(
-            { account: result.account, id: result.id, role: result.role, username: result.username },
-            config.jwt.secret,
-            { expiresIn: config.jwt.expiresIn }
-        );
+            const accessToken = sign(
+                { account: result.account, id: result.id, role: result.role, username: result.username },
+                config.jwt.secret,
+                { expiresIn: config.jwt.expiresIn }
+            );
 
-        // 記錄用戶註冊
-        logAudit(req, {
-            action: 'USER_REGISTER',
-            targetType: 'user',
-            targetId: result.id,
-            actorId: result.id,
-            metadata: { account: result.account, role: result.role, email: result.email }
-        }).catch(() => { });
+            // 生成 Refresh Token（與登入流程一致）
+            const refreshToken = crypto.randomUUID();
+            const expiresAt = new Date();
+            expiresAt.setTime(expiresAt.getTime() + config.jwt.refreshExpiresIn * 1000);
 
-        res.status(201).json({ accessToken, account: result.account, id: result.id });
+            await RefreshToken.create({
+                userId: result.id,
+                token: refreshToken,
+                expiresAt
+            }, { transaction: t });
+
+            await t.commit();
+
+            // 記錄用戶註冊（非阻塞）
+            logAudit(req, {
+                action: 'USER_REGISTER',
+                targetType: 'user',
+                targetId: result.id,
+                actorId: result.id,
+                metadata: { account: result.account, role: result.role, email: result.email }
+            }).catch(() => { });
+
+            res.status(201).json({
+                accessToken,
+                refreshToken,
+                account: result.account,
+                email: result.email,
+                username: result.username,
+                id: result.id,
+                role: result.role,
+                class: result.class,
+                seatNumber: result.seatNumber
+            });
+        } catch (innerErr) {
+            await t.rollback();
+            throw innerErr;
+        }
     } catch (err) {
-        console.error('Registration error:', err);
+        logger.error(err, '註冊失敗');
         res.status(500).json({ message: '內部錯誤，無法創建新用戶。' });
     }
 }

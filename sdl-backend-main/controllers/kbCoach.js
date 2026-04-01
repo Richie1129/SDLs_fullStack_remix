@@ -289,7 +289,7 @@ exports.provideGuidance = async (req, res) => {
         nodeTitle: title || null,
         nodeContent: content || null,
         thinkingProcess: coaching.thinkingProcess,
-        responseContent: coaching.content,
+        responseContent: coaching.content || '(AI 回應為空)',
         suggestedActions: coaching.suggestedActions || [],
         contextCount: contextNodes.length,
         responseTimeMs: responseTimeMs,

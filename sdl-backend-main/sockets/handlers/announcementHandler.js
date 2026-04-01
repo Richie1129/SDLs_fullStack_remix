@@ -1,4 +1,5 @@
 const { SocketHandlerFactory } = require('../socketHandlers');
+const { writeSocketErrorReport } = require('../../utils/errorHandler');
 const Announcement = require('../../models/announcement');
 const auditService = require('../../services/auditService');
 
@@ -69,6 +70,7 @@ class AnnouncementHandler {
 
         } catch (error) {
             console.error("公告儲存或廣播失敗:", error.message);
+            writeSocketErrorReport(error, 'emitAnnouncement', socket.user);
         }
     }
 }

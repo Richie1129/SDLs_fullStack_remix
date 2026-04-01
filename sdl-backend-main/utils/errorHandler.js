@@ -6,6 +6,10 @@
 const fs = require('fs');
 const path = require('path');
 
+// 預先建立 logs 目錄（只執行一次，避免每次 request 都 mkdirSync）
+const LOGS_DIR = path.join(__dirname, '..', '..', 'logs', 'errors');
+try { fs.mkdirSync(LOGS_DIR, { recursive: true }); } catch {}
+
 // 請求 body 中需要遮蔽的敏感欄位
 const SENSITIVE_FIELDS = ['password', 'newPassword', 'oldPassword', 'token', 'secret', 'refreshToken'];
 
@@ -23,18 +27,15 @@ const LOGIN_ROUTES = ['/api/users/login'];
 
 function writeErrorReport(err, req, statusCode) {
     try {
-        // 忽略：401，但登入路由例外（帳號密碼錯誤仍要記錄）
+        // 忽略：401，但登入路由例外（帳號密碼錯誤仍要排查）
         if (statusCode === 401 && !LOGIN_ROUTES.includes(req.originalUrl)) return;
         // 忽略：非 /api/ 路徑（靜態檔案 404 等噪音）
         if (!req.originalUrl.startsWith('/api/')) return;
 
-        const logsDir = path.join(__dirname, '..', '..', 'logs', 'errors');
-        fs.mkdirSync(logsDir, { recursive: true });
-
         const now = new Date();
         const date = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' }); // YYYY-MM-DD
         const time = now.toLocaleTimeString('zh-TW', { hour12: false, timeZone: 'Asia/Taipei' });
-        const filePath = path.join(logsDir, `${date}.md`);
+        const filePath = path.join(LOGS_DIR, `${date}.md`);
 
         const user = req.user
             ? `${req.user.username || '未知'} / ${req.user.email || '無 email'} (ID: ${req.user.id})`
@@ -67,10 +68,12 @@ function writeErrorReport(err, req, statusCode) {
 
         lines.push('', '---', '');
 
-        fs.appendFileSync(filePath, lines.join('\n'));
-    } catch (writeErr) {
-        // 不讓日誌錯誤影響正常請求回應
-        console.error('[ErrorReport] 寫入失敗:', writeErr.message);
+        // 非阻塞寫入，不阻塞 event loop
+        fs.appendFile(filePath, lines.join('\n'), (writeErr) => {
+            if (writeErr) console.error('[ErrorReport] 寫入失敗:', writeErr.message);
+        });
+    } catch (buildErr) {
+        console.error('[ErrorReport] 建構失敗:', buildErr.message);
     }
 }
 
@@ -149,7 +152,8 @@ function errorHandler(err, req, res, next) {
     // 標準化回應格式
     const statusCode = err.statusCode || 500;
 
-    // 寫入 MD 錯誤報告
+    // 寫入 MD 錯誤報告（設 flag 防止 errorInterceptor 雙重寫入）
+    res.__errorReported = true;
     writeErrorReport(err, req, statusCode);
 
     const response = {
@@ -205,9 +209,79 @@ function paginatedResponse(res, data, pagination, message = '查詢成功') {
     res.status(200).json(response);
 }
 
+/**
+ * 全域錯誤攔截中間件
+ * 攔截 res.json()，當 status >= 400 時自動寫入 logs/errors/
+ * 不需要修改任何 controller，一個 middleware 覆蓋全部
+ */
+function errorInterceptor(req, res, next) {
+    const originalJson = res.json.bind(res);
+
+    res.json = function (body) {
+        // 只在 4xx/5xx 時記錄，且 errorHandler 還沒處理過（防止雙重寫入）
+        if (res.statusCode >= 400 && !res.__errorReported) {
+            res.__errorReported = true;
+            const err = {
+                message: body?.error?.message || body?.message || body?.error || '未知錯誤',
+                code: body?.error?.code || body?.code || (res.statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR'),
+                isOperational: true
+            };
+            writeErrorReport(err, req, res.statusCode);
+        }
+        return originalJson(body);
+    };
+
+    next();
+}
+
+/**
+ * Socket 錯誤記錄（給 socket handler 使用）
+ * Socket 不走 Express middleware，需要獨立的 log 函式
+ */
+function writeSocketErrorReport(error, eventName, socketUser) {
+    try {
+        const now = new Date();
+        const date = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+        const time = now.toLocaleTimeString('zh-TW', { hour12: false, timeZone: 'Asia/Taipei' });
+        const filePath = path.join(LOGS_DIR, `${date}.md`);
+
+        const user = socketUser
+            ? `${socketUser.username || '未知'} (ID: ${socketUser.id})`
+            : '未知使用者';
+
+        const lines = [
+            `## ${time} — [Socket] ${eventName} \`ERROR\``,
+            '',
+            `- **使用者:** ${user}`,
+            `- **錯誤代碼:** \`SOCKET_ERROR\``,
+            `- **錯誤訊息:** ${error.message || String(error)}`,
+        ];
+
+        if (error.stack) {
+            lines.push('- **堆疊追蹤:**');
+            lines.push('  ```');
+            lines.push('  ' + error.stack.replace(/\n/g, '\n  '));
+            lines.push('  ```');
+        }
+
+        lines.push('', '---', '');
+
+        // 非阻塞寫入
+        fs.appendFile(filePath, lines.join('\n'), (writeErr) => {
+            if (writeErr) console.error('[SocketErrorReport] 寫入失敗:', writeErr.message);
+        });
+    } catch (buildErr) {
+        console.error('[SocketErrorReport] 建構失敗:', buildErr.message);
+    }
+}
+
 module.exports = {
     // 錯誤報告
     writeErrorReport,
+    writeSocketErrorReport,
+
+    // 全域攔截
+    errorInterceptor,
 
     // 錯誤類別
     AppError,
@@ -215,11 +289,11 @@ module.exports = {
     NotFoundError,
     PermissionError,
     ConflictError,
-    
+
     // 處理器
     asyncHandler,
     errorHandler,
-    
+
     // 回應輔助
     successResponse,
     paginatedResponse

@@ -4,6 +4,7 @@ import { useMutation } from 'react-query';
 import { userRegister, getSchools } from '../../api/users';
 import { AuthContext } from '../../utils/AuthContext';
 import Swal from 'sweetalert2';
+import { authStorage, userStorage } from '../../services/storageService';
 import { useTracking } from '../../providers/TrackingProvider';
 import { MdArrowForward, MdSchool, MdGroups } from 'react-icons/md';
 import { FiUser, FiLock, FiMail, FiHash, FiBriefcase, FiSearch, FiEye, FiEyeOff } from 'react-icons/fi';
@@ -83,21 +84,31 @@ export default function Register() {
 
   const userRegisterMutation = useMutation(userRegister, {
     onSuccess: (res) => {
-      localStorage.setItem('accessToken', res.data.accessToken);
-      localStorage.setItem('account', res.data.account);
-      localStorage.setItem('id', res.data.id);
-      if (res.data.class) localStorage.setItem('class', res.data.class);
-      if (res.data.seatNumber) localStorage.setItem('seatNumber', res.data.seatNumber);
+      // 與 Login.jsx 一致：使用 authStorage/userStorage namespace
+      authStorage.set('accessToken', res.data.accessToken);
+      if (res.data.refreshToken) authStorage.set('refreshToken', res.data.refreshToken);
+      userStorage.setMultiple({
+        id: res.data.id,
+        account: res.data.account,
+        email: res.data.email,
+        username: res.data.username,
+        role: res.data.role,
+      });
+      if (res.data.class) userStorage.set('class', res.data.class);
+      if (res.data.seatNumber) userStorage.set('seatNumber', res.data.seatNumber);
       setUserContext(prev => ({
         ...prev,
         account: res.data.account,
+        email: res.data.email,
         id: res.data.id,
         accessToken: res.data.accessToken,
+        username: res.data.username,
+        role: res.data.role,
         class: res.data.class,
         seatNumber: res.data.seatNumber,
       }));
-      navigate('/');
-      Swal.fire({ icon: 'success', title: '註冊成功！', text: '您已成功註冊！', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' });
+      Swal.fire({ icon: 'success', title: '註冊成功！', text: '您已成功註冊！', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' })
+        .then(() => navigate('/homepage'));
     },
     onError: (err) => {
       if (err.response?.status === 400 && err.response?.data?.message === '該用戶已存在，請嘗試其他用戶名稱。') {

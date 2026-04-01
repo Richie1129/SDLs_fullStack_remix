@@ -1,4 +1,5 @@
 const { SocketHandlerFactory } = require('../socketHandlers');
+const { writeSocketErrorReport } = require('../../utils/errorHandler');
 const Chatroom_message = require('../../models/chatroom_message');
 const Rag_message = require('../../models/rag_message');
 const QuestionMessage = require('../../models/question_message');
@@ -76,8 +77,9 @@ class MessageHandler {
             });
         } catch (error) {
             console.error("保存訊息時出錯：", error);
+            writeSocketErrorReport(error, 'send_message', socket.user);
         }
-        
+
         // 廣播訊息到房間
         this.socket.to(data.room).emit("receive_message", data);
     }
@@ -118,8 +120,9 @@ class MessageHandler {
             });
         } catch (error) {
             console.error("保存問答訊息時出錯：", error);
+            writeSocketErrorReport(error, 'send_QuestionMessage', socket.user);
         }
-        
+
         // 發送訊息到同一聊天室的其他用戶
         this.socket.to(data.questionId).emit("receive_QuestionMessage", data);
     }
@@ -226,6 +229,7 @@ class MessageHandler {
             }
         } catch (error) {
             console.error("保存 RAG 訊息時出錯：", error);
+            writeSocketErrorReport(error, 'rag_message', socket.user);
         }
 
         // 將訊息發送到對應的房間
