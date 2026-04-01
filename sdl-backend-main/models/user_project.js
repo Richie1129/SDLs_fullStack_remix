@@ -14,6 +14,14 @@ const UserProject = sequelize.define(
       allowNull: false,
       primaryKey: true,
     },
+    narrative_draft: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    draft_updated_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     tableName: "user_projects",

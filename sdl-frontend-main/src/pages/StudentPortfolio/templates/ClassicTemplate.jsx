@@ -114,7 +114,7 @@ export default function ClassicTemplate({ data, narrative }) {
       )}
 
       {/* 四個階段 */}
-      {stages.map(stage => (
+      {stages.filter(s => s.hasContent).map(stage => (
         <StageSection key={stage.stageNumber} stage={stage} />
       ))}
 

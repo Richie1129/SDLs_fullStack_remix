@@ -64,8 +64,8 @@ export default function TimelineTemplate({ data, narrative }) {
           borderRadius: '2px'
         }} />
 
-        {stages.map((stage, index) => {
-          const color = TIMELINE_COLORS[index];
+        {stages.filter(s => s.hasContent).map((stage) => {
+          const color = TIMELINE_COLORS[stage.stageNumber - 1];
           const hasContent = stage.reflections.length > 0 || stage.submits.length > 0 || stage.nodes.length > 0;
 
           return (

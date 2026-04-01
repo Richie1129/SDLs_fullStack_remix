@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 模型使用規則
+
+| 情境 | 使用模型 | 說明 |
+|------|----------|------|
+| 問題分析、規劃實作計畫、架構設計 | `opus` | 透過 Agent tool 指定 `model: "opus"` |
+| 研究調查、事實查核、文件閱讀 | `opus` | 需要深度推理的研究任務 |
+| 程式碼實作、檔案編輯、bug 修復 | `sonnet` | 預設模型，速度與品質的最佳平衡 |
+| 簡單搜尋、快速查詢 | `sonnet` | 不需切換 |
+
+**執行方式：** 使用 Agent tool 時，依上表指定 `model` 參數；主執行緒直接實作時維持預設 `sonnet`。
+
 ## 專案概述
 
 SDL (Self-Directed Learning) 是一個全端學習平台,結合科學探究五階段方法論(定標→擇策→監評→調節→學習歷程)、AI 輔助學習分析與現代化協作工具。
@@ -350,6 +361,31 @@ Socket.IO 採用 **事件驅動架構**,前後端透過事件名稱通訊:
 - 項目是「預填選取」還是「自動執行」？
 - 每個步驟的按鈕文字為何？
 - 確認後才開始撰寫程式碼
+
+### JSX 中的變數提取規則
+
+在 JSX render 內需要避免重複計算（如 `isOverdue`）時：
+
+**✅ 正確做法：在 render 函式最上方宣告 const**
+```jsx
+// 在 return 之前
+const isOverdue = cardData.dueDate && new Date(cardData.dueDate) < new Date();
+
+return (
+  <div className={isOverdue ? 'text-red-500' : ''}>...</div>
+);
+```
+
+**❌ 禁止在 JSX 內使用 IIFE**
+```jsx
+// 會破壞 JSX 結構，造成難以追蹤的括號不平衡錯誤
+{(() => {
+  const isOverdue = ...;
+  return <div>...</div>;
+})()}
+```
+
+IIFE 在 JSX 中雖然語法上合法，但容易在 edit 過程中造成 `</div>` 多餘或缺漏，且難以 debug。
 
 ### 錯誤處理
 

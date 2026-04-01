@@ -9,10 +9,10 @@ export default function PreExportReminder({ completeness, onConfirm, onCancel })
 
   const issues = [];
   if (!hasAnyReflection) {
-    issues.push({ type: 'warning', text: '尚未撰寫任何個人反思，學習歷程將以任務記錄為主' });
+    issues.push({ type: 'warning', text: '目前尚無個人反思記錄，建議在已完成的階段補上反思，讓歷程更有深度' });
   }
   if (missingSubmitCount > 0) {
-    issues.push({ type: 'info', text: `有 ${missingSubmitCount} 個子階段的正式提交尚未完成` });
+    issues.push({ type: 'info', text: `已完成進度中有 ${missingSubmitCount} 個子階段尚未正式提交，可先匯出目前記錄` });
   }
 
   if (issues.length === 0) {
@@ -28,8 +28,8 @@ export default function PreExportReminder({ completeness, onConfirm, onCancel })
         <div className="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-center gap-3">
           <FiAlertCircle className="text-amber-500 w-5 h-5 flex-shrink-0" />
           <div>
-            <div className="text-body font-semibold text-gray-800">匯出前確認</div>
-            <div className="text-body-sm text-gray-500">你的學習歷程有些地方可以更完整</div>
+            <div className="text-body font-semibold text-gray-800">目前學習進度</div>
+            <div className="text-body-sm text-gray-500">以下是你目前的學習歷程狀態</div>
           </div>
         </div>
 
@@ -65,7 +65,7 @@ export default function PreExportReminder({ completeness, onConfirm, onCancel })
             onClick={onConfirm}
             className="px-btn-x py-btn-y rounded-lg bg-customgreen text-white text-body-sm font-semibold hover:bg-customgreen/90 transition-shadow duration-fast flex-1"
           >
-            仍要匯出
+            匯出目前進度
           </button>
         </div>
       </div>

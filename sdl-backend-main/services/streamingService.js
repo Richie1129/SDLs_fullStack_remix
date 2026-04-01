@@ -57,11 +57,13 @@ async function streamGeminiResponse(prompt, res, options = {}) {
   console.log(`📝 [Gemini] Prompt 長度: ${prompt.length} 字元`);
 
   try {
-    // 設定 SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
+    // 若 headers 尚未送出才設定（作為 fallback 呼叫時 headers 已由呼叫方送出）
+    if (!res.headersSent) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+    }
 
     console.log('✅ [Gemini] SSE headers 已設定');
     console.log('🚀 [Gemini] 開始呼叫 generateContentStream...');

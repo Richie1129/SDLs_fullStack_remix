@@ -71,7 +71,7 @@ export default function ModernTemplate({ data, narrative }) {
       )}
 
       {/* 四階段 */}
-      {stages.map(stage => {
+      {stages.filter(s => s.hasContent).map(stage => {
         const palette = STAGE_PALETTE[stage.stageNumber];
         const hasContent = stage.reflections.length > 0 || stage.submits.length > 0 || stage.nodes.length > 0;
 
