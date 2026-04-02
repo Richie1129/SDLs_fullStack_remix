@@ -20,6 +20,10 @@ apiClient.interceptors.request.use(
       // Also set Authorization for future compatibility
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    // 檔案上傳自動延長 timeout（校園 WiFi 網速慢，30 秒不夠）
+    if (config.data instanceof FormData) {
+      config.timeout = 300000; // 5 分鐘
+    }
     return config;
   },
   (error) => Promise.reject(error)
