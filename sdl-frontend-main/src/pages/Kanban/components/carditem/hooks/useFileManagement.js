@@ -3,6 +3,7 @@ import apiClient from '@/api/client';
 import FileDownload from 'js-file-download';
 import toast from 'react-hot-toast';
 import { buildApiUrl, buildFileImageUrl, buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { validateFileSize } from '@/utils/fileValidation';
 
 const formatSize = (bytes) => {
   if (bytes === 0) return '0 B';
@@ -24,6 +25,10 @@ export function useFileManagement(cardData, setCardData) {
    */
   const handleFileUpload = useCallback(async (e) => {
     const files = Array.from(e.target.files);
+    if (!validateFileSize(files)) {
+      e.target.value = '';
+      return;
+    }
     const formData = new FormData();
 
     files.forEach((file) => {

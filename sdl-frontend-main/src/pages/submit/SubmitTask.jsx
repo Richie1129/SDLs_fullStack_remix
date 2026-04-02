@@ -14,17 +14,54 @@ import CongratulationsMain_icon from "../../assets/AnimationCongratulationsMain.
 import Congratulations_icon from "../../assets/AnimationCongratulations.json";
 import Lottie from "lottie-react";
 import { getStageInfo, setStageEnd, clearStageInfo } from '../../utils/authUtils';
+import { validateFileSize } from '../../utils/fileValidation';
 
 export default function SubmitTask() {
     const [taskData, setTaskData] = useState({});
     const [attachFile, setAttachFile] = useState(null);
+    const [uploadProgress, setUploadProgress] = useState(null);
     const navigate = useNavigate();
     const { projectId } = useParams();
     const [stageInfo, setStageInfo] = useState({ userSubmit: {} });
     const [isProjectEnded, setIsProjectEnded] = useState(false);
 
-    const { mutate } = useMutation(submitTask, {
+    // mutationFn 接收原始資料，每次呼叫時重新建構 FormData
+    // 確保 react-query 重試時不會送出已被消耗的 stream
+    const { mutate, isLoading: isSubmitting } = useMutation(({ projectId: pid, currentStage: cs, currentSubStage: css, content, files, extraFields }) => {
+        setUploadProgress(0);
+        const formData = new FormData();
+        formData.append('projectId', pid);
+        formData.append('currentStage', cs);
+        formData.append('currentSubStage', css);
+        formData.append('content', JSON.stringify(content));
+        if (files) {
+            for (let i = 0; i < files.length; i++) {
+                formData.append('attachFile', files[i]);
+            }
+        }
+        for (const key in extraFields) {
+            formData.append(key, extraFields[key]);
+        }
+        return submitTask(formData, {
+            onUploadProgress: (e) => {
+                if (e.total) {
+                    setUploadProgress(Math.round((e.loaded * 100) / e.total));
+                } else {
+                    setUploadProgress(-1); // 無法計算百分比，顯示不定進度
+                }
+            }
+        });
+    }, {
+        retry: (failureCount, error) => {
+            if (error?.code === 'UPLOAD_RETRY_AFTER_REFRESH') return false;
+            // 4xx 錯誤（權限、驗證等）不重試
+            if (error?.response?.status >= 400 && error?.response?.status < 500) return false;
+            // 網路瞬斷等暫時性錯誤最多重試 2 次
+            return failureCount < 2;
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * (attemptIndex + 1), 3000),
         onSuccess: (res) => {
+            setUploadProgress(null);
             if (res.message === "done") {
                 sucesssNotify("全部階段已完成")
                 setStageEnd(true);
@@ -39,6 +76,7 @@ export default function SubmitTask() {
             navigate(`/project/${projectId}/kanban`)
         },
         onError: (error) => {
+            setUploadProgress(null);
             console.error('Submit error:', error);
             const msg = error?.response?.data?.message
                 || error?.response?.data?.error?.message
@@ -80,6 +118,10 @@ export default function SubmitTask() {
         }));
     }
     const handleAddFileChange = e => {
+        if (!validateFileSize(e.target.files)) {
+            e.target.value = '';
+            return;
+        }
         setAttachFile(e.target.files);
     }
 
@@ -110,20 +152,14 @@ export default function SubmitTask() {
             if (result.isConfirmed) {
                 e.preventDefault();
                 const { currentStage, currentSubStage } = getStageInfo();
-                const formData = new FormData();
-                formData.append('projectId', projectId);
-                formData.append('currentStage', currentStage);
-                formData.append('currentSubStage', currentSubStage);
-                formData.append('content', JSON.stringify(taskData));
-                if (attachFile) {
-                    for (let i = 0; i < attachFile.length; i++) {
-                        formData.append("attachFile", attachFile[i])
-                    }
-                }
-                for (let key in taskData) {
-                    formData.append(key, taskData[key]);
-                }
-                mutate(formData);
+                mutate({
+                    projectId,
+                    currentStage,
+                    currentSubStage,
+                    content: taskData,
+                    files: attachFile || null,
+                    extraFields: taskData,
+                });
             }
         });
     }
@@ -185,14 +221,32 @@ export default function SubmitTask() {
                                     return null;
                             }
                         })}
-                        <div className='flex justify-center mt-4'>
+                        <div className='flex flex-col gap-stack-xs mt-4'>
+                            {uploadProgress !== null && (
+                                <div className="w-full">
+                                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                        {uploadProgress >= 0 ? (
+                                            <div
+                                                className="bg-customgreen h-2 rounded-full transition-all duration-fast"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            />
+                                        ) : (
+                                            <div className="bg-customgreen h-2 rounded-full w-1/3 animate-pulse" />
+                                        )}
+                                    </div>
+                                    <p className="text-caption text-gray-500 text-center mt-1">
+                                        {uploadProgress >= 0 ? `上傳中... ${uploadProgress}%` : '上傳中...'}
+                                    </p>
+                                </div>
+                            )}
                             <button
                                 data-track
                                 data-track-action="SUBMIT_UPLOAD"
                                 data-track-type="submit"
+                                disabled={isSubmitting}
                                 onClick={e => { handleSubmit(e) }}
-                                className="w-full py-2 sm:py-3 bg-customgreen hover:bg-customgreen/90 rounded-lg font-bold text-body-sm sm:text-body text-white transition-colors duration-fast">
-                                上傳
+                                className="w-full py-2 sm:py-3 bg-customgreen hover:bg-customgreen/90 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg font-bold text-body-sm sm:text-body text-white transition-colors duration-fast">
+                                {isSubmitting ? '上傳中...' : '上傳'}
                             </button>
                         </div>
                     </div>

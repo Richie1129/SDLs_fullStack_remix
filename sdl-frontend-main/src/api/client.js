@@ -72,6 +72,11 @@ apiClient.interceptors.response.use(
         }).then((newToken) => {
           originalRequest.headers['accessToken'] = newToken;
           originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+          if (originalRequest.data instanceof FormData) {
+            const retryError = new Error('登入狀態已更新，請重新點擊上傳');
+            retryError.code = 'UPLOAD_RETRY_AFTER_REFRESH';
+            return Promise.reject(retryError);
+          }
           return apiClient(originalRequest);
         }).catch((err) => {
           return Promise.reject(err);
@@ -95,6 +100,15 @@ apiClient.interceptors.response.use(
         // 重試原始請求
         originalRequest.headers['accessToken'] = newAccessToken;
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+
+        // FormData 底層 stream 已被第一次請求消耗，重試會送出空 body
+        // 回傳明確錯誤讓元件提示使用者重新操作
+        if (originalRequest.data instanceof FormData) {
+          const retryError = new Error('登入狀態已更新，請重新點擊上傳');
+          retryError.code = 'UPLOAD_RETRY_AFTER_REFRESH';
+          return Promise.reject(retryError);
+        }
+
         return apiClient(originalRequest);
 
       } catch (refreshError) {

@@ -8,6 +8,7 @@ import { formatUserDisplay } from '../../../../../utils/userDisplayUtils';
 import { buildFileImageUrl, buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 import AuthImage from '@/components/AuthImage';
 import { CommentErrorBoundary } from '../../../../../components/ErrorBoundary';
+import { validateFileSize } from '@/utils/fileValidation';
 import { getCurrentUserId } from '../../../../../utils/authUtils';
 
 const personImg = [
@@ -149,6 +150,10 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
   const handleSelectCommentFiles = (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    if (!validateFileSize(files)) {
+      if (commentFileInputRef.current) commentFileInputRef.current.value = "";
+      return;
+    }
     setFilesToUpload((prev) => [...prev, ...files]);
     if (commentFileInputRef.current) commentFileInputRef.current.value = "";
   };

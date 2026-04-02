@@ -48,6 +48,8 @@ services:
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
+      # CORS 允許的 origins
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     volumes:
       - "./sdl-backend-main/daily_file:/sdl-backend-main/daily_file"
     networks:

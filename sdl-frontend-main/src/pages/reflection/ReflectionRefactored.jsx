@@ -6,6 +6,7 @@ import { getCurrentUsername } from '../../utils/userUtils';
 import { getCurrentUserId, getCurrentUserRole, getStageInfo } from '../../utils/authUtils';
 import { is5RsFormat } from "@/utils/5RsUtils.js";
 import { DAILY_ERROR_CODES } from '@/constants/dailyErrorCodes.js';
+import { validateFileSize } from '@/utils/fileValidation';
 
 // Hooks
 import { usePersonalDaily } from "./hooks/usePersonalDaily";
@@ -71,6 +72,10 @@ export default function ReflectionRefactored() {
   };
 
   const handleAddFileChange = (e) => {
+    if (!validateFileSize(e.target.files)) {
+      e.target.value = '';
+      return;
+    }
     setAttachFile(e.target.files);
   };
 

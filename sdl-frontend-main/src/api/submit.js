@@ -1,11 +1,12 @@
 import apiClient from './client';
 
-export const submitTask = async (data) => {
+export const submitTask = async (data, extraConfig = {}) => {
     const isFormData = data instanceof FormData;
     const projectId = isFormData ? data.get('projectId') : data?.projectId;
 
     const response = await apiClient.post(`/submit`, data, {
-        params: projectId ? { projectId } : undefined
+        params: projectId ? { projectId } : undefined,
+        ...extraConfig
     })
     return response.data
 }

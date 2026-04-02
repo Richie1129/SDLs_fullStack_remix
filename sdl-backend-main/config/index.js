@@ -84,9 +84,10 @@ class Config {
 
     // CORS 配置
     get cors() {
-        const allowedOrigins = process.env.ALLOWED_ORIGINS 
-            ? process.env.ALLOWED_ORIGINS.split(',')
-            : ['http://localhost', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3001'];
+        const raw = process.env.ALLOWED_ORIGINS;
+        const allowedOrigins = raw && raw.trim()
+            ? raw.split(',').map(s => s.trim())
+            : ['http://localhost', 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:3001', 'http://localhost:8080'];
         
         return {
             origin: allowedOrigins,

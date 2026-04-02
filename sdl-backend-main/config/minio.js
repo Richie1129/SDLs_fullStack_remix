@@ -5,7 +5,6 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const minioConfig = {
 
     endpoint: process.env.MINIO_ENDPOINT || 'http://localhost:9000',
-    publicEndpoint: process.env.MINIO_PUBLIC_ENDPOINT || 'http://localhost:9000', // 前端可訪問的地址
     accessKeyId: process.env.MINIO_ACCESS_KEY || 'minioadmin',
     secretAccessKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
     bucketName: process.env.MINIO_BUCKET_NAME || 'sdl-files',
@@ -31,42 +30,39 @@ const s3Client = new S3Client({
 });
 
 /**
- * 上傳檔案到 MinIO
- * @param {Buffer} fileBuffer - 檔案 buffer
- * @param {string} fileName - 檔案名稱 
+ * 上傳檔案到 MinIO（支援 Buffer 或 Stream）
+ * @param {Buffer|ReadableStream} fileBody - 檔案內容（Buffer 或 ReadableStream）
+ * @param {string} fileName - 檔案名稱
  * @param {string} contentType - MIME 類型
+ * @param {number} [fileSize] - 檔案大小（stream 模式需提供）
  * @returns {Promise<Object>} 上傳結果
  */
-const uploadFileToMinio = async (fileBuffer, fileName, contentType) => {
-    console.log('📁 開始上傳檔案到 MinIO...');
-    console.log('檔案名稱:', fileName);
-    console.log('檔案類型:', contentType);
-    console.log('檔案大小:', fileBuffer.length, 'bytes');
+const uploadFileToMinio = async (fileBody, fileName, contentType, fileSize) => {
+    const size = fileSize || (Buffer.isBuffer(fileBody) ? fileBody.length : undefined);
+    console.log('📁 開始上傳檔案到 MinIO:', fileName, contentType, size ? `${size} bytes` : 'stream');
 
     try {
-        const command = new PutObjectCommand({
+        const putParams = {
             Bucket: minioConfig.bucketName,
             Key: fileName,
-            Body: fileBuffer,
+            Body: fileBody,
             ContentType: contentType,
-        });
+        };
+        if (size) putParams.ContentLength = size;
 
+        const command = new PutObjectCommand(putParams);
         const result = await s3Client.send(command);
-        
-        // 先返回基本 URL，稍後可以通過 API 獲取預簽名 URL
-        const fileUrl = `${minioConfig.publicEndpoint}/${minioConfig.bucketName}/${fileName}`;
-        
-        console.log('📁 MinIO 檔案路徑:', fileUrl);
-        
-        console.log('✅ 檔案上傳成功!');
-        console.log('檔案 URL:', fileUrl);
-        console.log('ETag:', result.ETag);
-        
+
+        // 儲存邏輯路徑而非主機名 URL，避免 Docker 內部主機名無法被瀏覽器解析
+        const fileUrl = `minio://${minioConfig.bucketName}/${fileName}`;
+
+        console.log('✅ 檔案上傳成功:', fileName, 'ETag:', result.ETag);
+
         return {
             url: fileUrl,
             etag: result.ETag,
             fileName: fileName,
-            size: fileBuffer.length,
+            size: size || 0,
             contentType: contentType
         };
     } catch (error) {

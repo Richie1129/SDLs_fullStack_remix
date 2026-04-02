@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FiX, FiImage, FiPaperclip, FiSend, FiDownload, FiFile, FiFileText, FiTrash, FiInfo } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import Swal from 'sweetalert2';
+import { validateFileSize } from '../utils/fileValidation';
 import { 
   fetchProjectComments, 
   createProjectComment,
@@ -137,6 +138,10 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const onPickFilesForNew = () => fileInputRef.current?.click();
   const onFilesChosenForNew = (e) => {
     const files = Array.from(e.target.files || []);
+    if (!validateFileSize(files)) {
+      e.target.value = '';
+      return;
+    }
     setPendingFiles(files);
   };
 
@@ -521,6 +526,10 @@ function CommentAttachmentPicker({ onPick, label = '附件' }) {
   const ref = useRef(null);
   const onChange = (e) => {
     const files = Array.from(e.target.files || []);
+    if (!validateFileSize(files)) {
+      e.target.value = '';
+      return;
+    }
     if (files.length > 0) onPick(files);
     e.target.value = '';
   };
