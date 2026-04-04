@@ -54,13 +54,13 @@ async function testVLLMAPI(baseUrl, modelName, apiKey, name) {
   }
 }
 
-// 測試 Gemma-3 (earth-vllmapi)
-async function testGemma3Earth() {
+// 測試 Gemma-4 (vllm-193)
+async function testGemma4() {
   return await testVLLMAPI(
-    'https://earth-vllmapi.agenticgrader.com/v1',
-    'ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g',
+    'https://vllm-193.hsueh.tw/v1',
+    '/models/gemma-4-26B-A4B-it',
     process.env.VLLM_API_KEY,
-    'Gemma-3 (earth-vllmapi)'
+    'Gemma-4 (vllm-193)'
   );
 }
 
@@ -118,32 +118,32 @@ async function main() {
   // 測試當前配置
   const currentSuccess = await testCurrentVLLM();
   
-  // 測試 Gemma-3 Earth
-  const gemma3Success = await testGemma3Earth();
-  
+  // 測試 Gemma-4 (vllm-193)
+  const gemma4Success = await testGemma4();
+
   // 測試 GPT-OSS-20b
   const gptOssSuccess = await testGPTOSS();
-  
+
   // 列出可用模型
   await listModels(process.env.VLLM_BASE_URL, process.env.VLLM_API_KEY, 'VLLM');
-  await listModels('https://earth-vllmapi.agenticgrader.com/v1', process.env.VLLM_API_KEY, 'Earth-VLLM');
+  await listModels('https://vllm-193.hsueh.tw/v1', process.env.VLLM_API_KEY, 'vLLM-193');
   await listModels(process.env.HSUEH_VLLM_BASE_URL, process.env.HSUEH_VLLM_API_KEY, 'Hsueh-VLLM');
-  
+
   // 總結
   console.log('\n========================================');
   console.log('📊 測試總結');
   console.log('========================================');
   console.log(`當前 VLLM 配置: ${currentSuccess ? '✅ 可用' : '❌ 不可用'}`);
-  console.log(`Gemma-3 (earth-vllmapi): ${gemma3Success ? '✅ 可用' : '❌ 不可用'}`);
+  console.log(`Gemma-4 (vllm-193): ${gemma4Success ? '✅ 可用' : '❌ 不可用'}`);
   console.log(`GPT-OSS-20b (Hsueh): ${gptOssSuccess ? '✅ 可用' : '❌ 不可用'}`);
-  
-  if (!gemma3Success) {
-    console.log('\n⚠️  Gemma-3 連線失敗可能原因：');
+
+  if (!gemma4Success) {
+    console.log('\n⚠️  Gemma-4 連線失敗可能原因：');
     console.log('1. API Key 不正確或已過期');
     console.log('2. 模型名稱錯誤（需要確認正確的模型 ID）');
     console.log('3. Base URL 不正確');
     console.log('4. 網路連線問題');
-    console.log('\n建議：請檢查 earth-vllmapi.agenticgrader.com 是否支援 Gemma-3 模型');
+    console.log('\n建議：請檢查 vllm-193.hsueh.tw 是否支援 Gemma-4 模型');
   }
 }
 

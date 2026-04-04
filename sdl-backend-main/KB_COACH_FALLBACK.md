@@ -7,7 +7,7 @@ KB Coach 採用三層智能 Fallback 架構，確保服務高可用性，並提�
 ```
 GPT-OSS-20B (Layer 1) 
     ↓ (失敗時)
-Gemma-3-27B (Layer 2)
+Gemma-4-27B (Layer 2)
     ↓ (失敗時)
 Gemini-3.1-Flash-Lite-Preview (Layer 3 - 最終保障)
 ```
@@ -92,13 +92,13 @@ Response: 完整的歷史記錄詳情
   HSUEH_VLLM_MODEL_NAME=openai/gpt-oss-20b
   ```
 
-### Layer 2: Gemma-3-27B
-- **模型**: `ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g`
-- **API 端點**: `https://earth-vllmapi.agenticgrader.com/v1`
+### Layer 2: Gemma-4-27B
+- **模型**: `/models/gemma-4-26B-A4B-it`
+- **API 端點**: `https://vllm-193.hsueh.tw/v1`
 - **環境變數**:
   ```bash
-  VLLM_BASE_URL=https://earth-vllmapi.agenticgrader.com/v1
-  VLLM_MODEL_NAME=ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g
+  VLLM_BASE_URL=https://vllm-193.hsueh.tw/v1
+  VLLM_MODEL_NAME=/models/gemma-4-26B-A4B-it
   ```
 
 ### Layer 3: Gemini-3.1-Flash-Lite-Preview (終極 Fallback)
@@ -115,7 +115,7 @@ Response: 完整的歷史記錄詳情
 graph TD
     A[用戶請求 KB Coach] --> B{嘗試 GPT-OSS-20B}
     B -->|成功| C[返回結果 + 儲存歷史 ✓]
-    B -->|失敗| D{嘗試 Gemma-3-27B}
+    B -->|失敗| D{嘗試 Gemma-4-27B}
     D -->|成功| E[返回結果 + 儲存歷史 ✓]
     D -->|失敗| F{嘗試 Gemini-3.1-Flash-Lite-Preview}
     F -->|成功| G[返回結果 + 儲存歷史 ✓]
@@ -244,7 +244,7 @@ LIMIT 10;
 ```json
 {
   "metadata": {
-    "model": "GPT-OSS-20B",  // 或 "Gemma-3-27B" 或 "Gemini-3.1-Flash-Lite-Preview"
+    "model": "GPT-OSS-20B",  // 或 "Gemma-4-27B" 或 "Gemini-3.1-Flash-Lite-Preview"
     "timestamp": "2026-02-06T10:30:00Z"
   }
 }
@@ -295,7 +295,7 @@ GROUP BY metadata->>'provider';
 1. **根據 Agent 類型選擇最佳模型**
    ```javascript
    IMPROVER → GPT-OSS (擅長蘇格拉底式提問)
-   SYNTHESIZER → Gemma-3 (擅長結構化分析)
+   SYNTHESIZER → Gemma-4 (擅長結構化分析)
    DEVIL → 隨機 A/B Testing
    ```
 

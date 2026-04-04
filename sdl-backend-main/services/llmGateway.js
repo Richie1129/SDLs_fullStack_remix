@@ -33,10 +33,10 @@ const VLLM_MODELS = {
         displayName: 'GPT-OSS-20B',
     },
     'gemma': {
-        baseURL: process.env.VLLM_BASE_URL || 'https://earth-vllmapi.agenticgrader.com/v1',
-        modelName: process.env.VLLM_MODEL_NAME || 'ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g',
-        apiKey: process.env.VLLM_API_KEY || '',
-        displayName: 'Gemma-3-27B',
+        baseURL: process.env.VLLM_BASE_URL || 'https://vllm-193.hsueh.tw/v1',
+        modelName: process.env.VLLM_MODEL_NAME || '/models/gemma-4-26B-A4B-it',
+        apiKey: process.env.VLLM_API_KEY || 'dummy',
+        displayName: 'Gemma-4-26B',
     },
 };
 
@@ -322,7 +322,7 @@ async function callGemini(options = {}) {
  */
 const DEFAULT_FALLBACK_CHAIN = [
     { type: 'vllm', key: 'gpt-oss', label: 'GPT-OSS-20B' },
-    { type: 'vllm', key: 'gemma', label: 'Gemma-3-27B' },
+    { type: 'vllm', key: 'gemma', label: 'Gemma-4-26B' },
     { type: 'gemini', label: 'Gemini-3.1-Flash-Lite-Preview' },
 ];
 

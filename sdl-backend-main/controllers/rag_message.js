@@ -250,7 +250,7 @@ exports.deleteSessionMessages = async (req, res) => {
 };
 
 // 新增：使用 vLLM 生成對話摘要標題，並儲存回該 session 的所有訊息
-// Fallback 順序：GPT-OSS-20B (Hsueh) → Gemma-3-27B (earth)
+// Fallback 順序：GPT-OSS-20B (Hsueh) → Gemma-4-27B (earth)
 exports.generateSessionTitle = async (req, res) => {
     const { sessionId } = req.params;
     const { userId, firstMessage, projectId } = req.body;
@@ -272,10 +272,10 @@ exports.generateSessionTitle = async (req, res) => {
             apiKey: process.env.HSUEH_VLLM_API_KEY || 'dummy',
         },
         {
-            baseURL: process.env.VLLM_BASE_URL || 'https://earth-vllmapi.agenticgrader.com/v1',
-            modelName: process.env.VLLM_MODEL_NAME || 'ISTA-DASLab/gemma-3-27b-it-GPTQ-4b-128g',
-            displayName: 'Gemma-3-27B',
-            apiKey: process.env.VLLM_API_KEY || '',
+            baseURL: process.env.VLLM_BASE_URL || 'https://vllm-193.hsueh.tw/v1',
+            modelName: process.env.VLLM_MODEL_NAME || '/models/gemma-4-26B-A4B-it',
+            displayName: 'Gemma-4-26B',
+            apiKey: process.env.VLLM_API_KEY || 'dummy',
         }
     ];
 

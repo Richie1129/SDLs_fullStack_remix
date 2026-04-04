@@ -253,7 +253,7 @@ const LogCard = ({
 
             const PROVIDERS = [
               { value: 'auto', label: '自動選擇' },
-              { value: 'gemma-3', label: 'Gemma-3' },
+              { value: 'gemma-4', label: 'Gemma-4' },
               { value: 'gpt-oss-20b', label: 'GPT-OSS-20b' },
               { value: 'gemini', label: 'Gemini' },
             ];

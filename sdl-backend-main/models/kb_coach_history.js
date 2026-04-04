@@ -53,7 +53,7 @@ const KbCoachHistory = sequelize.define('kb_coach_history', {
         type: DataTypes.STRING(100),
         allowNull: false,
         field: 'model_used',
-        comment: '實際使用的 AI 模型: GPT-OSS-20B, Gemma-3-27B, Gemini-3.1-Flash-Lite-Preview'
+        comment: '實際使用的 AI 模型: GPT-OSS-20B, Gemma-4-26B, Gemini-3.1-Flash-Lite-Preview'
     },
     nodeTitle: {
         type: DataTypes.TEXT,

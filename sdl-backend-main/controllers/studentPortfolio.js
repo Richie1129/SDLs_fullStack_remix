@@ -6,7 +6,7 @@
  * POST /api/projects/:projectId/portfolio/generate  — AI 敘事生成（SSE 串流）
  * POST /api/projects/:projectId/portfolio/feedback  — AI 寫作回饋（SSE 串流）
  *
- * AI fallback 鏈：vLLM Gemma-3 → vLLM GPT-OSS-20b → Gemini
+ * AI fallback 鏈：vLLM Gemma-4 → vLLM GPT-OSS-20b → Gemini
  */
 
 const {
@@ -117,7 +117,7 @@ exports.saveDraft = async (req, res) => {
 
 /**
  * AI 敘事生成（SSE 串流）
- * fallback 鏈：vLLM Gemma-3 → vLLM GPT-OSS-20b → Gemini
+ * fallback 鏈：vLLM Gemma-4 → vLLM GPT-OSS-20b → Gemini
  */
 exports.generateNarrative = async (req, res) => {
   try {

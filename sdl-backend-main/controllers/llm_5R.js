@@ -139,7 +139,7 @@ const FIVE_RS_SYSTEM = '你是一位專業的教育輔導員，擅長 5Rs 反思
 
 async function callVLLMGemmaAPI(prompt) {
   const result = await callVLLM('gemma', { systemPrompt: FIVE_RS_SYSTEM, userPrompt: prompt });
-  return { success: true, provider: 'gemma-3-27b', content: result.content };
+  return { success: true, provider: 'gemma-4-26b', content: result.content };
 }
 
 async function callHsuehVLLMAPI(prompt) {
@@ -181,13 +181,13 @@ exports.analyze5RsReflection = async (req, res) => {
 
     // 根據偏好選擇 API 提供者
     if (preferredProvider === 'auto') {
-      // 自動模式：優先使用 Gemma-3，失敗則嘗試其他選項
+      // 自動模式：優先使用 Gemma-4，失敗則嘗試其他選項
       try {
-        console.log('自動模式：嘗試使用 Gemma-3 API...');
+        console.log('自動模式：嘗試使用 Gemma-4 API...');
         result = await callVLLMGemmaAPI(analysisPrompt);
-        console.log('Gemma-3 API 成功，使用模型:', result.provider);
+        console.log('Gemma-4 API 成功，使用模型:', result.provider);
       } catch (gemmaError) {
-        console.log('Gemma-3 失敗，嘗試使用 GPT-OSS-20b...');
+        console.log('Gemma-4 失敗，嘗試使用 GPT-OSS-20b...');
         try {
           result = await callHsuehVLLMAPI(analysisPrompt);
           console.log('GPT-OSS-20b 成功，使用模型:', result.provider);
@@ -197,14 +197,14 @@ exports.analyze5RsReflection = async (req, res) => {
           console.log('Gemini API 成功，使用模型:', result.provider);
         }
       }
-    } else if (preferredProvider === 'gemma-3') {
-      // Gemma-3 優先，失敗則 fallback 到 Gemini
+    } else if (preferredProvider === 'gemma-4') {
+      // Gemma-4 優先，失敗則 fallback 到 Gemini
       try {
-        console.log('嘗試使用 Gemma-3 API...');
+        console.log('嘗試使用 Gemma-4 API...');
         result = await callVLLMGemmaAPI(analysisPrompt);
-        console.log('Gemma-3 API 成功，使用模型:', result.provider);
+        console.log('Gemma-4 API 成功，使用模型:', result.provider);
       } catch (error) {
-        console.log('Gemma-3 API 失敗，fallback 到 Gemini API...');
+        console.log('Gemma-4 API 失敗，fallback 到 Gemini API...');
         result = await callGeminiAPI(analysisPrompt);
         console.log('Gemini API 成功，使用模型:', result.provider);
       }
@@ -220,20 +220,20 @@ exports.analyze5RsReflection = async (req, res) => {
         console.log('Gemini API 成功，使用模型:', result.provider);
       }
     } else if (preferredProvider === 'gemini') {
-      // Gemini 優先，失敗則嘗試 Gemma-3
+      // Gemini 優先，失敗則嘗試 Gemma-4
       try {
         console.log('嘗試使用 Gemini API...');
         result = await callGeminiAPI(analysisPrompt);
         console.log('Gemini API 成功，使用模型:', result.provider);
       } catch (error) {
-        console.log('Gemini API 失敗，嘗試使用 Gemma-3 API...');
+        console.log('Gemini API 失敗，嘗試使用 Gemma-4 API...');
         result = await callVLLMGemmaAPI(analysisPrompt);
-        console.log('Gemma-3 API 成功，使用模型:', result.provider);
+        console.log('Gemma-4 API 成功，使用模型:', result.provider);
       }
     } else {
       return res.status(400).json({
         success: false,
-        message: '不支援的 API 提供者。請使用 "gemma-3", "gpt-oss-20b", "gemini", 或 "auto"'
+        message: '不支援的 API 提供者。請使用 "gemma-4", "gpt-oss-20b", "gemini", 或 "auto"'
       });
     }
 

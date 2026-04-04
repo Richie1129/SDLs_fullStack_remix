@@ -113,7 +113,7 @@ function buildSystemPrompt(agentType) {
 
 /**
  * 智能 AI 調用 with Fallback（使用 llmGateway）
- * 優先順序: GPT-OSS-20b → Gemma-3-27b → Gemini-3.1-Flash-Lite-Preview
+ * 優先順序: GPT-OSS-20b → Gemma-4-27b → Gemini-3.1-Flash-Lite-Preview
  * 
  * KB Coach 特殊需求：
  * - vLLM 使用 jsonMode
@@ -132,19 +132,19 @@ async function callAIWithFallback(agentType, userPrompt) {
     return { data: result.parsed, model: result.model };
   } catch (error) {
     errors.push({ model: 'GPT-OSS-20B', error: error.message });
-    console.warn('⚠️ GPT-OSS-20B 失敗，fallback 到 Gemma-3');
+    console.warn('⚠️ GPT-OSS-20B 失敗，fallback 到 Gemma-4');
   }
 
-  // 第二層：Gemma-3-27b
+  // 第二層：Gemma-4-27b
   try {
-    console.log('🤖 嘗試使用 Gemma-3-27B...');
+    console.log('🤖 嘗試使用 Gemma-4-27B...');
     const result = await gwCallVLLM('gemma', {
       systemPrompt, userPrompt, jsonMode: true
     });
     return { data: result.parsed, model: result.model };
   } catch (error) {
-    errors.push({ model: 'Gemma-3-27B', error: error.message });
-    console.warn('⚠️ Gemma-3-27B 失敗，fallback 到 Gemini');
+    errors.push({ model: 'Gemma-4-27B', error: error.message });
+    console.warn('⚠️ Gemma-4-27B 失敗，fallback 到 Gemini');
   }
 
   // 第三層：Gemini (結構化輸出)
@@ -247,7 +247,7 @@ exports.provideGuidance = async (req, res) => {
       userPrompt += '\n\n【角色提示】查看此節點的使用者不是節點的作者，而是社群中的其他學習者。請幫助他：(1) 理解這個想法的核心論點、(2) 思考它與自己既有知識或社群其他想法的關係、(3) 形成一個有建設性的回應觀點。建議行動應以 REPLY（回應這個節點）為主，有助推進社群知識討論。';
     }
 
-    // 呼叫 AI with Fallback (GPT-OSS → Gemma-3 → Gemini)
+    // 呼叫 AI with Fallback (GPT-OSS → Gemma-4 → Gemini)
     const { data: coaching, model: usedModel } = await callAIWithFallback(agentType, userPrompt);
     const responseTimeMs = Date.now() - startTime;
     const sessionId = `${Date.now()}-${nodeId || 'no-node'}`;

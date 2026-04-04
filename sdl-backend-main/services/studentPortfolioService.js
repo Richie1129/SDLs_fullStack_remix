@@ -5,7 +5,7 @@
  * 包含：個人反思、正式提交、任務貢獻、想法牆節點。
  *
  * AI 敘事生成使用三層 fallback：
- *   1. vLLM Gemma-3-27b  (VLLM_BASE_URL)
+ *   1. vLLM Gemma-4-26B  (VLLM_BASE_URL)
  *   2. vLLM GPT-OSS-20b  (HSUEH_VLLM_BASE_URL)
  *   3. Gemini 3.1-flash-lite-preview  (fallback)
  */
@@ -506,7 +506,7 @@ function setSseHeaders(res) {
 }
 
 /**
- * vLLM Gemma-3-27b streaming（VLLM_BASE_URL）
+ * vLLM Gemma-4-26B streaming（VLLM_BASE_URL）
  * @param {string} systemInstruction - 覆寫預設 SYSTEM_INSTRUCTION
  */
 async function streamVLLMGemma(prompt, res, systemInstruction = SYSTEM_INSTRUCTION) {
@@ -538,7 +538,7 @@ async function streamVLLMGemma(prompt, res, systemInstruction = SYSTEM_INSTRUCTI
     }
   );
 
-  return pipeVLLMStream(response.data, res, 'gemma-3-27b');
+  return pipeVLLMStream(response.data, res, 'gemma-4-26b');
 }
 
 /**
@@ -642,7 +642,7 @@ async function streamWithFallback(prompt, res, systemInstruction, label) {
   };
 
   const vllmLayers = [
-    { name: 'Gemma-3-27b', fn: () => streamVLLMGemma(prompt, res, systemInstruction) },
+    { name: 'Gemma-4-26B', fn: () => streamVLLMGemma(prompt, res, systemInstruction) },
     { name: 'GPT-OSS-20b', fn: () => streamVLLMHsueh(prompt, res, systemInstruction) },
   ];
 

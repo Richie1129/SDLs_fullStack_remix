@@ -26,7 +26,7 @@ module.exports = {
       model: {
         type: Sequelize.STRING(50),
         allowNull: true,
-        comment: '分析使用的 AI 模型（Gemini / GPT-OSS-20B / Gemma-3-27B）',
+        comment: '分析使用的 AI 模型（Gemini / GPT-OSS-20B / Gemma-4-26B）',
       },
       content: {
         type: Sequelize.TEXT,

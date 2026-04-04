@@ -49,7 +49,7 @@ node test-kb-coach-fallback.js --all
 ### 1. 自動儲存歷史記錄
 每次使用 KB Coach 時，系統會自動儲存：
 - AI 的完整回應（思考過程 + 內容 + 建議行動）
-- 使用的模型（GPT-OSS / Gemma-3 / Gemini）
+- 使用的模型（GPT-OSS / Gemma-4 / Gemini）
 - 回應時間、上下文數量等效能指標
 
 ### 2. 前端歷史記錄面板

@@ -66,13 +66,13 @@ async function buildFallbackChain(projectId) {
         logger.info(`[TeacherAgent] 專案 ${projectId} Gemini 冷卻中，使用 vLLM`);
         return [
             { type: 'vllm', key: 'gpt-oss', label: 'GPT-OSS-20B' },
-            { type: 'vllm', key: 'gemma', label: 'Gemma-3-27B' },
+            { type: 'vllm', key: 'gemma', label: 'Gemma-4-26B' },
         ];
     }
     return [
         { type: 'gemini', label: 'Gemini' },
         { type: 'vllm', key: 'gpt-oss', label: 'GPT-OSS-20B' },
-        { type: 'vllm', key: 'gemma', label: 'Gemma-3-27B' },
+        { type: 'vllm', key: 'gemma', label: 'Gemma-4-26B' },
     ];
 }
 

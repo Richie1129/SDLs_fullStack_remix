@@ -321,7 +321,7 @@ ${helpSeekingType === 'adaptive' ? `
         }
       },
       {
-        name: 'Gemma-3-27B',
+        name: 'Gemma-4-26B',
         enabled: !!process.env.VLLM_BASE_URL,
         call: async () => {
           const result = await callVLLM('gemma', { systemPrompt: systemInstruction, userPrompt: prompt });

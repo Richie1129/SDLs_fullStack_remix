@@ -46,7 +46,7 @@ const FiveRsReflectionForm = ({
     switch (provider) {
       case 'auto':
         return <FiCpu className="w-4 h-4" />;
-      case 'gemma-3':
+      case 'gemma-4':
         return <FiZap className="w-4 h-4" />;
       case 'gpt-oss-20b':
         return <FiSliders className="w-4 h-4" />;
@@ -589,7 +589,7 @@ const FiveRsReflectionForm = ({
                 title="選擇 AI 分析模型"
               >
                 <option value="auto">自動選擇</option>
-                <option value="gemma-3">Gemma-3 (推薦)</option>
+                <option value="gemma-4">Gemma-4 (推薦)</option>
                 <option value="gpt-oss-20b">GPT-OSS-20b (均衡)</option>
                 <option value="gemini">Gemini-3.1-flash-lite-preview</option>
               </select>
