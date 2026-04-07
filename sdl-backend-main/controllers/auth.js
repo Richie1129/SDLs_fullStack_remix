@@ -29,7 +29,7 @@ exports.refreshToken = async (req, res) => {
             include: [{
                 model: User,
                 as: 'user',
-                attributes: ['id', 'account', 'role']
+                attributes: ['id', 'account', 'role', 'username']
             }]
         });
 
