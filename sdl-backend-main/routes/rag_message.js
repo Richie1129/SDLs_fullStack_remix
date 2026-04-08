@@ -1,29 +1,41 @@
 //backend routes for rag_message
 const router = require('express').Router();
-const controller = require('../controllers/rag_message'); // 确保路径正确
+const controller = require('../controllers/rag_message');
+const { validateToken } = require('../middlewares/AuthMiddleware');
 
-// 測試連接
-router.get('/test/:userId', controller.testConnection);
+/**
+ * IDOR 保護：確認路由中的 userId 與 token 中的使用者一致
+ */
+function ensureOwnData(req, res, next) {
+    const paramUserId = parseInt(req.params.userId, 10);
+    if (Number.isNaN(paramUserId) || paramUserId !== req.userId) {
+        return res.status(403).json({ message: '無權存取其他使用者的資料' });
+    }
+    next();
+}
+
+// 所有路由都需要認證
+router.use(validateToken);
 
 // 获取用戶所有 RAG 訊息歷史
-router.get('/history/:userId', controller.getRagMessageHistory);
+router.get('/history/:userId', ensureOwnData, controller.getRagMessageHistory);
 
 // 根據 userId 和 sessionId 取得特定會話的訊息歷史
-router.get('/session/:userId/:sessionId', controller.getRagMessageBySession);
+router.get('/session/:userId/:sessionId', ensureOwnData, controller.getRagMessageBySession);
 
 // 根據 userId 和 sessionId 取得 RAGFlow session ID
-router.get('/ragflow-session/:userId/:sessionId', controller.getRagflowSessionId);
+router.get('/ragflow-session/:userId/:sessionId', ensureOwnData, controller.getRagflowSessionId);
 
 // 根據 userId 取得所有會話列表
-router.get('/sessions/:userId', controller.getUserSessions);
+router.get('/sessions/:userId', ensureOwnData, controller.getUserSessions);
 
-// 新增：根據 userId 和 sessionId 刪除特定會話的所有訊息
-router.delete('/session/:userId/:sessionId', controller.deleteSessionMessages);
+// 根據 userId 和 sessionId 刪除特定會話的所有訊息
+router.delete('/session/:userId/:sessionId', ensureOwnData, controller.deleteSessionMessages);
 
-// 新增：創建新會話並保存開場白
+// 創建新會話並保存開場白
 router.post('/create-session', controller.createNewSession);
 
-// 新增：使用 Gemini 生成對話摘要標題
+// 使用 Gemini 生成對話摘要標題
 router.post('/generate-title/:sessionId', controller.generateSessionTitle);
 
 module.exports = router;

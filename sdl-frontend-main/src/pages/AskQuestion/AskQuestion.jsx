@@ -17,6 +17,8 @@ export default function AskQuestion() {
     const [selectedChatId, setSelectedChatId] = useState(null); // 新增狀態來追蹤選擇的聊天室ID
     const [newTitle, setNewTitle] = useState('');  // 新提問標題的狀態
     const [AddindQuestion, setAddindQuestion] = useState(false);  // 新提問標題的狀態
+    const currentChatRef = useRef(null);
+    const prevChatIdRef = useRef(null);
 
     
     // 用於初始化和更新聊天列表的函數
@@ -48,12 +50,11 @@ export default function AskQuestion() {
     }, [projectId, userRole]);  // 當 projectId 變化時重新執行此函數
 
     const refreshMessages = async (chatId) => {
-        console.log("chatId", chatId)
-        const updatedMessages = await getMessages(chatId); // 獲取最新消息
-        console.log("updatedMessages", updatedMessages)
-        const updatedChat = chats.find(chat => chat.id === chatId);
-        console.log("updatedChat", updatedChat)
-        setCurrentChat({ ...updatedChat, messages: updatedMessages });
+        const updatedMessages = await getMessages(chatId);
+        const chat = currentChatRef.current;
+        if (chat && chat.id === chatId) {
+            setCurrentChat({ ...chat, messages: updatedMessages });
+        }
     };
 
     const toggleAddQuiestionInput = () => {
@@ -82,20 +83,33 @@ export default function AskQuestion() {
     };
 
 
+    // 同步 ref（每次 currentChat 變更時更新，不觸發 socket 操作）
     useEffect(() => {
-        if (currentChat) {
-            socket.emit("join_QuestionRoom", currentChat.id);
+        currentChatRef.current = currentChat;
+    }, [currentChat]);
 
-            socket.on("receive_QuestionMessage", (data) => {
-                console.log("Received message:", data);
-                refreshMessages(currentChat.id);  // 可以直接將data加入當前聊天中，而不是重新請求所有消息
-            });
+    // Socket 房間管理（只在 chatId 變更時觸發，避免每次 messages 更新都重綁）
+    useEffect(() => {
+        const chatId = currentChat?.id;
+        if (!chatId) return;
+
+        // 離開舊房間
+        if (prevChatIdRef.current && prevChatIdRef.current !== chatId) {
+            socket.emit("leave_QuestionRoom", prevChatIdRef.current);
         }
+        prevChatIdRef.current = chatId;
+
+        socket.emit("join_QuestionRoom", chatId);
+
+        const handleReceive = () => {
+            refreshMessages(chatId);
+        };
+        socket.on("receive_QuestionMessage", handleReceive);
 
         return () => {
-            socket.off("receive_QuestionMessage");
+            socket.off("receive_QuestionMessage", handleReceive);
         };
-    }, [currentChat, socket]);
+    }, [currentChat?.id, socket]);
 
     const sendMessage = async () => {
         // console.log(chat)

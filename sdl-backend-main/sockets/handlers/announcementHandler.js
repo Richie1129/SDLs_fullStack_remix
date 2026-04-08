@@ -24,6 +24,17 @@ class AnnouncementHandler {
      */
     static async handleAnnouncementBroadcast(data) {
         console.log("收到公告廣播請求:", data);
+
+        // 角色檢查：只有教師可以發送公告
+        if (this.socket.user?.role !== 'teacher') {
+            console.warn(`非教師用戶嘗試發送公告: ${this.socket.user?.username || 'unknown'}`);
+            this.socket.emit('announcementError', {
+                message: '只有教師可以發送公告',
+                code: 'INSUFFICIENT_ROLE'
+            });
+            return;
+        }
+
         const { title, content, author, projectId, userId } = data;
 
         try {
@@ -70,7 +81,7 @@ class AnnouncementHandler {
 
         } catch (error) {
             console.error("公告儲存或廣播失敗:", error.message);
-            writeSocketErrorReport(error, 'emitAnnouncement', socket.user);
+            writeSocketErrorReport(error, 'emitAnnouncement', this.socket.user);
         }
     }
 }

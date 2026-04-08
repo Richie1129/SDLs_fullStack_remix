@@ -11,6 +11,7 @@ import { getCurrentUsername } from '../../../utils/userUtils';
 import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
 import { userStorage, authStorage } from '../../../services/storageService';
 import { getCurrentSemester } from '../../../utils/semesterUtils';
+import { calculateProgress } from '../../../utils/stageUtils';
 
 export const useProjectData = () => {
   const [members, setMembers] = useState([]);
@@ -24,25 +25,9 @@ export const useProjectData = () => {
   const userClass = userStorage.get('class');
   const queryClient = useQueryClient();
 
-  // [Option B 隱藏] 計算進度百分比 - 四階段模式（共 12 個子階段）
-  const calculateProgress = (currentStage, currentSubStage) => {
-    // 向後兼容：Stage 5 視為 100% 完成
-    if (currentStage > 4) {
-      return 100;
-    }
-    // Stage 4-3 視為 100% 完成
-    if (currentStage === 4 && currentSubStage >= 3) {
-      return 100;
-    }
-    // 四階段計算：每階段 25%，每子階段約 8.33%
-    const stageProgress = (currentStage - 1) * 25;
-    const subStageProgress = ((currentSubStage - 1) / 3) * 25;
-    return Math.min(100, stageProgress + subStageProgress);
-  };
-
+  // 計算進度百分比（統一使用 stageUtils 共用版本）
   const calculateProgressPercentage = (currentStage, currentSubStage) => {
-    const percentage = calculateProgress(currentStage, currentSubStage);
-    return percentage.toFixed(2);
+    return calculateProgress(currentStage, currentSubStage).toFixed(2);
   };
 
   // 主要專案查詢 - 根據角色決定，加入學期過濾

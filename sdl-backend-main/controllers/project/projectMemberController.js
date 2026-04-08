@@ -4,6 +4,7 @@ const User = require('../../models/user')
 const User_project = require('../../models/user_project');
 const sequelize = require('../../util/database');
 const { logAudit } = require('../../services/auditService');
+const apiCache = require('../../services/apiCache');
 
 exports.inviteForProject = async (req, res) => {
     const referral_Code = req.body.referral_Code;
@@ -58,7 +59,10 @@ exports.inviteForProject = async (req, res) => {
         await referralProject.addUser(invitedUser);
 
         console.log('Successfully invited user to project!');
-        
+
+        // 清除該學生的專案列表快取
+        apiCache.delByPrefix(`projects:${userId}`);
+
         // 記錄審計事件（非阻塞）
         logAudit(req, {
             action: 'PROJECT_MEMBER_ADD',
@@ -74,7 +78,7 @@ exports.inviteForProject = async (req, res) => {
         }).catch(err => {
             console.error('記錄審計事件失敗（成員加入）:', err);
         });
-        
+
         // 成功邀請用戶加入項目
         return res.status(200).json({ message: '成功加入活動!' });
     } catch (error) {
@@ -113,6 +117,11 @@ exports.assignStudentsToGroup = async (req, res) => {
             throw txErr;
         }
         
+        // 清除所有被分配學生的專案列表快取
+        for (const sid of studentIds) {
+            apiCache.delByPrefix(`projects:${sid}`);
+        }
+
         // 記錄審計事件（非阻塞）
         logAudit(req, {
             action: 'PROJECT_MEMBER_ADD',

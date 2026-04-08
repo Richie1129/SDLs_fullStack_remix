@@ -10,6 +10,7 @@ import { FaChevronDown, FaChevronUp } from 'react-icons/fa';  // 引入Font Awes
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
 import { formatRelativeTime } from '../../utils/timeUtils';
+import { calculateProgress } from '../../utils/stageUtils';
 
 export default function ManagementOverview() {
   const [projectData, setProjectData] = useState([]);
@@ -97,21 +98,8 @@ export default function ManagementOverview() {
   
   // [Refactored] formatRelativeTime 已統一至 timeUtils.js
 
-  const calculateProgress = (currentStage, currentSubStage) => {
-    if (currentStage === 5) {
-      return (12 + currentSubStage) / 17 * 100;
-    } else {
-      return ((currentStage - 1) * 3 + currentSubStage) / 17 * 100;
-    }
-  }
   const calculateProgressPercentage = (currentStage, currentSubStage) => {
-    let percentage;
-    if (currentStage === 5) {
-      percentage = (12 + currentSubStage) / 17 * 100;
-    } else {
-      percentage = ((currentStage - 1) * 3 + currentSubStage) / 17 * 100;
-    }
-    return percentage.toFixed(2);
+    return calculateProgress(currentStage, currentSubStage).toFixed(2);
   }
 
   const Tooltip = ({ children, content }) => {
@@ -140,9 +128,9 @@ export default function ManagementOverview() {
   };
   useEffect(() => {
     if (projectData) {
-      const ongoing = projectData.filter(project => calculateProgress(project.currentStage, project.currentSubStage) < 75);
-      const completed = projectData.filter(project => calculateProgress(project.currentStage, project.currentSubStage) > 75 && project.ProjectEnd === false);
       const done = projectData.filter(project => project.ProjectEnd === true);
+      const ongoing = projectData.filter(project => !project.ProjectEnd && calculateProgress(project.currentStage, project.currentSubStage) < 75);
+      const completed = projectData.filter(project => !project.ProjectEnd && calculateProgress(project.currentStage, project.currentSubStage) >= 75);
 
       setDoneProjects(done);
       setOngoingProjects(ongoing);

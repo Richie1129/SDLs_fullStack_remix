@@ -12,25 +12,8 @@ import { FiFileText, FiMessageSquare, FiCpu, FiInfo, FiCheckCircle, FiTrendingUp
  * - 列表樣式
  */
 
-/**
- * 計算專案進度百分比
- * @param {number} stage - 當前階段
- * @param {number} subStage - 當前子階段
- * @returns {number} 進度百分比 (0-100)
- */
-export const calculateProgress = (stage, subStage) => {
-    if (!stage || !subStage) return 0;
-    const totalSubStages = [3, 4, 5, 3]; // 各階段的子階段數量
-    let completedSubStages = 0;
-    
-    for (let i = 1; i < stage; i++) {
-        completedSubStages += totalSubStages[i - 1] || 0;
-    }
-    completedSubStages += Math.max(0, subStage - 1);
-    
-    const totalStages = totalSubStages.reduce((sum, stages) => sum + stages, 0);
-    return Math.min(Math.round((completedSubStages / totalStages) * 100), 100);
-};
+// 計算專案進度（統一使用 stageUtils 共用版本）
+export { calculateProgress } from '@/utils/stageUtils';
 
 // [Refactored] 統一使用 timeUtils.js 的 formatRelativeTime
 export { formatRelativeTime } from '@/utils/timeUtils';

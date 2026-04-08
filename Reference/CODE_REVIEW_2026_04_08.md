@@ -18,7 +18,7 @@
 
 ### C1: 看板拖曳 — 無 Transaction 的 Read-Modify-Write
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/taskHandler.js:366-475`
 - **問題：** `handleTaskDrag` 讀取兩個 Column 的 task 陣列，在 JS 中操作後分別寫回，無 Transaction 無鎖定
 - **影響場景：** 兩人同時拖卡片 → 第二次寫入覆蓋第一次 → 卡片從欄位消失或重複出現
@@ -29,7 +29,7 @@
 
 ### C2: 建立任務 — Column 陣列非原子更新
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/taskHandler.js:85-97`
 - **問題：** `Task.create` 後讀取 Column、在 JS 中 append 新 ID、`column.save()`，全部無 Transaction
 - **影響場景：** 兩人同時在同一欄位建卡片 → 兩次都讀到 `[1,2,3]` → A 存 `[1,2,3,4]`、B 存 `[1,2,3,5]` → 卡片 4 從欄位消失
@@ -40,7 +40,7 @@
 
 ### C3: 刪除欄位 — 三步操作無 Transaction
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/columnHandler.js:197-308`
 - **問題：** (1) 更新 Kanban.column 陣列 → (2) 刪除 Tasks → (3) 刪除 Column，三步無 Transaction
 - **影響場景：** 步驟 1 成功但步驟 3 失敗 → Kanban 陣列已移除該欄位但 Column/Task 仍在 DB
@@ -51,7 +51,7 @@
 
 ### C4: Task.update 直接 spread 客戶端資料
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/taskHandler.js:171-174`
 - **問題：** `Task.update({ ...cardData, ... })` 直接展開客戶端送來的整個物件
 - **影響場景：** 惡意用戶送 `cardData: { id: 5, columnId: 999, createdAt: "..." }` → 可覆寫任何 Task 欄位
@@ -62,7 +62,7 @@
 
 ### C5: 訊息處理器無專案權限檢查
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/messageHandler.js` 全部事件
 - **問題：** `send_message`、`join_room`、`join_project` 等全部用 `registerSimpleEvent`，無權限驗證
 - **影響場景：** 任何登入用戶可加入任意專案聊天室、發送/讀取其他專案的訊息
@@ -73,7 +73,7 @@
 
 ### C6: 公告發送無角色檢查
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/announcementHandler.js:13-19`
 - **問題：** `emitAnnouncement` 用 `registerSimpleEvent`，任何登入用戶都能發
 - **影響場景：** 學生可發送假公告給所有連線用戶，且會存入 DB
@@ -84,7 +84,7 @@
 
 ### C7: RAG 對話路由完全無認證
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/routes/rag_message.js` 所有路由（8 個端點）
 - **問題：** 所有端點缺少 `validateToken` 中間件
 - **受影響端點：**
@@ -102,7 +102,7 @@
 
 ### C8: Socket catch 區塊 `socket.user` ReferenceError
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `taskHandler.js`、`columnHandler.js`、`nodeHandler.js`、`messageHandler.js`、`announcementHandler.js` 的所有 catch 區塊
 - **問題：** catch 中使用 `socket.user` 但 `socket` 未在 handler 方法的作用域中定義，handler 透過 `handler.call(baseHandler, data)` 調用，`this` 是 baseHandler，應使用 `this.socket.user`
 - **影響場景：** 任何 Socket handler 報錯 → catch 本身拋出 `ReferenceError: socket is not defined` → 原始錯誤被遮蔽，用戶收到靜默失敗
@@ -113,7 +113,7 @@
 
 ### C9: ChatBotRoom 送出訊息後未清空 input + 訊息重複
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/components/ChatBotRoom.jsx:13-24, 30-44`
 - **問題：** `sendMessage` 後未呼叫 `setCurrentMessage("")`；同時本地樂觀新增 + Socket 回傳再新增 = 訊息出現兩次
 - **影響場景：** 用戶每按 Enter 重送同一訊息，每條訊息出現兩次
@@ -124,7 +124,7 @@
 
 ### C10: AskQuestion Socket listener 捕獲 stale closure
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/pages/AskQuestion/AskQuestion.jsx:85-98`
 - **問題：**
   1. `refreshMessages` 中的 `chats` 是 effect 建立時的快照，後續更新不會反映
@@ -140,7 +140,7 @@
 
 ### H1: getUser 回傳密碼 hash
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/user.js:53-65`
 - **問題：** `User.findByPk(userId)` 未指定 `attributes`，回傳包含 bcrypt password hash
 - **建議修復：** 加 `attributes: { exclude: ['password'] }`
@@ -248,7 +248,7 @@
 
 ### H13: 刪除任務 — Column 陣列 + Task.destroy 無 Transaction
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/taskHandler.js:304-315`
 - **問題：** Column 陣列更新和 Task.destroy 分開操作
 - **建議修復：** 包在 Transaction 中
@@ -465,7 +465,7 @@
 
 ### R2-C1: 進度計算有 4 套互相矛盾的實作
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：**
   - `sdl-frontend-main/src/pages/teacher-dashboard/utils.js:4-14` — 用 5 階段模型，除數 2
   - `sdl-frontend-main/src/pages/student-dashboard/utils.jsx:66-81` — 用 4 階段模型，除數 3（正確）
@@ -480,7 +480,7 @@
 
 ### R2-C2: `inviteForProject` 未清除 apiCache
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/project/projectMemberController.js:58`
 - **問題：** 學生透過邀請碼加入專案後，未清除 `apiCache`
 - **影響：** 加入的學生在專案列表中看不到新專案，最長需等 30 秒
@@ -490,7 +490,7 @@
 
 ### R2-C3: `assignStudentsToGroup` 未清除 apiCache
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/project/projectMemberController.js:109`
 - **問題：** 教師批次分配學生到專案後，所有被分配學生的快取未清除
 - **影響：** 所有被分配的學生在 30 秒內看不到新專案
@@ -502,7 +502,7 @@
 
 ### R2-H1: `overviewUtils.jsx` 子階段數錯誤 `[3,4,5,3]`
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/pages/overview/utils/overviewUtils.jsx:23`
 - **問題：** 應為 `[3,3,3,3]`，stage 2 不是 4 個子階段、stage 3 不是 5 個
 - **影響：** Overview 頁面的進度百分比全部算錯
@@ -511,7 +511,7 @@
 
 ### R2-H2: `ManagementOverview.jsx` 用舊 5 階段模型
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/pages/overview/ManagementOverview.jsx:100-106`
 - **問題：** 用 `/17*100` 計算（5 階段共 17 子階段），應為 4 階段 12 子階段
 - **影響：** 完成所有階段（4-3）只顯示 70.6% 而非 100%
@@ -521,7 +521,7 @@
 
 ### R2-H3: `teacher-dashboard/utils.js` 用錯誤除數
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/pages/teacher-dashboard/utils.js:4-14`
 - **問題：** 用舊 5 階段公式：`(stage-1)*20` + `(sub-1)/2*20`
 - **影響：** 完成所有階段只顯示 80% 而非 100%

@@ -1,17 +1,7 @@
 // 工具函式
 
-// 計算專案進度
-export const calculateProgress = (currentStage, currentSubStage) => {
-  if (!currentStage || !currentSubStage) return 0;
-
-  if (currentStage === 5) {
-    return 100;
-  } else {
-    const stageProgress = ((currentStage - 1) * 20);
-    const subStageProgress = ((currentSubStage - 1) / 2) * 20;
-    return Math.round(stageProgress + subStageProgress);
-  }
-};
+// 計算專案進度（統一使用 stageUtils 共用版本）
+export { calculateProgress } from '@/utils/stageUtils';
 
 // [Refactored] 統一使用 timeUtils.js 的 formatRelativeTime
 export { formatRelativeTime } from '@/utils/timeUtils';

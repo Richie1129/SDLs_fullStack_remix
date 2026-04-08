@@ -156,7 +156,7 @@ class NodeHandler {
 
         } catch (error) {
             console.error("創建節點時發生錯誤:", error);
-            writeSocketErrorReport(error, 'nodeCreate', socket.user);
+            writeSocketErrorReport(error, 'nodeCreate', this.socket.user);
             this.emitError('nodeCreate', {
                 message: '創建節點時發生錯誤',
                 code: 'NODE_CREATE_ERROR'
@@ -216,7 +216,7 @@ class NodeHandler {
 
         } catch (error) {
             console.error("更新節點時發生錯誤:", error);
-            writeSocketErrorReport(error, 'nodeUpdate', socket.user);
+            writeSocketErrorReport(error, 'nodeUpdate', this.socket.user);
             this.emitError('nodeUpdate', {
                 message: '更新節點時發生錯誤',
                 code: 'NODE_UPDATE_ERROR'
@@ -303,7 +303,7 @@ class NodeHandler {
             console.error("錯誤訊息:", error.message);
             console.error("錯誤堆疊:", error.stack);
             console.error("節點資料:", { id, projectId, title, owner });
-            writeSocketErrorReport(error, 'nodeDelete', socket.user);
+            writeSocketErrorReport(error, 'nodeDelete', this.socket.user);
 
             this.emitError('nodeDelete', {
                 message: `刪除節點時發生錯誤: ${error.message}`,
@@ -404,7 +404,7 @@ class NodeHandler {
 
         } catch (error) {
             console.error("❌ 建立節點連線時發生錯誤:", error.message);
-            writeSocketErrorReport(error, 'createNodeRelation', socket.user);
+            writeSocketErrorReport(error, 'createNodeRelation', this.socket.user);
 
             this.emitError('createNodeRelation', {
                 message: `建立連線時發生錯誤: ${error.message}`,
@@ -482,7 +482,7 @@ class NodeHandler {
 
         } catch (error) {
             console.error("❌ 刪除節點連線時發生錯誤:", error.message);
-            writeSocketErrorReport(error, 'deleteNodeRelation', socket.user);
+            writeSocketErrorReport(error, 'deleteNodeRelation', this.socket.user);
 
             this.emitError('deleteNodeRelation', {
                 message: `刪除連線時發生錯誤: ${error.message}`,

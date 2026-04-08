@@ -59,7 +59,7 @@ class AiCoachHandler {
 
             console.log(`👍 AI Feedback recorded: ${feedbackType} for ${agentType} in project ${projectId}`);
             
-            socket.emit('aiCoachFeedbackResponse', {
+            this.socket.emit('aiCoachFeedbackResponse', {
                 success: true,
                 message: '感謝你的回饋！',
                 code: 'FEEDBACK_RECORDED'
@@ -67,8 +67,8 @@ class AiCoachHandler {
 
         } catch (error) {
             console.error('Error recording AI feedback:', error);
-            writeSocketErrorReport(error, 'aiCoachFeedback', socket.user);
-            socket.emit('aiCoachFeedbackResponse', {
+            writeSocketErrorReport(error, 'aiCoachFeedback', this.socket.user);
+            this.socket.emit('aiCoachFeedbackResponse', {
                 success: false,
                 message: '記錄回饋時發生錯誤',
                 code: 'FEEDBACK_ERROR'

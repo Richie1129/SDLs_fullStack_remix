@@ -17,9 +17,11 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
                 author: getCurrentUsername(),
                 message: currentMessage,
                 time: new Date(Date.now()).getHours() + ":" + new Date(Date.now()).getMinutes(),
+                _localId: Date.now() + Math.random(),
             };
             socket.emit("send_message", messageData);
-            setMessageList(prev => [...prev, messageData])
+            setMessageList(prev => [...prev, messageData]);
+            setCurrentMessage("");
         }
     }
 
@@ -29,8 +31,9 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
 
     useEffect(() => {
         function receive_message(data) {
-            setMessageList(prev => [...prev, data])
-            console.log(data);
+            // 過濾掉自己發的訊息（已在 sendMessage 做了樂觀更新）
+            if (data.author === getCurrentUsername()) return;
+            setMessageList(prev => [...prev, data]);
         }
         
         if (chatRoomOpen === true) {
@@ -71,9 +74,10 @@ export default function ChatRoom({chatRoomOpen, setChatRoomOpen}) {
                 <div ref={bottomRef} />
             </div>
             <div className=' h-[35px] w-full flex justify-between text-body p-0 border-t-2 bg-slate-50 border-black/70'>
-                <input 
-                    type="text" 
+                <input
+                    type="text"
                     className='w-10/12 outline-none p-1'
+                    value={currentMessage}
                     onChange={e => setCurrentMessage(e.target.value)}
                     onKeyDown={e => {e.key === "Enter" && sendMessage()}}
                 />

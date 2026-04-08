@@ -53,7 +53,9 @@ exports.getTeachers = async (req, res) => {
 exports.getUser = async (req, res) => {
     try {
         const userId = req.params.userId;
-        const user = await User.findByPk(userId);
+        const user = await User.findByPk(userId, {
+            attributes: { exclude: ['password'] }
+        });
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }

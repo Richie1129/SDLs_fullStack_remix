@@ -13,28 +13,31 @@ class MessageHandler {
      * 註冊所有訊息相關的 Socket 事件
      */
     static registerEvents(io, socket) {
-        // 一般聊天訊息
-        SocketHandlerFactory.registerSimpleEvent(
+        // 一般聊天訊息（需要專案寫入權限）
+        SocketHandlerFactory.registerProtectedEvent(
             socket,
             'send_message',
-            this.handleChatMessage
+            this.handleChatMessage,
+            'write'
         );
 
-        // 問答訊息
-        SocketHandlerFactory.registerSimpleEvent(
+        // 問答訊息（需要專案寫入權限）
+        SocketHandlerFactory.registerProtectedEvent(
             socket,
             'send_QuestionMessage',
-            this.handleQuestionMessage
+            this.handleQuestionMessage,
+            'write'
         );
 
-        // RAG 訊息
-        SocketHandlerFactory.registerSimpleEvent(
+        // RAG 訊息（需要專案寫入權限）
+        SocketHandlerFactory.registerProtectedEvent(
             socket,
             'rag_message',
-            this.handleRagMessage
+            this.handleRagMessage,
+            'write'
         );
 
-        // 房間相關事件
+        // 房間相關事件（join 傳入的是 roomId 而非 data 物件，保留 simple 但已有 Socket 認證）
         SocketHandlerFactory.registerSimpleEvent(socket, 'join_room', this.handleJoinRoom);
         SocketHandlerFactory.registerSimpleEvent(socket, 'join_QuestionRoom', this.handleJoinQuestionRoom);
         SocketHandlerFactory.registerSimpleEvent(socket, 'join_project', this.handleJoinProject);
@@ -77,7 +80,7 @@ class MessageHandler {
             });
         } catch (error) {
             console.error("保存訊息時出錯：", error);
-            writeSocketErrorReport(error, 'send_message', socket.user);
+            writeSocketErrorReport(error, 'send_message', this.socket.user);
         }
 
         // 廣播訊息到房間
@@ -120,7 +123,7 @@ class MessageHandler {
             });
         } catch (error) {
             console.error("保存問答訊息時出錯：", error);
-            writeSocketErrorReport(error, 'send_QuestionMessage', socket.user);
+            writeSocketErrorReport(error, 'send_QuestionMessage', this.socket.user);
         }
 
         // 發送訊息到同一聊天室的其他用戶
@@ -229,7 +232,7 @@ class MessageHandler {
             }
         } catch (error) {
             console.error("保存 RAG 訊息時出錯：", error);
-            writeSocketErrorReport(error, 'rag_message', socket.user);
+            writeSocketErrorReport(error, 'rag_message', this.socket.user);
         }
 
         // 將訊息發送到對應的房間
