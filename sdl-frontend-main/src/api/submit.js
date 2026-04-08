@@ -38,6 +38,12 @@ export const getSubmitChangeLogs = async (submitId) => {
     return response.data;
 };
 
+// 刪除提交記錄
+export const deleteSubmit = async (submitId) => {
+    const response = await apiClient.delete(`/submit/${submitId}`);
+    return response.data;
+};
+
 // export const getProfolioSubmit = async (submitId,config) => {
 //     const response = await getsubmitApi.get(`/${submitId}/profolio`,config)
 //     return response.data

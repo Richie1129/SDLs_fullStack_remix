@@ -14,9 +14,7 @@ const { invalidateProjectCache } = require('./assistant');
 const { filterStage5Data, FOUR_STAGE_CONFIG } = require('../services/fourStageFilterService');
 
 exports.createSubmit = async(req, res) => {
-    const { currentStage, currentSubStage, content, projectId, projectid } = req.body;
-    const currentStageInt = parseInt(currentStage);
-    const currentSubStageInt = parseInt(currentSubStage);
+    const { content, projectId, projectid } = req.body;
 
     // Fix: Handle case sensitivity for projectId (frontend might send projectid)
     const pId = projectId || projectid;
@@ -29,21 +27,61 @@ exports.createSubmit = async(req, res) => {
 
     const t = await sequelize.transaction();
     try {
+        // 從 DB 讀取專案當前階段（Row-level lock 防止並發推進）
+        const project = await Project.findByPk(pId, {
+            attributes: ['id', 'currentStage', 'currentSubStage', 'ProjectEnd'],
+            transaction: t,
+            lock: t.LOCK.UPDATE
+        });
+
+        if (!project) {
+            await t.rollback();
+            return res.status(404).json({ success: false, message: '專案不存在' });
+        }
+
+        if (project.ProjectEnd) {
+            await t.rollback();
+            return res.status(400).json({ success: false, message: '專案已完成，無法再提交' });
+        }
+
+        const currentStageInt = project.currentStage;
+        const currentSubStageInt = project.currentSubStage;
+        const stageKey = `${currentStageInt}-${currentSubStageInt}`;
+
+        // 驗證前端送來的階段資訊
+        const frontendStage = parseInt(req.body.currentStage);
+        const frontendSubStage = parseInt(req.body.currentSubStage);
+        if (isNaN(frontendStage) || isNaN(frontendSubStage)) {
+            await t.rollback();
+            return res.status(400).json({
+                success: false,
+                message: '缺少必要的階段資訊 (currentStage, currentSubStage)'
+            });
+        }
+        if (frontendStage !== currentStageInt || frontendSubStage !== currentSubStageInt) {
+            await t.rollback();
+            return res.status(409).json({
+                success: false,
+                message: '階段資訊已過期，其他組員可能已提交此階段，請重新整理頁面',
+                currentStage: currentStageInt,
+                currentSubStage: currentSubStageInt
+            });
+        }
+
         // 如果有檔案上傳（來自 MinIO 中介軟體）
         if (req.uploadedFiles && req.uploadedFiles.length > 0) {
             // 為每個檔案創建一筆 Submit 記錄
             const submitPromises = req.uploadedFiles.map(async (file) => {
                 return Submit.create({
-                    stage: `${currentStageInt}-${currentSubStageInt}`,
+                    stage: stageKey,
                     content: content,
                     projectId: pId,
                     userId: req.userId,
-                    // 改為儲存 MinIO 相關資訊，而非 BLOB
-                    fileName: file.fileName,        // MinIO 檔案名
-                    originalName: file.originalName, // 原始檔案名
-                    fileUrl: file.url,              // MinIO URL
-                    mimeType: file.mimeType,        // 檔案類型
-                    fileSize: file.size             // 檔案大小
+                    fileName: file.fileName,
+                    originalName: file.originalName,
+                    fileUrl: file.url,
+                    mimeType: file.mimeType,
+                    fileSize: file.size
                 }, { req, transaction: t });
             });
 
@@ -51,7 +89,7 @@ exports.createSubmit = async(req, res) => {
         } else {
             // 沒有檔案上傳
             await Submit.create({
-                stage: `${currentStageInt}-${currentSubStageInt}`,
+                stage: stageKey,
                 content: content,
                 projectId: pId,
                 userId: req.userId,
@@ -61,7 +99,7 @@ exports.createSubmit = async(req, res) => {
         // 檢查並更新到下一階段
         const process = await Process.findAll({
             attributes: ['stage'],
-            where: { projectId: projectId },
+            where: { projectId: pId },
             transaction: t
         });
 
@@ -81,19 +119,27 @@ exports.createSubmit = async(req, res) => {
             await Project.update({
                 currentSubStage: currentSubStageInt + 1
             }, {
-                where: { id: projectId },
+                where: { id: pId },
                 individualHooks: true,
                 req,
                 transaction: t
             });
 
-            await Idea_wall.create({
-                userId: req.userId,
-                projectId: projectId,
-                stage: `${currentStageInt}-${currentSubStageInt + 1}`,
-                title: `${stage[0].sub_stage[currentSubStageInt]}`,
-                type: "project"
-            }, { transaction: t });
+            // 防止重複建立 Idea_wall
+            const nextStageKey = `${currentStageInt}-${currentSubStageInt + 1}`;
+            const existingWall = await Idea_wall.findOne({
+                where: { projectId: pId, stage: nextStageKey, type: 'project' },
+                transaction: t
+            });
+            if (!existingWall) {
+                await Idea_wall.create({
+                    userId: req.userId,
+                    projectId: pId,
+                    stage: nextStageKey,
+                    title: `${stage[0].sub_stage[currentSubStageInt]}`,
+                    type: "project"
+                }, { transaction: t });
+            }
         } else {
             // 當前階段的子階段已完成，檢查是否有下一個主階段
             if (currentStageInt + 1 <= maxStage) {
@@ -102,7 +148,7 @@ exports.createSubmit = async(req, res) => {
                     currentStage: currentStageInt + 1,
                     currentSubStage: 1
                 }, {
-                    where: { id: projectId },
+                    where: { id: pId },
                     individualHooks: true,
                     req,
                     transaction: t
@@ -114,33 +160,47 @@ exports.createSubmit = async(req, res) => {
                     transaction: t
                 });
 
-                await Idea_wall.create({
-                    userId: req.userId,
-                    projectId: projectId,
-                    stage: `${currentStageInt + 1}-1`,
-                    title: `${nextStage[0].sub_stage[0]}`,
-                    type: "project"
-                }, { transaction: t });
+                const nextStageKey = `${currentStageInt + 1}-1`;
+                const existingWall = await Idea_wall.findOne({
+                    where: { projectId: pId, stage: nextStageKey, type: 'project' },
+                    transaction: t
+                });
+                if (!existingWall) {
+                    await Idea_wall.create({
+                        userId: req.userId,
+                        projectId: pId,
+                        stage: nextStageKey,
+                        title: `${nextStage[0].sub_stage[0]}`,
+                        type: "project"
+                    }, { transaction: t });
+                }
             } else {
                 // [Option B 隱藏] 四階段全部完成（Stage 4-3），標記專案為完成狀態
                 await Project.update({
                     ProjectEnd: true
                 }, {
-                    where: { id: projectId },
+                    where: { id: pId },
                     individualHooks: true,
                     req,
                     transaction: t
                 });
 
-                await Idea_wall.create({
-                    userId: req.userId,
-                    projectId: projectId,
-                    stage: "completed",
-                    title: "專案已完成",
-                    type: "project"
-                }, { transaction: t });
+                const existingWall = await Idea_wall.findOne({
+                    where: { projectId: pId, stage: 'completed', type: 'project' },
+                    transaction: t
+                });
+                if (!existingWall) {
+                    await Idea_wall.create({
+                        userId: req.userId,
+                        projectId: pId,
+                        stage: "completed",
+                        title: "專案已完成",
+                        type: "project"
+                    }, { transaction: t });
+                }
 
                 await t.commit();
+                invalidateProjectCache(pId);
                 // [Option B 隱藏] 返回 "done" 讓前端顯示完成提示
                 return res.status(200).json({
                     success: true,
@@ -150,7 +210,7 @@ exports.createSubmit = async(req, res) => {
         }
 
         // v2.3: 清除專案快取（階段完成狀態已變更）
-        invalidateProjectCache(projectId);
+        invalidateProjectCache(pId);
 
         await t.commit();
         
@@ -182,7 +242,7 @@ exports.createSubmit = async(req, res) => {
             console.error('❌❌❌ CRITICAL: Transaction rollback failed:', {
                 originalError: err.message,
                 rollbackError: rollbackError.message,
-                projectId,
+                projectId: pId,
                 timestamp: new Date().toISOString()
             });
             // TODO: 觸發監控警報 (Sentry, CloudWatch 等)
@@ -433,7 +493,7 @@ exports.deleteSubmit = async (req, res) => {
             await logSubmitChange({
                 submitId: submit.id,
                 changeType: 'delete',
-                changedBy: req.body.changedBy || '未知用戶',
+                changedBy: req.user?.username || '未知用戶',
                 projectId: submit.projectId,
                 description: `刪除提交記錄 (階段: ${submit.stage})`
             });

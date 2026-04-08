@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useMutation, useQuery } from 'react-query';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { submitTask } from '../../api/submit';
 import { useNavigate, useParams } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
@@ -13,7 +13,7 @@ import { getProject } from '../../api/project';
 import CongratulationsMain_icon from "../../assets/AnimationCongratulationsMain.json";
 import Congratulations_icon from "../../assets/AnimationCongratulations.json";
 import Lottie from "lottie-react";
-import { getStageInfo, setStageEnd, clearStageInfo } from '../../utils/authUtils';
+import { getStageInfo, setStageInfo as persistStageInfo, setStageEnd, clearStageInfo } from '../../utils/authUtils';
 import { validateFileSize } from '../../utils/fileValidation';
 
 export default function SubmitTask() {
@@ -22,8 +22,51 @@ export default function SubmitTask() {
     const [uploadProgress, setUploadProgress] = useState(null);
     const navigate = useNavigate();
     const { projectId } = useParams();
-    const [stageInfo, setStageInfo] = useState({ userSubmit: {} });
+    const [stageFormInfo, setStageFormInfo] = useState({ userSubmit: {} });
     const [isProjectEnded, setIsProjectEnded] = useState(false);
+    // 從伺服器取得的最新階段（初始值先用 localStorage，後續由 API 覆蓋）
+    const [currentStage, setCurrentStage] = useState(() => {
+        const info = getStageInfo();
+        return info.currentStage;
+    });
+    const [currentSubStage, setCurrentSubStage] = useState(() => {
+        const info = getStageInfo();
+        return info.currentSubStage;
+    });
+    const queryClient = useQueryClient();
+
+    // 用 ref 追蹤當前階段，避免 syncStageFromServer 的 stale closure
+    const currentStageRef = useRef(currentStage);
+    const currentSubStageRef = useRef(currentSubStage);
+    useEffect(() => { currentStageRef.current = currentStage; }, [currentStage]);
+    useEffect(() => { currentSubStageRef.current = currentSubStage; }, [currentSubStage]);
+
+    const errorNotify = (toastContent) => toast.error(toastContent);
+    const sucesssNotify = (toastContent) => toast.success(toastContent);
+
+    // 從 API 同步最新的專案階段
+    const syncStageFromServer = useCallback(async () => {
+        try {
+            const proj = await getProject(projectId);
+            if (proj?.ProjectEnd) {
+                setIsProjectEnded(true);
+                return;
+            }
+            if (proj?.currentStage && proj?.currentSubStage) {
+                const stageChanged = proj.currentStage !== currentStageRef.current || proj.currentSubStage !== currentSubStageRef.current;
+                setCurrentStage(proj.currentStage);
+                setCurrentSubStage(proj.currentSubStage);
+                persistStageInfo(proj.currentStage, proj.currentSubStage);
+                if (stageChanged) {
+                    setTaskData({});
+                    setAttachFile(null);
+                    queryClient.invalidateQueries('getSubStage');
+                }
+            }
+        } catch (e) {
+            console.error('同步階段資訊失敗:', e);
+        }
+    }, [projectId, queryClient]);
 
     // mutationFn 接收原始資料，每次呼叫時重新建構 FormData
     // 確保 react-query 重試時不會送出已被消耗的 stream
@@ -47,7 +90,7 @@ export default function SubmitTask() {
                 if (e.total) {
                     setUploadProgress(Math.round((e.loaded * 100) / e.total));
                 } else {
-                    setUploadProgress(-1); // 無法計算百分比，顯示不定進度
+                    setUploadProgress(-1);
                 }
             }
         });
@@ -78,6 +121,15 @@ export default function SubmitTask() {
         onError: (error) => {
             setUploadProgress(null);
             console.error('Submit error:', error);
+
+            // 409 = 階段過期，自動同步最新狀態並提示
+            if (error?.response?.status === 409) {
+                const data = error.response.data;
+                toast.error(data.message || '其他組員已提交此階段，頁面將自動更新');
+                syncStageFromServer();
+                return;
+            }
+
             const msg = error?.response?.data?.message
                 || error?.response?.data?.error?.message
                 || error?.message
@@ -86,32 +138,32 @@ export default function SubmitTask() {
         }
     })
 
-    const { currentStage, currentSubStage } = getStageInfo();
-    
     // 生成 stage key (例如 '3-1') 給 GuidancePanel 使用
     const stageKey = `${currentStage}-${currentSubStage}`;
-    
-    const getSubStageQuery = useQuery("getSubStage", () => getSubStage({
-        projectId: projectId,
-        currentStage,
-        currentSubStage
-    }),
+
+    const getSubStageQuery = useQuery(
+        ["getSubStage", currentStage, currentSubStage],
+        () => getSubStage({
+            projectId: projectId,
+            currentStage,
+            currentSubStage
+        }),
         {
             onSuccess: (data) => {
-                setStageInfo(prev => ({
+                setStageFormInfo(prev => ({
                     ...prev,
                     ...data,
                     currentStage,
                     currentSubStage
                 }));
             },
-            enabled: !!projectId
+            enabled: !!projectId && !!currentStage && !!currentSubStage
         }
     );
 
     const handleChange = e => {
         const { name, value } = e.target;
-        const nameArray = Object.keys(stageInfo.userSubmit);
+        const nameArray = Object.keys(stageFormInfo.userSubmit);
         setTaskData(prev => ({
             ...prev,
             [nameArray[name]]: value,
@@ -128,7 +180,7 @@ export default function SubmitTask() {
     const handleSubmit = e => {
         e.preventDefault();
         let allFieldsFilled = true;
-        for (const [key, type] of Object.entries(stageInfo.userSubmit)) {
+        for (const [key, type] of Object.entries(stageFormInfo.userSubmit)) {
             if (type !== "file" && (!taskData[key] || taskData[key].trim() === "")) {
                 allFieldsFilled = false;
                 break;
@@ -138,7 +190,7 @@ export default function SubmitTask() {
             toast.error("請確認所有欄位皆填寫完整!");
             return;
         }
-    
+
         Swal.fire({
             title: "上傳",
             text: "確認紀錄當前階段成果?",
@@ -151,7 +203,6 @@ export default function SubmitTask() {
         }).then((result) => {
             if (result.isConfirmed) {
                 e.preventDefault();
-                const { currentStage, currentSubStage } = getStageInfo();
                 mutate({
                     projectId,
                     currentStage,
@@ -164,12 +215,26 @@ export default function SubmitTask() {
         });
     }
 
-    const errorNotify = (toastContent) => toast.error(toastContent);
-    const sucesssNotify = (toastContent) => toast.success(toastContent);
+    // 頁面載入時從伺服器同步最新階段
+    useEffect(() => {
+        syncStageFromServer();
+    }, [syncStageFromServer]);
 
     useEffect(() => {
         socket.connect();
-    }, [socket])
+
+        // 監聽其他組員提交事件，自動同步階段（過濾非本專案的事件）
+        const handleRefresh = (data) => {
+            if (!data?.projectId || String(data.projectId) === String(projectId)) {
+                syncStageFromServer();
+            }
+        };
+        socket.on('refreshKanban', handleRefresh);
+
+        return () => {
+            socket.off('refreshKanban', handleRefresh);
+        };
+    }, [socket, syncStageFromServer])
 
     const projectQuery = useQuery(['getProject', projectId], () => getProject(projectId), {
         onSuccess: (data) => {
@@ -205,9 +270,9 @@ export default function SubmitTask() {
                     {/* 主要表單卡片 */}
                     <div className='flex-1 w-full flex flex-col p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg min-h-0'>
                         <h3 className='font-bold text-body-lg sm:text-h3 text-center mb-4 text-gray-800'>
-                            {stageInfo.name}
+                            {stageFormInfo.name}
                         </h3>
-                        {Object.entries(stageInfo.userSubmit).map((element, index) => {
+                        {Object.entries(stageFormInfo.userSubmit).map((element, index) => {
                             const name = element[0];
                             const type = element[1];
                             switch (type) {

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AiTwotoneFolderAdd, AiOutlineCloudDownload, AiOutlineUpload } from "react-icons/ai";
-import { FiInfo } from 'react-icons/fi';
+import { FiInfo, FiTrash2 } from 'react-icons/fi';
 import { GrFormClose } from "react-icons/gr";
 import { useQuery, useQueryClient } from 'react-query';
-import { getAllSubmit, updateSubmitTask, updateSubmitAttachment, getSubmitChangeLogs } from '../../api/submit';
+import { getAllSubmit, updateSubmitTask, updateSubmitAttachment, getSubmitChangeLogs, deleteSubmit } from '../../api/submit';
 import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../../components/Loader';
 import ProtfoliioIcon from "../../assets/AnimationProtfoliio.json";
@@ -18,6 +18,9 @@ import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩
 import { recordObservationEvent } from '../../api/usage';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
+
+// Option B: 四階段 SRL 循環（「歷程」標題已隱藏）
+const INSERT_TITLES = ["定標", "擇策", "監評", "調節"]; // [Option B 隱藏] "歷程"
 
 export default function Protfolio() {
     const [currentStageIndex] = useStageIndex();
@@ -148,16 +151,13 @@ export default function Protfolio() {
         // "5-4": "內容撰寫",
         // "5-5": "反思撰寫"
     };
-    // Option B: 四階段 SRL 循環（「歷程」標題已隱藏）
-    const insertTitles = ["定標", "擇策", "監評", "調節"]; // [Option B 隱藏] "歷程"
-
     useEffect(() => {
         if (stagePortfolio.length > 0) {
             const itemsWithTitles = [];
             stagePortfolio.forEach((item, index) => {
                 if (index % 3 === 0) {
                     const titleIndex = Math.floor(index / 3);
-                    const title = insertTitles[titleIndex];
+                    const title = INSERT_TITLES[titleIndex];
                     if (title) {
                         itemsWithTitles.push({ type: 'title', content: title });
                     }
@@ -217,6 +217,48 @@ export default function Protfolio() {
     }
   };
 
+    // 刪除提交記錄
+    const handleDeleteSubmit = (e, item) => {
+        e.stopPropagation();
+        Swal.fire({
+            title: '確認刪除',
+            text: `確定要刪除「${stageDescriptions[item.stage] || item.stage}」的歷程記錄嗎？此操作無法復原。`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: '確定刪除',
+            cancelButtonText: '取消'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await deleteSubmit(item.id);
+                    // 如果刪除的是當前選中的項目，清除選中狀態
+                    if (activeItemId === item.id) {
+                        setActiveItemId(null);
+                        setFolderModalOpen(false);
+                        setModalData({});
+                    }
+                    queryClient.invalidateQueries('protfolioDatas');
+                    Swal.fire({
+                        icon: 'success',
+                        title: '刪除成功',
+                        text: '歷程記錄已刪除',
+                        confirmButtonColor: '#5BA491'
+                    });
+                } catch (err) {
+                    console.error('刪除失敗:', err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: '刪除失敗',
+                        text: err?.response?.data?.message || '請稍後再試',
+                        confirmButtonColor: '#d33'
+                    });
+                }
+            }
+        });
+    };
+
     // socket
     useEffect(() => {
         socket.connect();
@@ -226,6 +268,21 @@ export default function Protfolio() {
         //     socket.disconnect();
         // }
     }, [socket])
+
+    // 按主階段分組，並計算每個子階段的記錄數（用於判斷是否顯示刪除按鈕）
+    const stageItemsByMainStage = useMemo(() => {
+        const result = {};
+        INSERT_TITLES.forEach((_, index) => {
+            const mainStage = index + 1;
+            const items = stagePortfolio.filter(item => Math.floor(item.stage.split('-')[0]) === mainStage);
+            const stageCount = {};
+            items.forEach(item => {
+                stageCount[item.stage] = (stageCount[item.stage] || 0) + 1;
+            });
+            result[mainStage] = { items, stageCount };
+        });
+        return result;
+    }, [stagePortfolio]);
 
     return (
         <div className="h-full w-full bg-gray-50">
@@ -276,7 +333,7 @@ export default function Protfolio() {
                         ) : (
                             <div className="p-component-base sm:p-component-md-lg">
                                 <nav className="space-y-stack-md">
-                                    {insertTitles.map((title, index) => (
+                                    {INSERT_TITLES.map((title, index) => (
                                         <div key={index} className="relative">
                                             {/* Stage Header */}
                                             <div className="flex items-center mb-4">
@@ -295,15 +352,13 @@ export default function Protfolio() {
                                             </div>
                                             
                                             {/* Connecting Line */}
-                                            {index < insertTitles.length - 1 && (
+                                            {index < INSERT_TITLES.length - 1 && (
                                                 <div className="absolute left-2.5 top-8 w-[1px] h-6 bg-gray-200"></div>
                                             )}
                                             
                                             {/* Stage Items */}
                                             <div className="ml-8 space-y-stack-xs">
-                                                {stagePortfolio
-                                                    .filter(item => Math.floor(item.stage.split('-')[0]) === index + 1)
-                                                    .map(item => (
+                                                {stageItemsByMainStage[index + 1]?.items.map(item => (
                                                         <button
                                                             key={item.id}
                                                             data-track
@@ -327,9 +382,9 @@ export default function Protfolio() {
                                                                     } catch (_) { /* noop */ }
                                                                 }
                                                             }}
-                                                            className={`w-full text-left p-component-sm rounded-lg text-body-sm transition-all duration-fast relative group ${
+                                                            className={`w-full text-left p-component-sm rounded-lg text-body-sm transition-all duration-fast relative group flex items-center gap-2 ${
                                                                 activeItemId === item.id
-                                                                    ? 'bg-[#5BA491] text-white shadow-lg scale-[1.02]'
+                                                                    ? 'bg-[#5BA491] text-white shadow-lg'
                                                                     : 'text-gray-700 hover:bg-[#5BA491]/10 hover:shadow-md border border-gray-100'
                                                             }`}
                                                             title={item.createdAt ? `建立於 ${formatTime(item.createdAt, 'full')}${item.updatedAt && item.updatedAt !== item.createdAt ? `\n更新於 ${formatTime(item.updatedAt, 'full')}` : ''}` : ''}
@@ -339,14 +394,14 @@ export default function Protfolio() {
                                                                 <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-full"></div>
                                                             )}
                                                             
-                                                            <div className="flex flex-col space-y-1">
+                                                            <div className="flex flex-col space-y-1 flex-1 min-w-0">
                                                                 <span className="font-medium leading-tight">
                                                                     {stageDescriptions[item.stage]}
                                                                 </span>
                                                                 <div className="flex items-center justify-between">
                                                                     <span className={`text-caption font-medium px-2 py-1 rounded-full ${
-                                                                        activeItemId === item.id 
-                                                                            ? 'bg-white/20 text-white' 
+                                                                        activeItemId === item.id
+                                                                            ? 'bg-white/20 text-white'
                                                                             : 'bg-[#5BA491]/10 text-[#5BA491]'
                                                                     }`}>
                                                                         {item.stage}
@@ -360,6 +415,20 @@ export default function Protfolio() {
                                                                     )}
                                                                 </div>
                                                             </div>
+                                                            {/* 刪除按鈕 - 同階段有多筆時才顯示，hover 時出現，觀摩模式隱藏 */}
+                                                            {!isObservationMode && stageItemsByMainStage[index + 1]?.stageCount[item.stage] > 1 && (
+                                                                <button
+                                                                    onClick={(e) => handleDeleteSubmit(e, item)}
+                                                                    className={`flex-shrink-0 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-fast ${
+                                                                        activeItemId === item.id
+                                                                            ? 'hover:bg-white/20 text-white/80 hover:text-white'
+                                                                            : 'hover:bg-red-50 text-gray-400 hover:text-red-500'
+                                                                    }`}
+                                                                    title="刪除此歷程記錄"
+                                                                >
+                                                                    <FiTrash2 size={14} />
+                                                                </button>
+                                                            )}
                                                         </button>
                                                     ))}
                                             </div>
