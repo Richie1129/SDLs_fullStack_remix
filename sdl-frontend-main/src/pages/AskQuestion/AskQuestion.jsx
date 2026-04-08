@@ -108,6 +108,10 @@ export default function AskQuestion() {
 
         return () => {
             socket.off("receive_QuestionMessage", handleReceive);
+            // unmount 或切換時離開當前房間
+            if (chatId) {
+                socket.emit("leave_QuestionRoom", chatId);
+            }
         };
     }, [currentChat?.id, socket]);
 

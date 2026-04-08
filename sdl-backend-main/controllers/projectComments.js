@@ -218,15 +218,18 @@ exports.toggleLike = async (req, res) => {
     const comment = await ProjectComment.findByPk(commentId);
     if (!comment) return res.status(404).json({ message: '評論不存在' });
 
-    const existing = await ProjectCommentLike.findOne({ where: { commentId, userId } });
-    if (existing) {
-      await existing.destroy();
-    } else {
-      await ProjectCommentLike.create({ commentId, userId });
+    // H6: 使用 findOrCreate 防止快速雙擊造成重複讚
+    const [likeRecord, created] = await ProjectCommentLike.findOrCreate({
+      where: { commentId, userId },
+      defaults: { commentId, userId }
+    });
+
+    if (!created) {
+      await likeRecord.destroy();
     }
 
     const likeCount = await ProjectCommentLike.count({ where: { commentId } });
-    res.status(200).json({ liked: !existing, likeCount });
+    res.status(200).json({ liked: created, likeCount });
   } catch (err) {
     console.error('toggle project comment like error:', err);
     res.status(500).json({ message: '按讚操作失敗', error: err.message });

@@ -172,35 +172,24 @@ exports.toggleLike = async (req, res) => {
     const comment = await Comment.findByPk(commentId);
     if (!comment) return res.status(404).json({ message: '評論不存在' });
 
-    const existing = await CommentLike.findOne({ where: { commentId, userId } });
-    if (existing) {
-      await existing.destroy();
-    } else {
-      // Resolve username from token or DB
-      let username = req.user?.username || null;
-      if (!username) {
-        try {
-          const user = await User.findByPk(userId);
-          username = user?.username || null;
-        } catch (_) {}
-      }
-
-      // Snapshot comment content
-      const targetComment = await Comment.findByPk(commentId);
-      if (!targetComment) {
-        return res.status(404).json({ message: 'Comment not found' });
-      }
-
-      await CommentLike.create({ 
-        commentId, 
+    // H6: 使用 findOrCreate 防止快速雙擊造成重複讚
+    const [likeRecord, created] = await CommentLike.findOrCreate({
+      where: { commentId, userId },
+      defaults: {
+        commentId,
         userId,
-        username,
-        comment_content: targetComment.content,
-      });
+        username: req.user?.username || null,
+        comment_content: comment.content,
+      }
+    });
+
+    if (!created) {
+      // 已存在 → 取消讚
+      await likeRecord.destroy();
     }
 
     const likeCount = await CommentLike.count({ where: { commentId } });
-    res.status(200).json({ liked: !existing, likeCount });
+    res.status(200).json({ liked: created, likeCount });
   } catch (err) {
     console.error('toggle like error:', err);
     res.status(500).json({ message: '按讚操作失敗', error: err.message });

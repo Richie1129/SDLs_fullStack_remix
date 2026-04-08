@@ -177,13 +177,33 @@ class TaskHandler {
         const changedBy = currentUser?.username || cardData.owner || "未知";
 
         try {
-            // 取得原始資料以比較變更
-            const originalTask = await Task.findByPk(cardData.id);
-
             // 使用交易更新任務
             const t = await sequelize.transaction();
             try {
-                const updateTask = await Task.update({
+                // H14: 在 transaction 內取得原始資料並驗證歸屬
+                const originalTask = await Task.findByPk(cardData.id, {
+                    transaction: t,
+                    include: [{
+                        model: Column,
+                        attributes: ['id'],
+                        include: [{ model: Kanban, attributes: ['id', 'projectId'] }]
+                    }]
+                });
+                if (!originalTask) {
+                    await t.rollback();
+                    this.emitError('taskUpdate', { message: '任務不存在', code: 'TASK_NOT_FOUND' });
+                    return;
+                }
+                // 驗證 Task 確實屬於聲稱的 projectId
+                const actualProjectId = originalTask.column?.kanban?.projectId;
+                if (actualProjectId && String(actualProjectId) !== String(projectId)) {
+                    await t.rollback();
+                    this.emitError('taskUpdate', { message: '任務不屬於此專案', code: 'RESOURCE_MISMATCH' });
+                    return;
+                }
+
+                // R2-H6: Task.update 回傳 [affectedCount]，改用 reload 取得實際資料
+                await Task.update({
                     title: cardData.title,
                     content: cardData.content,
                     labels: cardData.labels,
@@ -198,6 +218,7 @@ class TaskHandler {
                     individualHooks: true,
                     req: data._reqContext
                 });
+                const updatedTask = await Task.findByPk(cardData.id, { transaction: t });
 
                 // 同步更新關聯評論的反正規化快照
                 if (originalTask && (originalTask.title !== cardData.title || originalTask.content !== cardData.content)) {
@@ -228,8 +249,8 @@ class TaskHandler {
                     req: data._reqContext
                 });
 
-                // 廣播更新事件
-                this.broadcastToProject(projectId, "taskItem", updateTask);
+                // 廣播更新事件（R2-H6: 廣播實際 Task 資料而非 affectedCount）
+                this.broadcastToProject(projectId, "taskItem", updatedTask);
 
                 // 廣播活動更新
                 const taskColumn = await Column.findOne({

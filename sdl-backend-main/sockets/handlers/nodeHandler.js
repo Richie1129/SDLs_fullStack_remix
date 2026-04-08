@@ -175,7 +175,8 @@ class NodeHandler {
             // 取得原始資料以比較變更
             const originalNode = await Node.findByPk(id);
 
-            const updatedNode = await Node.update(
+            // R2-H7: Node.update 回傳 [affectedCount]，改用 reload 取得實際資料
+            await Node.update(
                 {
                     title: title,
                     content: content
@@ -186,6 +187,7 @@ class NodeHandler {
                     req: data._reqContext
                 }
             );
+            const updatedNode = await Node.findByPk(id);
 
             // 記錄欄位變更
             if (originalNode) {

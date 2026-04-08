@@ -149,7 +149,7 @@
 
 ### H2: getUsers 回傳所有用戶 PII
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/user.js:19-29`
 - **問題：** 任何登入用戶可取得所有人的 email、班級、座號等
 - **建議修復：** 限制為 teacher/admin 角色，或限制回傳欄位
@@ -158,7 +158,7 @@
 
 ### H3: Refresh Token 未做 Rotation
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/auth.js:12-76`
 - **問題：** 使用 refresh token 取得新 access token 後，舊 refresh token 仍然有效
 - **建議修復：** 每次刷新時銷毀舊 token 並發新 token
@@ -167,7 +167,7 @@
 
 ### H4: 檔案刪除無所有權驗證
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/routes/file.js:147, 192`
 - **問題：** `DELETE /api/file/:fileName` 只要認證通過就能刪任何檔案
 - **建議修復：** 驗證檔案所有權（上傳者或專案成員）
@@ -176,7 +176,7 @@
 
 ### H5: 專案邀請 TOCTOU
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/project/projectMemberController.js:8-83`
 - **問題：** 先查是否已加入 → 再加入，無 Transaction，兩個請求可能都通過檢查
 - **建議修復：** 用 `findOrCreate` + unique constraint，或 Transaction + Lock
@@ -185,7 +185,7 @@
 
 ### H6: 按讚 Toggle TOCTOU
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/comments.js:167-208`、`controllers/projectComments.js:213-233`
 - **問題：** 查有無讚 → 建立或刪除，無 Transaction。快速雙擊建立兩個讚記錄
 - **建議修復：** `findOrCreate` + unique constraint on `(commentId, userId)`
@@ -194,7 +194,7 @@
 
 ### H7: 改名非原子操作
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/user.js:288-383`
 - **問題：** `User.update` 在 Transaction 外，`Task.update` + `Node.update` 在 Transaction 內。前者成功後者失敗 → 名稱不一致
 - **建議修復：** 全部放在同一個 Transaction 中
@@ -203,7 +203,7 @@
 
 ### H8: updateSubmit 的 findByPk 在 Transaction 外
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/submit.js:337-440`
 - **問題：** `Submit.findByPk(submitId)` 無 `{ transaction: t }` 和 lock
 - **建議修復：** 移入 Transaction 並加 `lock: t.LOCK.UPDATE`
@@ -212,7 +212,7 @@
 
 ### H9: 密碼重設無 Transaction
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/passwordReset.js:162-245`
 - **問題：** 讀取 token → 驗證 → 改密碼 → 銷毀 token，全部分開操作
 - **建議修復：** 包在 Transaction 中，`SELECT FOR UPDATE` 鎖定 reset token
@@ -221,7 +221,7 @@
 
 ### H10: SubStageBar Socket cleanup 被註解
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/components/SubStageBar.jsx:204-215`
 - **問題：** `socket.off('refreshKanban', handleRefreshKanban)` 被註解掉 → 頁面切換累積重複 listener
 - **建議修復：** 取消註解該行
@@ -230,7 +230,7 @@
 
 ### H11: useKanbanData 樂觀更新讀取 stale kanbanData
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/pages/Kanban/hooks/useKanbanData.js:208-452`
 - **問題：** `addCard`、`addColumn`、`deleteColumn`、`moveCard` 從 closure 讀取 `kanbanData` 而非用 functional updater
 - **建議修復：** 改用 `setKanbanData(prev => ...)` functional updater 模式
@@ -239,7 +239,7 @@
 
 ### H12: ProtectedRoute 邏輯錯誤 + 無 Token 過期檢查
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-frontend-main/src/utils/ProtectedRoute.jsx:6-18`
 - **問題：** `!auth ? A : auth ? B : C` 三元邏輯中 C 不可達；且只檢查 token 是否存在，不檢查是否過期
 - **建議修復：** 修正三元邏輯，加入 token 過期時間檢查
@@ -257,7 +257,7 @@
 
 ### H14: broadcastToProject 信任客戶端 projectId
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/socketHandlers.js:22` 及多處 handler
 - **問題：** 權限檢查用客戶端提供的 projectId，但實際操作的資源（Task、Column）可能屬於其他專案
 - **建議修復：** 操作後驗證資源確實屬於聲稱的 projectId
@@ -266,7 +266,7 @@
 
 ### H15: `parseInt(data.creator) || 1` 預設 userId
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/messageHandler.js:138`
 - **問題：** 缺失 creator 時預設為 userId=1，訊息被歸屬給管理員
 - **建議修復：** 使用 `this.socket.userId`
@@ -530,7 +530,7 @@
 
 ### R2-H4: `createSubmit` 在 commit 前就清除 assistant cache
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/submit.js:213-215`
 - **問題：** `invalidateProjectCache(pId)` 在 `t.commit()` 之前呼叫。若 commit 失敗則快取已被無效化；若並發請求在兩者之間重建快取，會快取到舊資料持續 5 分鐘
 - **建議修復：** 移到 `await t.commit()` 之後
@@ -539,7 +539,7 @@
 
 ### R2-H5: `createSubmit` 未清除 apiCache（專案列表）
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/controllers/submit.js`
 - **問題：** 提交後 `Project.update` 改了 `currentStage`/`currentSubStage`，但未清除 `apiCache`
 - **影響：** 學生提交後回到儀表板，進度指標 30 秒內仍顯示舊階段
@@ -549,7 +549,7 @@
 
 ### R2-H6: Socket `taskItem` 事件廣播的是 Sequelize update 回傳值而非實際資料
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：**
   - 後端：`sdl-backend-main/sockets/handlers/taskHandler.js:212`
   - 前端：`sdl-frontend-main/src/pages/Kanban/hooks/useKanbanData.js:161`
@@ -560,7 +560,7 @@
 
 ### R2-H7: Socket `nodeUpdated` 事件同樣廣播 update 回傳值
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/nodeHandler.js:213`
 - **問題：** 同 R2-H6，`Node.update()` 回傳 `[1]` 而非節點資料
 

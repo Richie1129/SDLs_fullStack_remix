@@ -209,8 +209,7 @@ export default function SubStageComponent() {
         socket.on('refreshKanban', handleRefreshKanban);
 
         return () => {
-            // socket.disconnect();
-            // socket.off('refreshKanban', handleRefreshKanban);
+            socket.off('refreshKanban', handleRefreshKanban);
         };
     }, []);
 

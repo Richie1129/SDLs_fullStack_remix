@@ -137,8 +137,12 @@ class MessageHandler {
         console.log("收到 RAG 訊息：", data);
         
         try {
-            // 確保 creator 是有效的數字
-            const userId = parseInt(data.creator) || 1;
+            // H15: 使用 socket 認證的 userId，避免預設為 userId=1
+            const userId = this.socket.userId || parseInt(data.creator, 10);
+            if (!userId) {
+                this.socket.emit('error', { message: '無法識別使用者身份' });
+                return;
+            }
             const userName = data.userName || data.author || "未知用戶";
             const sessionId = data.sessionId || null;
             const ragflowSessionId = data.ragflowSessionId || null;

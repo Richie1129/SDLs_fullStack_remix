@@ -93,6 +93,10 @@ apiClient.interceptors.response.use(
 
         const newAccessToken = response.data.accessToken;
         authStorage.set('accessToken', newAccessToken);
+        // H3: Token Rotation — 後端回傳新的 refreshToken 時更新
+        if (response.data.refreshToken) {
+          authStorage.set('refreshToken', response.data.refreshToken);
+        }
 
         // 通知排隊中的請求
         processQueue(null, newAccessToken);

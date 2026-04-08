@@ -3,6 +3,14 @@ const router = express.Router();
 const { getPresignedDownloadUrl, deleteFileFromMinio, fileExistsInMinio } = require('../config/minio');
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const { logAudit } = require('../services/auditService');
+const Submit = require('../models/submit');
+const Task = require('../models/task');
+const CommentAttachment = require('../models/comment_attachment');
+const ProjectCommentAttachment = require('../models/project_comment_attachment');
+const User_project = require('../models/user_project');
+const Column = require('../models/column');
+const Kanban = require('../models/kanban');
+const { Op } = require('sequelize');
 
 /**
  * fileName 安全驗證：防止路徑遍歷攻擊
@@ -141,6 +149,65 @@ router.get('/direct/:fileName', validateToken, async (req, res) => {
 });
 
 /**
+ * H4: 驗證使用者是否有權刪除此檔案
+ * 檢查檔案是否屬於使用者所在的專案
+ */
+async function verifyFileOwnership(userId, userRole, fileName) {
+    // 查詢 Submit 中引用此檔案的記錄
+    const submit = await Submit.findOne({
+        where: { fileName },
+        attributes: ['projectId', 'userId']
+    });
+    if (submit) {
+        if (submit.userId === userId) return true;
+        const membership = await User_project.findOne({
+            where: { userId, projectId: submit.projectId }
+        });
+        return !!membership;
+    }
+
+    // 查詢 Task 的 files/images JSON 欄位中是否引用此檔案
+    const taskWithFile = await Task.findOne({
+        where: {
+            [Op.or]: [
+                { files: { [Op.contains]: [{ fileName }] } },
+                { images: { [Op.contains]: [fileName] } }
+            ]
+        },
+        attributes: ['id', 'columnId'],
+        include: [{
+            model: Column,
+            attributes: ['id'],
+            include: [{ model: Kanban, attributes: ['id', 'projectId'] }]
+        }]
+    });
+    if (taskWithFile) {
+        const projectId = taskWithFile.column?.kanban?.projectId;
+        if (!projectId) return false;
+        const membership = await User_project.findOne({
+            where: { userId, projectId }
+        });
+        return !!membership;
+    }
+
+    // 查詢 CommentAttachment / ProjectCommentAttachment
+    const commentAtt = await CommentAttachment.findOne({
+        where: { fileName },
+        attributes: ['id']
+    });
+    if (commentAtt) return true;
+
+    const projCommentAtt = await ProjectCommentAttachment.findOne({
+        where: { fileName },
+        attributes: ['id']
+    });
+    if (projCommentAtt) return true;
+
+    // 孤立檔案 — 僅教師可刪除
+    return userRole === 'teacher';
+}
+
+/**
  * 刪除單個檔案
  * DELETE /api/file/:fileName
  */
@@ -152,6 +219,12 @@ router.delete('/:fileName', validateToken, async (req, res) => {
     }
 
     try {
+        // H4: 驗證檔案所有權
+        const hasAccess = await verifyFileOwnership(req.userId, req.user?.role, fileName);
+        if (!hasAccess) {
+            return res.status(403).json({ message: '無權刪除此檔案' });
+        }
+
         const exists = await fileExistsInMinio(fileName);
         if (!exists) {
             return res.status(404).json({ message: '檔案不存在' });
@@ -203,6 +276,14 @@ router.post('/batch-delete', validateToken, async (req, res) => {
     }
 
     try {
+        // H4: 批量刪除也需驗證所有權
+        for (const fileName of safeFileNames) {
+            const hasAccess = await verifyFileOwnership(req.userId, req.user?.role, fileName);
+            if (!hasAccess) {
+                return res.status(403).json({ message: `無權刪除檔案: ${fileName}` });
+            }
+        }
+
         const results = [];
 
         for (const fileName of safeFileNames) {

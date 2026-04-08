@@ -18,9 +18,13 @@ const { writeErrorReport } = require('../utils/errorHandler');
 //get all users
 exports.getUsers = async (req, res) => {
     try {
-        const users = await User.findAll({
-            attributes: ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id'],
-        });
+        // H2: 根據角色限制回傳欄位 — 學生只能看到基本資訊
+        const role = req.user?.role; // 來自 AuthMiddleware (JWT decoded)
+        const attributes = role === 'teacher'
+            ? ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id']
+            : ['id', 'username', 'role', 'class'];
+
+        const users = await User.findAll({ attributes });
         res.status(200).json({ user: users });
     } catch (err) {
         console.error('Error fetching users:', err);
@@ -309,49 +313,42 @@ exports.updateUserProfile = async (req, res) => {
         const oldUsername = currentUser.username;
         const newUsername = username.trim();
 
-        // 更新用戶資料
-        const [updatedRowsCount] = await User.update({
-            username: newUsername,
-            email: email || '',
-            class: classField || '',
-            seatNumber: seatNumber || ''
-        }, {
-            where: { id: userId }
-        });
+        // H7: 全部放在同一個 Transaction 中，確保原子操作
+        const transaction = await sequelize.transaction();
+        try {
+            // 更新用戶資料
+            const [updatedRowsCount] = await User.update({
+                username: newUsername,
+                email: email || '',
+                class: classField || '',
+                seatNumber: seatNumber || ''
+            }, {
+                where: { id: userId },
+                transaction
+            });
 
-        if (updatedRowsCount === 0) {
-            return res.status(400).json({ message: '用戶資料更新失敗' });
-        }
-
-        // 如果 username 有變更，使用事務同步更新所有該用戶建立的卡片和節點的 owner 欄位
-        if (oldUsername !== newUsername) {
-            const transaction = await sequelize.transaction();
-            try {
-                // 更新卡片 owner
-                const taskUpdateResult = await Task.update({
-                    owner: newUsername
-                }, {
-                    where: { owner: oldUsername },
-                    transaction
-                });
-
-                // 更新節點 owner
-                const nodeUpdateResult = await Node.update({
-                    owner: newUsername
-                }, {
-                    where: { owner: oldUsername },
-                    transaction
-                });
-
-                await transaction.commit();
-                console.log(`已將用戶 ${oldUsername} 的所有資料更新為 ${newUsername}:`);
-                console.log(`- 卡片: ${taskUpdateResult[0]} 筆`);
-                console.log(`- 節點: ${nodeUpdateResult[0]} 筆`);
-            } catch (error) {
+            if (updatedRowsCount === 0) {
                 await transaction.rollback();
-                console.error('更新相關資料失敗，已回滾事務:', error);
-                throw new Error('用戶名稱更新失敗：無法同步更新相關資料');
+                return res.status(400).json({ message: '用戶資料更新失敗' });
             }
+
+            // 如果 username 有變更，同步更新所有該用戶建立的卡片和節點的 owner 欄位
+            if (oldUsername !== newUsername) {
+                await Task.update(
+                    { owner: newUsername },
+                    { where: { owner: oldUsername }, transaction }
+                );
+
+                await Node.update(
+                    { owner: newUsername },
+                    { where: { owner: oldUsername }, transaction }
+                );
+            }
+
+            await transaction.commit();
+        } catch (txErr) {
+            await transaction.rollback();
+            throw txErr;
         }
 
         // 記錄個人資料更新

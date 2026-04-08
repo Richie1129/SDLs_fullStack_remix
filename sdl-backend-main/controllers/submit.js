@@ -9,6 +9,7 @@ const { logAudit } = require('../services/auditService');
 const sequelize = require('../util/database');
 const { createErrorResponse, getHttpStatusByErrorCode } = require('../constants/dailyErrorCodes');
 const { invalidateProjectCache } = require('./assistant');
+const apiCache = require('../services/apiCache');
 
 // [Option B 隱藏] 四階段過濾服務
 const { filterStage5Data, FOUR_STAGE_CONFIG } = require('../services/fourStageFilterService');
@@ -209,10 +210,13 @@ exports.createSubmit = async(req, res) => {
             }
         }
 
-        // v2.3: 清除專案快取（階段完成狀態已變更）
-        invalidateProjectCache(pId);
-
         await t.commit();
+
+        // R2-H4: cache 清除移到 commit 之後，避免 commit 失敗時快取已被無效化
+        invalidateProjectCache(pId);
+        // R2-H5: 清除 apiCache（key 格式 projects:${userId}:${semester}）
+        // 提交改變 currentStage，影響所有能看到此專案的使用者
+        apiCache.delByPrefix('projects:');
         
         // Audit: Record submit creation
         await logAudit(req, {
@@ -340,8 +344,13 @@ exports.updateSubmit = async (req, res) => {
 
     const t = await sequelize.transaction();
     try {
-        const submit = await Submit.findByPk(submitId);
+        // H8: findByPk 移入 Transaction 並加 row lock 防止並發更新
+        const submit = await Submit.findByPk(submitId, {
+            transaction: t,
+            lock: t.LOCK.UPDATE
+        });
         if (!submit) {
+            await t.rollback();
             const errorResponse = createErrorResponse('DAILY_NOT_FOUND', 'Submit not found');
             return res.status(404).json(errorResponse);
         }

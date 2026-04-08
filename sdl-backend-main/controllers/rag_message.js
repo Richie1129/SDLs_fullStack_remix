@@ -266,16 +266,16 @@ exports.generateSessionTitle = async (req, res) => {
 
     const VLLM_ENDPOINTS = [
         {
-            baseURL: process.env.HSUEH_VLLM_BASE_URL || 'https://vllm-210.hsueh.tw/v1',
-            modelName: process.env.HSUEH_VLLM_MODEL_NAME || 'openai/gpt-oss-20b',
-            displayName: 'GPT-OSS-20B',
-            apiKey: process.env.HSUEH_VLLM_API_KEY || 'dummy',
-        },
-        {
             baseURL: process.env.VLLM_BASE_URL || 'https://vllm-193.hsueh.tw/v1',
             modelName: process.env.VLLM_MODEL_NAME || '/models/gemma-4-26B-A4B-it',
             displayName: 'Gemma-4-26B',
             apiKey: process.env.VLLM_API_KEY || 'dummy',
+        },
+        {
+            baseURL: process.env.HSUEH_VLLM_BASE_URL || 'https://vllm-210.hsueh.tw/v1',
+            modelName: process.env.HSUEH_VLLM_MODEL_NAME || 'openai/gpt-oss-20b',
+            displayName: 'GPT-OSS-20B',
+            apiKey: process.env.HSUEH_VLLM_API_KEY || 'dummy',
         }
     ];
 
@@ -283,7 +283,7 @@ exports.generateSessionTitle = async (req, res) => {
     for (const endpoint of VLLM_ENDPOINTS) {
         try {
             const headers = { 'Content-Type': 'application/json' };
-            if (endpoint.apiKey && endpoint.apiKey !== 'dummy') {
+            if (endpoint.apiKey) {
                 headers['Authorization'] = `Bearer ${endpoint.apiKey}`;
             }
 

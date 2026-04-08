@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
+const sequelize = require('../util/database');
 const User = require('../models/user');
 const PasswordResetToken = require('../models/password_reset_token');
 const { sendPasswordResetEmail } = require('../services/emailService');
@@ -177,63 +178,76 @@ const resetPassword = async (req, res) => {
             });
         }
 
-        const resetToken = await PasswordResetToken.findOne({
-            where: {
-                token: token,
-                expiresAt: {
-                    [Op.gt]: new Date()
-                }
-            },
-            include: [{
-                model: User,
-                as: 'User',
-                attributes: ['id', 'email']
-            }]
-        });
-
-        if (!resetToken) {
-            return res.status(400).json({
-                success: false,
-                message: '無效或已過期的重設連結'
+        // H9: 包在 Transaction 中，鎖定 reset token 防止重複使用
+        const t = await sequelize.transaction();
+        try {
+            const resetToken = await PasswordResetToken.findOne({
+                where: {
+                    token: token,
+                    expiresAt: {
+                        [Op.gt]: new Date()
+                    }
+                },
+                include: [{
+                    model: User,
+                    as: 'User',
+                    attributes: ['id', 'email']
+                }],
+                transaction: t,
+                lock: t.LOCK.UPDATE
             });
-        }
 
-        // 【Linus式檢查】- 檢查 User 關聯是否載入成功
-        if (!resetToken.User) {
-            console.error('Token found but User relation failed to load for token:', token);
-            return res.status(500).json({
-                success: false,
-                message: '系統錯誤，請稍後再試'
+            if (!resetToken) {
+                await t.rollback();
+                return res.status(400).json({
+                    success: false,
+                    message: '無效或已過期的重設連結'
+                });
+            }
+
+            if (!resetToken.User) {
+                await t.rollback();
+                console.error('Token found but User relation failed to load for token:', token);
+                return res.status(500).json({
+                    success: false,
+                    message: '系統錯誤，請稍後再試'
+                });
+            }
+
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            await User.update(
+                { password: hashedPassword },
+                { where: { id: resetToken.User.id }, transaction: t }
+            );
+
+            await PasswordResetToken.destroy({
+                where: { userId: resetToken.User.id },
+                transaction: t
             });
+
+            await t.commit();
+
+            // Transaction 成功後：撤銷所有 Refresh Tokens（非阻塞）
+            revokeAllTokens(resetToken.User.id).catch(() => {});
+
+            // 記錄密碼重設成功
+            logAudit(req, {
+                action: 'PASSWORD_RESET_EXECUTE',
+                targetType: 'user',
+                targetId: resetToken.User.id,
+                actorId: resetToken.User.id,
+                metadata: { email: resetToken.User.email, resetAt: new Date().toISOString() }
+            }).catch(() => { });
+
+            res.status(200).json({
+                success: true,
+                message: '密碼重設成功'
+            });
+        } catch (txErr) {
+            await t.rollback();
+            throw txErr;
         }
-
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-        await User.update(
-            { password: hashedPassword },
-            { where: { id: resetToken.User.id } }
-        );
-
-        // 撤銷所有 Refresh Tokens (密碼重設後強制重新登入)
-        await revokeAllTokens(resetToken.User.id);
-
-        await PasswordResetToken.destroy({
-            where: { userId: resetToken.User.id }
-        });
-
-        // 記錄密碼重設成功
-        logAudit(req, {
-            action: 'PASSWORD_RESET_EXECUTE',
-            targetType: 'user',
-            targetId: resetToken.User.id,
-            actorId: resetToken.User.id,
-            metadata: { email: resetToken.User.email, resetAt: new Date().toISOString() }
-        }).catch(() => { });
-
-        res.status(200).json({
-            success: true,
-            message: '密碼重設成功'
-        });
 
     } catch (error) {
         console.error('Password reset error:', error);

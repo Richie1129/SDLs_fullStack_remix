@@ -31,32 +31,27 @@ exports.inviteForProject = async (req, res) => {
             console.log('Project not found for referral code:', referral_Code);
             return res.status(404).json({ message: '邀請碼不存在!' });
         }
-        console.log("projectId:", referralProject.id); // 新增日誌輸出
-        console.log("userId:", userId); // 新增日誌輸出
-        // 檢查使用者是否已經存在於專案中
-        const userProject = await User_project.findOne({
-            where: {
-                projectId: referralProject.id,
-                userId: userId
-            }
-
-        });
-        console.log("userProject:", userProject); // 新增日誌輸出
-
-        if (userProject) {
-            console.log('User already exists in project!');
-            return res.status(400).json({ message: '你已經是此活動的其中一員!' });
-        }
-
         // 找到用户
         const invitedUser = await User.findByPk(userId);
         if (!invitedUser) {
-            console.log('User not found:', userId);
             return res.status(404).json({ message: 'User not found!' });
         }
 
-        // 將用戶加入項目
-        await referralProject.addUser(invitedUser);
+        // H5: 使用 findOrCreate 防止 TOCTOU 競態條件
+        const [, created] = await User_project.findOrCreate({
+            where: {
+                projectId: referralProject.id,
+                userId: userId
+            },
+            defaults: {
+                projectId: referralProject.id,
+                userId: userId
+            }
+        });
+
+        if (!created) {
+            return res.status(400).json({ message: '你已經是此活動的其中一員!' });
+        }
 
         console.log('Successfully invited user to project!');
 

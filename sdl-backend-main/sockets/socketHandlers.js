@@ -85,12 +85,46 @@ class BaseSocketHandler {
     }
 
     /**
+     * H14: 驗證 Column 確實屬於聲稱的 projectId
+     * 防止使用者操作不屬於自己專案的資源
+     */
+    async verifyColumnProject(columnId, claimedProjectId) {
+        const Column = require('../models/column');
+        const Kanban = require('../models/kanban');
+        const column = await Column.findByPk(columnId, {
+            include: [{ model: Kanban, attributes: ['id', 'projectId'] }]
+        });
+        if (!column || !column.kanban) return false;
+        return String(column.kanban.projectId) === String(claimedProjectId);
+    }
+
+    /**
+     * H14: 驗證 Task 確實屬於聲稱的 projectId
+     */
+    async verifyTaskProject(taskId, claimedProjectId) {
+        const Task = require('../models/task');
+        const Column = require('../models/column');
+        const Kanban = require('../models/kanban');
+        const task = await Task.findByPk(taskId, {
+            include: [{
+                model: Column,
+                include: [{ model: Kanban, attributes: ['id', 'projectId'] }]
+            }]
+        });
+        if (!task || !task.column || !task.column.kanban) return false;
+        return String(task.column.kanban.projectId) === String(claimedProjectId);
+    }
+
+    /**
      * 廣播到專案房間
      */
     broadcastToProject(projectId, event, data) {
-        this.io.to(projectId).emit(event, data);
-        // 同時發送給發送者（防止剛進入頁面時漏接）
-        this.socket.emit(event, data);
+        // 修正：io.to() 已包含房間內所有 socket（含發送者），不需額外 emit
+        // 若發送者未加入房間，先確保加入
+        if (!this.socket.rooms.has(String(projectId))) {
+            this.socket.join(String(projectId));
+        }
+        this.io.to(String(projectId)).emit(event, data);
     }
 
     /**

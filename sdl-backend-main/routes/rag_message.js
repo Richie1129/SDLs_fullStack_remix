@@ -17,7 +17,10 @@ function ensureOwnData(req, res, next) {
 // 所有路由都需要認證
 router.use(validateToken);
 
-// 获取用戶所有 RAG 訊息歷史
+// 測試 API 連接（前端健康檢查用）
+router.get('/test/:userId', ensureOwnData, controller.testConnection);
+
+// 獲取用戶所有 RAG 訊息歷史
 router.get('/history/:userId', ensureOwnData, controller.getRagMessageHistory);
 
 // 根據 userId 和 sessionId 取得特定會話的訊息歷史

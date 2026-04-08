@@ -220,36 +220,36 @@ export const useKanbanData = (projectId) => {
       createdBy: username
     };
 
-    const updatedKanbanData = kanbanData.map((column, index) => {
-      if (index === columnIndex) {
-        return {
-          ...column,
-          task: [...(column.task || []), optimisticTask]
-        };
-      }
-      return column;
-    });
+    // H11: 使用 functional updater 避免 stale closure
+    setKanbanData(prev => {
+      const updated = prev.map((column, index) => {
+        if (index === columnIndex) {
+          return { ...column, task: [...(column.task || []), optimisticTask] };
+        }
+        return column;
+      });
+      queryClient.setQueryData(['kanbanDatas', projectId], updated);
 
-    setKanbanData(updatedKanbanData);
-    queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
+      socket.emit("taskItemCreated", {
+        eventType: 'taskItemCreated',
+        selectedcolumn: columnIndex,
+        item: {
+          title: title.trim(),
+          content: "",
+          labels: [],
+          assignees: []
+        },
+        kanbanData: prev,
+        projectId,
+        user: {
+          username: username,
+          id: userId || null
+        }
+      });
 
-    socket.emit("taskItemCreated", {
-      eventType: 'taskItemCreated',
-      selectedcolumn: columnIndex,
-      item: {
-        title: title.trim(),
-        content: "",
-        labels: [],
-        assignees: []
-      },
-      kanbanData: kanbanData,
-      projectId,
-      user: { 
-        username: username,
-        id: userId || null
-      }
+      return updated;
     });
-  }, [kanbanData, projectId, queryClient]);
+  }, [projectId, queryClient]);
 
   const addPhaseTemplate = useCallback(async (columnsToAdd) => {
     console.log(`🚀 Creating ${columnsToAdd.length} columns from template`);
@@ -390,17 +390,19 @@ export const useKanbanData = (projectId) => {
 
   const addColumn = useCallback((name) => {
     console.log(`🚀 Optimistically creating new column: ${name}`);
-    
-    const optimisticColumn = {
-      id: `temp-${Date.now()}`,
-      name: name.trim(),
-      task: [],
-      order: kanbanData.length
-    };
 
-    const updatedKanbanData = [...kanbanData, optimisticColumn];
-    setKanbanData(updatedKanbanData);
-    queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
+    // H11: functional updater 避免 stale closure
+    setKanbanData(prev => {
+      const optimisticColumn = {
+        id: `temp-${Date.now()}`,
+        name: name.trim(),
+        task: [],
+        order: prev.length
+      };
+      const updated = [...prev, optimisticColumn];
+      queryClient.setQueryData(['kanbanDatas', projectId], updated);
+      return updated;
+    });
 
     socket.emit("ColumnCreated", {
       eventType: 'columnCreate',
@@ -411,7 +413,7 @@ export const useKanbanData = (projectId) => {
         id: getCurrentUserId() || null
       }
     });
-  }, [kanbanData, projectId, queryClient]);
+  }, [projectId, queryClient]);
 
   const deleteColumn = useCallback((columnData) => {
     console.log(`🗑️ Optimistically deleting column: ${columnData.name}`);
@@ -436,10 +438,13 @@ export const useKanbanData = (projectId) => {
     const event = new CustomEvent('columnDeleted', { detail: activityData });
     window.dispatchEvent(event);
     
-    const updatedKanbanData = kanbanData.filter(column => column.id !== columnData.id);
-    setKanbanData(updatedKanbanData);
-    queryClient.setQueryData(['kanbanDatas', projectId], updatedKanbanData);
-    
+    // H11: functional updater 避免 stale closure
+    setKanbanData(prev => {
+      const updated = prev.filter(column => column.id !== columnData.id);
+      queryClient.setQueryData(['kanbanDatas', projectId], updated);
+      return updated;
+    });
+
     socket.emit("ColumnDelete", {
       eventType: 'columnDelete',
       columnData: completeColumnData,
@@ -449,76 +454,83 @@ export const useKanbanData = (projectId) => {
         id: getCurrentUserId() || null
       }
     });
-  }, [kanbanData, projectId, queryClient]);
+  }, [projectId, queryClient]);
 
   const reorderColumn = useCallback((sourceIndex, destinationIndex) => {
-    const newKanbanData = Array.from(kanbanData);
-    const [reorderedColumn] = newKanbanData.splice(sourceIndex, 1);
-    newKanbanData.splice(destinationIndex, 0, reorderedColumn);
+    // H11: functional updater 避免 stale closure
+    setKanbanData(prev => {
+      const newData = Array.from(prev);
+      const [reorderedColumn] = newData.splice(sourceIndex, 1);
+      newData.splice(destinationIndex, 0, reorderedColumn);
+      queryClient.setQueryData(['kanbanDatas', projectId], newData);
 
-    setKanbanData(newKanbanData);
-    queryClient.setQueryData(['kanbanDatas', projectId], newKanbanData);
+      const columnOrder = newData.map(col => col.id.toString());
+      socket.emit('columnOrderChanged', {
+        projectId,
+        columnOrder,
+        user: {
+          username: getCurrentUsername(),
+          id: getCurrentUserId() || null,
+        },
+      });
 
-    const columnOrder = newKanbanData.map(col => col.id.toString());
-    socket.emit('columnOrderChanged', {
-      projectId,
-      columnOrder,
-      user: {
-        username: getCurrentUsername(),
-        id: getCurrentUserId() || null,
-      },
+      return newData;
     });
-  }, [kanbanData, projectId, queryClient]);
+  }, [projectId, queryClient]);
 
   const moveCard = useCallback((source, destination) => {
     const sourceColumnId = parseInt(source.droppableId);
     const destColumnId = parseInt(destination.droppableId);
-    
-    const sourceColumnIndex = kanbanData.findIndex(col => col.id === sourceColumnId);
-    const destColumnIndex = kanbanData.findIndex(col => col.id === destColumnId);
-    
-    if (sourceColumnIndex === -1 || destColumnIndex === -1) {
-      console.error('❌ 找不到對應的列表:', { sourceColumnId, destColumnId });
-      return;
-    }
 
-    const newKanbanData = Array.from(kanbanData);
-    const sourceColumn = { ...newKanbanData[sourceColumnIndex] };
-    const destColumn = sourceColumnIndex === destColumnIndex 
-      ? sourceColumn 
-      : { ...newKanbanData[destColumnIndex] };
-    
-    const sourceTasks = Array.from(sourceColumn.task || []);
-    const [movedTask] = sourceTasks.splice(source.index, 1);
-    
-    if (!movedTask) return;
-    
-    sourceColumn.task = sourceTasks;
-    
-    const destTasks = Array.from(destColumn.task || []);
-    destTasks.splice(destination.index, 0, movedTask);
-    destColumn.task = destTasks;
-    
-    newKanbanData[sourceColumnIndex] = sourceColumn;
-    if (sourceColumnIndex !== destColumnIndex) {
-      newKanbanData[destColumnIndex] = destColumn;
-    }
-    
-    setKanbanData(newKanbanData);
-    queryClient.setQueryData(['kanbanDatas', projectId], newKanbanData);
-    
-    socket.emit('cardItemDragged', {
-      eventType: 'taskDrag',
-      projectId,
-      taskId: movedTask.id,
-      source: { columnId: sourceColumnId, index: source.index },
-      destination: { columnId: destColumnId, index: destination.index },
-      user: {
-        username: getCurrentUsername(),
-        id: getCurrentUserId() || null,
-      },
+    // H11: functional updater 避免 stale closure
+    setKanbanData(prev => {
+      const sourceColumnIndex = prev.findIndex(col => col.id === sourceColumnId);
+      const destColumnIndex = prev.findIndex(col => col.id === destColumnId);
+
+      if (sourceColumnIndex === -1 || destColumnIndex === -1) {
+        console.error('❌ 找不到對應的列表:', { sourceColumnId, destColumnId });
+        return prev;
+      }
+
+      const newData = Array.from(prev);
+      const sourceColumn = { ...newData[sourceColumnIndex] };
+      const destColumn = sourceColumnIndex === destColumnIndex
+        ? sourceColumn
+        : { ...newData[destColumnIndex] };
+
+      const sourceTasks = Array.from(sourceColumn.task || []);
+      const [movedTask] = sourceTasks.splice(source.index, 1);
+
+      if (!movedTask) return prev;
+
+      sourceColumn.task = sourceTasks;
+
+      const destTasks = Array.from(destColumn.task || []);
+      destTasks.splice(destination.index, 0, movedTask);
+      destColumn.task = destTasks;
+
+      newData[sourceColumnIndex] = sourceColumn;
+      if (sourceColumnIndex !== destColumnIndex) {
+        newData[destColumnIndex] = destColumn;
+      }
+
+      queryClient.setQueryData(['kanbanDatas', projectId], newData);
+
+      socket.emit('cardItemDragged', {
+        eventType: 'taskDrag',
+        projectId,
+        taskId: movedTask.id,
+        source: { columnId: sourceColumnId, index: source.index },
+        destination: { columnId: destColumnId, index: destination.index },
+        user: {
+          username: getCurrentUsername(),
+          id: getCurrentUserId() || null,
+        },
+      });
+
+      return newData;
     });
-  }, [kanbanData, projectId, queryClient]);
+  }, [projectId, queryClient]);
 
   return {
     kanbanData,

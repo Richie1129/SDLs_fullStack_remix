@@ -1,6 +1,8 @@
 const { sign } = require('jsonwebtoken');
 const { Op } = require('sequelize');
+const crypto = require('crypto');
 const config = require('../config');
+const sequelize = require('../util/database');
 const RefreshToken = require('../models/refresh_token');
 const User = require('../models/user');
 const { logAudit } = require('../services/auditService');
@@ -40,31 +42,55 @@ exports.refreshToken = async (req, res) => {
             });
         }
 
-        // 生成新 Access Token
-        const accessToken = sign(
-            {
-                account: tokenRecord.user.account,
-                id: tokenRecord.user.id,
-                role: tokenRecord.user.role,
-                username: tokenRecord.user.username
-            },
-            config.jwt.secret,
-            { expiresIn: config.jwt.expiresIn }
-        );
+        // H3: Token Rotation — 在 Transaction 中銷毀舊 token 並發新 token
+        const t = await sequelize.transaction();
+        try {
+            // 銷毀舊 Refresh Token
+            await tokenRecord.destroy({ transaction: t });
 
-        // 記錄 Token 刷新
-        logAudit(req, {
-            action: 'TOKEN_REFRESH',
-            targetType: 'user',
-            targetId: tokenRecord.user.id,
-            actorId: tokenRecord.user.id,
-            metadata: { account: tokenRecord.user.account }
-        }).catch(() => {});
+            // 生成新 Refresh Token
+            const newRefreshToken = crypto.randomUUID();
+            const expiresAt = new Date();
+            expiresAt.setTime(expiresAt.getTime() + (config.jwt.refreshExpiresIn || 604800) * 1000);
 
-        res.status(200).json({
-            accessToken,
-            expiresIn: config.jwt.expiresIn
-        });
+            await RefreshToken.create({
+                userId: tokenRecord.user.id,
+                token: newRefreshToken,
+                expiresAt
+            }, { transaction: t });
+
+            await t.commit();
+
+            // 生成新 Access Token
+            const accessToken = sign(
+                {
+                    account: tokenRecord.user.account,
+                    id: tokenRecord.user.id,
+                    role: tokenRecord.user.role,
+                    username: tokenRecord.user.username
+                },
+                config.jwt.secret,
+                { expiresIn: config.jwt.expiresIn }
+            );
+
+            // 記錄 Token 刷新
+            logAudit(req, {
+                action: 'TOKEN_REFRESH',
+                targetType: 'user',
+                targetId: tokenRecord.user.id,
+                actorId: tokenRecord.user.id,
+                metadata: { account: tokenRecord.user.account }
+            }).catch(() => {});
+
+            res.status(200).json({
+                accessToken,
+                refreshToken: newRefreshToken,
+                expiresIn: config.jwt.expiresIn
+            });
+        } catch (innerErr) {
+            await t.rollback();
+            throw innerErr;
+        }
 
     } catch (err) {
         console.error('[Refresh Token Error]', err);
