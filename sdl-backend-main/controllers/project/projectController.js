@@ -249,6 +249,9 @@ exports.createProject = async (req, res) => {
         processInst.stage = [stage1.id, stage2.id, stage3.id, stage4.id, stage5.id];
         await processInst.save({ transaction: t });
 
+        // 清除該用戶的專案列表快取，確保前端立即看到新專案
+        apiCache.delByPrefix(`projects:${userId}`);
+
         const sub_stage_1_1 = await Sub_stage.create({
             name: "提出研究主題",
             description: "這個階段的目標是為了確定研究的主題範圍，並確保主題具有研究價值和實務意義。在這個階段你可以先進行文獻回顧，識別研究領域中的空白或爭議點，再透過討論和思考縮小研究範圍，最後再和小組成員一起確定出一個具體的研究主題。",
@@ -486,6 +489,9 @@ exports.updateProject = async (req, res) => {
 
         await project.save();
 
+        // 清除相關用戶的專案列表快取
+        apiCache.delByPrefix('projects:');
+
         res.status(200).json({ message: '活動更新成功！', project });
     } catch (error) {
         console.error("更新專案錯誤:", error);
@@ -593,6 +599,8 @@ exports.deleteProject = async (req, res) => {
             await Kanban.destroy({ where: { projectId }, transaction: t });
             await Project.destroy({ where: { id: projectId }, individualHooks: true, req, transaction: t });
             await t.commit();
+            // 清除相關用戶的專案列表快取
+            apiCache.delByPrefix('projects:');
             console.log(`✅ 專案 ${projectId} 刪除完成`);
             return res.status(200).json({ message: "專案刪除成功！" });
         } catch (txErr) {

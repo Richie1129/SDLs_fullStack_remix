@@ -17,7 +17,8 @@ function getTaiwanSemester(date = new Date()) {
 
   if (month >= 2 && month <= 7) {
     // 第 2 學期：2 月 ~ 7 月
-    const academicYear = year - 1911;
+    // 學年度以「前一年」命名（例如 2026年3月 → 114學年度，因學年始於2025年8月）
+    const academicYear = (year - 1) - 1911;
     return `${academicYear}-2`;
   } else {
     // 第 1 學期：8 月 ~ 隔年 1 月
