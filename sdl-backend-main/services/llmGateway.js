@@ -321,8 +321,8 @@ async function callGemini(options = {}) {
  * @type {Array<{type: 'vllm'|'gemini', key?: string, label: string}>}
  */
 const DEFAULT_FALLBACK_CHAIN = [
-    { type: 'vllm', key: 'gpt-oss', label: 'GPT-OSS-20B' },
     { type: 'vllm', key: 'gemma', label: 'Gemma-4-26B' },
+    { type: 'vllm', key: 'gpt-oss', label: 'GPT-OSS-20B' },
     { type: 'gemini', label: 'Gemini-3.1-Flash-Lite-Preview' },
 ];
 

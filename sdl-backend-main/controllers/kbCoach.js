@@ -123,19 +123,7 @@ async function callAIWithFallback(agentType, userPrompt) {
   const systemPrompt = buildSystemPrompt(agentType);
   const errors = [];
 
-  // 第一層：GPT-OSS-20b
-  try {
-    console.log('🤖 嘗試使用 GPT-OSS-20B...');
-    const result = await gwCallVLLM('gpt-oss', {
-      systemPrompt, userPrompt, jsonMode: true
-    });
-    return { data: result.parsed, model: result.model };
-  } catch (error) {
-    errors.push({ model: 'GPT-OSS-20B', error: error.message });
-    console.warn('⚠️ GPT-OSS-20B 失敗，fallback 到 Gemma-4');
-  }
-
-  // 第二層：Gemma-4-27b
+  // 第一層：Gemma-4-27b
   try {
     console.log('🤖 嘗試使用 Gemma-4-27B...');
     const result = await gwCallVLLM('gemma', {
@@ -144,7 +132,19 @@ async function callAIWithFallback(agentType, userPrompt) {
     return { data: result.parsed, model: result.model };
   } catch (error) {
     errors.push({ model: 'Gemma-4-27B', error: error.message });
-    console.warn('⚠️ Gemma-4-27B 失敗，fallback 到 Gemini');
+    console.warn('⚠️ Gemma-4-27B 失敗，fallback 到 GPT-OSS');
+  }
+
+  // 第二層：GPT-OSS-20b
+  try {
+    console.log('🤖 嘗試使用 GPT-OSS-20B...');
+    const result = await gwCallVLLM('gpt-oss', {
+      systemPrompt, userPrompt, jsonMode: true
+    });
+    return { data: result.parsed, model: result.model };
+  } catch (error) {
+    errors.push({ model: 'GPT-OSS-20B', error: error.message });
+    console.warn('⚠️ GPT-OSS-20B 失敗，fallback 到 Gemini');
   }
 
   // 第三層：Gemini (結構化輸出)
