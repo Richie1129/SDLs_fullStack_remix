@@ -478,18 +478,18 @@ export default function IdeaWall() {
                 </div>
             )}
 
-            {/* Phase 2: IdeaWall Chat Panel */}
-            {!isObservationMode && (
+            {/* Phase 2: IdeaWall Chat Panel — 暫時隱藏 */}
+            {false && !isObservationMode && (
                 <>
                     {state.isChatPanelOpen ? (
                         <IdeaWallChatPanel
                             ideaWallId={state.ideaWallInfo?.id}
                             selectedNodeId={state.selectNodeInfo?.id}
                             nodes={state.nodes}
-                            onClose={() => state.setIsChatPanelOpen(false)} 
+                            onClose={() => state.setIsChatPanelOpen(false)}
                         />
                     ) : (
-                        <button 
+                        <button
                             data-track
                             data-track-action="IDEAWALL_CHAT_OPEN"
                             data-track-type="ideawall"
