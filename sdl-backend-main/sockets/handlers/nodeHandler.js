@@ -7,6 +7,8 @@ const { logNodeChange, logNodeFieldChanges } = require('../../utils/nodeChangeLo
 
 // Phase 3: 引入 Orchestrator
 const { orchestrate } = require('../../services/orchestrator');
+// R2-M2: 節點變更時清除 AI 助理快取
+const { invalidateProjectCache } = require('../../controllers/assistant');
 
 /**
  * 節點相關 Socket 事件處理器
@@ -125,7 +127,10 @@ class NodeHandler {
 
             // 廣播新節點到所有相關客戶端
             this.broadcastToProject(projectId, "nodeUpdated", createdNode);
-            
+
+            // R2-M2: 清除 AI 助理快取
+            invalidateProjectCache(projectId);
+
             // 發送成功事件給創建者
             this.emitSuccess('nodeCreate', {
                 message: '節點創建成功',
@@ -213,7 +218,10 @@ class NodeHandler {
 
             // 廣播節點更新
             this.broadcastToProject(projectId, "nodeUpdated", updatedNode);
-            
+
+            // R2-M2: 清除 AI 助理快取
+            invalidateProjectCache(projectId);
+
             console.log(`✅ 節點更新成功: ${id} - ${title}`);
 
         } catch (error) {
@@ -277,7 +285,10 @@ class NodeHandler {
 
             // 廣播節點刪除 - 觸發節點列表刷新
             this.broadcastToProject(projectId, "nodeUpdated", null);
-            
+
+            // R2-M2: 清除 AI 助理快取
+            invalidateProjectCache(projectId);
+
             // 廣播活動流更新 - 觸發活動記錄顯示
             this.broadcastToProject(projectId, 'activityUpdate', {
                 type: 'delete',

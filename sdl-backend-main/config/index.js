@@ -91,7 +91,7 @@ class Config {
         
         return {
             origin: allowedOrigins,
-            methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS'],
+            methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH', 'OPTIONS'],
             credentials: true
         };
     }

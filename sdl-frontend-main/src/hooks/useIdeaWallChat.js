@@ -56,9 +56,9 @@ export const useIdeaWallChat = (ideaWallId) => {
 
         initChat();
 
-        // 清理：離開房間 (如果需要的話，目前後端沒有 leave_ideawall，但 socket 斷線會自動處理)
+        // M8: 離開頁面時離開房間，避免收到不相關的訊息
         return () => {
-            // socket.emit('leave_ideawall', ideaWallId); 
+            socket.emit('leave_ideawall', ideaWallId);
         };
     }, [ideaWallId]);
 

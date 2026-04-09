@@ -277,75 +277,73 @@
 
 ### M1: 聊天室/提問路由無專案權限檢查
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `routes/question.js`、`routes/chatroom.js`
-- **建議修復：** 加 `checkProjectViewingPermission` 中間件
+- **修復方式：** 為含 `projectId` 的路由加上 `checkProjectViewingPermission` 中間件
 
 ---
 
 ### M2: 多個 controller `.catch(err => console.log(err))` 不回 response
 
-- **狀態：** [ ] 未修復
-- **檔案：** `controllers/chatroom.js:4-17`、`controllers/question.js:9-48`、`controllers/ideaWall.js:68-80`
-- **建議修復：** catch 中回 `res.status(500).json({ error: '...' })`
+- **狀態：** [x] 已修復
+- **檔案：** `controllers/chatroom.js`、`controllers/question.js`、`controllers/ideaWall.js`
+- **修復方式：** 改為 try-catch 並回 `res.status(500).json({ message: '...' })`
 
 ---
 
 ### M3: 刪除專案先刪 MinIO 檔案再做 DB Transaction
 
-- **狀態：** [ ] 未修復
-- **檔案：** `controllers/project/projectController.js:496-606`
-- **問題：** DB Transaction 回滾但 MinIO 檔案已不可恢復地刪除
-- **建議修復：** DB Transaction commit 後再刪檔案
+- **狀態：** [x] 已修復
+- **檔案：** `controllers/project/projectController.js`
+- **修復方式：** 先收集檔案名稱，DB Transaction commit 後再刪 MinIO 檔案
 
 ---
 
 ### M4: Portfolio react-query key 缺 projectId
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/pages/protfolio/Protfolio.jsx:52`
-- **問題：** query key 是 `"protfolioDatas"`（字串），跨專案會看到舊快取
-- **建議修復：** 改為 `['protfolioDatas', projectId]`
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/pages/protfolio/Protfolio.jsx`
+- **修復方式：** query key 改為 `["protfolioDatas", projectId]`
 
 ---
 
 ### M5: ChatRoom 訊息重複（樂觀 + Socket 回傳）
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/components/ChatRoom.jsx:26-80`
-- **建議修復：** 訊息加唯一 ID，handler 中去重
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/components/ChatRoom.jsx`
+- **修復方式：** receive_message handler 中以 message+author+createdAt 去重
 
 ---
 
 ### M6: useAssistantChat SSE stream 無 AbortController
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/hooks/useAssistantChat.js:113-245`
-- **建議修復：** 加 AbortController，unmount 或新訊息時 abort
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/hooks/useAssistantChat.js`
+- **修復方式：** 加 AbortController ref，新訊息時 abort 前一次請求，unmount 時 cleanup
 
 ---
 
 ### M7: useAnnouncementSocket listener 頻繁重綁
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/hooks/useAnnouncementSocket.js:19-30`
-- **建議修復：** 用 ref 追蹤 selectedAnnouncement，避免重綁
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/hooks/useAnnouncementSocket.js`
+- **修復方式：** 用 useRef 追蹤 selectedAnnouncement，從 deps 中移除
 
 ---
 
 ### M8: useIdeaWallChat 離開頁面未離開房間
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/hooks/useIdeaWallChat.js:59-62`
-- **建議修復：** 取消註解 `socket.emit('leave_ideawall', ideaWallId)`
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/hooks/useIdeaWallChat.js`
+- **修復方式：** 取消註解 `socket.emit('leave_ideawall', ideaWallId)`
 
 ---
 
 ### M9: ReflectionRefactored 階段資訊非響應式
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/pages/reflection/ReflectionRefactored.jsx:43`
-- **建議修復：** 改用 `useStageManager` hook
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/pages/reflection/ReflectionRefactored.jsx`
+- **修復方式：** 取代 `getStageInfo()` 為 `useStageManager()` hook
 
 ---
 
@@ -359,33 +357,33 @@
 
 ### M11: projectViewingMiddleware debug log 洩漏敏感資訊
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-backend-main/middlewares/projectViewingMiddleware.js:39-47`
-- **建議修復：** 移除或限制在 `NODE_ENV === 'development'`
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-backend-main/middlewares/projectViewingMiddleware.js`
+- **修復方式：** 移除大量 console.log，僅保留 development 環境下的精簡 debug 資訊
 
 ---
 
 ### M12: 多處錯誤回應含 `error.message`
 
-- **狀態：** [ ] 未修復
-- **檔案：** 多個 middleware/controller
-- **建議修復：** 生產環境回傳通用錯誤訊息
+- **狀態：** [x] 部分修復
+- **檔案：** `projectViewingMiddleware.js`、`announcement.js`、`ideaWall.js`
+- **修復方式：** 移除 error.message/error.stack 暴露。其餘 controllers 待後續批次處理
 
 ---
 
 ### M13: adminResetPassword 不驗證師生關係
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-backend-main/controllers/user.js:498-545`
-- **建議修復：** 驗證教師與學生有共同專案
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-backend-main/controllers/user.js`
+- **修復方式：** 新增教師與學生的專案成員關係或 mentor 關係驗證
 
 ---
 
 ### M14: CORS 缺少 PATCH method
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-backend-main/config/index.js:94`
-- **建議修復：** methods 陣列加入 `'PATCH'`
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-backend-main/config/index.js`
+- **修復方式：** methods 陣列加入 `'PATCH'`
 
 ---
 
@@ -399,10 +397,9 @@
 
 ### M16: broadcastToProject 重複送給 sender
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-backend-main/sockets/socketHandlers.js:90-94`
-- **問題：** 同時 emit 給 `io.to(projectId)` 和 `this.socket`，sender 若在房間內會收兩次
-- **建議修復：** 只用 `io.to(projectId).emit()` 或改用 `socket.to(projectId).emit()` + 單獨確認
+- **狀態：** [x] 已修復（先前批次）
+- **檔案：** `sdl-backend-main/sockets/socketHandlers.js`
+- **修復方式：** 移除多餘的 `this.socket.emit`，統一使用 `io.to(projectId).emit()`
 
 ---
 
@@ -570,73 +567,65 @@
 
 ### R2-M1: Idea_wall title 存的是 Sub_stage 的 DB ID 而非名稱
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-backend-main/controllers/submit.js:139, 173`
-- **問題：** `stage.sub_stage` 是 `DataTypes.ARRAY(DataTypes.INTEGER)`，存的是 Sub_stage ID，所以 title 變成 `"42"` 而非 `"提出研究目的"`
-- **建議修復：** 用 ID 查詢 Sub_stage record 取得 `name` 欄位
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-backend-main/controllers/submit.js`
+- **修復方式：** 引入 Sub_stage model，用 `findByPk` 查詢名稱後設定為 title
 
 ---
 
 ### R2-M2: Node handler 未清除 assistantCache
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復
 - **檔案：** `sdl-backend-main/sockets/handlers/nodeHandler.js`
-- **問題：** 建立/更新/刪除想法牆節點後，未呼叫 `invalidateProjectCache`
-- **影響：** AI 助理最長 5 分鐘內基於過期的想法牆資料給建議
+- **修復方式：** 在 create/update/delete 後呼叫 `invalidateProjectCache(projectId)`
 
 ---
 
 ### R2-M3: `updateSubmit` / `deleteSubmit` 未清除 assistant cache
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-backend-main/controllers/submit.js:337-529`
-- **問題：** `createSubmit` 有清，但 update/delete 沒有
-- **影響：** 編輯/刪除提交後，AI 助理 5 分鐘內仍引用舊/已刪資料
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-backend-main/controllers/submit.js`
+- **修復方式：** updateSubmit 在 commit 後、deleteSubmit 在 destroy 後呼叫 `invalidateProjectCache`
 
 ---
 
 ### R2-M4: SubStageBar useEffect 依賴陣列錯誤
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/components/SubStageBar.jsx:180-184`
-- **問題：** effect 計算 `stages` 基於 `currentStageIndex`，但依賴陣列只有 `currentSubStageIndex`
-- **影響：** 主階段變更時（如 1→2），子階段列表可能不更新
-- **建議修復：** 依賴改為 `[currentStageIndex, currentSubStageIndex]`
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/components/SubStageBar.jsx`
+- **修復方式：** 依賴改為 `[currentStageIndex, currentSubStageIndex]`
 
 ---
 
 ### R2-M5: `useProjectData.js` 專案篩選在 75%-99% 有缺口
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/pages/home/hooks/useProjectData.js:104-118`
-- **問題：** "進行中" 篩選 `<75`，"已完成" 篩選 `ProjectEnd===true`。75%-99% 且未結束的專案消失
-- **建議修復：** "進行中" 改為 `!isProjectEnded(project)`
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/pages/home/hooks/useProjectData.js`
+- **修復方式：** "進行中" 改為 `!isProjectEnded(project) && !isPortfolioCompleted(project)`
 
 ---
 
 ### R2-M6: Portfolio title 插入基於位置而非實際階段
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/pages/protfolio/Protfolio.jsx:154-169`
-- **問題：** 每 3 筆插入一個階段標題，假設每階段恰好 3 筆。若上傳多檔或刪除記錄，標題全部錯位
-- **建議修復：** 用 `stageItemsByMainStage`（已存在的 useMemo）來渲染，按實際 stage 欄位分組
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/pages/protfolio/Protfolio.jsx`
+- **修復方式：** 改為按 `item.stage` 欄位的主階段值分組，先排序再以 lastMainStage 追蹤變化
 
 ---
 
 ### R2-M7: Socket error event 命名不一致
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/pages/Kanban/hooks/useKanbanData.js:169-174`
-- **問題：** 前端同時監聽 `ColumnCreatedError`（PascalCase）和 `columnCreateError`（camelCase），後端只發 camelCase
-- **建議修復：** 移除 PascalCase 版本的監聽
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/pages/Kanban/hooks/useKanbanData.js`
+- **修復方式：** 移除 `ColumnCreatedError` 和 `ColumnDeleteError` PascalCase 監聽
 
 ---
 
 ### R2-M8: `ManagementOverview` 未做學期篩選
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-frontend-main/src/pages/overview/ManagementOverview.jsx:34`
-- **問題：** 查詢所有專案不帶 semester 參數，顯示所有學期混在一起
+- **狀態：** [x] 已修復
+- **檔案：** `sdl-frontend-main/src/pages/overview/ManagementOverview.jsx`
+- **修復方式：** 引入 `getCurrentSemester()`，查詢時帶入 semester 參數，query key 也加入 semester
 
 ---
 

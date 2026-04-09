@@ -11,6 +11,7 @@ import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils
 import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
 import { formatRelativeTime } from '../../utils/timeUtils';
 import { calculateProgress } from '../../utils/stageUtils';
+import { getCurrentSemester } from '../../utils/semesterUtils';
 
 export default function ManagementOverview() {
   const [projectData, setProjectData] = useState([]);
@@ -27,13 +28,15 @@ export default function ManagementOverview() {
   const [doneSearch, setDoneSearch] = useState(''); // 已完成歷程搜尋
   const role = getCurrentUserRole();
   const userName = getCurrentUsername();
+  // R2-M8: 加入學期篩選，避免所有學期混在一起
+  const [currentSemester] = useState(getCurrentSemester());
   const {
     isLoading,
     isError,
     error,
     data
-  } = useQuery("projectDatas", () => getAllProject(
-    { params: { userId: getCurrentUserId() } }),
+  } = useQuery(["projectDatas", currentSemester], () => getAllProject(
+    { params: { userId: getCurrentUserId(), semester: currentSemester } }),
     { onSuccess: setProjectData }
   );
 
@@ -144,7 +147,7 @@ export default function ManagementOverview() {
       isError,
       error,
       data
-    } = useQuery("TeacherProjectDatas", () => getProjectsByMentor(userName), {
+    } = useQuery(["TeacherProjectDatas", currentSemester], () => getProjectsByMentor(userName, currentSemester), {
       onSuccess: setProjectData,
     });
 

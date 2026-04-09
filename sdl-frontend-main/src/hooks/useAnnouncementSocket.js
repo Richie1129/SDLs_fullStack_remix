@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { socket } from '../utils/socket';
 import Swal from 'sweetalert2';
 
@@ -6,6 +6,12 @@ import Swal from 'sweetalert2';
  * Hook to handle real-time announcement updates via Socket.io
  */
 export const useAnnouncementSocket = (projectId, setNotifications, selectedAnnouncement, setSelectedAnnouncement) => {
+    // M7: 用 ref 追蹤 selectedAnnouncement，避免因其變更導致頻繁重綁 listener
+    const selectedAnnouncementRef = useRef(selectedAnnouncement);
+    useEffect(() => {
+        selectedAnnouncementRef.current = selectedAnnouncement;
+    }, [selectedAnnouncement]);
+
     useEffect(() => {
         const handleReceiveAnnouncement = (data) => {
             setNotifications((prev) => {
@@ -20,7 +26,8 @@ export const useAnnouncementSocket = (projectId, setNotifications, selectedAnnou
             setNotifications((prev) => prev.filter(n => n.id !== data.id));
 
             // 如果正在查看被刪除的公告，關閉 Modal
-            if (selectedAnnouncement && selectedAnnouncement.id === data.id) {
+            const current = selectedAnnouncementRef.current;
+            if (current && current.id === data.id) {
                 setSelectedAnnouncement(null);
                 Swal.fire({
                     icon: 'info',
@@ -39,7 +46,7 @@ export const useAnnouncementSocket = (projectId, setNotifications, selectedAnnou
             socket.off('receiveAnnouncement', handleReceiveAnnouncement);
             socket.off('announcementDeleted', handleAnnouncementDeleted);
         };
-    }, [selectedAnnouncement, setNotifications, setSelectedAnnouncement]);
+    }, [setNotifications, setSelectedAnnouncement]);
 
     // 當 projectId 變更時，加入或離開對應的 socket room
     useEffect(() => {

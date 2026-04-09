@@ -94,8 +94,8 @@ exports.createAnnouncement = async (req, res) => {
 
         res.status(201).json({ message: '公告發布成功', announcement: newAnnouncement });
     } catch (error) {
-        console.error("公告儲存失敗，出錯資訊:", error.message, error.stack);
-        res.status(500).json({ message: '公告發布失敗', error: error.message, stack: error.stack });
+        console.error("公告儲存失敗:", error);
+        res.status(500).json({ message: '公告發布失敗' });
     }
 };
 
@@ -144,7 +144,7 @@ exports.getAnnouncements = async (req, res) => {
         res.status(200).json({ announcements });
     } catch (error) {
         console.error('無法加載公告:', error);
-        res.status(500).json({ message: '載入公告失敗', error: error.message });
+        res.status(500).json({ message: '載入公告失敗' });
     }
 };
 

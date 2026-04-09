@@ -102,15 +102,8 @@ exports.assignStudentsToGroup = async (req, res) => {
             return res.status(400).json({ message: '部分學生ID無效或學生不存在' });
         }
 
-        // 將學生加入專案（使用交易以確保全部或全部不成功）
-        const t = await sequelize.transaction();
-        try {
-            await project.addUsers(students, { transaction: t });
-            await t.commit();
-        } catch (txErr) {
-            await t.rollback();
-            throw txErr;
-        }
+        // 將學生加入專案
+        await project.addUsers(students);
         
         // 清除所有被分配學生的專案列表快取
         for (const sid of studentIds) {

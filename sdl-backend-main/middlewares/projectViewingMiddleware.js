@@ -35,37 +35,26 @@ const checkProjectViewingPermission = async (req, res, next) => {
             return res.status(404).json({ message: '用戶不存在' });
         }
 
-        console.log('=== 權限檢查 Debug ===');
-        console.log('projectId:', projectId);
-        console.log('userId:', userId);
-        console.log('user.username:', user.username);
-        console.log('user.class:', user.class);
-        console.log('project.mentor:', project.mentor);
-        console.log('project.is_open_for_viewing:', project.is_open_for_viewing);
-        console.log('project.allowed_classes:', project.allowed_classes);
-        console.log('project members:', project.users.map(u => u.id));
+        if (process.env.NODE_ENV === 'development') {
+            console.log('=== 權限檢查 Debug ===');
+            console.log('projectId:', projectId, 'userId:', userId);
+        }
 
         // 檢查用戶是否為專案成員
         const isProjectMember = project.users.some(projectUser => projectUser.id === parseInt(userId));
-        console.log('isProjectMember:', isProjectMember);
 
         if (isProjectMember) {
-            // 專案成員擁有完整權限
             req.readOnly = false;
             req.hasViewingPermission = true;
-            console.log('權限通過：專案成員');
             return next();
         }
 
         // 檢查是否為指導教師（以 mentorId 外鍵比對，避免 username 異動導致關聯斷裂）
         const isProjectMentor = project.mentorId === user.id;
-        console.log('isProjectMentor:', isProjectMentor);
 
         if (isProjectMentor) {
-            // 指導教師只有查看權限，無編輯權限
             req.readOnly = true;
             req.hasViewingPermission = true;
-            console.log('權限通過：指導教師（只讀）');
             return next();
         }
 
@@ -75,18 +64,12 @@ const checkProjectViewingPermission = async (req, res, next) => {
             project.school_id !== null &&
             project.school_id === user.school_id &&
             project.allowed_classes.includes(user.class);
-        console.log('hasViewingPermission:', hasViewingPermission);
 
         if (hasViewingPermission) {
-            // 非成員但有觀摩權限 - 只讀模式
             req.readOnly = true;
             req.hasViewingPermission = true;
-            console.log('權限通過：跨班觀摩');
             return next();
         }
-
-        // 無任何權限
-        console.log('權限被拒絕：無任何權限');
         return res.status(403).json({ 
             message: '無權限訪問此專案',
             code: 'INSUFFICIENT_PERMISSIONS'
@@ -95,8 +78,7 @@ const checkProjectViewingPermission = async (req, res, next) => {
     } catch (error) {
         console.error('權限檢查錯誤:', error);
         return res.status(500).json({ 
-            message: '權限檢查時發生錯誤',
-            error: error.message 
+            message: '權限檢查時發生錯誤'
         });
     }
 };
@@ -120,8 +102,7 @@ const checkTeacherRole = async (req, res, next) => {
     } catch (error) {
         console.error('教師權限檢查錯誤:', error);
         return res.status(500).json({ 
-            message: '權限檢查時發生錯誤',
-            error: error.message 
+            message: '權限檢查時發生錯誤'
         });
     }
 };
@@ -166,8 +147,7 @@ const checkProjectOwnerOrTeacher = async (req, res, next) => {
     } catch (error) {
         console.error('專案權限檢查錯誤:', error);
         return res.status(500).json({ 
-            message: '權限檢查時發生錯誤',
-            error: error.message 
+            message: '權限檢查時發生錯誤'
         });
     }
 };
@@ -183,24 +163,15 @@ const checkProjectOwnerOrTeacher = async (req, res, next) => {
 const checkWritePermission = async (req, res, next) => {
     try {
         const userId = parseInt(req.userId);
-        console.log('=== checkWritePermission Debug ===');
-        console.log('userId:', userId);
-        console.log('readOnly:', req.readOnly);
-        console.log('hasViewingPermission:', req.hasViewingPermission);
-        console.log('dailyRecord存在:', !!req.dailyRecord);
-        console.log('submitRecord存在:', !!req.submitRecord);
-
         // 如果用戶已經在 checkProjectViewingPermission 中被確認為專案成員（readOnly = false），直接放行
         // 注意：指導教師是 readOnly = true，不會在此通過
         if (req.readOnly === false && req.hasViewingPermission === true) {
-            console.log('權限通過：已確認為專案成員');
             return next();
         }
 
         // 處理 daily 相關操作（個人/小組日誌）
         if (req.dailyRecord && userId) {
             const projectId = req.dailyRecord.projectId;
-            console.log('檢查日誌編輯權限 - projectId:', projectId, 'dailyRecord.userId:', req.dailyRecord.userId);
 
             // 重新查詢專案成員資訊（確保資料正確）
             const project = await Project.findByPk(projectId, {
@@ -213,17 +184,12 @@ const checkWritePermission = async (req, res, next) => {
             if (project) {
                 const projectMemberIds = project.users ? project.users.map(u => u.id) : [];
                 const isProjectMember = projectMemberIds.includes(userId);
-                console.log('isProjectMember:', isProjectMember, '成員列表:', projectMemberIds);
 
-                // 小組日誌：專案成員可以編輯
                 if (isProjectMember) {
-                    console.log('權限通過：專案成員編輯日誌');
                     return next();
                 }
 
-                // 個人日誌：創建者可以編輯自己的日誌
                 if (req.dailyRecord.userId === userId) {
-                    console.log('權限通過：日誌創建者編輯自己的日誌');
                     return next();
                 }
             }
@@ -245,22 +211,16 @@ const checkWritePermission = async (req, res, next) => {
                 const projectMemberIds = project.users ? project.users.map(u => u.id) : [];
                 const isProjectMember = projectMemberIds.includes(userId);
 
-                // 專案提交：專案成員可以編輯
                 if (isProjectMember) {
-                    console.log('權限通過：專案成員編輯提交');
                     return next();
                 }
 
-                // 個人提交：創建者可以編輯
                 if (req.submitRecord.userId === userId) {
-                    console.log('權限通過：提交創建者編輯自己的提交');
                     return next();
                 }
             }
         }
 
-        // 沒有權限
-        console.log('權限被拒絕：無編輯權限');
         return res.status(403).json({
             message: '沒有權限進行此操作',
             code: 'WRITE_PERMISSION_DENIED'

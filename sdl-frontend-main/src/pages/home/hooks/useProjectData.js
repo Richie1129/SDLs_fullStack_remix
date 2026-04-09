@@ -86,10 +86,9 @@ export const useProjectData = () => {
       return project.portfolioGenerated === true;
     };
 
-    // 進行中活動：未達 75% 且未結束
+    // R2-M5: 進行中活動：未結束且未完成歷程（修正原先 <75% 導致 75-99% 專案消失的問題）
     const ongoing = projectData.filter(project =>
-      !isProjectEnded(project) &&
-      calculateProgress(project.currentStage, project.currentSubStage) < 75
+      !isProjectEnded(project) && !isPortfolioCompleted(project)
     );
 
     // 已結束活動：已結束（Stage 4-3 或 ProjectEnd）但尚未生成 Portfolio

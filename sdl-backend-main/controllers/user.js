@@ -516,6 +516,59 @@ exports.adminResetPassword = async (req, res) => {
             return res.status(403).json({ message: '只能重設學生密碼' });
         }
 
+        // M13: 驗證教師與學生有共同專案（確保師生關係）
+        const Project = require('../models/project');
+        const teacherProjects = await Project.findAll({
+            attributes: ['id'],
+            include: [{
+                model: User,
+                attributes: [],
+                where: { id: req.userId }
+            }]
+        });
+        const teacherProjectIds = teacherProjects.map(p => p.id);
+
+        if (teacherProjectIds.length > 0) {
+            const studentInTeacherProject = await Project.findOne({
+                attributes: ['id'],
+                where: { id: teacherProjectIds },
+                include: [{
+                    model: User,
+                    attributes: [],
+                    where: { id: targetUserId }
+                }]
+            });
+
+            // 也檢查教師是否為 mentor
+            const mentorProject = await Project.findOne({
+                attributes: ['id'],
+                where: { mentorId: req.userId },
+                include: [{
+                    model: User,
+                    attributes: [],
+                    where: { id: targetUserId }
+                }]
+            });
+
+            if (!studentInTeacherProject && !mentorProject) {
+                return res.status(403).json({ message: '只能重設自己指導的學生密碼' });
+            }
+        } else {
+            // 教師沒有任何專案，也檢查 mentor 關係
+            const mentorProject = await Project.findOne({
+                attributes: ['id'],
+                where: { mentorId: req.userId },
+                include: [{
+                    model: User,
+                    attributes: [],
+                    where: { id: targetUserId }
+                }]
+            });
+            if (!mentorProject) {
+                return res.status(403).json({ message: '只能重設自己指導的學生密碼' });
+            }
+        }
+
         // 產生臨時密碼：SDL + 6 位隨機數字
         const randomDigits = Math.floor(100000 + Math.random() * 900000);
         const tempPassword = `SDL${randomDigits}`;

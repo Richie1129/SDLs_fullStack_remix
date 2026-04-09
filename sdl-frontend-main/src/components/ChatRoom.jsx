@@ -65,8 +65,16 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
 
     useEffect(() => {
         function receive_message(data) {
-            setMessageList(prev => [...prev, data])
-            console.log(data);
+            // M5: 去重 — 如果本地樂觀新增的同一條訊息已存在則跳過
+            setMessageList(prev => {
+                const isDuplicate = prev.some(m =>
+                    m.message === data.message &&
+                    m.author === data.author &&
+                    m.createdAt === data.createdAt
+                );
+                if (isDuplicate) return prev;
+                return [...prev, data];
+            });
         }
 
         if (chatRoomOpen === true) {

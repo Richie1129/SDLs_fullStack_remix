@@ -166,10 +166,8 @@ export const useKanbanData = (projectId) => {
     socket.on("ColumnCreatedSuccess", handleColumnCreated);
     socket.on("columnDeleted", handleColumnDeleted);
     socket.on("cardUpdated", KanbanUpdateEvent);
-    socket.on("ColumnCreatedError", handleCreationError);
     socket.on("columnCreateError", handleCreationError);
     socket.on("columnDeleteError", handleColumnDeleteError);
-    socket.on("ColumnDeleteError", handleColumnDeleteError);
     socket.on("taskItemCreatedError", handleCreationError);
     socket.on("error", handleCreationError);
     
@@ -188,10 +186,8 @@ export const useKanbanData = (projectId) => {
       socket.off('ColumnCreatedSuccess', handleColumnCreated);
       socket.off('columnDeleted', handleColumnDeleted);
       socket.off('cardUpdated', KanbanUpdateEvent);
-      socket.off("ColumnCreatedError", handleCreationError);
       socket.off("columnCreateError", handleCreationError);
       socket.off("columnDeleteError", handleColumnDeleteError);
-      socket.off("ColumnDeleteError", handleColumnDeleteError);
       socket.off("taskItemCreatedError", handleCreationError);
       socket.off("error", handleCreationError);
       socket.off('refreshKanban');

@@ -41,7 +41,6 @@ exports.listByTask = async (req, res) => {
 
 // POST /api/tasks/:taskId/comments
 exports.create = async (req, res) => {
-  const t = await sequelize.transaction();
   try {
     const { taskId } = req.params;
     const { content, parentId } = req.body;
@@ -60,6 +59,9 @@ exports.create = async (req, res) => {
       const user = await User.findByPk(userId);
       username = user?.username || null;
     } catch (_) {}
+
+    // 驗證完成後才開啟 transaction，避免驗證查詢佔用連線池
+    const t = await sequelize.transaction();
 
     const comment = await Comment.create({
       content: content.trim(),
@@ -106,7 +108,7 @@ exports.create = async (req, res) => {
     res.status(201).json({ item: created, likeCount: 0 });
   } catch (err) {
     console.error('create comment error:', err);
-    try { await t.rollback(); } catch (_) {}
+    if (t) try { await t.rollback(); } catch (_) {}
     res.status(500).json({ message: '新增評論失敗', error: err.message });
   }
 };

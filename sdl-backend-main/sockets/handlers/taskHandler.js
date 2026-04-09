@@ -309,9 +309,7 @@ class TaskHandler {
             const t = await sequelize.transaction();
             let columnIdToUse, columnName;
             try {
-                // 鎖定 Task row 防止刪除時同時被拖曳到其他欄位
                 const taskRow = await Task.findByPk(cardData.id, {
-                    lock: t.LOCK.UPDATE,
                     transaction: t
                 });
 

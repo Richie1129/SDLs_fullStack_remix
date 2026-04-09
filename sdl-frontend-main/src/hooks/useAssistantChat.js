@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { getChatHistory, getChatSessions, deleteChatSession, createChatTurn } from '../api/assistant';
 import { authStorage, projectStorage } from '../services/storageService';
 
@@ -32,6 +32,9 @@ export function useAssistantChat() {
     return 'default';
   });
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+
+  // M6: AbortController ref，用於取消進行中的 SSE stream
+  const abortControllerRef = useRef(null);
 
   /**
    * 🔑 生成唯一的 UUID（替代簡單的時間戳）
@@ -104,25 +107,30 @@ export function useAssistantChat() {
         throw new Error('請先登入');
       }
 
+      // M6: 取消前一次進行中的請求
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       // 3. 連接到後端 streaming endpoint
-      // 使用 /api 路徑（跟其他 API 一致）
       const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
-      console.log('🚀 [前端] 發送請求到:', `${baseURL}/assistant/chat`);
-      console.log('📦 [前端] 請求參數:', { projectId, message: userMessage, provider, sessionId: currentSessionId });
 
       const response = await fetch(`${baseURL}/assistant/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'accessToken': token, // 你的後端也檢查這個 header
+          'accessToken': token,
         },
         body: JSON.stringify({
           projectId,
           message: userMessage,
           provider,
-          sessionId: currentSessionId,  // Include currentSessionId for session management
+          sessionId: currentSessionId,
         }),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -245,6 +253,11 @@ export function useAssistantChat() {
       }
 
     } catch (err) {
+      // M6: 忽略 abort 錯誤
+      if (err.name === 'AbortError') {
+        console.log('SSE stream aborted');
+        return;
+      }
       console.error('Chat error:', err);
       setError(err.message || '發生未知錯誤');
 
@@ -550,6 +563,15 @@ export function useAssistantChat() {
       }
     }
   }, [currentSessionId, messages.length, chatSessions, generateSessionId, updateCurrentSessionId]);
+
+  // M6: unmount 時取消進行中的 SSE stream
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   return {
     messages,

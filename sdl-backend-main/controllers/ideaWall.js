@@ -61,22 +61,21 @@ exports.getIdeaWall = async(req, res) =>{
         res.status(200).json(result);
     } catch (err) {
         console.error("getIdeaWall 錯誤:", err);
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ message: '取得想法牆失敗' });
     }
 }
 
 exports.getAllIdeaWall = async(req, res) =>{
     const projectId = req.query.projectId;
-    await Idea_wall.findAll({
-        where:{
-            projectId:projectId
-        }
-    })
-    .then(result =>{
-        console.log(result);
-        res.status(200).json(result)
-    })
-    .catch(err => console.log(err));
+    try {
+        const result = await Idea_wall.findAll({
+            where: { projectId: projectId }
+        });
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('取得所有想法牆失敗:', err);
+        res.status(500).json({ message: '取得想法牆列表失敗' });
+    }
 }
 
 exports.createIdeaWall = async(req, res) =>{

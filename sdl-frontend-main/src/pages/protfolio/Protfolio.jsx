@@ -49,7 +49,7 @@ export default function Protfolio() {
         isLoading,
         isError,
         data: portfolioData
-    } = useQuery("protfolioDatas", () => getAllSubmit({ params: { projectId: projectId } }), {
+    } = useQuery(["protfolioDatas", projectId], () => getAllSubmit({ params: { projectId: projectId } }), {
         onSuccess: (data) => {
             // Option B: 過濾掉 Stage 5 資料（只保留 Stage 1-4）
             const filteredData = Array.isArray(data)
@@ -151,16 +151,27 @@ export default function Protfolio() {
         // "5-4": "內容撰寫",
         // "5-5": "反思撰寫"
     };
+    // R2-M6: 按實際 stage 欄位分組插入標題，而非按位置（每 3 筆）假設
     useEffect(() => {
         if (stagePortfolio.length > 0) {
             const itemsWithTitles = [];
-            stagePortfolio.forEach((item, index) => {
-                if (index % 3 === 0) {
-                    const titleIndex = Math.floor(index / 3);
-                    const title = INSERT_TITLES[titleIndex];
+            let lastMainStage = null;
+
+            // 按 stage 排序確保順序正確
+            const sorted = [...stagePortfolio].sort((a, b) => {
+                const [aMain, aSub] = (a.stage || '0-0').split('-').map(Number);
+                const [bMain, bSub] = (b.stage || '0-0').split('-').map(Number);
+                return aMain !== bMain ? aMain - bMain : aSub - bSub;
+            });
+
+            sorted.forEach((item) => {
+                const mainStage = item.stage ? parseInt(item.stage.split('-')[0], 10) : null;
+                if (mainStage && mainStage !== lastMainStage) {
+                    const title = INSERT_TITLES[mainStage - 1];
                     if (title) {
                         itemsWithTitles.push({ type: 'title', content: title });
                     }
+                    lastMainStage = mainStage;
                 }
                 itemsWithTitles.push({ type: 'item', content: item });
             });

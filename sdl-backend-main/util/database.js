@@ -8,7 +8,13 @@ const sequelize = new Sequelize(
     process.env.PG_PASSWORD,
     {
         host: process.env.PG_HOST,
-        dialect:'postgres',
+        dialect: 'postgres',
+        pool: {
+            max: 20,
+            min: 2,
+            acquire: 30000,
+            idle: 10000,
+        },
     },
 );
 

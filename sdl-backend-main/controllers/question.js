@@ -4,47 +4,48 @@ const { logAudit } = require('../services/auditService');
 
 exports.getAllChatrooms = async (req, res) => {
     const projectId = req.params.projectId;
-    // console.log("Chatroom_message",Question); 
 
-    await Question.findAll({
-        where: { projectId: projectId }
-    })
-        .then(result => {
-            console.log(result);
-            res.status(200).json(result)
-        })
-        .catch(err => console.log(err));
+    try {
+        const result = await Question.findAll({
+            where: { projectId: projectId }
+        });
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('取得所有聊天室失敗:', err);
+        res.status(500).json({ message: '取得聊天室列表失敗' });
+    }
 };
 
 exports.getUserChatrooms = async (req, res) => {
     const projectId = req.params.projectId;
     const userId = req.params.userId;
-    // console.log("Chatroom_message",Question); 
 
-    await Question.findAll({
-        where: {
-            projectId: projectId,
-            userId: userId
-        }
-    })
-        .then(result => {
-            console.log(result);
-            res.status(200).json(result)
-        })
-        .catch(err => console.log(err));
+    try {
+        const result = await Question.findAll({
+            where: {
+                projectId: projectId,
+                userId: userId
+            }
+        });
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('取得用戶聊天室失敗:', err);
+        res.status(500).json({ message: '取得用戶聊天室失敗' });
+    }
 };
 
 exports.getMessages = async (req, res) => {
     const questionId = req.params.questionId;
 
-    await QuestionMessage.findAll({
-        where: { questionId: questionId }
-    })
-        .then(result => {
-            console.log(result);
-            res.status(200).json(result)
-        })
-        .catch(err => console.log(err));
+    try {
+        const result = await QuestionMessage.findAll({
+            where: { questionId: questionId }
+        });
+        res.status(200).json(result);
+    } catch (err) {
+        console.error('取得聊天室訊息失敗:', err);
+        res.status(500).json({ message: '取得聊天室訊息失敗' });
+    }
 };
 
 exports.createChatroom = async (req, res) => {

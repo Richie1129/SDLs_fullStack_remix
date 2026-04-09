@@ -180,8 +180,7 @@ export default function SubStageComponent() {
     useEffect(() => {
         const isValidStageIndex = currentStageIndex > 0 && currentStageIndex <= stageInfo.length;
         setStages(isValidStageIndex ? stageInfo[currentStageIndex - 1] : []);
-        console.log("currentSubStageIndexChanged", currentSubStageIndex)
-    }, [currentSubStageIndex]);
+    }, [currentStageIndex, currentSubStageIndex]);
 
     const handleRobotClick = () => {
         document.body.style.overflow = 'hidden'; // 開啟DialogBox時禁止滾動

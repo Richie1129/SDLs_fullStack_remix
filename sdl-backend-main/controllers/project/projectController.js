@@ -577,21 +577,15 @@ exports.deleteProject = async (req, res) => {
                 console.log(`📤 提交記錄 ${submit.id} 發現 ${submitFileNames.length} 個檔案`);
             }
 
-            // 移除重複的檔案名
+            // 移除重複的檔案名（先收集，DB commit 後再刪）
             const uniqueFileNames = [...new Set(allFileNames)];
             console.log(`🗂️ 總共發現 ${uniqueFileNames.length} 個唯一檔案需要刪除`);
 
-            // 批量刪除 MinIO 檔案
-            if (uniqueFileNames.length > 0) {
-                const deleteResult = await batchDeleteMinioFiles(uniqueFileNames);
-                console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
-            }
-
         } catch (fileCleanupError) {
-            console.warn('⚠️ MinIO 檔案清理過程中發生錯誤，但繼續刪除專案:', fileCleanupError.message);
+            console.warn('⚠️ MinIO 檔案名收集過程中發生錯誤，但繼續刪除專案:', fileCleanupError.message);
         }
 
-        // 刪除相關數據庫記錄（使用交易以確保一致性）
+        // M3: 先完成 DB Transaction，commit 後再刪 MinIO 檔案（避免 rollback 時檔案已不可恢復）
         console.log('🗄️ 開始清理資料庫記錄...');
         const t = await sequelize.transaction();
         try {
@@ -599,14 +593,28 @@ exports.deleteProject = async (req, res) => {
             await Kanban.destroy({ where: { projectId }, transaction: t });
             await Project.destroy({ where: { id: projectId }, individualHooks: true, req, transaction: t });
             await t.commit();
-            // 清除相關用戶的專案列表快取
-            apiCache.delByPrefix('projects:');
-            console.log(`✅ 專案 ${projectId} 刪除完成`);
-            return res.status(200).json({ message: "專案刪除成功！" });
         } catch (txErr) {
             await t.rollback();
             throw txErr;
         }
+
+        // DB commit 成功後，再清理 MinIO 檔案（非阻塞）
+        if (allFileNames.length > 0) {
+            try {
+                const uniqueFileNames = [...new Set(allFileNames)];
+                if (uniqueFileNames.length > 0) {
+                    const deleteResult = await batchDeleteMinioFiles(uniqueFileNames);
+                    console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
+                }
+            } catch (fileCleanupError) {
+                console.warn('⚠️ MinIO 檔案清理失敗（DB 已刪除成功）:', fileCleanupError.message);
+            }
+        }
+
+        // 清除相關用戶的專案列表快取
+        apiCache.delByPrefix('projects:');
+        console.log(`✅ 專案 ${projectId} 刪除完成`);
+        return res.status(200).json({ message: "專案刪除成功！" });
     } catch (error) {
         console.error("刪除專案錯誤:", error);
         res.status(500).json({ message: "無法刪除專案！" });

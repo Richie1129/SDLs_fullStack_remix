@@ -3,7 +3,8 @@ import { useParams } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { socket } from "../../utils/socket";
 import { getCurrentUsername } from '../../utils/userUtils';
-import { getCurrentUserId, getCurrentUserRole, getStageInfo } from '../../utils/authUtils';
+import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
+import { useStageManager } from '../../hooks/useStageIndex';
 import { is5RsFormat } from "@/utils/5RsUtils.js";
 import { DAILY_ERROR_CODES } from '@/constants/dailyErrorCodes.js';
 import { validateFileSize } from '@/utils/fileValidation';
@@ -39,8 +40,8 @@ export default function ReflectionRefactored() {
   const [stage, setStage] = useState("");      // 個人日誌選擇的階段
   const [teamStage, setTeamStage] = useState(""); // 小組日誌選擇的階段
   
-  // 智能推薦：從專案進度獲取當前階段
-  const { currentStage, currentSubStage } = getStageInfo();
+  // M9: 使用響應式 hook 取得當前階段（取代非響應式的 getStageInfo）
+  const { currentStageIndex: currentStage, currentSubStageIndex: currentSubStage } = useStageManager();
   const recommendedStage = currentStage && currentSubStage 
     ? `${currentStage}-${currentSubStage}` 
     : null;

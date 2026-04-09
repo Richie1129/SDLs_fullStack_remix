@@ -4,6 +4,7 @@ const Project = require('../models/project');
 const Idea_wall = require('../models/idea_wall');
 const Process = require('../models/process');
 const Stage = require('../models/stage');
+const Sub_stage = require('../models/sub_stage');
 const { logSubmitChange, logSubmitFieldChanges } = require('../utils/submitChangeLogger');
 const { logAudit } = require('../services/auditService');
 const sequelize = require('../util/database');
@@ -133,11 +134,16 @@ exports.createSubmit = async(req, res) => {
                 transaction: t
             });
             if (!existingWall) {
+                // R2-M1: 查詢 Sub_stage name 而非存 ID
+                const subStageId = stage[0].sub_stage[currentSubStageInt];
+                const subStageRecord = await Sub_stage.findByPk(subStageId, { attributes: ['name'], transaction: t });
+                const subStageName = subStageRecord ? subStageRecord.name : `子階段 ${currentSubStageInt + 1}`;
+
                 await Idea_wall.create({
                     userId: req.userId,
                     projectId: pId,
                     stage: nextStageKey,
-                    title: `${stage[0].sub_stage[currentSubStageInt]}`,
+                    title: subStageName,
                     type: "project"
                 }, { transaction: t });
             }
@@ -167,11 +173,16 @@ exports.createSubmit = async(req, res) => {
                     transaction: t
                 });
                 if (!existingWall) {
+                    // R2-M1: 查詢 Sub_stage name 而非存 ID
+                    const nextSubStageId = nextStage[0].sub_stage[0];
+                    const nextSubStageRecord = await Sub_stage.findByPk(nextSubStageId, { attributes: ['name'], transaction: t });
+                    const nextSubStageName = nextSubStageRecord ? nextSubStageRecord.name : `子階段 1`;
+
                     await Idea_wall.create({
                         userId: req.userId,
                         projectId: pId,
                         stage: nextStageKey,
-                        title: `${nextStage[0].sub_stage[0]}`,
+                        title: nextSubStageName,
                         type: "project"
                     }, { transaction: t });
                 }
@@ -344,10 +355,8 @@ exports.updateSubmit = async (req, res) => {
 
     const t = await sequelize.transaction();
     try {
-        // H8: findByPk 移入 Transaction 並加 row lock 防止並發更新
         const submit = await Submit.findByPk(submitId, {
-            transaction: t,
-            lock: t.LOCK.UPDATE
+            transaction: t
         });
         if (!submit) {
             await t.rollback();
@@ -409,7 +418,10 @@ exports.updateSubmit = async (req, res) => {
         }
 
         await t.commit();
-        
+
+        // R2-M3: commit 後清除 AI 助理快取
+        invalidateProjectCache(submit.projectId);
+
         // Audit: Record submit update
         await logAudit(req, {
             action: 'SUBMIT_UPDATE',
@@ -421,7 +433,7 @@ exports.updateSubmit = async (req, res) => {
                 hasContentUpdate: content !== undefined
             }
         }).catch(() => {}); // Non-blocking
-        
+
         return res.status(200).json({
             success: true,
             message: "Submit updated successfully | 更新成功"
@@ -512,7 +524,10 @@ exports.deleteSubmit = async (req, res) => {
 
         // 刪除提交記錄（用 instance.destroy 讓 hooks 正常觸發）
         await submit.destroy({ req });
-        
+
+        // R2-M3: 清除 AI 助理快取
+        invalidateProjectCache(submit.projectId);
+
         // Audit: Record submit deletion
         await logAudit(req, {
             action: 'SUBMIT_DELETE',
