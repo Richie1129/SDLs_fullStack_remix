@@ -2,7 +2,7 @@
 
 SDL 是一個面向教育研究與專案式學習（PBL）的智慧型學習平台，整合科學探究流程、AI 輔助分析與即時協作工具。
 
-[![Version](https://img.shields.io/badge/version-v3.5.0-0ea5e9)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.6.0-0ea5e9)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-required-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Node](https://img.shields.io/badge/node-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -147,15 +147,16 @@ npm test
 
 ## 版本與更新
 
-目前版本：`v3.5.0`（2026-03-27）
+目前版本：`v3.6.0`（2026-04-09）
 
 近期重點：
 
-- 學生端 4 週學習節律熱圖（`ActivityHeatmap.jsx`，teal 色系，4 資料來源）
-- 教師端全班節律熱圖（`ClassActivityHeatmap.jsx`，purple 色系，集中趕工偵測）
-- 教師總覽多維度風險偵測（進度 < 30% 或 7 天無活動）
-- 各專案健康度一覽（綜合評分 0–100，紅/黃/綠標示）
-- TeacherOverview UI 精簡（Tab 從 4 個縮減為 2 個，移除冗餘資訊）
+- 安全全面加固：修復 19 項 CRITICAL + 17 項 HIGH 級別漏洞（Transaction、Row Lock、IDOR、Token Rotation）
+- 想法牆 Optimistic Update 重構（Self-Echo 過濾 + DataSet 差量更新）
+- 學習歷程 AI 寫作回饋（SSE 串流 + 敘事草稿自動儲存）
+- 任務截止日期功能、AI 使用透明度說明
+- 檔案上傳全面修復（FormData 重試保護、Multer stream、timeout 延長）
+- mentor 外鍵從 username 字串改為 user.id 整數
 
 完整內容請查看 [CHANGELOG.md](CHANGELOG.md)。
 

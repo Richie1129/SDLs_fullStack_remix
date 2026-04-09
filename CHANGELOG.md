@@ -4,6 +4,97 @@
 
 ---
 
+## [v3.6.0] - 2026-04-09 — 安全全面加固、想法牆即時協作優化與學習歷程 AI 回饋
+
+### 🟣 新功能
+
+- **學習歷程 AI 寫作回饋**（`portfolioAiController.js`）
+  - SSE 串流回饋端點，提供學生歷程文字改善建議
+  - 敘事草稿自動儲存與載入機制（`user_projects.narrativeDraft` 欄位）
+  - 前端學習歷程頁面整合回饋面板與草稿管理
+
+- **任務截止日期**（`CardDetailModal.jsx`）
+  - Task model 新增 `dueDate` 欄位，看板卡片支援設定截止日與逾期標示
+  - 移除未成熟的甘特圖視圖（GanttView、useGanttData、gantt-task-react 依賴）
+
+- **AI 使用透明度說明**
+  - Login 頁面 footer 加入 AI 說明
+  - HomePage 常駐「AI 輔助中」浮動提示（可展開說明）
+  - 5Rs 反思表單加入 AI 分析提示
+  - 教師「需要關注」清單加入 AI 排序邏輯 tooltip
+
+### 🔄 重構
+
+- **想法牆 Optimistic Update**（`IdeaWall.jsx`、`useIdeaWallSocket.js`）
+  - 實作 Optimistic Update + Self-Echo 過濾 + DataSet 差量更新
+  - 修復 tempId→realId 替換時節點位置跳動
+  - 修復 update/delete error 未觸發 rollback
+
+- **mentor 外鍵修正**（`projects` 表）
+  - `mentor` 從 username 字串改為 `mentorId` INTEGER 外鍵
+  - 所有權限比對（11 處，5 個檔案）改用 mentorId === user.id
+  - 防止教師改名後指導關聯靜默斷裂
+
+- **vLLM 模型升級**：Gemma-3-27B → Gemma-4-26B (vllm-193)
+- **KB Coach 模型優先順序**：調整為 Gemma-4 → GPT-OSS → Gemini
+
+### 🔒 安全修復
+
+- **19 項 CRITICAL 漏洞修復**
+  - 看板拖曳/建立/刪除加入 Transaction + Row Lock（一致 lock ordering 防 deadlock）
+  - Task.update 改白名單欄位防止覆寫任意欄位
+  - 訊息 handler 加專案權限檢查、公告 handler 加教師角色檢查
+  - RAG 路由加 validateToken + IDOR 保護
+  - 統一 5 處 calculateProgress 為 `stageUtils.js` 共用版本
+  - ChatBotRoom 送出後清空 input + 訊息去重
+
+- **17 項 HIGH 級別修復**
+  - getUsers 依角色限制回傳欄位（學生無法取得 email 等 PII）
+  - Refresh Token Rotation（每次刷新銷毀舊 token 發新 token）
+  - 檔案刪除加所有權驗證（Submit/Task/Comment 歸屬檢查）
+  - 專案邀請/按讚改用 findOrCreate 防 TOCTOU 競態
+  - 改名/密碼重設全部包在 Transaction + row lock
+  - RAG 訊息 userId 改用 socket 認證值取代預設 1
+
+- **額外安全加固**
+  - 教師重設密碼新增師生關係驗證
+  - 移除錯誤回應中的 `error.message` 避免洩漏內部資訊
+  - 清理 projectViewingMiddleware 過量 debug logs
+
+### 🔴 Bug 修復
+
+- **檔案上傳全面修復**
+  - FormData token refresh 重試保護（避免空 body 重送）
+  - Multer memoryStorage 改 diskStorage + stream 上傳 MinIO（降低 OOM 風險）
+  - 5 個上傳入口統一加入 100MB 驗證（`fileValidation.js`）
+  - Axios FormData timeout 從 30 秒延長至 5 分鐘
+  - Nginx proxy_read/send_timeout 延長至 300 秒
+  - MinIO 移除無效 publicEndpoint，改存 `minio://` 邏輯路徑
+
+- **生產環境關鍵修復**
+  - 全域錯誤攔截中間件，自動寫入 `logs/errors/`
+  - express-rate-limit IPv6 地址處理錯誤修復
+  - Token refresh 併發 race condition（queue 機制）
+  - 註冊流程缺少 refreshToken + localStorage namespace 不一致
+  - Socket.IO 重連使用過期 token（新增 refresh + mutex）
+  - 註冊改用 transaction 確保 User + RefreshToken 原子寫入
+
+- **其他修復**
+  - Token Refresh 遺漏 username 欄位導致功能異常
+  - 後端學期計算第 2 學期學年度少減 1 年
+  - 提交階段競態條件（SELECT FOR UPDATE 行級鎖）
+  - Portfolio 頁面新增刪除按鈕（僅有重複記錄時顯示）
+  - KB Coach AI 回應為 null 時的資料庫寫入錯誤
+  - helpSeekingAvoidanceService 欄位名稱錯誤（userId→senderId）
+
+### 📦 資料庫遷移
+
+- `20260327000001-add-mentor-id-to-projects.js` — 專案 mentorId 外鍵
+- `20260330000002-add-due-date-to-tasks.js` — 任務截止日期欄位
+- `20260331000001-add-narrative-draft-to-user-projects.js` — 敘事草稿欄位
+
+---
+
 ## [v3.5.0] - 2026-03-27 — 儀表板學術強化：節律熱圖、多維度風險偵測與健康度評分
 
 ### 🟣 新功能
