@@ -185,6 +185,7 @@ class SocketHandlerFactory {
         const baseHandler = this.create(socket.io || socket.server, socket);
         
         socket.on(eventName, async (data) => {
+            data.eventType = eventName;
             const authorizedData = await baseHandler.withPermission(permission)(data);
             if (authorizedData) {
                 await handler.call(baseHandler, authorizedData);

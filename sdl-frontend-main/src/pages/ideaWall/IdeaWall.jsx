@@ -7,7 +7,7 @@ import { HiLink, HiX } from 'react-icons/hi';
 import { FiHelpCircle } from 'react-icons/fi';
 
 // API
-import { getIdeaWall, createIdeaWall } from '../../api/ideaWall';
+import { getIdeaWall } from '../../api/ideaWall';
 import { postClientAuditEvent } from '../../api/audit';
 import { getProjectNodes, getProjectNodeRelation } from '../../api/nodes';
 import { getProject } from '../../api/project';
@@ -15,9 +15,7 @@ import { getNodeChangeLogs } from '../../api/kanban';
 
 // Components
 import Modal from '../../components/Modal';
-// import Timer from './components/Timer';
 import KB_Coach from './components/KB_Coach';
-// import OrchestratorMonitor from './components/OrchestratorMonitor';
 import IdeaWallChatPanel from '../../components/IdeaWall/IdeaWallChatPanel';
 import CreateNodeModal from './components/modals/CreateNodeModal';
 import UpdateNodeModal from './components/modals/UpdateNodeModal';
@@ -27,44 +25,16 @@ import IdeaWallOnboarding from './components/IdeaWallOnboarding';
 // Hooks
 import { useIdeaWallState } from './hooks/useIdeaWallState';
 import { useNodeOperations } from './hooks/useNodeOperations';
+import { useNodeMutations } from './hooks/useNodeMutations';
 import { useIdeaWallSocket } from './hooks/useIdeaWallSocket.jsx';
 import { useVisNetwork } from './hooks/useVisNetwork';
 import useObservationMode from '../../hooks/useObservationMode';
 
 // Utils
-import svgConvertUrl from '../../utils/svgConvertUrl';
 import { getCurrentUsername, isCurrentUser } from '../../utils/userUtils';
-import { socket } from '../../utils/socket';
-
-// Constants
-import { NODE_COLORS } from './constants/ideaWallConstants';
 
 // Assets
 import Adding_icon from "../../assets/AnimationAddingNode.json";
-
-/**
- * 將後端原始節點資料轉換為 vis-network 所需格式（SVG image + shape）
- * 抽成 module 層級 helper 以便在 useEffect 和其他地方共用
- */
-function processRawNodes(nodes) {
-    return nodes.map((item) => {
-        let colorIndex;
-        if (item.colorindex) {
-            colorIndex = item.colorindex;
-        } else {
-            const hash = item.owner.split('').reduce((acc, char) => {
-                return char.charCodeAt(0) + ((acc << 5) - acc);
-            }, 0);
-            colorIndex = Math.abs(hash) % NODE_COLORS.length + 1;
-        }
-        const nodeColor = NODE_COLORS[(colorIndex - 1) % NODE_COLORS.length];
-        return {
-            ...item,
-            image: svgConvertUrl(item.title, item.owner, item.createdAt, nodeColor, item.content),
-            shape: 'image',
-        };
-    });
-}
 
 export default function IdeaWall() {
     const container = useRef(null);
@@ -74,6 +44,9 @@ export default function IdeaWall() {
 
     // 使用狀態管理 hook
     const state = useIdeaWallState(projectId);
+
+    // Optimistic Update mutation hook
+    const mutations = useNodeMutations({ projectId });
 
     // 新手導覽
     const [showOnboarding, setShowOnboarding] = useState(false);
@@ -120,7 +93,6 @@ export default function IdeaWall() {
         {
             enabled: !!projectId,
             onSuccess: (data) => {
-                console.log(`🎯 想法牆信息設置完成:`, data);
                 state.setIdeaWallInfo(data);
                 if (data) {
                     state.setTempId(data.id);
@@ -131,7 +103,7 @@ export default function IdeaWall() {
         }
     );
 
-    // 獲取節點資料並轉換為 SVG
+    // 獲取節點資料（初始載入用，後續靠 socket 差量更新）
     const getNodesQuery = useQuery({
         queryKey: ['projectNodes', projectId],
         queryFn: () => getProjectNodes(projectId),
@@ -147,14 +119,10 @@ export default function IdeaWall() {
         retryOnMount: false,
     });
 
-    // 修復：改用 useEffect 監聽 query data 變化來同步 state。
-    // 原先依賴 onSuccess callback，但在 React Query v3 + React StrictMode 下，
-    // 當 cache 有資料直接被 serve 時，onSuccess 不一定可靠觸發（第二次 mount 時
-    // query 已處於 success 狀態，transition 不再發生），導致進頁時節點不顯示，
-    // 需要 F5 才能看到。改用 useEffect 可保證每次 data reference 改變都同步。
+    // 當 query data 變化時，轉換為 vis-network 格式並同步到 state
     useEffect(() => {
         if (!getNodesQuery.data) return;
-        state.setNodes(processRawNodes(getNodesQuery.data));
+        state.setNodes(getNodesQuery.data.map((node) => mutations.toVisNode(node)));
     }, [getNodesQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
@@ -162,46 +130,35 @@ export default function IdeaWall() {
         state.setEdges(getNodeRelationQuery.data);
     }, [getNodeRelationQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // 完成連線 - 必須在 useVisNetwork 之前定義
+    // 完成連線 — Optimistic Update
     const handleLinkingComplete = (fromId, toId) => {
-        socket.emit('createNodeRelation', {
+        mutations.createRelation({
             from_id: fromId,
             to_id: toId,
-            projectId: projectId,
             ideaWallId: state.ideaWallInfo?.id,
-            user: {
-                username: getCurrentUsername(),
-                id: parseInt(localStorage.getItem('id')) || null,
-            },
         });
 
-        // 重置連線模式
         state.setIsLinkingMode(false);
         state.setLinkingSourceNode(null);
-        
+
         toast.success('連線建立成功！');
     };
 
-    // 取消連線模式 - 必須在 useVisNetwork 之前定義
+    // 取消連線模式
     const handleCancelLinking = () => {
         state.setIsLinkingMode(false);
         state.setLinkingSourceNode(null);
         toast('已取消連線模式');
     };
 
-    // 刪除連線 - 必須在 useVisNetwork 之前定義
+    // 刪除連線 — Optimistic Update
     const handleDeleteRelation = (fromId, toId) => {
         if (window.confirm('確定要取消此連結嗎？')) {
-            socket.emit('deleteNodeRelation', {
+            mutations.deleteRelation({
                 from_id: fromId,
                 to_id: toId,
-                projectId: projectId,
-                user: {
-                    username: getCurrentUsername(),
-                    id: parseInt(localStorage.getItem('id')) || null,
-                },
             });
-            
+
             toast.success('連線已取消！');
         }
     };
@@ -209,11 +166,9 @@ export default function IdeaWall() {
     // 計算當前節點連結到的其他節點
     const getConnectedNodes = (nodeId) => {
         if (!nodeId || !state.edges || !state.nodes) return [];
-        
-        // 找出從當前節點連出去的邊
+
         const connectedEdges = state.edges.filter(edge => edge.from === nodeId);
-        
-        // 找出目標節點的詳細資訊
+
         return connectedEdges.map(edge => {
             const targetNode = state.nodes.find(node => node.id === edge.to);
             return targetNode ? {
@@ -224,11 +179,10 @@ export default function IdeaWall() {
         }).filter(node => node !== null);
     };
 
-    // 使用 Socket 事件處理 hook
+    // 使用 Socket 事件處理 hook（方案 B：差量同步）
     useIdeaWallSocket({
         projectId,
-        getNodesQuery,
-        getNodeRelationQuery,
+        mutations,
         setAiSuggestion: state.setAiSuggestion,
         setSuggestedAgentType: state.setSuggestedAgentType,
         setKbCoachModalOpen: state.setKbCoachModalOpen,
@@ -252,7 +206,7 @@ export default function IdeaWall() {
         onLinkingComplete: handleLinkingComplete,
     });
 
-    // 使用節點操作 hook
+    // 使用節點操作 hook（方案 B：透過 mutations 樂觀更新）
     const operations = useNodeOperations({
         projectId,
         ideaWallInfo: state.ideaWallInfo,
@@ -272,6 +226,7 @@ export default function IdeaWall() {
         setCreateNodeModalOpen: state.setCreateNodeModalOpen,
         setUpdateNodeModalOpen: state.setUpdateNodeModalOpen,
         setAiCoachingNote: state.setAiCoachingNote,
+        mutations,
     });
 
     // UI 互動處理函式
@@ -279,7 +234,6 @@ export default function IdeaWall() {
     const handleMouseLeave = () => state.setHovering(false);
     const handleKbCoach = () => state.setKbCoachModalOpen(true);
 
-    // 建立想法按鈕處理
     const handleCreateIdeaClick = () => {
         state.setNodeData({});
         state.setTitle("");
@@ -288,7 +242,6 @@ export default function IdeaWall() {
         state.setCreateNodeModalOpen(true);
     };
 
-    // 延伸想法按鈕處理
     const handleExtendIdeaClick = () => {
         state.setNodeData({});
         state.setTitle("");
@@ -297,7 +250,6 @@ export default function IdeaWall() {
         state.setCreateNodeModalOpen(true);
     };
 
-    // 從 UpdateModal 延伸想法
     const handleExtendFromUpdate = () => {
         state.setBuildOnNodeId(state.selectNodeInfo.id);
         state.setNodeData({});
@@ -307,7 +259,6 @@ export default function IdeaWall() {
         state.setCreateNodeModalOpen(true);
     };
 
-    // 開始連線模式
     const handleStartLinking = () => {
         state.setLinkingSourceNode(state.selectNodeInfo);
         state.setIsLinkingMode(true);
@@ -317,7 +268,6 @@ export default function IdeaWall() {
         });
     };
 
-    // 處理變更歷史標籤切換
     const handleTabChange = (showHistory) => {
         state.setShowNodeChangeHistory(showHistory);
         if (showHistory) {
@@ -415,13 +365,13 @@ export default function IdeaWall() {
 
             {/* KB Coach Modal */}
             {!isObservationMode && (
-                <Modal 
-                    open={state.kbCoachModalOpen} 
+                <Modal
+                    open={state.kbCoachModalOpen}
                     onClose={() => {
                         state.setKbCoachModalOpen(false);
                         state.setSuggestedAgentType(null);
-                    }} 
-                    opacity={false} 
+                    }}
+                    opacity={false}
                     position={"justify-center items-center"}
                 >
                     <KB_Coach
@@ -441,7 +391,6 @@ export default function IdeaWall() {
             {/* 計時器 + 新增節點按鈕 + 導覽重播按鈕 */}
             {!isObservationMode && (
                 <div className="fixed bottom-4 right-4 flex flex-row items-end gap-2 z-50">
-                    {/* <Timer /> */}
                     <button
                         data-track
                         data-track-action="IDEAWALL_NODE_CREATE_OPEN"

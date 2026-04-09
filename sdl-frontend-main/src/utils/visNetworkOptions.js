@@ -5,7 +5,7 @@
 export const visNetworkOptions = {
     nodes: {
         shape: 'image',
-        size: 50,  // 大幅增加節點顯示大小
+        size: 90,
         borderWidth: 0,
         // 節點陰影效果
         shadow: {
@@ -76,7 +76,7 @@ export const visNetworkOptions = {
         barnesHut: {
             gravitationalConstant: -20000,
             centralGravity: 0.2,
-            springLength: 350,  // 增加彈簧長度讓節點更分散
+            springLength: 450,
             springConstant: 0.05,
             damping: 0.15,
             avoidOverlap: 0.5  // 增加節點間距避免重疊

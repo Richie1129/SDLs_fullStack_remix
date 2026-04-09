@@ -125,18 +125,23 @@ class NodeHandler {
                 req: data._reqContext
             });
 
-            // 廣播新節點到所有相關客戶端
-            this.broadcastToProject(projectId, "nodeUpdated", createdNode);
+            // 廣播差量事件給所有客戶端（帶 socketId 供 self-echo 過濾）
+            const nodeJson = createdNode.toJSON();
+            this.broadcastToProject(projectId, "nodeSync", {
+                action: 'create',
+                node: nodeJson,
+                relation: from_id ? { from_id, to_id: createdNode.id } : null,
+                _socketId: this.socket.id
+            });
 
             // R2-M2: 清除 AI 助理快取
             invalidateProjectCache(projectId);
 
-            // 發送成功事件給創建者
-            this.emitSuccess('nodeCreate', {
-                message: '節點創建成功',
-                code: 'NODE_CREATE_SUCCESS',
-                nodeId: createdNode.id,
-                nodeTitle: createdNode.title
+            // 回傳 tempId mapping 給建立者（供 optimistic update 替換用）
+            this.socket.emit('nodeCreateConfirm', {
+                tempId: data.tempId || null,
+                realId: createdNode.id,
+                node: nodeJson
             });
             
             console.log(`✅ 節點創建成功: ${createdNode.id} - ${createdNode.title}`);
@@ -164,7 +169,8 @@ class NodeHandler {
             writeSocketErrorReport(error, 'nodeCreate', this.socket.user);
             this.emitError('nodeCreate', {
                 message: '創建節點時發生錯誤',
-                code: 'NODE_CREATE_ERROR'
+                code: 'NODE_CREATE_ERROR',
+                tempId: data.tempId || null,
             });
         }
     }
@@ -216,8 +222,12 @@ class NodeHandler {
                 req: data._reqContext
             });
 
-            // 廣播節點更新
-            this.broadcastToProject(projectId, "nodeUpdated", updatedNode);
+            // 廣播差量更新事件
+            this.broadcastToProject(projectId, "nodeSync", {
+                action: 'update',
+                node: updatedNode.toJSON(),
+                _socketId: this.socket.id
+            });
 
             // R2-M2: 清除 AI 助理快取
             invalidateProjectCache(projectId);
@@ -283,8 +293,12 @@ class NodeHandler {
                 where: { id: projectId }
             });
 
-            // 廣播節點刪除 - 觸發節點列表刷新
-            this.broadcastToProject(projectId, "nodeUpdated", null);
+            // 廣播差量刪除事件
+            this.broadcastToProject(projectId, "nodeSync", {
+                action: 'delete',
+                nodeId: id,
+                _socketId: this.socket.id
+            });
 
             // R2-M2: 清除 AI 助理快取
             invalidateProjectCache(projectId);
@@ -403,11 +417,15 @@ class NodeHandler {
                 });
             }
 
-            // 廣播更新事件
-            this.broadcastToProject(projectId, "nodeUpdated", null);
-            
+            // 廣播差量連線建立事件
+            this.broadcastToProject(projectId, "nodeSync", {
+                action: 'createRelation',
+                relation: { from_id, to_id },
+                _socketId: this.socket.id
+            });
+
             console.log(`✅ 節點連線建立成功: ${from_id} → ${to_id}`);
-            
+
             this.emitSuccess('createNodeRelation', {
                 message: '連線建立成功',
                 code: 'NODE_RELATION_CREATE_SUCCESS',
@@ -481,11 +499,15 @@ class NodeHandler {
                 });
             }
 
-            // 廣播更新事件
-            this.broadcastToProject(projectId, "nodeUpdated", null);
-            
+            // 廣播差量連線刪除事件
+            this.broadcastToProject(projectId, "nodeSync", {
+                action: 'deleteRelation',
+                relation: { from_id, to_id },
+                _socketId: this.socket.id
+            });
+
             console.log(`✅ 節點連線刪除成功: ${from_id} → ${to_id}`);
-            
+
             this.emitSuccess('deleteNodeRelation', {
                 message: '連線刪除成功',
                 code: 'NODE_RELATION_DELETE_SUCCESS',

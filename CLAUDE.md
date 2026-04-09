@@ -475,6 +475,39 @@ FRONTEND_URL=http://localhost
 NODE_ENV=development
 ```
 
+## 實作前的強制思考
+
+在撰寫任何跨層功能前，必須先輸出一份簡短的防禦清單：
+- 這個流程的 error path 是什麼？（不只是 happy path）
+- 涉及哪些跨層邊界？資料在邊界處的格式/ID 會變嗎？
+- 我依賴了哪些外部假設？（事件名稱、payload 結構、另一層的行為）
+
+列完清單後，根據清單撰寫程式碼，而非邊寫邊想。
+
+## 實作後的自我審查
+
+完成初步實作後，切換成審查者角色，主動找：
+- Error path 是否有接線漏掉（寫了 rollback 函式但沒有呼叫者）
+- 所有假設是否已驗證（實際讀過對應的程式碼）
+- 跨層狀態是否一致（ID 替換、快取更新）
+
+若發現問題，直接修正後再輸出，不要輸出有已知缺陷的版本。
+
+**正式 Code Review**：當需要進行完整的程式碼審查時，使用 Agent tool 執行 `everything-claude-code:code-reviewer`，而非手動逐檔檢查。
+
+## 這個專案的已知地雷
+
+以下是這個專案曾經踩過的坑，每次實作相關功能時必須主動確認：
+
+- **Socket 事件名稱**：前端 listener 的事件名必須實際讀 socketHandlers.js
+  確認，不得假設命名規則
+- **樂觀更新回滾**：error payload 必須包含 tempId，前端才能定位要回滾的節點
+- **React Query ↔ vis-network ID 同步**：confirmCreate 將 tempId 替換成
+  realId 後，diff 邏輯會把這個變化解讀成「刪除舊節點＋新增新節點」，
+  需要特別處理
+- **Error handler 接線**：寫了 rollback 函式之後，必須在同一個 PR 確認
+  有地方呼叫它，不得留下孤立的函式
+
 ## 常見問題排查
 
 ### 前端無法連接後端

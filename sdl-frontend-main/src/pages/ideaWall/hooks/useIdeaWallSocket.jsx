@@ -6,26 +6,34 @@ import { AGENT_NAMES, TOAST_DURATION } from '../constants/ideaWallConstants';
 /**
  * IdeaWall Socket 事件處理 Hook
  * 處理所有 Socket.IO 相關的事件監聽和清理
+ *
+ * 方案 B 改造：
+ * - 新增 nodeSync 事件監聽（差量更新 + self-echo 過濾）
+ * - 新增 nodeCreateConfirm 事件（tempId → realId 替換）
+ * - 新增 nodeCreateError/nodeUpdateError/nodeDeleteError 事件（回滾 optimistic update）
+ * - 保留 aiSuggestion 等非節點事件不變
  */
 export function useIdeaWallSocket({
     projectId,
-    getNodesQuery,
-    getNodeRelationQuery,
+    mutations,
     setAiSuggestion,
     setSuggestedAgentType,
     setKbCoachModalOpen,
 }) {
-    const refetchTimeoutRef = useRef(null);
+    // 使用 ref 持有最新的函式，避免 effect 依賴變化頻繁重掛
+    const applySyncRef = useRef(mutations?.applySyncEvent);
+    const confirmCreateRef = useRef(mutations?.confirmCreate);
+    const rollbackCreateRef = useRef(mutations?.rollbackCreate);
+    const rollbackUpdateRef = useRef(mutations?.rollbackUpdate);
+    const rollbackDeleteRef = useRef(mutations?.rollbackDelete);
 
-    // 使用 ref 持有最新的 refetch 函式，避免 effect 依賴 getNodesQuery 物件
-    // （useQuery 每次 render 都回傳新物件，若放進 deps 會導致 effect 頻繁重跑，
-    //  造成 nodeUpdated listener 在 teardown/re-attach 空隙中丟失事件）
-    const refetchNodesRef = useRef(getNodesQuery.refetch);
-    const refetchRelationsRef = useRef(getNodeRelationQuery.refetch);
-    useEffect(() => { refetchNodesRef.current = getNodesQuery.refetch; }, [getNodesQuery.refetch]);
-    useEffect(() => { refetchRelationsRef.current = getNodeRelationQuery.refetch; }, [getNodeRelationQuery.refetch]);
+    useEffect(() => { applySyncRef.current = mutations?.applySyncEvent; }, [mutations?.applySyncEvent]);
+    useEffect(() => { confirmCreateRef.current = mutations?.confirmCreate; }, [mutations?.confirmCreate]);
+    useEffect(() => { rollbackCreateRef.current = mutations?.rollbackCreate; }, [mutations?.rollbackCreate]);
+    useEffect(() => { rollbackUpdateRef.current = mutations?.rollbackUpdate; }, [mutations?.rollbackUpdate]);
+    useEffect(() => { rollbackDeleteRef.current = mutations?.rollbackDelete; }, [mutations?.rollbackDelete]);
 
-    // 使用 ref 持有最新的 AI 相關 setter，同樣避免頻繁重掛 effect
+    // AI 相關 setter refs
     const setAiSuggestionRef = useRef(setAiSuggestion);
     const setSuggestedAgentTypeRef = useRef(setSuggestedAgentType);
     const setKbCoachModalOpenRef = useRef(setKbCoachModalOpen);
@@ -34,52 +42,69 @@ export function useIdeaWallSocket({
     useEffect(() => { setKbCoachModalOpenRef.current = setKbCoachModalOpen; }, [setKbCoachModalOpen]);
 
     useEffect(() => {
-        // 節點更新事件處理器（使用 debounce 避免頻繁重新載入）
-        // 透過 ref 讀取最新 refetch，不需將 query 物件放入 deps
-        function nodeUpdateEvent(_data) {
-            // 清除之前的 timeout
-            if (refetchTimeoutRef.current) {
-                clearTimeout(refetchTimeoutRef.current);
-            }
-
-            // 延遲 300ms 後才重新載入，避免連續事件導致畫面跳動
-            refetchTimeoutRef.current = setTimeout(() => {
-                refetchNodesRef.current?.();
-                refetchRelationsRef.current?.();
-            }, 300);
+        // ==========================================
+        // 差量同步事件（取代原本的 nodeUpdated + refetch）
+        // ==========================================
+        function handleNodeSync(data) {
+            applySyncRef.current?.(data);
         }
 
-        // 錯誤處理事件：建立/更新/刪除節點失敗
-        const handleNodeError = (err) => {
-            console.warn('節點操作失敗:', err);
-            
-            if (err?.code === 'READ_ONLY_MODE') {
-                toast.error('觀摩模式下無法編輯或建立節點');
-            } else if (err?.message) {
-                toast.error(err.message);
+        // ==========================================
+        // Server 確認建立成功 — 替換 tempId → realId
+        // ==========================================
+        function handleCreateConfirm(data) {
+            confirmCreateRef.current?.(data);
+        }
+
+        // ==========================================
+        // 錯誤處理：建立/更新/刪除節點失敗 — 回滾 optimistic update
+        // ==========================================
+        const handleNodeCreateError = (err) => {
+            console.warn('節點建立失敗:', err);
+            if (err?.tempId) {
+                rollbackCreateRef.current?.({
+                    tempId: err.tempId,
+                    errorMessage: err?.message || '節點建立失敗',
+                });
             } else {
-                toast.error('節點操作失敗，請稍後再試');
+                if (err?.code === 'READ_ONLY_MODE') {
+                    toast.error('觀摩模式下無法建立節點');
+                } else {
+                    toast.error(err?.message || '節點建立失敗');
+                }
             }
         };
 
-        // 成功處理事件：節點操作成功
+        const handleNodeUpdateError = (err) => {
+            console.warn('節點更新失敗:', err);
+            const errorMessage = err?.code === 'READ_ONLY_MODE'
+                ? '觀摩模式下無法編輯節點'
+                : (err?.message || '節點更新失敗');
+            rollbackUpdateRef.current?.({ errorMessage });
+        };
+
+        const handleNodeDeleteError = (err) => {
+            console.warn('節點刪除失敗:', err);
+            const errorMessage = err?.code === 'READ_ONLY_MODE'
+                ? '觀摩模式下無法刪除節點'
+                : (err?.message || '節點刪除失敗');
+            rollbackDeleteRef.current?.({ errorMessage });
+        };
+
+        // 成功處理事件
         const handleNodeSuccess = (result) => {
             if (result?.code === 'NODE_DELETE_SUCCESS') {
-                toast.success(`${result.nodeTitle || '節點'} 刪除成功！`);
-            } else if (result?.message) {
-                toast.success(result.message);
+                toast.success(`${result.nodeTitle || '節點'} 刪除成功`);
             }
         };
 
         // Phase 3: AI 建議通知處理器
         const handleAiSuggestion = (data) => {
-            // 儲存建議資訊（透過 ref 讀取最新 setter）
             setAiSuggestionRef.current(data);
             setSuggestedAgentTypeRef.current(data.role);
-            
-            // 顯示 Toast 通知
+
             const agentName = AGENT_NAMES[data.role] || 'AI 助教';
-            
+
             toast((t) => (
                 <div className="flex flex-col gap-stack-xs">
                     <div className="font-medium">{agentName} 有建議給你！</div>
@@ -114,64 +139,47 @@ export function useIdeaWallSocket({
             });
         };
 
-        // 加入專案房間的處理函式（確保 socket 已連線後才 emit）
+        // 加入專案房間
         const joinProject = () => {
             socket.emit("join_project", projectId);
         };
 
-        // 連接 socket 並加入專案房間
         if (socket.connected) {
-            // 已連線：直接 emit
             joinProject();
         } else {
-            // 未連線：等待連線完成後再 emit，避免在 CLOSING 狀態時發送造成錯誤
             socket.once('connect', joinProject);
             socket.connect();
         }
 
-        // 註冊事件監聽器（先移除舊的避免重複）
-        socket.off("nodeUpdated", nodeUpdateEvent);
-        socket.on("nodeUpdated", nodeUpdateEvent);
+        // 註冊事件監聯器
+        socket.off("nodeSync", handleNodeSync);
+        socket.on("nodeSync", handleNodeSync);
 
-        socket.off('nodeCreateError', handleNodeError);
-        socket.off('nodeUpdateError', handleNodeError);
-        socket.off('nodeDeleteError', handleNodeError);
-        socket.on('nodeCreateError', handleNodeError);
-        socket.on('nodeUpdateError', handleNodeError);
-        socket.on('nodeDeleteError', handleNodeError);
-        
-        socket.off('nodeCreateSuccess', handleNodeSuccess);
-        socket.off('nodeUpdateSuccess', handleNodeSuccess);
+        socket.off("nodeCreateConfirm", handleCreateConfirm);
+        socket.on("nodeCreateConfirm", handleCreateConfirm);
+
+        socket.off('nodeCreateError', handleNodeCreateError);
+        socket.off('nodeUpdateError', handleNodeUpdateError);
+        socket.off('nodeDeleteError', handleNodeDeleteError);
+        socket.on('nodeCreateError', handleNodeCreateError);
+        socket.on('nodeUpdateError', handleNodeUpdateError);
+        socket.on('nodeDeleteError', handleNodeDeleteError);
+
         socket.off('nodeDeleteSuccess', handleNodeSuccess);
-        socket.on('nodeCreateSuccess', handleNodeSuccess);
-        socket.on('nodeUpdateSuccess', handleNodeSuccess);
         socket.on('nodeDeleteSuccess', handleNodeSuccess);
 
         socket.off('aiSuggestion', handleAiSuggestion);
         socket.on('aiSuggestion', handleAiSuggestion);
 
-        // 清理函式
         return () => {
-            // 清除未完成的 timeout
-            if (refetchTimeoutRef.current) {
-                clearTimeout(refetchTimeoutRef.current);
-            }
-
-            // 若 socket 尚未連線就已卸載，移除待執行的 joinProject 監聽
             socket.off('connect', joinProject);
-
-            socket.off("nodeUpdated", nodeUpdateEvent);
-            socket.off('nodeCreateError', handleNodeError);
-            socket.off('nodeUpdateError', handleNodeError);
-            socket.off('nodeDeleteError', handleNodeError);
-            socket.off('nodeCreateSuccess', handleNodeSuccess);
-            socket.off('nodeUpdateSuccess', handleNodeSuccess);
+            socket.off("nodeSync", handleNodeSync);
+            socket.off("nodeCreateConfirm", handleCreateConfirm);
+            socket.off('nodeCreateError', handleNodeCreateError);
+            socket.off('nodeUpdateError', handleNodeUpdateError);
+            socket.off('nodeDeleteError', handleNodeDeleteError);
             socket.off('nodeDeleteSuccess', handleNodeSuccess);
             socket.off('aiSuggestion', handleAiSuggestion);
         };
-    // 只依賴 projectId：projectId 換了才需要重新加入房間並重新掛 listener
-    // getNodesQuery / getNodeRelationQuery 每次 render 都是新物件，
-    // 放入 deps 會讓 effect 頻繁重跑，在 teardown 空隙丟失 socket 事件
-    // → 改用 ref 持有最新的 refetch，listener 只掛一次，永遠不漏接
     }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
 }
