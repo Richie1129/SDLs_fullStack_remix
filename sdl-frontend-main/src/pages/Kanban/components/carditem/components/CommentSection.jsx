@@ -255,9 +255,8 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
           })}
         </div>
 
-        {/* 新增評論輸入框 */}
-        {!isObservationMode && (
-          <div className='flex items-start space-x-3'>
+        {/* 新增評論輸入框（觀摩模式也允許評論） */}
+        <div className='flex items-start space-x-3'>
             <img src={(personImg[Math.abs(getCurrentUserId()) % personImg.length])} alt='me' className='w-9 h-9 rounded-full object-cover' />
             <div className='flex-1'>
               <textarea
@@ -305,7 +304,6 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
               </div>
             </div>
           </div>
-        )}
       </CommentErrorBoundary>
     </div>
   );

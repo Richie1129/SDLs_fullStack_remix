@@ -58,11 +58,12 @@ const checkProjectViewingPermission = async (req, res, next) => {
             return next();
         }
 
-        // 檢查是否有跨班觀摩權限（同校且班級在允許清單內）
+        // 檢查是否有跨班觀摩權限（同校或雙方皆無學校、且班級在允許清單內）
+        const bothHaveSchool = project.school_id !== null && user.school_id !== null;
+        const schoolMatch = !bothHaveSchool || project.school_id === user.school_id;
         const hasViewingPermission = project.is_open_for_viewing &&
             project.allowed_classes &&
-            project.school_id !== null &&
-            project.school_id === user.school_id &&
+            schoolMatch &&
             project.allowed_classes.includes(user.class);
 
         if (hasViewingPermission) {

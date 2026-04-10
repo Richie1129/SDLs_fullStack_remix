@@ -202,14 +202,18 @@ exports.getViewableProjects = async (req, res) => {
             }]
         });
 
-        // 篩選允許指定班級觀摩的專案（同校、班級在允許清單、且排除自己的專案）
-        const viewableProjects = projects.filter(project =>
-            project.allowed_classes &&
-            project.school_id !== null &&
-            project.school_id === user.school_id &&
-            project.allowed_classes.includes(viewable_by) &&
-            !userProjectIds.includes(project.id)
-        );
+        // 篩選允許指定班級觀摩的專案（同校或雙方皆無學校、班級在允許清單、且排除自己的專案）
+        const viewableProjects = projects.filter(project => {
+            if (!project.allowed_classes) return false;
+            if (!project.allowed_classes.includes(viewable_by)) return false;
+            if (userProjectIds.includes(project.id)) return false;
+
+            // 同校檢查：雙方都有 school_id 時必須一致；任一方為 null 則跳過
+            const bothHaveSchool = project.school_id !== null && user.school_id !== null;
+            if (bothHaveSchool && project.school_id !== user.school_id) return false;
+
+            return true;
+        });
 
         // 格式化回傳資料
         const formattedProjects = viewableProjects.map(project => ({
