@@ -24,6 +24,7 @@ export default function SubmitTask() {
     const { projectId } = useParams();
     const [stageFormInfo, setStageFormInfo] = useState({ userSubmit: {} });
     const [isProjectEnded, setIsProjectEnded] = useState(false);
+    const [isGuidanceCollapsed, setIsGuidanceCollapsed] = useState(false);
     // 從伺服器取得的最新階段（初始值先用 localStorage，後續由 API 覆蓋）
     const [currentStage, setCurrentStage] = useState(() => {
         const info = getStageInfo();
@@ -266,9 +267,22 @@ export default function SubmitTask() {
                 </div>
             ) : (
                 // 表單和引導面板並排的容器（響應式：移動版垂直，桌面版並排）
-                <div className='flex flex-col lg:flex-row gap-stack-sm sm:gap-stack-md lg:gap-stack-md-lg items-stretch max-w-7xl w-full mx-auto my-auto'>
-                    {/* 主要表單卡片 */}
-                    <div className='flex-1 w-full flex flex-col p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg min-h-0'>
+                <div className='flex flex-col lg:flex-row lg:justify-center gap-stack-sm sm:gap-stack-md lg:gap-stack-md-lg items-start w-full mx-auto my-auto'>
+                    {/* 主要表單卡片 - 固定最大寬度，收合時仍保持同樣大小並置中 */}
+                    <div className='relative w-full lg:w-[52rem] lg:flex-shrink-0 flex flex-col p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg min-h-0'>
+                        {/* 收合時的展開按鈕 - 桌面版顯示在表單右上角 */}
+                        {isGuidanceCollapsed && (
+                            <button
+                                onClick={() => setIsGuidanceCollapsed(false)}
+                                className="absolute -right-3 -top-3 z-10 bg-customgreen text-white p-2 rounded-full shadow-lg hover:bg-customgreen/90 transition-colors hidden lg:flex items-center justify-center"
+                                title="展開寫作提示"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>
+                            </button>
+                        )}
                         <h3 className='font-bold text-body-lg sm:text-h3 text-center mb-4 text-gray-800'>
                             {stageFormInfo.name}
                         </h3>
@@ -316,8 +330,12 @@ export default function SubmitTask() {
                         </div>
                     </div>
 
-                    {/* 側邊引導面板 - 桌面版顯示，與表單等高 */}
-                    <GuidancePanel stageKey={stageKey} />
+                    {/* 側邊引導面板 */}
+                    <GuidancePanel
+                        stageKey={stageKey}
+                        isCollapsed={isGuidanceCollapsed}
+                        onToggleCollapse={setIsGuidanceCollapsed}
+                    />
                 </div>
             )}
             <Toaster />
