@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FiChevronDown, FiChevronUp, FiMessageCircle, FiClock, FiUser } from 'react-icons/fi';
+import { FiCheck, FiChevronDown, FiChevronUp, FiMessageCircle, FiClock } from 'react-icons/fi';
 import { AiOutlineRobot } from 'react-icons/ai';
 import { format5RsForDisplay } from '@/utils/5RsUtils.js';
 import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
@@ -18,7 +18,7 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
     );
   }
 
-  const { sections, overallFeedback, suggestions, hasOverallFeedback, provider, analysisDate, completeness, overallAssessment, strengths, improvements } = reflectionData;
+  const { sections, overallFeedback, suggestions, hasOverallFeedback, provider, analysisDate, overallAssessment, strengths, improvements } = reflectionData;
 
   // 針對附件的下載處理（支援 MinIO 與舊有 BLOB）
   const handleDownload = () => {
@@ -50,22 +50,6 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-lg">
-      {/* 完成度概覽 */}
-      <div className="mb-6 p-component-base bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-body-lg font-semibold text-gray-800">5Rs 反思概覽</h3>
-          <span className="text-body-sm text-gray-600">
-            完成度: {completeness.completed}/{completeness.total} ({completeness.percentage}%)
-          </span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-teal-500 h-2 rounded-full transition-all duration-slow"
-            style={{ width: `${completeness.percentage}%` }}
-          />
-        </div>
-      </div>
-
       {/* 5Rs 內容展示 */}
       <div className="space-y-stack-sm">
         {/* 附件區塊（如果有附件） */}
@@ -89,33 +73,26 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
           </div>
         )}
 
-        {Object.entries(sections).map(([key, section]) => (
+        {Object.entries(sections)
+          .filter(([, section]) => section.hasContent)
+          .map(([key, section], idx) => (
           <motion.div
             key={key}
             className="border border-gray-200 rounded-lg overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Object.keys(sections).indexOf(key) * 0.1 }}
+            transition={{ delay: idx * 0.1 }}
           >
             {/* 區段標題 */}
             <div
-              className={`flex items-center justify-between p-component-base cursor-pointer transition-colors ${
-                section.hasContent ? 'bg-gray-50 hover:bg-gray-100' : 'bg-red-50 hover:bg-red-100'
-              }`}
+              className="flex items-center justify-between p-component-base cursor-pointer transition-colors bg-gray-50 hover:bg-gray-100"
               onClick={() => toggleSection(key)}
             >
               <div className="flex items-center space-x-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-body-sm font-semibold ${
-                  section.hasContent ? 'bg-green-500' : 'bg-red-400'
-                }`}>
-                  {section.hasContent ? '✓' : '!'}
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-green-500">
+                  <FiCheck className="w-4 h-4" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-800">{section.title}</h4>
-                  {!section.hasContent && (
-                    <p className="text-body-sm text-red-600">此部分尚未完成</p>
-                  )}
-                </div>
+                <h4 className="font-semibold text-gray-800">{section.title}</h4>
               </div>
               <div className="flex items-center space-x-stack-xs">
                 {typeof section.score === 'number' && (
@@ -139,20 +116,14 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
                 className="border-t border-gray-200"
               >
                 {/* 學生內容 */}
-                {section.hasContent ? (
-                  <div className="p-component-base bg-white">
-                    <h5 className="text-body-sm font-medium text-gray-700 mb-2">學生反思：</h5>
-                    <div className="prose prose-sm max-w-none">
-                      <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                        {section.content}
-                      </p>
-                    </div>
+                <div className="p-component-base bg-white">
+                  <h5 className="text-body-sm font-medium text-gray-700 mb-2">學生反思：</h5>
+                  <div className="prose prose-sm max-w-none">
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                      {section.content}
+                    </p>
                   </div>
-                ) : (
-                  <div className="p-component-base bg-gray-50">
-                    <p className="text-gray-500 italic">此部分尚未填寫內容</p>
-                  </div>
-                )}
+                </div>
 
                 {/* AI 回饋內容 */}
                 {showFeedback && section.hasFeedback && (
@@ -291,6 +262,11 @@ const FiveRsReflectionDisplay = ({ content, showFeedback = true, isTeacher = fal
               </ul>
             </div>
           )}
+
+          {/* AI 聲明 */}
+          <div className="mt-4 pt-3 border-t border-purple-100 text-center">
+            <span className="text-caption text-purple-400">以上 AI 分析結果僅供參考，不作為正式評量依據</span>
+          </div>
         </motion.div>
       )}
 

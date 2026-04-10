@@ -3,7 +3,7 @@ import { getAuditEvents } from '@/api/audit.js';
 import { formatTime } from '@/utils/timeUtils.js';
 import { formatAuditAction } from '@/utils/auditUtils.js';
 
-const AuditHistoryPanel = ({ targetType, targetId }) => {
+const AuditHistoryPanel = ({ targetType, targetId, refreshKey }) => {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
 
@@ -23,7 +23,7 @@ const AuditHistoryPanel = ({ targetType, targetId }) => {
     };
     run();
     return () => { ignore = true; };
-  }, [targetType, targetId]);
+  }, [targetType, targetId, refreshKey]);
 
   if (!targetType || !targetId) return null;
 

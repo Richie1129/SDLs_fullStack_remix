@@ -3,6 +3,7 @@ import Modal from "../../../components/Modal";
 import { GrFormClose } from "react-icons/gr";
 import FiveRsReflectionForm from "@/components/FiveRsReflectionForm.jsx";
 import AuditHistoryPanel from "@/components/reflection/AuditHistoryPanel.jsx";
+import AIAnalysisHistoryPanel from "@/components/reflection/AIAnalysisHistoryPanel.jsx";
 
 /**
  * Modal component for editing 5Rs reflection
@@ -25,11 +26,17 @@ export function FiveRsModal({
   recommendedStage,
 }) {
   const [activeTab, setActiveTab] = useState('edit');
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   // Reset tab when opening modal
   useEffect(() => {
     if (open) setActiveTab('edit');
   }, [open]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'history') setHistoryRefreshKey(k => k + 1);
+  };
 
   return (
     <Modal
@@ -55,7 +62,7 @@ export function FiveRsModal({
             data-track-action="REFLECTION_5RS_TAB_SWITCH"
             data-track-type="daily_personal"
             data-track-meta-tab="edit"
-            onClick={() => setActiveTab('edit')}
+            onClick={() => handleTabChange('edit')}
             className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             編輯 5Rs 反思
@@ -65,9 +72,20 @@ export function FiveRsModal({
             data-track-action="REFLECTION_5RS_TAB_SWITCH"
             data-track-type="daily_personal"
             data-track-meta-tab="history"
-            onClick={() => setActiveTab('history')}
+            onClick={() => handleTabChange('history')}
+            className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             變更歷史
+          </button>
+          <button
+            data-track
+            data-track-action="REFLECTION_5RS_TAB_SWITCH"
+            data-track-type="daily_personal"
+            data-track-meta-tab="aiHistory"
+            onClick={() => handleTabChange('aiHistory')}
+            className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'aiHistory' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            AI 分析歷史
           </button>
         </div>
         <div className="flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300">
@@ -89,7 +107,14 @@ export function FiveRsModal({
             />
           )}
           {activeTab === 'history' && isEditing && currentRecord && (
-            <AuditHistoryPanel targetType="daily_personal" targetId={currentRecord.id} defaultOpen={true} />
+            <div className="p-3 sm:p-4">
+              <AuditHistoryPanel targetType="daily_personal" targetId={currentRecord.id} refreshKey={historyRefreshKey} />
+            </div>
+          )}
+          {activeTab === 'aiHistory' && isEditing && currentRecord && (
+            <div className="p-3 sm:p-4">
+              <AIAnalysisHistoryPanel targetId={currentRecord.id} title={title || currentRecord?.title} />
+            </div>
           )}
         </div>
       </div>

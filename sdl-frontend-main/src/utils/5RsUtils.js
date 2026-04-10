@@ -1,5 +1,17 @@
 // 5Rs 反思工具函式
 
+// 所有 R 的欄位鍵值
+export const ALL_R_KEYS = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
+
+// 基礎層（建議填寫）與進階層（選填）分組
+export const R_TIERS = {
+  core: ['reporting', 'responding'],       // 描述與情感 — 入門反思
+  advanced: ['relating', 'reasoning', 'reconstructing'], // 連結、推論、重建 — 深度反思
+};
+
+// 儲存的最低欄位數
+export const MIN_REQUIRED_FIELDS = 2;
+
 // 檢查內容是否為 5Rs 格式
 export const is5RsFormat = (content) => {
   try {
@@ -57,7 +69,8 @@ export const build5RsContent = (data, feedback = null) => {
       improvements: feedback.improvements || [],
       scores: feedback.scores || {},
       questions: feedback.questions || {},
-      templates: feedback.templates || {}
+      templates: feedback.templates || {},
+      encouragement: feedback.encouragement || {}
     };
   }
 
@@ -82,16 +95,15 @@ export const extract5RsText = (content) => {
 // 計算 5Rs 完成度
 export const calculate5RsCompleteness = (content) => {
   const parsed = parse5RsContent(content);
-  if (!parsed) return { completed: 0, total: 5, percentage: 0 };
-  
+  if (!parsed) return { completed: 0, total: ALL_R_KEYS.length, percentage: 0 };
+
   const { data } = parsed;
-  const fields = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
-  const completed = fields.filter(field => data[field] && data[field].trim()).length;
-  
+  const completed = ALL_R_KEYS.filter(field => data[field] && data[field].trim()).length;
+
   return {
     completed,
-    total: fields.length,
-    percentage: Math.round((completed / fields.length) * 100)
+    total: ALL_R_KEYS.length,
+    percentage: Math.round((completed / ALL_R_KEYS.length) * 100)
   };
 };
 
@@ -101,6 +113,7 @@ export const FIVE_R_FRAMEWORK = {
     title: "Reporting (報告)",
     description: "描述性地敘述一個情境、事件或問題",
     placeholder: "請描述性地敘述一個情境、事件或問題。發生了什麼？涉及了什麼？",
+    tier: 'core',
     guidingQuestions: [
       "發生了什麼？",
       "涉及了什麼人事物？",
@@ -112,6 +125,7 @@ export const FIVE_R_FRAMEWORK = {
     title: "Responding (回應)",
     description: "表達對情境、事件或問題的情感或個人反應",
     placeholder: "請表達您對這個情境的情感反應和個人感受...",
+    tier: 'core',
     guidingQuestions: [
       "你當時的感受是什麼？",
       "這個經驗讓你有什麼樣的情緒反應？",
@@ -123,6 +137,7 @@ export const FIVE_R_FRAMEWORK = {
     title: "Relating (關聯)",
     description: "將當前的個人或理論理解與情境、事件或問題建立關聯",
     placeholder: "請將這個經驗與您過去的經驗、理論知識或個人價值觀建立連結...",
+    tier: 'advanced',
     guidingQuestions: [
       "這個經驗與你過去的經驗有什麼相似或不同之處？",
       "你可以將哪些理論或概念應用到這個情況中？",
@@ -134,6 +149,7 @@ export const FIVE_R_FRAMEWORK = {
     title: "Reasoning (推論)",
     description: "對情境、事件或問題進行探索、質疑或解釋",
     placeholder: "請分析和探索這個情境的深層原因，從不同角度進行思考...",
+    tier: 'advanced',
     guidingQuestions: [
       "為什麼會發生這種情況？",
       "有哪些潛在的原因或因素？",
@@ -145,6 +161,7 @@ export const FIVE_R_FRAMEWORK = {
     title: "Reconstructing (重建)",
     description: "基於理性理解，得出結論並制定未來行動計劃",
     placeholder: "請基於前面的反思，制定具體的學習計劃和未來行動方案...",
+    tier: 'advanced',
     guidingQuestions: [
       "你從這個經驗中學到了什麼？",
       "下次遇到類似情況，你會怎麼做？",
@@ -154,17 +171,69 @@ export const FIVE_R_FRAMEWORK = {
   }
 };
 
-// 驗證 5Rs 資料格式
+// 每個欄位的最低有效字數（中文字元）
+export const MIN_FIELD_CHARS = 10;
+
+// 檢查單一欄位內容品質（前端 + 後端共用邏輯）
+export const checkFieldQuality = (text) => {
+  if (!text || typeof text !== 'string') return { valid: false, reason: 'empty' };
+  const trimmed = text.trim();
+  if (!trimmed) return { valid: false, reason: 'empty' };
+
+  // 過短（少於 MIN_FIELD_CHARS 個字元）
+  if (trimmed.length < MIN_FIELD_CHARS) return { valid: false, reason: 'too_short' };
+
+  // 純數字或純符號
+  if (/^[\d\s.,;:!?@#$%^&*()_+\-=\[\]{}|\\/<>~`'"]+$/.test(trimmed)) {
+    return { valid: false, reason: 'no_text' };
+  }
+
+  // 重複字元（如 aaaa、哈哈哈哈哈哈哈哈）
+  // 判斷方式：去重後的字元數 < 原始長度的 30%
+  const uniqueChars = new Set(trimmed.replace(/\s/g, '')).size;
+  const nonSpaceLen = trimmed.replace(/\s/g, '').length;
+  if (nonSpaceLen >= 6 && uniqueChars / nonSpaceLen < 0.3) {
+    return { valid: false, reason: 'repetitive' };
+  }
+
+  return { valid: true, reason: null };
+};
+
+// 驗證 5Rs 資料格式（漸進式：至少填寫 MIN_REQUIRED_FIELDS 個欄位，含品質檢查）
 export const validate5RsData = (data) => {
   const errors = [];
-  const requiredFields = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
-  
-  requiredFields.forEach(field => {
-    if (!data[field] || typeof data[field] !== 'string') {
+
+  // 檢查型別：有填的欄位必須是字串
+  ALL_R_KEYS.forEach(field => {
+    if (data[field] !== undefined && data[field] !== '' && typeof data[field] !== 'string') {
       errors.push(`${FIVE_R_FRAMEWORK[field].title} 欄位必須是字串`);
     }
   });
-  
+
+  // 品質檢查：有內容的欄位必須通過品質門檻
+  ALL_R_KEYS.forEach(field => {
+    const text = data[field];
+    if (!text || !text.trim()) return; // 空的不檢查
+    const quality = checkFieldQuality(text);
+    if (!quality.valid) {
+      const reasons = {
+        too_short: `內容過短，請至少寫 ${MIN_FIELD_CHARS} 個字`,
+        no_text: '請輸入有意義的文字內容',
+        repetitive: '請避免重複輸入相同的文字',
+      };
+      errors.push(`${FIVE_R_FRAMEWORK[field].title}：${reasons[quality.reason] || '內容無效'}`);
+    }
+  });
+
+  // 檢查最低數量（通過品質檢查的欄位才算）
+  const qualityFilledCount = ALL_R_KEYS.filter(f => {
+    const text = data[f];
+    return text && text.trim() && checkFieldQuality(text).valid;
+  }).length;
+  if (qualityFilledCount < MIN_REQUIRED_FIELDS) {
+    errors.push(`請至少填寫 ${MIN_REQUIRED_FIELDS} 個有效的反思層次`);
+  }
+
   return {
     isValid: errors.length === 0,
     errors

@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { validateToken } = require('../middlewares/AuthMiddleware');
-const { checkTeacherRole } = require('../middlewares/projectViewingMiddleware');
+
 const { logAudit } = require('../services/auditService');
 const { Op } = require('sequelize');
 const AuditEvent = require('../models/audit_event');
+const User = require('../models/user');
 const { classifyAction, calculateExpiresAt } = require('../constants/retentionPolicy');
 
 // Client-side audit ingestion
@@ -109,17 +110,30 @@ router.post('/batch', validateToken, async (req, res) => {
   }
 });
 
-// Query audit events (teacher/admin only)
-router.get('/events', validateToken, checkTeacherRole, async (req, res) => {
+// Query audit events (teacher: unrestricted, student: own records only)
+router.get('/events', validateToken, async (req, res) => {
   try {
     const { action, targetType, targetId, projectId, source, actorId, limit = 20, offset = 0, before, after } = req.query;
+
+    // 權限判斷：學生只能查詢自己的 audit 紀錄
+    const user = await User.findByPk(req.userId);
+    const isTeacher = user && user.role === 'teacher';
+
     const where = {};
     if (action) where.action = action;
     if (targetType) where.targetType = targetType;
     if (targetId) where.targetId = String(targetId);
     if (projectId) where.projectId = projectId;
     if (source) where.source = source;
-    if (actorId) where.actorId = actorId;
+
+    if (isTeacher) {
+      // 教師可自由指定 actorId 過濾
+      if (actorId) where.actorId = actorId;
+    } else {
+      // 學生強制限制為自己的紀錄
+      where.actorId = String(req.userId);
+    }
+
     if (before || after) {
       where.timestamp = {};
       if (after) where.timestamp[Op.gte] = new Date(after);

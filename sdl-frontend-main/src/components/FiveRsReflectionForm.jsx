@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiChevronDown, FiHelpCircle, FiCheck, FiRefreshCw, FiCpu, FiZap, FiSliders, FiShield } from 'react-icons/fi';
 import { AiOutlineRobot } from 'react-icons/ai';
-import { FIVE_R_FRAMEWORK, build5RsContent, validate5RsData } from '@/utils/5RsUtils.js';
+import { FIVE_R_FRAMEWORK, build5RsContent, validate5RsData, MIN_REQUIRED_FIELDS, R_TIERS, checkFieldQuality, MIN_FIELD_CHARS } from '@/utils/5RsUtils.js';
 import { analyze5RsReflection } from '@/api/llm5Rs.js';
 import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
 import StageSelector from '@/components/reflection/StageSelector';
@@ -60,6 +60,18 @@ const FiveRsReflectionForm = ({
   useEffect(() => {
     if (initialData && Object.keys(initialData).length > 0) {
       setData(prev => ({ ...prev, ...initialData }));
+    } else {
+      // 新建模式：重置為空白表單
+      setData({
+        reporting: '',
+        responding: '',
+        relating: '',
+        reasoning: '',
+        reconstructing: ''
+      });
+      setFeedback(null);
+      setCurrentStep(0);
+      setExpandedSections({ 0: true });
     }
   }, [initialData]);
 
@@ -86,7 +98,7 @@ const FiveRsReflectionForm = ({
   };
 
   const isStepCompleted = (field) => {
-    return data[field] && data[field].trim().length > 0;
+    return data[field] && data[field].trim().length > 0 && checkFieldQuality(data[field]).valid;
   };
 
   const getCompletedSteps = () => {
@@ -152,15 +164,18 @@ const FiveRsReflectionForm = ({
       htmlContent += `</ul></div>`;
     }
 
-    // 分析時間
+    // 分析時間 + 僅供參考聲明
+    htmlContent += `
+      <div style="margin-top: 16px; padding: 8px; background: #f9fafb; border-radius: 4px; text-align: center;">
+    `;
     if (feedback.analysisDate) {
       const date = new Date(feedback.analysisDate);
-      htmlContent += `
-        <div style="margin-top: 16px; padding: 8px; background: #f9fafb; border-radius: 4px; text-align: center;">
-          <small style="color: #6b7280;">分析時間：${date.toLocaleString('zh-TW')}</small>
-        </div>
-      `;
+      htmlContent += `<small style="color: #6b7280;">分析時間：${date.toLocaleString('zh-TW')}</small><br/>`;
     }
+    htmlContent += `
+        <small style="color: #9ca3af;">以上 AI 分析結果僅供參考，不作為正式評量依據</small>
+      </div>
+    `;
 
     htmlContent += `</div>`;
     return htmlContent;
@@ -190,9 +205,9 @@ const FiveRsReflectionForm = ({
     console.log('已完成步驟數:', completedSteps);
     console.log('當前反思資料:', data);
     
-    if (completedSteps < 3) {
-      console.log('步驟不足，需要至少 3 個步驟');
-      toast.error('請至少完成 3 個部分再請求 AI 分析');
+    if (completedSteps < MIN_REQUIRED_FIELDS) {
+      console.log('步驟不足，需要至少', MIN_REQUIRED_FIELDS, '個步驟');
+      toast.error(`請至少完成 ${MIN_REQUIRED_FIELDS} 個部分再請求 AI 分析`);
       return;
     }
 
@@ -287,7 +302,6 @@ const FiveRsReflectionForm = ({
             transition: all 0.2s;
           }
           .custom-swal-popup .swal2-confirm:hover {
-            transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
           }
         `}
@@ -440,21 +454,35 @@ const FiveRsReflectionForm = ({
         </div>
         <div>
           <h3 className="text-body font-semibold text-gray-800">反思架構</h3>
-          <p className="text-caption text-gray-500">依序完成各部分，建構完整的反思歷程</p>
+          <p className="text-caption text-gray-500">至少填寫 {MIN_REQUIRED_FIELDS} 個層次即可儲存，挑戰更多層次能深化反思</p>
         </div>
       </div>
 
       {/* 5Rs 步驟 */}
       <div className="space-y-3">
+        {/* 基礎層分隔標題 */}
+        <div className="flex items-center gap-2 px-1">
+          <span className="text-caption font-medium text-teal-700 bg-teal-50 px-2 py-0.5 rounded">建議填寫</span>
+          <div className="flex-1 border-t border-teal-200" />
+        </div>
+
         {steps.map((step, index) => {
           const framework = FIVE_R_FRAMEWORK[step];
           const isExpanded = expandedSections[index];
           const isCompleted = isStepCompleted(step);
           const isCurrent = currentStep === index;
+          const isFirstAdvanced = R_TIERS.advanced[0] === step;
 
           return (
+            <React.Fragment key={step}>
+            {/* 進階層分隔標題 */}
+            {isFirstAdvanced && (
+              <div className="flex items-center gap-2 px-1 mt-2">
+                <span className="text-caption font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded">進階反思（選填）</span>
+                <div className="flex-1 border-t border-purple-200" />
+              </div>
+            )}
             <motion.div
-              key={step}
               className={`border rounded-xl transition-all duration-fast overflow-hidden ${
                 isCurrent ? 'border-teal-400 shadow-sm ring-1 ring-teal-100' : 
                 isCompleted ? 'border-green-200 bg-green-50/30' : 'border-gray-200'
@@ -548,21 +576,33 @@ const FiveRsReflectionForm = ({
                     <span className="text-caption text-gray-400">
                       {data[step].length > 0 ? `已輸入 ${data[step].length} 字` : '尚未填寫'}
                     </span>
-                    {data[step].length >= 50 && (
-                      <span className="text-caption text-green-500 flex items-center gap-1">
-                        <FiCheck className="w-3 h-3" /> 內容充足
-                      </span>
-                    )}
+                    {(() => {
+                      const text = data[step];
+                      if (!text || !text.trim()) return null;
+                      const quality = checkFieldQuality(text);
+                      if (quality.valid) {
+                        return text.length >= 50
+                          ? <span className="text-caption text-green-500 flex items-center gap-1"><FiCheck className="w-3 h-3" /> 內容充足</span>
+                          : <span className="text-caption text-green-500 flex items-center gap-1"><FiCheck className="w-3 h-3" /> 已達最低要求</span>;
+                      }
+                      const hints = {
+                        too_short: `至少需要 ${MIN_FIELD_CHARS} 個字`,
+                        no_text: '請輸入有意義的文字',
+                        repetitive: '請避免重複相同的文字',
+                      };
+                      return <span className="text-caption text-amber-500">{hints[quality.reason]}</span>;
+                    })()}
                   </div>
                 </motion.div>
               )}
             </motion.div>
+            </React.Fragment>
           );
         })}
       </div>
 
       {/* AI 分析區域 */}
-      {getCompletedSteps() >= 3 && (
+      {getCompletedSteps() >= MIN_REQUIRED_FIELDS && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -618,16 +658,7 @@ const FiveRsReflectionForm = ({
 
       {/* 操作按鈕 - sticky 黏在底部 */}
       <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-100 bg-gray-50/80 sticky bottom-0">
-        <div className="flex flex-col gap-1">
-          <div className="text-caption text-gray-500">
-            {getCompletedSteps() === 0 ? (
-              <span className="text-amber-600">⚠️ 請至少完成一個反思區塊</span>
-            ) : (
-              <span className="text-green-600">✓ 已完成 {getCompletedSteps()}/{steps.length} 個區塊</span>
-            )}
-          </div>
-          <span className="text-caption text-gray-400 hidden sm:inline">儲存後系統將以 AI 分析您的反思內容，結果僅供參考</span>
-        </div>
+        <span className="text-caption text-gray-400">結果僅供參考，不作為正式評量依據</span>
         <div className="flex gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={onCancel}
@@ -637,7 +668,7 @@ const FiveRsReflectionForm = ({
           </button>
           <button
             onClick={handleSave}
-            disabled={getCompletedSteps() === 0}
+            disabled={getCompletedSteps() < MIN_REQUIRED_FIELDS}
             className="px-3 sm:px-5 py-2 sm:py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-body-sm transition-all hover:shadow-md disabled:hover:shadow-none"
           >
             {isEditing ? '更新' : '儲存'}反思日誌

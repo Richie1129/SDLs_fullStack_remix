@@ -37,10 +37,11 @@ export function PersonalDailyModal({
 }) {
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('edit');
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   const isTeacher = userRole === "teacher";
   const isCurrent5Rs = currentRecord ? is5RsFormat(currentRecord.content) : false;
-  
+
   // 根據選擇的階段取得引導提示
   const reflectionGuide = getReflectionGuide(stage);
 
@@ -48,6 +49,11 @@ export function PersonalDailyModal({
   useEffect(() => {
     if (open) setActiveTab('edit');
   }, [open]);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'history') setHistoryRefreshKey(k => k + 1);
+  };
 
   const toggleTooltip = () => setIsTooltipVisible(!isTooltipVisible);
   const closeTooltip = () => setIsTooltipVisible(false);
@@ -126,7 +132,7 @@ export function PersonalDailyModal({
             data-track-action="REFLECTION_PERSONAL_TAB_SWITCH"
             data-track-type="daily_personal"
             data-track-meta-tab="edit"
-            onClick={() => setActiveTab('edit')}
+            onClick={() => handleTabChange('edit')}
             className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'edit' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             {isTeacher ? "查看日誌" : "編輯日誌"}
@@ -136,7 +142,7 @@ export function PersonalDailyModal({
             data-track-action="REFLECTION_PERSONAL_TAB_SWITCH"
             data-track-type="daily_personal"
             data-track-meta-tab="history"
-            onClick={() => setActiveTab('history')}
+            onClick={() => handleTabChange('history')}
             className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'history' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
           >
             變更歷史
@@ -147,7 +153,7 @@ export function PersonalDailyModal({
               data-track-action="REFLECTION_PERSONAL_TAB_SWITCH"
               data-track-type="daily_personal"
               data-track-meta-tab="aiHistory"
-              onClick={() => setActiveTab('aiHistory')}
+              onClick={() => handleTabChange('aiHistory')}
               className={`px-4 py-2 font-medium text-body-sm ${activeTab === 'aiHistory' ? 'text-customgreen border-b-2 border-customgreen' : 'text-gray-500 hover:text-gray-700'}`}
             >
               AI 分析歷史
@@ -203,7 +209,7 @@ export function PersonalDailyModal({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-stack-sm">
               <div>
                 <h4 className="text-body-sm font-medium text-gray-700 mb-2">變更歷史</h4>
-                <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} />
+                <AuditHistoryPanel targetType="daily_personal" targetId={editingId} defaultOpen={true} refreshKey={historyRefreshKey} />
               </div>
               <div>
                 <h4 className="text-body-sm font-medium text-gray-700 mb-2">AI 分析歷史</h4>
