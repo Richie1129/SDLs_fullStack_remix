@@ -2,7 +2,7 @@
 
 SDL 是一個面向教育研究與專案式學習（PBL）的智慧型學習平台，整合科學探究流程、AI 輔助分析與即時協作工具。
 
-[![Version](https://img.shields.io/badge/version-v3.6.0-0ea5e9)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.6.1-0ea5e9)](CHANGELOG.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-required-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Node](https://img.shields.io/badge/node-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -147,16 +147,16 @@ npm test
 
 ## 版本與更新
 
-目前版本：`v3.6.0`（2026-04-09）
+目前版本：`v3.6.1`（2026-04-10）
 
 近期重點：
 
+- 5Rs 漸進式反思重構：依學生填寫程度動態解鎖反思層次，AI 分層評估回饋
+- 觀摩模式修復：修正無法查看專案與評論卡片的問題
+- 響應式佈局優化：5Rs Modal 滾動、SubmitTask 寫作提示面板收合邏輯
 - 安全全面加固：修復 19 項 CRITICAL + 17 項 HIGH 級別漏洞（Transaction、Row Lock、IDOR、Token Rotation）
 - 想法牆 Optimistic Update 重構（Self-Echo 過濾 + DataSet 差量更新）
 - 學習歷程 AI 寫作回饋（SSE 串流 + 敘事草稿自動儲存）
-- 任務截止日期功能、AI 使用透明度說明
-- 檔案上傳全面修復（FormData 重試保護、Multer stream、timeout 延長）
-- mentor 外鍵從 username 字串改為 user.id 整數
 
 完整內容請查看 [CHANGELOG.md](CHANGELOG.md)。
 

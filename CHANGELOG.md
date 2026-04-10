@@ -4,6 +4,38 @@
 
 ---
 
+## [v3.6.1] - 2026-04-10 — 5Rs 漸進式反思重構、觀摩評論修復與佈局優化
+
+### 🔄 重構
+
+- **5Rs 漸進式反思系統**（`llm_5R.js`、`FiveRsReflectionForm.jsx`、`5RsUtils.js`）
+  - 反思表單改為漸進式引導，依學生填寫程度動態解鎖下一層次
+  - 後端 AI 分析新增分層評估邏輯，根據填寫層次給予對應回饋
+  - 前端反思顯示元件精簡，移除冗餘邏輯
+  - 📄 [設計提案](docs/proposals/5RS_PROGRESSIVE_REFLECTION.md)
+
+- **SubmitTask 寫作提示面板**（`SubmitTask.jsx`、`GuidancePanel.jsx`）
+  - 收合狀態提升至父元件管理，GuidancePanel 精簡為純展示元件
+  - 面板收合時自動調整輸入區域佈局
+
+### 🔴 Bug 修復
+
+- **觀摩模式無法評論卡片**（`CommentSection.jsx`）
+  - 移除評論輸入框的 `isObservationMode` 條件限制，觀摩者可發表評論
+  - 編輯/刪除按鈕維持原有權限控制（僅留言者本人可操作）
+
+- **觀摩專案列表為空**（`projectViewingController.js`、`projectViewingMiddleware.js`）
+  - 放寬 `school_id` 同校檢查：雙方皆無 `school_id` 時跳過比對
+  - Controller 與 Middleware 篩選邏輯同步修正
+
+### 🎨 樣式修復
+
+- **5Rs 反思 Modal 滾動問題**（`FiveRsModal.jsx`、`PersonalDailyModal.jsx`）
+  - 修正多處響應式佈局與 Modal 內容溢出問題
+- **反思相關元件配色與間距調整**（`LogCard.jsx`、`AuditHistoryPanel.jsx`、`StageReflectionGuide.jsx`、`DailyFormFields.jsx`）
+
+---
+
 ## [v3.6.0] - 2026-04-09 — 安全全面加固、想法牆即時協作優化與學習歷程 AI 回饋
 
 ### 🟣 新功能
