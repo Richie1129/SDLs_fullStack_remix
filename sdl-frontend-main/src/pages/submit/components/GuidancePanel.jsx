@@ -130,10 +130,10 @@ export default function GuidancePanel({ stageKey, isCollapsed, onToggleCollapse 
 
   return (
     <>
-      {/* 桌面版側邊欄 (lg+) */}
+      {/* 側邊欄 (md+) */}
       {!isCollapsed && (
-      <div className="w-full lg:w-80 lg:max-h-[70vh] bg-gradient-to-b from-customgreen/5 to-white border-2 border-gray-200
-                      rounded-lg shadow-lg flex-shrink-0 hidden lg:flex lg:flex-col min-h-0">
+      <div className="w-full md:w-[42%] lg:w-[37%] md:max-h-[60vh] lg:max-h-[70vh] bg-gradient-to-b from-customgreen/5 to-white border-2 border-gray-200
+                      rounded-lg shadow-lg flex-shrink-0 hidden md:flex md:flex-col min-h-0">
         <div className="p-4 bg-white/95 backdrop-blur border-b border-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-body-lg text-gray-800 flex items-center gap-2">
@@ -160,10 +160,10 @@ export default function GuidancePanel({ stageKey, isCollapsed, onToggleCollapse 
       </div>
       )}
 
-      {/* 移動版浮動按鈕 (< lg) */}
+      {/* 移動版浮動按鈕 (< md) */}
       <button
         onClick={() => setIsMobileDrawerOpen(true)}
-        className="lg:hidden fixed bottom-6 right-6 z-40 bg-customgreen text-white p-4 rounded-full shadow-lg hover:bg-customgreen/90 transition-all hover:scale-110"
+        className="md:hidden fixed bottom-6 right-6 z-40 bg-customgreen text-white p-4 rounded-full shadow-lg hover:bg-customgreen/90 transition-all hover:scale-110"
         title="查看寫作提示"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,17 +173,17 @@ export default function GuidancePanel({ stageKey, isCollapsed, onToggleCollapse 
         <span className="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 rounded-full animate-pulse"></span>
       </button>
 
-      {/* 移動版抽屜面板 (< lg) */}
+      {/* 移動版抽屜面板 (< md) */}
       {isMobileDrawerOpen && (
         <>
           {/* 背景遮罩 */}
-          <div 
-            className="lg:hidden fixed inset-0 bg-black/50 z-50 transition-opacity duration-normal"
+          <div
+            className="md:hidden fixed inset-0 bg-black/50 z-50 transition-opacity duration-normal"
             onClick={() => setIsMobileDrawerOpen(false)}
           />
           
           {/* 抽屜內容 */}
-          <div className="lg:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col animate-slide-up">
+          <div className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col animate-slide-up">
             {/* 拖拽指示條 */}
             <div className="flex justify-center py-2 border-b border-gray-100">
               <div className="w-12 h-1 bg-gray-300 rounded-full"></div>

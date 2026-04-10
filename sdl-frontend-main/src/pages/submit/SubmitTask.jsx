@@ -267,14 +267,14 @@ export default function SubmitTask() {
                 </div>
             ) : (
                 // 表單和引導面板並排的容器（響應式：移動版垂直，桌面版並排）
-                <div className='flex flex-col lg:flex-row lg:justify-center gap-stack-sm sm:gap-stack-md lg:gap-stack-md-lg items-start w-full mx-auto my-auto'>
-                    {/* 主要表單卡片 - 固定最大寬度，收合時仍保持同樣大小並置中 */}
-                    <div className='relative w-full lg:w-[52rem] lg:flex-shrink-0 flex flex-col p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg min-h-0'>
-                        {/* 收合時的展開按鈕 - 桌面版顯示在表單右上角 */}
+                <div className='flex flex-col md:flex-row md:justify-center gap-stack-sm sm:gap-stack-md md:gap-stack-md-lg items-start w-full mx-auto my-auto'>
+                    {/* 主要表單卡片 - 比例寬度，隨裝置調整 */}
+                    <div className='relative w-full md:w-[58%] lg:w-[63%] flex flex-col p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg min-h-0'>
+                        {/* 收合時的展開按鈕 - md 以上顯示在表單右上角 */}
                         {isGuidanceCollapsed && (
                             <button
                                 onClick={() => setIsGuidanceCollapsed(false)}
-                                className="absolute -right-3 -top-3 z-10 bg-customgreen text-white p-2 rounded-full shadow-lg hover:bg-customgreen/90 transition-colors hidden lg:flex items-center justify-center"
+                                className="absolute -right-3 -top-3 z-10 bg-customgreen text-white p-2 rounded-full shadow-lg hover:bg-customgreen/90 transition-colors hidden md:flex items-center justify-center"
                                 title="展開寫作提示"
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

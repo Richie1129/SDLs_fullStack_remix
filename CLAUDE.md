@@ -44,6 +44,7 @@ npm run migrate:undo # 回滾遷移
 - Hover 效果用 `hover:bg-xxx/90 hover:shadow-lg`，**禁止 `scale` 或 `translateY`**
 - 動畫速度用 `duration-fast`/`duration-normal`/`duration-slow`
 - 響應式必須包含 `md:` 中間斷點，**禁止從 sm 直接跳 lg**
+- **UI/UX 佈局變更必須同步調整各裝置尺寸** — 任何新增或修改佈局（間距、高度、寬度、flex 配置等），都必須確認 sm / md / lg 斷點下的表現，不能只寫一個固定值
 
 ## Skills
 

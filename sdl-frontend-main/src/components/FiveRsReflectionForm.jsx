@@ -292,8 +292,8 @@ const FiveRsReflectionForm = ({
           }
         `}
       </style>
-      <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="flex flex-col">
+      <div className="px-3 sm:px-6 py-3 sm:py-5">
       
       {/* 基本資訊區塊 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
@@ -616,8 +616,8 @@ const FiveRsReflectionForm = ({
       )}
       </div>
 
-      {/* 操作按鈕 - 固定在底部 */}
-      <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/80">
+      {/* 操作按鈕 - sticky 黏在底部 */}
+      <div className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-t border-gray-100 bg-gray-50/80 sticky bottom-0">
         <div className="flex flex-col gap-1">
           <div className="text-caption text-gray-500">
             {getCompletedSteps() === 0 ? (
@@ -626,19 +626,19 @@ const FiveRsReflectionForm = ({
               <span className="text-green-600">✓ 已完成 {getCompletedSteps()}/{steps.length} 個區塊</span>
             )}
           </div>
-          <span className="text-caption text-gray-400">儲存後系統將以 AI 分析您的反思內容，結果僅供參考</span>
+          <span className="text-caption text-gray-400 hidden sm:inline">儲存後系統將以 AI 分析您的反思內容，結果僅供參考</span>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={onCancel}
-            className="px-5 py-2.5 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-body-sm transition-colors"
+            className="px-3 sm:px-5 py-2 sm:py-2.5 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-body-sm transition-colors"
           >
             取消
           </button>
           <button
             onClick={handleSave}
             disabled={getCompletedSteps() === 0}
-            className="px-5 py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-body-sm transition-all hover:shadow-md disabled:hover:shadow-none"
+            className="px-3 sm:px-5 py-2 sm:py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-body-sm transition-all hover:shadow-md disabled:hover:shadow-none"
           >
             {isEditing ? '更新' : '儲存'}反思日誌
           </button>

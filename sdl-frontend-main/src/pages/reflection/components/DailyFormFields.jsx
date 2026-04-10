@@ -51,7 +51,7 @@ export function DailyFormFields({
       <StageReflectionGuide stage={stage} />
       
       <textarea
-        className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto"
+        className="rounded outline-none ring-2 ring-[#5BA491] w-full mb-3 p-1 resize-none overflow-auto min-h-[120px] sm:min-h-[150px] lg:min-h-[180px] flex-shrink-0"
         rows={7}
         placeholder="撰寫您的日誌..."
         name="content"

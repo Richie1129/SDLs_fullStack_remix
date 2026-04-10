@@ -257,7 +257,7 @@ const StageReflectionGuide = ({ stage, className = '' }) => {
   };
 
   return (
-    <div className={`mb-6 ${className}`}>
+    <div className={`mb-3 ${className}`}>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -297,7 +297,7 @@ const StageReflectionGuide = ({ stage, className = '' }) => {
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="p-component-base pt-0 space-y-stack-sm">
+              <div className="p-component-base pt-0 space-y-stack-sm max-h-[120px] sm:max-h-[150px] lg:max-h-[200px] overflow-y-auto">
                 {/* 核心任務 */}
                 <div className="bg-white p-component-sm rounded-lg border border-purple-100">
                   <div className="flex items-start gap-2">

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { AiOutlineCloudDownload, AiOutlineRobot } from 'react-icons/ai';
 import { FiTrash2, FiFlag, FiFileText } from 'react-icons/fi';
 import { formatTime } from '../../utils/timeUtils';
-import { is5RsFormat, parse5RsContent, extract5RsText } from '@/utils/5RsUtils.js';
+import { is5RsFormat, parse5RsContent, extract5RsText, FIVE_R_FRAMEWORK } from '@/utils/5RsUtils.js';
 import FileDownload from 'js-file-download';
 import { getAuditEvents } from '@/api/audit.js';
 import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
@@ -62,17 +62,27 @@ const LogCard = ({
 
   const renderContent = () => {
     if (is5Rs) {
+      const parsed = parse5RsContent(item.content);
+      const data = parsed?.data || {};
+      const rKeys = ['reporting', 'responding', 'relating', 'reasoning', 'reconstructing'];
+
       return (
-        <div className="space-y-stack-xs">
-          <p className="text-gray-600 text-body-sm mb-2">
-            5Rs 結構化反思內容
-          </p>
-          <div className="text-gray-700 line-clamp-3">
-            {extract5RsText(item.content)}
-          </div>
+        <div className="space-y-1.5">
+          {rKeys.map((key) => {
+            const text = data[key]?.trim();
+            if (!text) return null;
+            return (
+              <div key={key}>
+                <span className="text-caption font-semibold text-purple-700">
+                  {FIVE_R_FRAMEWORK[key].title}
+                </span>
+                <p className="text-body-sm text-gray-700 line-clamp-1">{text}</p>
+              </div>
+            );
+          })}
           <button
             onClick={() => onView5Rs(item)}
-            className="text-teal-600 hover:text-teal-800 text-body-sm font-medium"
+            className="text-teal-600 hover:text-teal-800 text-body-sm font-medium mt-1"
           >
             查看完整 5Rs 反思 →
           </button>
