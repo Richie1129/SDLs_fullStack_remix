@@ -5,7 +5,7 @@ import { Outlet, useLocation, useParams } from "react-router-dom";
 import SubStageComponent from "../components/SubStageBar";
 import ActivityStream from "../components/ActivityStream";
 import ProjectCommentDrawer from "../components/ProjectCommentDrawer";
-import { CommentErrorBoundary } from "../components/ErrorBoundary";
+import { CommentErrorBoundary, PageErrorBoundary } from "../components/ErrorBoundary";
 
 export default function ProjectLayout() {
   const location = useLocation();
@@ -40,7 +40,9 @@ export default function ProjectLayout() {
                 : "flex-1 overflow-y-auto"
             }
           >
-            <Outlet />
+            <PageErrorBoundary key={location.pathname}>
+              <Outlet />
+            </PageErrorBoundary>
           </div>
           {inKanBan && <SubStageComponent />}
         </main>

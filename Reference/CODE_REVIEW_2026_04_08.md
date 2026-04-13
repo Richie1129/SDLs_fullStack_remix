@@ -349,9 +349,26 @@
 
 ### M10: MIME type 驗證依賴客戶端 header
 
-- **狀態：** [ ] 未修復
-- **檔案：** `sdl-backend-main/middlewares/minioUploadMiddleware.js:48`
-- **建議修復：** 加上 magic bytes 驗證（`file-type` 套件）
+- **狀態：** [x] 已修復（2026-04-13）
+- **檔案：** `sdl-backend-main/middlewares/minioUploadMiddleware.js`
+- **問題：** `fileFilter` 僅比對 multer 傳入的 `file.mimetype`，而該值來自客戶端 `Content-Type` header，攻擊者可將 `.exe` 宣告為 `application/pdf` 繞過白名單
+- **修復內容：**
+  1. 新增依賴 `file-type@16.5.4`（CJS 相容的最後一版）於 `sdl-backend-main/package.json`
+  2. 實作 `verifyFileMagicBytes(file)` helper：以 `FileType.fromFile(path)` 讀取檔頭 magic bytes 偵測真實 MIME，對照白名單
+  3. 將 `allowedTypes` 提升為模組級常數，`fileFilter` 與 magic bytes 驗證共用
+  4. `uploadToMinio` / `uploadSingleToMinio` 於檔案寫入磁碟後、上傳 MinIO 前，逐檔呼叫 `verifyFileMagicBytes`；任一驗證失敗立即清理全部暫存檔並回 400
+  5. 以 `verifiedMime`（偵測結果）取代 `file.mimetype` 傳給 `uploadFileToMinio` 與回傳結構，確保 MinIO object metadata 與 DB 紀錄皆以真實 MIME 為準
+  6. 新增 `MIME_ALIASES`（`application/x-zip-compressed` ↔ `application/zip` 等）處理 client/file-type 別名差異
+  7. 新增 `TEXT_MIME_TYPES` 白名單（`text/plain`、`text/csv`）——這類檔案無 magic bytes 可偵測，屬低風險類型，允許直接信任 client header（即使內容被篡改，瀏覽器以 text 開啟不會執行）
+- **端到端驗證：**
+  - Case 1（宣告 PDF、內容為 PNG）：接受，mime 被覆寫為 `image/png` ✓
+  - Case 2（宣告 PNG、內容為 .exe）：拒絕 `application/x-msdownload` ✓
+  - Case 3（純文字 `text/plain`）：接受 ✓
+- **資料風險：** 無 —— 僅影響新上傳驗證邏輯，既有 DB 紀錄與 MinIO 物件不變
+- **Docker 注意事項：** `package.json` 新增依賴，需重新 `docker compose -f docker-compose.dev.yml up --build`
+- **類似問題檢查：**
+  - `sdl-backend-main` 全專案只有此一個 `multer` 上傳入口（`grep require('multer')` 僅命中這一檔），無其他需同步的上傳點
+  - downstream 消費者 `controllers/submit.js`、`controllers/comments.js`、`controllers/projectComments.js` 只是把 `mimeType` 寫入 DB，無任何業務邏輯依賴 client-declared 值，切換為 detected MIME 不會引發相容性問題
 
 ---
 
@@ -428,8 +445,20 @@
 
 ### L4: 多頁面缺 ErrorBoundary
 
-- **狀態：** [ ] 未修復
+- **狀態：** [x] 已修復（2026-04-13）
 - **檔案：** IdeaWall、Reflection、AskQuestion、Portfolio、Submit 頁面
+- **問題：** 這 5 個頁面未被任何 ErrorBoundary 包覆，一旦渲染錯誤會直接觸發 RootLayout 的 `GlobalErrorBoundary`，整個應用（含 SideBar/TopBar）變成全螢幕錯誤 UI
+- **修復內容：**
+  1. 新增 `sdl-frontend-main/src/components/ErrorBoundary/PageErrorBoundary.jsx` — 頁面級錯誤邊界，採用 inline 錯誤 UI（保留 SideBar/TopBar/SubStageBar），提供「重試」與「重新載入頁面」兩個復原路徑
+  2. 於 `sdl-frontend-main/src/components/ErrorBoundary/index.js` 導出
+  3. 於 `sdl-frontend-main/src/layouts/ProjectLayout.jsx` 在 `<Outlet />` 外包一層 `<PageErrorBoundary key={location.pathname}>` —— 一處修復覆蓋所有專案子頁面；`key` 讓路徑切換時自動重置錯誤狀態
+- **設計決策：**
+  - 在 Layout 層統一包覆，而非每個頁面個別加，避免重複並確保未來新增頁面自動受保護
+  - Kanban 的 `KanbanErrorBoundary`、TeacherDashboard 的 `DashboardErrorBoundary` 仍保留，形成「內層細粒度 → 外層兜底」分層
+  - 採用設計系統語意 token（`text-h3`、`p-component-md-lg`、`customgreen`、`duration-normal`），圖示用 `react-icons/fi`
+- **類似問題檢查：**
+  - 頂層路由 `homepage`、`bulletin`、`List`、`observation`、`profile` 等同樣只有 RootLayout 的 `GlobalErrorBoundary` 作兜底，但不在本條 code review 範圍內，未擴大修改（可考慮後續追加為獨立條目）
+  - `overView` / `student-overview` / `teacher-overview` / `teacherDashboard` / `studentDashboard` 內部已使用 `DashboardErrorBoundary`；Kanban 有 `KanbanErrorBoundary`，無需額外處理
 
 ---
 
@@ -718,10 +747,82 @@
 
 ---
 
+---
+
+# 第三輪補充：H4 修復引入的 Regression
+
+**發現日期：** 2026-04-13  
+**發現方式：** 使用者在 Kanban 卡片嘗試刪除附件時拿到 403 Forbidden（`DELETE /api/file/:fileName`）
+
+---
+
+## HIGH
+
+### R3-H1: `verifyFileOwnership` 對 Task.files/images 的查詢永遠找不到（H4 regression）
+
+- **狀態：** [x] 已修復（2026-04-13）
+- **檔案：** `sdl-backend-main/routes/file.js:155-208` — `verifyFileOwnership`
+- **引入 commit：** `5e679a8`（H4: 檔案刪除加所有權驗證）
+- **症狀：** 非教師使用者刪除 Kanban 卡片附件時，後端穩定回 `403 無權刪除此檔案`。前端 log：
+  ```
+  AxiosError: Request failed with status code 403
+  at useFileManagement.js:168 (apiClient.delete(`/file/${fileName}`))
+  ```
+- **根因：**
+  1. **`Task.files` 是 `jsonb[]`，不是 `jsonb`。** 原寫法 `{ files: { [Op.contains]: [{ fileName }] } }` 產生的 SQL 是 `files @> ARRAY['{"fileName":"xxx"}']::jsonb[]`，對 `jsonb[]` 而言 `@>` 要求「**陣列元素完全相等**」而非 JSON 子集包含。實際儲存的元素結構是 `{"url":..., "size":..., "fileName":..., "mimeType":..., "originalName":...}`，因此永遠比不到。
+  2. **`Task.images` 欄位存的是完整 URL 路徑**（如 `/api/file/image/xxx.jpg`），但查詢用純 fileName 做 `text[] @>` 字串相等比對，也永遠比不到。
+  3. 兩條路徑全部比空後，`verifyFileOwnership` 回落到最後一行 `return userRole === 'teacher'` —— 孤立檔案僅教師可刪，學生/一般使用者一律 403。
+- **DB 驗證：**
+  ```sql
+  -- 原查詢（永遠回空）
+  SELECT id FROM tasks WHERE files @> ARRAY['{"fileName":"1766...pdf"}']::jsonb[];
+  -- (0 rows)
+
+  -- 正確查詢（命中）
+  SELECT id FROM tasks WHERE EXISTS (
+      SELECT 1 FROM unnest(files) f WHERE f->>'fileName' = '1766...pdf'
+  );
+  -- (1 row)
+  ```
+- **修復內容：**
+  1. 移除 Sequelize ORM 的 `Op.contains` 寫法（型別誤判的 trap）
+  2. 改用原生 SQL + `unnest`：
+     ```sql
+     SELECT k."projectId"
+     FROM tasks t
+     LEFT JOIN columns c ON c.id = t."columnId"
+     LEFT JOIN kanbans k ON k.id = c."kanbanId"
+     WHERE EXISTS (
+         SELECT 1 FROM unnest(t.files) AS f WHERE f->>'fileName' = :fileName
+     )
+     OR EXISTS (
+         SELECT 1 FROM unnest(t.images) AS img
+         WHERE img = :fileName OR img LIKE :fileNameSuffix
+     )
+     LIMIT 1
+     ```
+     `fileNameSuffix = '%/' || fileName`，兼容 `images` 存完整 URL 與歷史純 fileName 兩種情況
+  3. 直接 JOIN `tasks → columns → kanbans` 一次取到 `projectId`，避免 Sequelize include 的樣板代碼
+  4. 清理不再使用的 import：`Task`、`Column`、`Kanban`、`Op`
+- **端到端驗證：**
+  - 對既有資料實測 `files` 路徑（PDF 附件）：正確回傳 `projectId: 1` ✓
+  - 對既有資料實測 `images` 路徑（JPG 圖片）：正確回傳 `projectId: 1` ✓
+  - nodemon 熱重載無錯誤
+- **影響範圍：**
+  - `DELETE /api/file/:fileName` 與 `POST /api/file/batch-delete` 共用同一個 `verifyFileOwnership`，兩個端點同時修復
+  - 純讀取邏輯修正，不影響現有 DB 資料
+- **教訓：**
+  - `DataTypes.ARRAY(DataTypes.JSONB)` 對映到 Postgres `jsonb[]`，與單一 `jsonb` 欄位的 `@>` 語義**完全不同**。前者是陣列元素相等、後者是 JSON 子集包含。Sequelize 的 `Op.contains` 對兩者寫法相同但行為不同，是個容易誤踩的 trap
+  - 寫 ownership 檢查務必對真實資料做端到端測試，不能只單元測 ORM 層
+  - 與 CLAUDE.md「實作後的自我審查 → 假設是否已驗證」呼應：當初 H4 修復時沒對實際 `jsonb[]` 資料實測，假設 Sequelize 的 `contains` 能直接用
+
+---
+
 ## 附註
 
 - 第一輪由 4 個平行 Agent 審查（後端控制器、Socket 處理器、前端狀態管理、認證/安全）
 - 第二輪由 3 個平行 Agent 補充審查（快取一致性、商業邏輯正確性、前後端資料對齊）
 - 已於 2026-04-08 修復的問題：`controllers/submit.js` 的 `createSubmit` 競態條件（commit `cba53ea`）
 - 已於 2026-04-08 修復的問題：`utils/semesterUtils.js` 第 2 學期學年度計算 + 專案列表快取清除（commit `9a806f6`）
+- 於 2026-04-13 補上第三輪：R3-H1 — H4 修復引入的 `verifyFileOwnership` Sequelize `jsonb[]` containment 誤用
 - 所有修復必須遵循 CLAUDE.md「修復與重構的最高原則」：不能影響現有資料

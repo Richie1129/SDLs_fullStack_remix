@@ -4,6 +4,7 @@
  */
 
 export { default as GlobalErrorBoundary } from './GlobalErrorBoundary';
+export { default as PageErrorBoundary } from './PageErrorBoundary';
 export { default as KanbanErrorBoundary } from './KanbanErrorBoundary';
 export { default as DashboardErrorBoundary } from './DashboardErrorBoundary';
 export { default as ChartErrorBoundary } from './ChartErrorBoundary';

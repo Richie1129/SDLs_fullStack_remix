@@ -267,7 +267,7 @@ export default function SubmitTask() {
                 </div>
             ) : (
                 // 表單和引導面板並排的容器（響應式：移動版垂直，桌面版並排）
-                <div className='flex flex-col md:flex-row md:justify-center gap-stack-sm sm:gap-stack-md md:gap-stack-md-lg items-start w-full mx-auto my-auto'>
+                <div className='flex flex-col md:flex-row md:justify-center gap-stack-sm sm:gap-stack-md md:gap-stack-md-lg items-start w-full max-w-5xl lg:max-w-6xl mx-auto my-auto'>
                     {/* 主要表單卡片 - 比例寬度，隨裝置調整 */}
                     <div className='relative w-full md:w-[58%] lg:w-[63%] flex flex-col p-component-base sm:p-component-md-lg bg-white border-2 border-gray-200 rounded-lg shadow-lg min-h-0'>
                         {/* 收合時的展開按鈕 - md 以上顯示在表單右上角 */}
