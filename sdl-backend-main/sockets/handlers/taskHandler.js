@@ -7,7 +7,6 @@ const Project = require('../../models/project');
 const { logTaskChange, logFieldChanges } = require('../../utils/taskChangeLogger');
 const { Op } = require('sequelize');
 const sequelize = require('../../util/database');
-const { invalidateProjectCache } = require('../../controllers/assistant');
 
 /**
  * 任務相關 Socket 事件處理器
@@ -153,9 +152,6 @@ class TaskHandler {
                 }
             });
 
-            // 🗑️ 清除快取：看板資料已變更
-            invalidateProjectCache(projectId);
-
             console.log(`✅ 任務創建成功: ${createdTask.id} - ${createdTask.title}`);
 
         } catch (error) {
@@ -266,9 +262,6 @@ class TaskHandler {
                     timestamp: new Date(),
                     columnName: taskColumn?.name || '未知列表'
                 });
-
-                // 🗑️ 清除快取：看板資料已變更
-                invalidateProjectCache(projectId);
 
                 console.log(`✅ 任務更新成功: ${cardData.id} - ${cardData.title}`);
 
@@ -413,9 +406,6 @@ class TaskHandler {
                 }
             });
 
-            // 清除快取：看板資料已變更
-            invalidateProjectCache(projectId);
-
             console.log(`任務 ${cardData.id} 刪除完成`);
 
         } catch (error) {
@@ -556,9 +546,6 @@ class TaskHandler {
                     timestamp: new Date()
                 });
             }
-
-            // 🗑️ 清除快取：看板資料已變更
-            invalidateProjectCache(projectId);
 
             console.log(`✅ 拖拽操作完成: 任務 ${taskId}`);
 

@@ -5,7 +5,6 @@
  * - 專案查看權限 (PROJECT_VIEWING_UPDATE, PROJECT_VIEWING_BATCH_UPDATE)
  * - 專案成員管理 (PROJECT_MEMBER_ADD)
  * - 聊天室管理 (CHATROOM_CREATE, CHATROOM_MESSAGE_SEND)
- * - AI 助理 (ASSISTANT_GUIDANCE_REQUEST, ASSISTANT_CHAT_REQUEST)
  * - 文件操作 (FILE_DELETE, FILE_BATCH_DELETE)
  */
 
@@ -175,7 +174,6 @@ async function cleanup() {
           [require('sequelize').Op.in]: [
             'PROJECT_VIEWING_UPDATE', 'PROJECT_VIEWING_BATCH_UPDATE',
             'PROJECT_MEMBER_ADD', 'CHATROOM_CREATE', 'CHATROOM_MESSAGE_SEND',
-            'ASSISTANT_GUIDANCE_REQUEST', 'ASSISTANT_CHAT_REQUEST',
             'FILE_DELETE', 'FILE_BATCH_DELETE'
           ]
         },
@@ -476,107 +474,6 @@ async function testChatroomMessageSend() {
   }
 }
 
-// 測試 6: ASSISTANT_GUIDANCE_REQUEST
-async function testAssistantGuidanceRequest() {
-  log(colors.blue, '\n📝 測試 6: ASSISTANT_GUIDANCE_REQUEST');
-
-  try {
-    // AI API 可能因為缺少 API key 或專案資料不足而失敗
-    // 我們主要驗證審計追蹤是否被記錄
-    let apiSucceeded = false;
-    try {
-      await axios.post(
-        `${API_BASE}/api/assistant/guidance`,
-        {
-          projectId: testProjectId,
-          userMessage: '請幫我分析專案狀況'
-        },
-        { headers: { accessToken } }
-      );
-      apiSucceeded = true;
-    } catch (apiError) {
-      const status = apiError.response?.status;
-      log(colors.yellow, `   ⚠️ AI API 回應 ${status} (${apiError.response?.data?.error || '可能缺少 API key'})`);
-      // 即使 API 失敗，審計可能在請求處理的早期就被記錄了
-    }
-
-    await waitForAudit();
-
-    // 驗證審計記錄
-    const audit = await AuditEvent.findOne({
-      where: {
-        actorId: testUserId,
-        action: 'ASSISTANT_GUIDANCE_REQUEST'
-      },
-      order: [['timestamp', 'DESC']]
-    });
-
-    if (audit) {
-      recordTest('ASSISTANT_GUIDANCE_REQUEST', true,
-        `AI 指導請求審計記錄存在 (API ${apiSucceeded ? '成功' : '失敗但審計已記錄'})`);
-    } else if (!apiSucceeded) {
-      // AI API 失敗且沒有審計記錄 - 可能是在驗證階段就失敗了
-      recordTest('ASSISTANT_GUIDANCE_REQUEST', true,
-        'AI API 未成功回應 (缺少 API Key 或資料不足)，審計追蹤在成功執行時才記錄 - 預期行為');
-    } else {
-      recordTest('ASSISTANT_GUIDANCE_REQUEST', false, 'API 成功但審計記錄不存在');
-    }
-  } catch (error) {
-    recordTest('ASSISTANT_GUIDANCE_REQUEST', false, error.message);
-  }
-}
-
-// 測試 7: ASSISTANT_CHAT_REQUEST
-async function testAssistantChatRequest() {
-  log(colors.blue, '\n📝 測試 7: ASSISTANT_CHAT_REQUEST');
-
-  try {
-    let apiSucceeded = false;
-    try {
-      await axios.post(
-        `${API_BASE}/api/assistant/chat`,
-        {
-          projectId: testProjectId,
-          message: '你好，這是測試訊息',
-          provider: 'gemini',
-          sessionId: 'test-session'
-        },
-        {
-          headers: { accessToken },
-          timeout: 15000 // AI 可能需要較長時間
-        }
-      );
-      apiSucceeded = true;
-    } catch (apiError) {
-      const status = apiError.response?.status;
-      log(colors.yellow, `   ⚠️ AI API 回應 ${status || 'timeout'} (${apiError.response?.data?.error || apiError.message})`);
-    }
-
-    await waitForAudit();
-
-    // 驗證審計記錄
-    const audit = await AuditEvent.findOne({
-      where: {
-        actorId: testUserId,
-        action: 'ASSISTANT_CHAT_REQUEST'
-      },
-      order: [['timestamp', 'DESC']]
-    });
-
-    if (audit) {
-      recordTest('ASSISTANT_CHAT_REQUEST', true,
-        `AI 聊天請求審計記錄存在 (API ${apiSucceeded ? '成功' : '失敗但審計已記錄'})`);
-    } else if (!apiSucceeded) {
-      recordTest('ASSISTANT_CHAT_REQUEST', true,
-        'AI API 未成功回應，審計追蹤在成功執行時才記錄 - 預期行為');
-    } else {
-      recordTest('ASSISTANT_CHAT_REQUEST', false, 'API 成功但審計記錄不存在');
-    }
-  } catch (error) {
-    recordTest('ASSISTANT_CHAT_REQUEST', false, error.message);
-  }
-}
-
 // 測試 8: FILE_DELETE
 async function testFileDelete() {
   log(colors.blue, '\n📝 測試 8: FILE_DELETE');
@@ -666,8 +563,6 @@ async function runTests() {
     await testProjectMemberAdd();
     await testChatroomCreate();
     await testChatroomMessageSend();
-    await testAssistantGuidanceRequest();
-    await testAssistantChatRequest();
     await testFileDelete();
     await testFileBatchDelete();
 

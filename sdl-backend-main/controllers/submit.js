@@ -9,7 +9,6 @@ const { logSubmitChange, logSubmitFieldChanges } = require('../utils/submitChang
 const { logAudit } = require('../services/auditService');
 const sequelize = require('../util/database');
 const { createErrorResponse, getHttpStatusByErrorCode } = require('../constants/dailyErrorCodes');
-const { invalidateProjectCache } = require('./assistant');
 const apiCache = require('../services/apiCache');
 
 // [Option B 隱藏] 四階段過濾服務
@@ -212,7 +211,6 @@ exports.createSubmit = async(req, res) => {
                 }
 
                 await t.commit();
-                invalidateProjectCache(pId);
                 // [Option B 隱藏] 返回 "done" 讓前端顯示完成提示
                 return res.status(200).json({
                     success: true,
@@ -223,8 +221,6 @@ exports.createSubmit = async(req, res) => {
 
         await t.commit();
 
-        // R2-H4: cache 清除移到 commit 之後，避免 commit 失敗時快取已被無效化
-        invalidateProjectCache(pId);
         // R2-H5: 清除 apiCache（key 格式 projects:${userId}:${semester}）
         // 提交改變 currentStage，影響所有能看到此專案的使用者
         apiCache.delByPrefix('projects:');
@@ -419,9 +415,6 @@ exports.updateSubmit = async (req, res) => {
 
         await t.commit();
 
-        // R2-M3: commit 後清除 AI 助理快取
-        invalidateProjectCache(submit.projectId);
-
         // Audit: Record submit update
         await logAudit(req, {
             action: 'SUBMIT_UPDATE',
@@ -524,9 +517,6 @@ exports.deleteSubmit = async (req, res) => {
 
         // 刪除提交記錄（用 instance.destroy 讓 hooks 正常觸發）
         await submit.destroy({ req });
-
-        // R2-M3: 清除 AI 助理快取
-        invalidateProjectCache(submit.projectId);
 
         // Audit: Record submit deletion
         await logAudit(req, {

@@ -8,7 +8,6 @@ const { logColumnChange, logColumnReorder } = require('../../utils/columnChangeL
 const { Op } = require('sequelize');
 const sequelize = require('../../util/database');
 const { buildKanbanData } = require('../../utils/kanbanHelper');
-const { invalidateProjectCache } = require('../../controllers/assistant');
 
 /**
  * 欄位(列表)相關 Socket 事件處理器
@@ -127,9 +126,6 @@ class ColumnHandler {
                 description: `建立了新列表「${newGroupName}」`
             });
 
-            // 清除快取：看板資料已變更
-            invalidateProjectCache(projectId);
-
             console.log(`列表創建成功: ${newColumn.id} - ${newGroupName}`);
 
         } catch (error) {
@@ -191,9 +187,6 @@ class ColumnHandler {
                 timestamp: new Date(),
                 description: `調整了列表順序`
             });
-
-            // 🗑️ 清除快取：看板資料已變更
-            invalidateProjectCache(roomProjectId);
 
             console.log("✅ 欄位順序更新成功");
 
@@ -318,9 +311,6 @@ class ColumnHandler {
                 updatedColumns,
                 deletedColumnId: columnData.id
             });
-
-            // 🗑️ 清除快取：看板資料已變更
-            invalidateProjectCache(kanbanId);
 
             console.log(`✅ 欄位和其任務刪除成功: ${columnData.name}`);
 

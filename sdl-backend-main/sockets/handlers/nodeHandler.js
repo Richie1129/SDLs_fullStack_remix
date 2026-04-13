@@ -7,8 +7,6 @@ const { logNodeChange, logNodeFieldChanges } = require('../../utils/nodeChangeLo
 
 // Phase 3: 引入 Orchestrator
 const { orchestrate } = require('../../services/orchestrator');
-// R2-M2: 節點變更時清除 AI 助理快取
-const { invalidateProjectCache } = require('../../controllers/assistant');
 
 /**
  * 節點相關 Socket 事件處理器
@@ -134,9 +132,6 @@ class NodeHandler {
                 _socketId: this.socket.id
             });
 
-            // R2-M2: 清除 AI 助理快取
-            invalidateProjectCache(projectId);
-
             // 回傳 tempId mapping 給建立者（供 optimistic update 替換用）
             this.socket.emit('nodeCreateConfirm', {
                 tempId: data.tempId || null,
@@ -229,9 +224,6 @@ class NodeHandler {
                 _socketId: this.socket.id
             });
 
-            // R2-M2: 清除 AI 助理快取
-            invalidateProjectCache(projectId);
-
             console.log(`✅ 節點更新成功: ${id} - ${title}`);
 
         } catch (error) {
@@ -299,9 +291,6 @@ class NodeHandler {
                 nodeId: id,
                 _socketId: this.socket.id
             });
-
-            // R2-M2: 清除 AI 助理快取
-            invalidateProjectCache(projectId);
 
             // 廣播活動流更新 - 觸發活動記錄顯示
             this.broadcastToProject(projectId, 'activityUpdate', {

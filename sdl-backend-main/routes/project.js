@@ -1,6 +1,5 @@
 // router for project
 const controller = require('../controllers/project');
-const assistantController = require('../controllers/assistant');
 const router = require('express').Router();
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const chatTurnController = require('../controllers/chatTurns');

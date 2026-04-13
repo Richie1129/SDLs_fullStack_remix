@@ -1,27 +1,5 @@
 import apiClient from './client';
 
-// export const getProjectContent = async (projectId) => {
-//   const res = await apiClient.get(`/projects/${projectId}/content`);
-//   return res.data;
-// };
-
-export const getGuidance = async ({ projectId, currentStage, currentSubStage, userMessage, useLLM, provider, history, tasksMode, tasksCount }) => {
-  const res = await apiClient.post('/assistant/guidance', {
-    projectId,
-    currentStage,
-    currentSubStage,
-    userMessage,
-    useLLM,
-    provider,
-    history,
-    tasksMode,
-    tasksCount,
-  }, {
-    timeout: 60000, // AI 響應可能較慢，給 60 秒超時
-  });
-  return res.data;
-};
-
 // Create a chat turn with user and/or assistant content
 export const createChatTurn = async ({ projectId, body }) => {
   const res = await apiClient.post(`/projects/${projectId}/chat`, body);
@@ -52,4 +30,4 @@ export const deleteChatSession = async ({ projectId, sessionId }) => {
   return res.data;
 };
 
-export default { getGuidance, createChatTurn, completeChatTurn, getChatHistory, getChatSessions, deleteChatSession };
+export default { createChatTurn, completeChatTurn, getChatHistory, getChatSessions, deleteChatSession };
