@@ -83,6 +83,7 @@ const aiLimiter = rateLimit({
 app.use('/api/users/login', loginLimiter);
 app.use('/api/auth/forgot-password', forgotPasswordLimiter);
 app.use('/api/llm', aiLimiter);
+app.use('/api/sdl-coach', aiLimiter);
 app.use('/proxy/api/v1/chats', aiLimiter);
 
 app.use(express.json({ limit: '10mb' }));
@@ -227,6 +228,7 @@ app.use('/api/rag_message', require('./routes/rag_message'));
 app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/llm', require('./routes/llm'));
 app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
+app.use('/api/sdl-coach', require('./routes/sdlCoach')); // SDL Coach - 自主學習助手
 app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
 app.use('/api/teacher/help-seeking', require('./routes/teacherHelpSeeking')); // Teacher Help-Seeking Dashboard
 app.use('/api/teacher-agent', require('./routes/teacherAgent')); // Teacher Analytics Agent

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiTarget, FiBookOpen, FiMessageSquare, FiZap, FiCpu, FiCheckSquare, FiChevronDown, FiChevronUp, FiArrowRight } from 'react-icons/fi';
+import { FiTarget, FiBookOpen, FiMessageSquare, FiZap, FiCpu, FiCheckSquare, FiChevronDown, FiChevronUp, FiArrowRight, FiX } from 'react-icons/fi';
+import SdlCoachChat from '../../../components/SdlCoachChat';
 
 /* ─────────────────────────────────────────────
    Stage / Sub-stage 定義（與 SubStageBar.jsx 保持同步）
@@ -117,10 +118,10 @@ function generateSuggestions(stage, subStage, personalData) {
   if (aiInteractions === 0) {
     conditional.push({
       id: 'no_ai',
-      icon: <FiCpu className="w-4 h-4 shrink-0" />,
-      title: '還沒有使用 AI 助手',
-      body: `AI 助手可以針對「${sub.name}」給你具體的研究建議。試著提問：「${getAiPromptExample(stage, subStage)}」`,
-      type: 'tip',
+      icon: <FiBookOpen className="w-4 h-4 shrink-0" />,
+      title: '還沒向自主學習助手提問',
+      body: `自主學習助手會用「探究與實作」階段思維陪你想下一步，不會直接給答案。試著問：「${getAiPromptExample(stage, subStage)}」`,
+      type: 'action',
     });
   }
 
@@ -184,6 +185,7 @@ const ACTION_ROUTES = {
 const StageSuggestions = ({ personalData, projectId }) => {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [coachOpen, setCoachOpen] = useState(false);
 
   const stage    = personalData?.currentStage    || 0;
   const subStage = personalData?.currentSubStage || 0;
@@ -199,23 +201,88 @@ const StageSuggestions = ({ personalData, projectId }) => {
   return (
     <div className={`rounded-xl border ${meta.border} ${meta.bg} overflow-hidden`}>
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-component-base py-3 cursor-pointer"
-        onClick={() => setCollapsed(v => !v)}
-      >
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between px-component-base py-3 gap-stack-xs">
+        <div
+          className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+          onClick={() => setCollapsed(v => !v)}
+        >
           <span className={`w-2 h-2 rounded-full ${meta.dot} shrink-0`} />
           <span className={`text-body-sm font-semibold ${meta.text}`}>
             本週學習建議
           </span>
-          <span className={`text-caption px-2 py-0.5 rounded-full font-medium bg-white/60 ${meta.text}`}>
+          <span className={`text-caption px-2 py-0.5 rounded-full font-medium bg-white/60 ${meta.text} truncate`}>
             {meta.name} · {meta.subs[subStage]?.name || `子階段 ${subStage}`}
           </span>
         </div>
-        {collapsed
-          ? <FiChevronDown className={`w-4 h-4 ${meta.text}`} />
-          : <FiChevronUp   className={`w-4 h-4 ${meta.text}`} />}
+        <div className="flex items-center gap-stack-xs shrink-0">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCoachOpen(true); }}
+            className={`hidden sm:inline-flex items-center gap-1 text-caption font-medium px-component-sm py-1 rounded-full bg-white/70 border ${meta.border} ${meta.text} hover:bg-white hover:shadow-sm transition-all duration-fast`}
+            title="向自主學習助手提問"
+          >
+            <FiBookOpen className="w-3 h-3" />
+            問自主學習助手
+          </button>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setCoachOpen(true); }}
+            className={`sm:hidden inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/70 border ${meta.border} ${meta.text} hover:bg-white transition-all duration-fast`}
+            title="向自主學習助手提問"
+          >
+            <FiBookOpen className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCollapsed(v => !v)}
+            className={`p-1 ${meta.text}`}
+            aria-label={collapsed ? '展開' : '收合'}
+          >
+            {collapsed
+              ? <FiChevronDown className="w-4 h-4" />
+              : <FiChevronUp   className="w-4 h-4" />}
+          </button>
+        </div>
       </div>
+
+      {/* SDL Coach modal */}
+      {coachOpen && (
+        <div
+          className="fixed inset-0 z-[1000] bg-black/40 flex items-end sm:items-center justify-center p-component-sm sm:p-component-md"
+          onClick={() => setCoachOpen(false)}
+        >
+          <div
+            className="bg-white w-full max-w-2xl h-[80vh] sm:h-[70vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-component-base py-component-sm border-b border-gray-200 bg-customgreen/5">
+              <div className="flex items-center gap-stack-xs">
+                <FiBookOpen className="w-4 h-4 text-customgreen" />
+                <span className="text-body-base font-semibold text-customgreen">自主學習助手</span>
+                <span className="text-caption text-gray-500 hidden sm:inline">
+                  {meta.name} · {meta.subs[subStage]?.name || `子階段 ${subStage}`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCoachOpen(false)}
+                className="p-1.5 rounded-full text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors duration-fast"
+                aria-label="關閉"
+              >
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
+              <SdlCoachChat
+                embedded
+                projectId={projectId}
+                currentStage={stage}
+                currentSubStage={subStage}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Suggestions list */}
       {!collapsed && (
@@ -236,7 +303,16 @@ const StageSuggestions = ({ personalData, projectId }) => {
                   {s.title}
                 </p>
                 <p className="text-caption text-gray-600 leading-relaxed">{s.body}</p>
-                {s.type === 'action' && ACTION_ROUTES[s.id] && projectId && (
+                {s.type === 'action' && s.id === 'no_ai' && (
+                  <button
+                    onClick={() => setCoachOpen(true)}
+                    className={`mt-1.5 inline-flex items-center gap-1 text-caption font-medium ${meta.text} hover:underline`}
+                  >
+                    <FiBookOpen className="w-3 h-3" />
+                    向自主學習助手提問
+                  </button>
+                )}
+                {s.type === 'action' && s.id !== 'no_ai' && ACTION_ROUTES[s.id] && projectId && (
                   <button
                     onClick={() => navigate(ACTION_ROUTES[s.id](projectId))}
                     className={`mt-1.5 inline-flex items-center gap-1 text-caption font-medium ${meta.text} hover:underline`}

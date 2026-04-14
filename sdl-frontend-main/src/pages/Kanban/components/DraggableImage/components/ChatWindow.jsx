@@ -148,19 +148,11 @@ const ChatWindow = ({
             </button>
             {/* <button
               className={`px-3 py-1 rounded-full text-body-sm ${
-                activeTab === 'project-assistant' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'
-              }`}
-              onClick={() => setActiveTab('project-assistant')}
-            >
-              <FiCpu className="w-4 h-4 inline mr-1" /> 專案助理
-            </button> */}
-            {/* <button
-              className={`px-3 py-1 rounded-full text-body-sm ${
                 activeTab === 'mentor' ? 'bg-[#5BA491] text-white' : 'bg-white border border-[#e9ecef] text-[#495057]'
               }`}
               onClick={() => setActiveTab('mentor')}
             >
-              <FiCpu className="w-4 h-4 inline mr-1" /> 自主學習助手
+              <FiBookOpen className="w-4 h-4 inline mr-1" /> 自主學習助手
             </button> */}
           </div>
 

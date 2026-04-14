@@ -1,8 +1,6 @@
-import React from "react";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import AssistantChat from '../../../../../components/AssistantChat';
-import AssistantChatStreaming from '../../../../../components/AssistantChatStreaming';
+import SdlCoachChat from '../../../../../components/SdlCoachChat';
 
 const ChatContent = ({
   activeTab,
@@ -37,24 +35,14 @@ const ChatContent = ({
           : (screenWidth < 768 ? 'p-component-sm' : 'p-component-md')
       } bg-[#fdfdfd]`}
     >
-      {activeTab === 'project-assistant' ? (
-        // 專案助理（新版，支援 streaming）
-        <div className="h-full">
-          <AssistantChatStreaming
-            projectId={projectId}
-            provider="gemini"
-            embedded={true}
-          />
-        </div>
-      ) : activeTab === 'mentor' ? (
+      {activeTab === 'mentor' ? (
         mentorStarted ? (
           <div className="h-full">
-            <AssistantChat
+            <SdlCoachChat
               embedded
               projectId={projectId}
               currentStage={currentStage}
               currentSubStage={currentSubStage}
-              autoGreet
             />
           </div>
         ) : (
@@ -63,13 +51,13 @@ const ChatContent = ({
               <div className="text-[15px] font-semibold text-[#343a40] mb-2">啟動前確認</div>
               <div className="text-[13px] text-[#6c757d] mb-4">
                 為了避免在科學助手與自主學習助手之間切換時自動觸發推理、耗用 LLM Token，切換到「自主學習助手」後不會自動開始。
-                請點擊下方按鈕以開始與自主學習助手互動。
+                自主學習助手會以「探究與實作」階段思維陪你想下一步，不會直接幫你寫題目或報告。
               </div>
               <button
                 className="px-4 py-2 bg-[#5BA491] text-white rounded-lg border-0 cursor-pointer text-body-sm font-semibold shadow-[0_2px_8px_rgba(91,164,145,0.3)] hover:bg-[#4a9076] hover:shadow-lg transition-all duration-fast"
                 onClick={() => setMentorStarted(true)}
               >
-                詢問自主學習助手後開始
+                開始與自主學習助手對話
               </button>
             </div>
           </div>
