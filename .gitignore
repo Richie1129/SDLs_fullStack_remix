@@ -156,3 +156,7 @@ daily_file/
 # Ignore local AI agent skills
 .agent/skills/
 .gemini/skills/
+
+# SDL Coach 知識庫原始素材（PDF + 萃取 txt）
+# 運行時只需要 sdl-backend-main/docs/sdl-coach-knowledge-base.md
+自主學習/
