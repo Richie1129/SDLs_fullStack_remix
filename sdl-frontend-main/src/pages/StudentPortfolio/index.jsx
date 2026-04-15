@@ -12,7 +12,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react';
 import './StudentPortfolio.print.css';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiDownload, FiZap, FiStopCircle, FiRefreshCw, FiFileText, FiInfo, FiMessageSquare, FiChevronDown, FiChevronUp, FiLayers, FiCheck, FiX } from 'react-icons/fi';
+import { FiDownload, FiZap, FiStopCircle, FiRefreshCw, FiFileText, FiInfo, FiMessageSquare, FiChevronDown, FiChevronUp, FiLayers, FiCheck, FiX, FiArrowLeft } from 'react-icons/fi';
 import Lottie from 'lottie-react';
 import PortfolioIcon from '../../assets/AnimationProtfoliio.json';
 import Loader from '../../components/Loader';
@@ -207,18 +207,29 @@ export default function StudentPortfolio() {
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm portfolio-no-print">
         <div className="max-w-6xl mx-auto px-component-md py-3 flex items-center justify-between gap-stack-sm flex-wrap">
 
-          {/* 標題 */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8">
-              <Lottie animationData={PortfolioIcon} loop />
-            </div>
-            <div>
-              <div className="text-h3 font-bold text-gray-800">個人學習歷程</div>
-              {portfolioData && (
-                <div className="text-caption text-gray-500">
-                  {portfolioData.student.username} · {portfolioData.project.name}
-                </div>
-              )}
+          {/* 返回 + 標題（整組向左拉出 container padding） */}
+          <div className="flex items-center gap-stack-xs -ml-stack-lg sm:-ml-stack-xl md:-ml-stack-xl">
+            <button
+              type="button"
+              onClick={() => navigate(`/project/${projectId}/protfolio`)}
+              title="返回歷程檔案"
+              className="flex items-center gap-1 px-btn-x py-btn-y rounded-lg border border-gray-200 text-gray-600 text-body-sm hover:bg-gray-50 hover:shadow-lg transition-shadow duration-fast portfolio-no-print"
+            >
+              <FiArrowLeft className="w-4 h-4" />
+              返回
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8">
+                <Lottie animationData={PortfolioIcon} loop />
+              </div>
+              <div>
+                <div className="text-h3 font-bold text-gray-800">個人學習歷程</div>
+                {portfolioData && (
+                  <div className="text-caption text-gray-500">
+                    {portfolioData.student.username} · {portfolioData.project.name}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

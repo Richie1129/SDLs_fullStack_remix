@@ -207,10 +207,10 @@ const StageSuggestions = ({ personalData, projectId }) => {
           onClick={() => setCollapsed(v => !v)}
         >
           <span className={`w-2 h-2 rounded-full ${meta.dot} shrink-0`} />
-          <span className={`text-body-sm font-semibold ${meta.text}`}>
+          <span className={`text-body-sm font-semibold ${meta.text} shrink-0 whitespace-nowrap`}>
             本週學習建議
           </span>
-          <span className={`text-caption px-2 py-0.5 rounded-full font-medium bg-white/60 ${meta.text} truncate`}>
+          <span className={`text-caption px-2 py-0.5 rounded-full font-medium bg-white/60 ${meta.text} truncate min-w-0`}>
             {meta.name} · {meta.subs[subStage]?.name || `子階段 ${subStage}`}
           </span>
         </div>
@@ -218,16 +218,7 @@ const StageSuggestions = ({ personalData, projectId }) => {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); setCoachOpen(true); }}
-            className={`hidden sm:inline-flex items-center gap-1 text-caption font-medium px-component-sm py-1 rounded-full bg-white/70 border ${meta.border} ${meta.text} hover:bg-white hover:shadow-sm transition-all duration-fast`}
-            title="向自主學習助手提問"
-          >
-            <FiBookOpen className="w-3 h-3" />
-            問自主學習助手
-          </button>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setCoachOpen(true); }}
-            className={`sm:hidden inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/70 border ${meta.border} ${meta.text} hover:bg-white transition-all duration-fast`}
+            className={`inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/70 border ${meta.border} ${meta.text} hover:bg-white transition-all duration-fast`}
             title="向自主學習助手提問"
           >
             <FiBookOpen className="w-3.5 h-3.5" />

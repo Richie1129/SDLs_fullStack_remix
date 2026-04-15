@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AiTwotoneFolderAdd, AiOutlineCloudDownload, AiOutlineUpload } from "react-icons/ai";
 import { FiInfo, FiTrash2 } from 'react-icons/fi';
+import { BiTask } from 'react-icons/bi';
 import { GrFormClose } from "react-icons/gr";
 import { useQuery, useQueryClient } from 'react-query';
 import { getAllSubmit, updateSubmitTask, updateSubmitAttachment, getSubmitChangeLogs, deleteSubmit } from '../../api/submit';
+import { getAllSubStageTemplates } from '../../api/stage';
 import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../../components/Loader';
 import ProtfoliioIcon from "../../assets/AnimationProtfoliio.json";
@@ -18,6 +20,7 @@ import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩
 import { recordObservationEvent } from '../../api/usage';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
+import { getStageInfo } from '../../utils/authUtils';
 
 // Option B: 四階段 SRL 循環（「歷程」標題已隱藏）
 const INSERT_TITLES = ["定標", "擇策", "監評", "調節"]; // [Option B 隱藏] "歷程"
@@ -25,6 +28,7 @@ const INSERT_TITLES = ["定標", "擇策", "監評", "調節"]; // [Option B 隱
 export default function Protfolio() {
     const [currentStageIndex] = useStageIndex();
     const [stagePortfolio, setStagePortfolio] = useState([]);
+    const [subStageTemplates, setSubStageTemplates] = useState({});
     const [portfolioItemsWithTitles, setPortfolioItemsWithTitles] = useState([]);
     const [folderModalOpen, setFolderModalOpen] = useState(false);
     const [modalData, setModalData] = useState({});
@@ -63,6 +67,25 @@ export default function Protfolio() {
             setShowEmptyMessage(filteredData.length === 0);
         }
     });
+
+    // 抓取所有子階段範本，供「尚未填寫」項目預覽使用
+    useQuery(
+        ["subStageTemplates", projectId],
+        () => getAllSubStageTemplates(projectId),
+        {
+            enabled: !!projectId,
+            onSuccess: (data) => {
+                const filtered = {};
+                Object.entries(data || {}).forEach(([code, template]) => {
+                    const mainStage = parseInt(code.split('-')[0], 10);
+                    if (!isNaN(mainStage) && mainStage >= 1 && mainStage <= 4) {
+                        filtered[code] = template;
+                    }
+                });
+                setSubStageTemplates(filtered);
+            }
+        }
+    );
 
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -152,32 +175,49 @@ export default function Protfolio() {
         // "5-5": "反思撰寫"
     };
     // R2-M6: 按實際 stage 欄位分組插入標題，而非按位置（每 3 筆）假設
+    // 合併已繳交項目與尚未繳交的範本佔位項目
     useEffect(() => {
-        if (stagePortfolio.length > 0) {
-            const itemsWithTitles = [];
-            let lastMainStage = null;
+        const submittedCodes = new Set(stagePortfolio.map(item => item.stage));
+        const pendingItems = Object.entries(subStageTemplates)
+            .filter(([code]) => !submittedCodes.has(code))
+            .map(([code, template]) => ({
+                id: `pending-${code}`,
+                stage: code,
+                _pending: true,
+                name: template.name,
+                description: template.description,
+                userSubmit: template.userSubmit || {},
+                content: '{}'
+            }));
 
-            // 按 stage 排序確保順序正確
-            const sorted = [...stagePortfolio].sort((a, b) => {
-                const [aMain, aSub] = (a.stage || '0-0').split('-').map(Number);
-                const [bMain, bSub] = (b.stage || '0-0').split('-').map(Number);
-                return aMain !== bMain ? aMain - bMain : aSub - bSub;
-            });
+        const allItems = [...stagePortfolio, ...pendingItems];
 
-            sorted.forEach((item) => {
-                const mainStage = item.stage ? parseInt(item.stage.split('-')[0], 10) : null;
-                if (mainStage && mainStage !== lastMainStage) {
-                    const title = INSERT_TITLES[mainStage - 1];
-                    if (title) {
-                        itemsWithTitles.push({ type: 'title', content: title });
-                    }
-                    lastMainStage = mainStage;
-                }
-                itemsWithTitles.push({ type: 'item', content: item });
-            });
-            setPortfolioItemsWithTitles(itemsWithTitles);
+        if (allItems.length === 0) {
+            setPortfolioItemsWithTitles([]);
+            return;
         }
-    }, [stagePortfolio]);
+
+        const sorted = allItems.sort((a, b) => {
+            const [aMain, aSub] = (a.stage || '0-0').split('-').map(Number);
+            const [bMain, bSub] = (b.stage || '0-0').split('-').map(Number);
+            return aMain !== bMain ? aMain - bMain : aSub - bSub;
+        });
+
+        const itemsWithTitles = [];
+        let lastMainStage = null;
+        sorted.forEach((item) => {
+            const mainStage = item.stage ? parseInt(item.stage.split('-')[0], 10) : null;
+            if (mainStage && mainStage !== lastMainStage) {
+                const title = INSERT_TITLES[mainStage - 1];
+                if (title) {
+                    itemsWithTitles.push({ type: 'title', content: title });
+                }
+                lastMainStage = mainStage;
+            }
+            itemsWithTitles.push({ type: 'item', content: item });
+        });
+        setPortfolioItemsWithTitles(itemsWithTitles);
+    }, [stagePortfolio, subStageTemplates]);
 
     const downloadFile = () => {
         // 檢查是否有 MinIO 檔案資訊
@@ -280,20 +320,62 @@ export default function Protfolio() {
         // }
     }, [socket])
 
-    // 按主階段分組，並計算每個子階段的記錄數（用於判斷是否顯示刪除按鈕）
+    // 按主階段分組，合併已繳交與尚未繳交的項目
+    // stageCount 只計算真正的 submit 記錄（用於判斷是否顯示刪除按鈕）
     const stageItemsByMainStage = useMemo(() => {
         const result = {};
         INSERT_TITLES.forEach((_, index) => {
             const mainStage = index + 1;
-            const items = stagePortfolio.filter(item => Math.floor(item.stage.split('-')[0]) === mainStage);
+            const submitted = stagePortfolio.filter(item => Math.floor(item.stage.split('-')[0]) === mainStage);
+            const submittedCodes = new Set(submitted.map(item => item.stage));
+
+            const pending = Object.entries(subStageTemplates)
+                .filter(([code]) => {
+                    const cMain = parseInt(code.split('-')[0], 10);
+                    return cMain === mainStage && !submittedCodes.has(code);
+                })
+                .map(([code, template]) => ({
+                    id: `pending-${code}`,
+                    stage: code,
+                    _pending: true,
+                    name: template.name,
+                    description: template.description,
+                    userSubmit: template.userSubmit || {},
+                    content: '{}'
+                }));
+
+            const items = [...submitted, ...pending].sort((a, b) => {
+                const [, aSub] = (a.stage || '0-0').split('-').map(Number);
+                const [, bSub] = (b.stage || '0-0').split('-').map(Number);
+                return aSub - bSub;
+            });
+
             const stageCount = {};
-            items.forEach(item => {
+            submitted.forEach(item => {
                 stageCount[item.stage] = (stageCount[item.stage] || 0) + 1;
             });
             result[mainStage] = { items, stageCount };
         });
         return result;
-    }, [stagePortfolio]);
+    }, [stagePortfolio, subStageTemplates]);
+
+    // 判斷 pending 項目屬於「目前階段」還是「未開放的未來階段」
+    // current: 可以立刻至成果紀錄提交
+    // future:  需先完成前面階段才能填寫
+    const pendingStatus = useMemo(() => {
+        if (!modalData._pending) return null;
+        const info = getStageInfo();
+        const currentMain = parseInt(info.currentStage, 10);
+        const currentSub = parseInt(info.currentSubStage, 10);
+        if (isNaN(currentMain) || isNaN(currentSub)) return 'current';
+
+        const [itemMain, itemSub] = (modalData.stage || '').split('-').map(Number);
+        if (isNaN(itemMain) || isNaN(itemSub)) return 'current';
+
+        if (itemMain > currentMain) return 'future';
+        if (itemMain === currentMain && itemSub > currentSub) return 'future';
+        return 'current';
+    }, [modalData._pending, modalData.stage]);
 
     return (
         <div className="h-full w-full bg-gray-50">
@@ -377,10 +459,12 @@ export default function Protfolio() {
                                                             data-track-type="submit"
                                                             data-track-id={item.id}
                                                             data-track-meta-stage={item.stage}
+                                                            data-track-meta-pending={item._pending ? 'true' : 'false'}
                                                             onClick={() => {
                                                                 setActiveItemId(item.id);
                                                                 setFolderModalOpen(true);
                                                                 setModalData(item);
+                                                                setShowSubmitChangeHistory(false);
                                                                 // Record observation click without blocking UI
                                                                 if (isObservationMode) {
                                                                     try {
@@ -395,16 +479,22 @@ export default function Protfolio() {
                                                             }}
                                                             className={`w-full text-left p-component-sm rounded-lg text-body-sm transition-all duration-fast relative group flex items-center gap-2 ${
                                                                 activeItemId === item.id
-                                                                    ? 'bg-[#5BA491] text-white shadow-lg'
-                                                                    : 'text-gray-700 hover:bg-[#5BA491]/10 hover:shadow-md border border-gray-100'
+                                                                    ? item._pending
+                                                                        ? 'bg-gray-400 text-white shadow-lg border border-gray-400'
+                                                                        : 'bg-[#5BA491] text-white shadow-lg'
+                                                                    : item._pending
+                                                                        ? 'text-gray-500 hover:bg-gray-100 hover:shadow-md border border-dashed border-gray-300 bg-gray-50/50'
+                                                                        : 'text-gray-700 hover:bg-[#5BA491]/10 hover:shadow-md border border-gray-100'
                                                             }`}
-                                                            title={item.createdAt ? `建立於 ${formatTime(item.createdAt, 'full')}${item.updatedAt && item.updatedAt !== item.createdAt ? `\n更新於 ${formatTime(item.updatedAt, 'full')}` : ''}` : ''}
+                                                            title={item._pending
+                                                                ? '尚未填寫，請至上傳歷程頁面完成提交'
+                                                                : (item.createdAt ? `建立於 ${formatTime(item.createdAt, 'full')}${item.updatedAt && item.updatedAt !== item.createdAt ? `\n更新於 ${formatTime(item.updatedAt, 'full')}` : ''}` : '')}
                                                         >
                                                             {/* Active Indicator */}
                                                             {activeItemId === item.id && (
                                                                 <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-white rounded-full"></div>
                                                             )}
-                                                            
+
                                                             <div className="flex flex-col space-y-1 flex-1 min-w-0">
                                                                 <span className="font-medium leading-tight">
                                                                     {stageDescriptions[item.stage]}
@@ -413,11 +503,19 @@ export default function Protfolio() {
                                                                     <span className={`text-caption font-medium px-2 py-1 rounded-full ${
                                                                         activeItemId === item.id
                                                                             ? 'bg-white/20 text-white'
-                                                                            : 'bg-[#5BA491]/10 text-[#5BA491]'
+                                                                            : item._pending
+                                                                                ? 'bg-gray-200 text-gray-600'
+                                                                                : 'bg-[#5BA491]/10 text-[#5BA491]'
                                                                     }`}>
                                                                         {item.stage}
                                                                     </span>
-                                                                    {item.createdAt && (
+                                                                    {item._pending ? (
+                                                                        <span className={`text-caption font-medium ${
+                                                                            activeItemId === item.id ? 'text-white/90' : 'text-gray-500'
+                                                                        }`}>
+                                                                            (尚未填寫)
+                                                                        </span>
+                                                                    ) : item.createdAt && (
                                                                         <span className={`text-caption ${
                                                                             activeItemId === item.id ? 'text-white/80' : 'text-gray-500'
                                                                         }`}>
@@ -427,7 +525,7 @@ export default function Protfolio() {
                                                                 </div>
                                                             </div>
                                                             {/* 刪除按鈕 - 同階段有多筆時才顯示，hover 時出現，觀摩模式隱藏 */}
-                                                            {!isObservationMode && stageItemsByMainStage[index + 1]?.stageCount[item.stage] > 1 && (
+                                                            {!isObservationMode && !item._pending && stageItemsByMainStage[index + 1]?.stageCount[item.stage] > 1 && (
                                                                 <button
                                                                     onClick={(e) => handleDeleteSubmit(e, item)}
                                                                     className={`flex-shrink-0 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-fast ${
@@ -482,9 +580,14 @@ export default function Protfolio() {
                                         </h2>
                                         <div className="flex flex-wrap gap-stack-sm text-body-sm text-gray-600">
                                             <span className="flex items-center">
-                                                <span className="w-2 h-2 bg-[#5BA491] rounded-full mr-2"></span>
+                                                <span className={`w-2 h-2 rounded-full mr-2 ${modalData._pending ? 'bg-gray-400' : 'bg-[#5BA491]'}`}></span>
                                                 階段: {modalData.stage}
                                             </span>
+                                            {modalData._pending && (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-caption font-semibold bg-gray-100 text-gray-600 border border-gray-300">
+                                                    (尚未填寫)
+                                                </span>
+                                            )}
                                             {modalData.createdAt && (
                                                 <span className="flex items-center" title={formatTime(modalData.createdAt, 'full')}>
                                                     <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -541,6 +644,7 @@ export default function Protfolio() {
                                                 編輯內容
                                             </span>
                                         </button>
+                                        {!modalData._pending && (
                                         <button
                                             data-track
                                             data-track-action="PORTFOLIO_TAB_SWITCH"
@@ -551,8 +655,8 @@ export default function Protfolio() {
                                                 getSubmitChangeLogs(modalData.id).then(setSubmitChangeLogs).catch(console.error);
                                             }}
                                             className={`py-4 px-1 border-b-2 font-medium text-body-sm transition-colors ${
-                                                showSubmitChangeHistory 
-                                                    ? 'border-[#5BA491] text-[#5BA491]' 
+                                                showSubmitChangeHistory
+                                                    ? 'border-[#5BA491] text-[#5BA491]'
                                                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                             }`}
                                         >
@@ -563,6 +667,7 @@ export default function Protfolio() {
                                                 變更歷史
                                             </span>
                                         </button>
+                                        )}
                                     </nav>
                                 </div>
                             </div>
@@ -573,27 +678,97 @@ export default function Protfolio() {
                                     {!showSubmitChangeHistory ? (
                                         // Edit Content Tab
                                         <div className="space-y-stack-md">
+                                            {/* 尚未填寫提示（current / future 不同文案） */}
+                                            {modalData._pending && (
+                                                <div className={`flex items-start gap-stack-xs rounded-lg border p-component-base ${
+                                                    pendingStatus === 'future'
+                                                        ? 'border-gray-200 bg-gray-50'
+                                                        : 'border-amber-200 bg-amber-50'
+                                                }`}>
+                                                    <FiInfo className={`mt-0.5 h-5 w-5 flex-shrink-0 ${
+                                                        pendingStatus === 'future' ? 'text-gray-500' : 'text-amber-600'
+                                                    }`} />
+                                                    {pendingStatus === 'future' ? (
+                                                        <div className="flex-1 text-body-sm text-gray-700">
+                                                            <p className="font-semibold text-gray-800">此階段尚未開放</p>
+                                                            <p className="mt-1 text-gray-600">
+                                                                需先完成前面階段才能填寫此子階段的內容。以下為欄位預覽，僅供參考。
+                                                            </p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex-1 text-body-sm text-amber-800">
+                                                            <p className="font-semibold">此階段尚未填寫</p>
+                                                            <p className="mt-1 text-amber-700">
+                                                                以下是待填寫的欄位預覽。請先至
+                                                                <span className="mx-1 font-semibold text-amber-900 whitespace-nowrap">
+                                                                    <BiTask className="inline align-text-bottom w-4 h-4 mr-0.5" />
+                                                                    成果紀錄
+                                                                </span>
+                                                                頁面完成正式提交後，即可在此進行內容更新與修改。
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             {/* Content Form */}
                                             <div className="space-y-stack-md">
-                                                {Object.entries(editableContent).map(([key, value], index) => (
-                                                    <div key={index} className="space-y-stack-xs">
-                                                        <label className="block text-body-sm font-semibold text-gray-700 mb-2">
-                                                            {key}
-                                                        </label>
-                                                        <textarea
-                                                            className="w-full rounded-lg border-2 border-gray-200 bg-white text-body-sm p-component-base shadow-sm transition-all duration-fast focus:border-[#5BA491] focus:ring-4 focus:ring-[#5BA491]/20 hover:border-gray-300 resize-none min-h-[100px]"
-                                                            rows={4}
-                                                            value={value}
-                                                            onChange={(e) => handleChange(key, e.target.value)}
-                                                            placeholder={`輸入 ${key} 內容...`}
-                                                            disabled={isObservationMode}
-                                                            readOnly={isObservationMode}
-                                                        />
-                                                    </div>
-                                                ))}
+                                                {modalData._pending ? (
+                                                    Object.entries(modalData.userSubmit || {}).map(([key, type], index) => (
+                                                        <div key={index} className="space-y-stack-xs">
+                                                            <label className="block text-body-sm font-semibold text-gray-700 mb-2">
+                                                                {key}
+                                                                <span className="ml-2 text-caption font-medium text-gray-400">
+                                                                    ({type === 'file' ? '附加檔案' : type === 'input' ? '單行文字' : '多行文字'})
+                                                                </span>
+                                                            </label>
+                                                            {type === 'file' ? (
+                                                                <div className="w-full rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-component-base text-body-sm text-gray-400">
+                                                                    尚未上傳檔案
+                                                                </div>
+                                                            ) : type === 'input' ? (
+                                                                <input
+                                                                    type="text"
+                                                                    className="w-full rounded-lg border-2 border-gray-200 bg-gray-50 text-body-sm p-component-base text-gray-500 cursor-not-allowed"
+                                                                    value=""
+                                                                    placeholder="尚未填寫"
+                                                                    disabled
+                                                                    readOnly
+                                                                />
+                                                            ) : (
+                                                                <textarea
+                                                                    className="w-full rounded-lg border-2 border-gray-200 bg-gray-50 text-body-sm p-component-base text-gray-500 resize-none min-h-[100px] cursor-not-allowed"
+                                                                    rows={4}
+                                                                    value=""
+                                                                    placeholder="尚未填寫"
+                                                                    disabled
+                                                                    readOnly
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    Object.entries(editableContent).map(([key, value], index) => (
+                                                        <div key={index} className="space-y-stack-xs">
+                                                            <label className="block text-body-sm font-semibold text-gray-700 mb-2">
+                                                                {key}
+                                                            </label>
+                                                            <textarea
+                                                                className="w-full rounded-lg border-2 border-gray-200 bg-white text-body-sm p-component-base shadow-sm transition-all duration-fast focus:border-[#5BA491] focus:ring-4 focus:ring-[#5BA491]/20 hover:border-gray-300 resize-none min-h-[100px]"
+                                                                rows={4}
+                                                                value={value}
+                                                                onChange={(e) => handleChange(key, e.target.value)}
+                                                                placeholder={`輸入 ${key} 內容...`}
+                                                                disabled={isObservationMode}
+                                                                readOnly={isObservationMode}
+                                                            />
+                                                        </div>
+                                                    ))
+                                                )}
                                             </div>
 
-                                            {/* File Section */}
+                                            {/* File Section - 已提交項目才顯示 */}
+                                            {!modalData._pending && (
                                             <div className="bg-gray-50 rounded-xl p-component-md-lg border border-gray-100">
                                                 <div className="mb-4">
                                                     <h3 className="text-body-lg font-semibold text-gray-800 mb-2">
@@ -646,6 +821,7 @@ export default function Protfolio() {
                                                     )}
                                                 </div>
                                             </div>
+                                            )}
 
                                             {/* Action Buttons */}
                                             <div className="flex justify-end space-x-3 pt-6 border-t border-gray-100">
@@ -661,17 +837,32 @@ export default function Protfolio() {
                                                 >
                                                     取消
                                                 </button>
-                                                {/* 儲存按鈕 - 觀摩模式隱藏 */}
+                                                {/* 儲存 / 前往成果紀錄 按鈕 - 觀摩模式隱藏。未開放階段也保留按鈕當作快捷鍵 */}
                                                 {!isObservationMode && (
-                                                    <button
-                                                        data-track
-                                                        data-track-action="PORTFOLIO_SAVE"
-                                                        data-track-type="portfolio"
-                                                        onClick={handleSave}
-                                                        className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-body-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
-                                                    >
-                                                        儲存變更
-                                                    </button>
+                                                    modalData._pending ? (
+                                                        <button
+                                                            data-track
+                                                            data-track-action="PORTFOLIO_GO_SUBMIT"
+                                                            data-track-type="portfolio"
+                                                            data-track-meta-stage={modalData.stage}
+                                                            data-track-meta-status={pendingStatus}
+                                                            onClick={() => navigate(`/project/${projectId}/submitTask`)}
+                                                            className="inline-flex items-center gap-stack-xs px-6 py-2 border border-transparent rounded-lg shadow-sm text-body-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
+                                                        >
+                                                            <BiTask className="w-4 h-4" />
+                                                            前往成果紀錄
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            data-track
+                                                            data-track-action="PORTFOLIO_SAVE"
+                                                            data-track-type="portfolio"
+                                                            onClick={handleSave}
+                                                            className="px-6 py-2 border border-transparent rounded-lg shadow-sm text-body-sm font-medium text-white bg-[#5BA491] hover:bg-[#5BA491]/80 transition-colors"
+                                                        >
+                                                            儲存變更
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
                                         </div>

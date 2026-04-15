@@ -105,3 +105,80 @@ exports.getWholeStage = async(req, res) => {
         });
     }
 }
+
+// 取得該專案所有子階段範本，回傳以 "X-Y" 為 key 的 map
+// 供 Protfolio 頁面在尚未提交時預覽欄位
+exports.getAllSubStageTemplates = async (req, res) => {
+    try {
+        const projectId = req.params.projectId;
+
+        if (!projectId) {
+            return res.status(400).json({
+                error: 'Invalid parameters | 參數無效',
+                message: 'projectId is required'
+            });
+        }
+
+        const process = await Process.findOne({
+            attributes: ['id', 'stage'],
+            where: { projectId }
+        });
+
+        if (!process || !Array.isArray(process.stage) || process.stage.length === 0) {
+            return res.status(200).json({});
+        }
+
+        const stages = await Stage.findAll({
+            attributes: ['id', 'name', 'sub_stage'],
+            where: { id: process.stage }
+        });
+        const stageById = new Map(stages.map(s => [s.id, s]));
+
+        const subStageIdList = [];
+        const subStageIndex = [];
+        process.stage.forEach((stageId, sIdx) => {
+            const stage = stageById.get(stageId);
+            if (!stage || !Array.isArray(stage.sub_stage)) return;
+            stage.sub_stage.forEach((subId, subIdx) => {
+                subStageIdList.push(subId);
+                subStageIndex.push({
+                    code: `${sIdx + 1}-${subIdx + 1}`,
+                    stageName: stage.name,
+                    subStageId: subId
+                });
+            });
+        });
+
+        if (subStageIdList.length === 0) {
+            return res.status(200).json({});
+        }
+
+        const subStages = await Sub_stage.findAll({
+            attributes: ['id', 'name', 'description', 'userSubmit'],
+            where: { id: subStageIdList }
+        });
+        const subStageById = new Map(subStages.map(s => [s.id, s]));
+
+        const result = {};
+        subStageIndex.forEach(({ code, stageName, subStageId }) => {
+            const subStage = subStageById.get(subStageId);
+            if (!subStage) return;
+            result[code] = {
+                id: subStage.id,
+                name: subStage.name,
+                description: subStage.description,
+                userSubmit: subStage.userSubmit,
+                stageName
+            };
+        });
+
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error('Error in getAllSubStageTemplates | 取得子階段範本錯誤:', error);
+        return res.status(500).json({
+            error: 'Internal server error | 伺服器內部錯誤',
+            message: 'Failed to get sub-stage templates',
+            details: error.message
+        });
+    }
+}

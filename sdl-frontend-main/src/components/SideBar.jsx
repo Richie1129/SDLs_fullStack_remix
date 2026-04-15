@@ -293,6 +293,15 @@ export default function SideBar() {
   const [selected, setSelected] = useState(0);
 
   useEffect(() => {
+    // student-portfolio（個人學習歷程匯出頁）歸屬於「歷程檔案」分類
+    if (location.pathname.includes('student-portfolio')) {
+      const idx = menus.findIndex((m) => m.name === '歷程檔案');
+      if (idx !== -1) {
+        setSelected(idx);
+        return;
+      }
+    }
+
     const findMenuIndex = menus.findIndex((menu) =>
       location.pathname.includes(menu.link)
     );
