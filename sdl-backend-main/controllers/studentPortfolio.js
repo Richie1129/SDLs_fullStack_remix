@@ -19,6 +19,22 @@ const {
   streamOrganize
 } = require('../services/studentPortfolioService');
 const UserProject = require('../models/user_project');
+const Project = require('../models/project');
+
+/**
+ * 解析目標學生 ID
+ * 教師/Mentor（readOnly=true）可透過 ?studentId=X 指定查看的學生；
+ * 學生則一律使用自己的 userId。
+ */
+function resolveTargetStudentId(req) {
+  const isMentor = req.readOnly === true && req.hasViewingPermission === true;
+  if (isMentor && req.query.studentId) {
+    const sid = parseInt(req.query.studentId, 10);
+    if (Number.isNaN(sid)) return null;
+    return sid;
+  }
+  return parseInt(req.userId, 10);
+}
 
 /**
  * 取得學生個人學習歷程資料
@@ -26,11 +42,15 @@ const UserProject = require('../models/user_project');
 exports.getStudentPortfolioData = async (req, res) => {
   try {
     const { projectId } = req.params;
-    const userId = req.userId;
+    const targetUserId = resolveTargetStudentId(req);
+
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, error: 'INVALID_STUDENT_ID' });
+    }
 
     const data = await aggregateStudentPortfolioData(
       parseInt(projectId),
-      parseInt(userId)
+      targetUserId
     );
 
     res.status(200).json({ success: true, data });
@@ -52,13 +72,13 @@ exports.getStudentPortfolioData = async (req, res) => {
 exports.getDraft = async (req, res) => {
   try {
     const pid = parseInt(req.params.projectId, 10);
-    const uid = parseInt(req.userId, 10);
-    if (Number.isNaN(pid) || Number.isNaN(uid)) {
+    const targetUid = resolveTargetStudentId(req);
+    if (Number.isNaN(pid) || !targetUid) {
       return res.status(400).json({ success: false, error: 'INVALID_PARAMS' });
     }
 
     const record = await UserProject.findOne({
-      where: { userId: uid, projectId: pid },
+      where: { userId: targetUid, projectId: pid },
       attributes: ['narrative_draft', 'draft_updated_at']
     });
 

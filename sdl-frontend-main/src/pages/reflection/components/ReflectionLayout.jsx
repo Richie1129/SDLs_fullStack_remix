@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import LogSection from "../../../components/reflection/LogSection";
 import personalDailyIcon from "../../../assets/AnimationPersonalDaily.json";
 import teamDailyIcon from "../../../assets/AnimationTeamDaily.json";
@@ -39,10 +39,33 @@ export function ReflectionLayout({
 }) {
   const isTeacher = userRole === "teacher";
   const [showTypeSelector, setShowTypeSelector] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState('all');
   const { currentStage, currentSubStage } = getStageInfo();
-  const currentStageFormatted = currentStage && currentSubStage 
-    ? `${currentStage}-${currentSubStage}` 
+  const currentStageFormatted = currentStage && currentSubStage
+    ? `${currentStage}-${currentSubStage}`
     : null;
+
+  // 教師模式：從日誌資料提取不重複的學生列表
+  const studentOptions = useMemo(() => {
+    if (!isTeacher || !personalDaily?.length) return [];
+    const map = new Map();
+    personalDaily.forEach(d => {
+      const u = d.user;
+      if (u && !map.has(u.id)) {
+        const label = u.class && u.seatNumber
+          ? `${u.username}（${u.class} ${u.seatNumber}號）`
+          : u.username;
+        map.set(u.id, { id: u.id, label });
+      }
+    });
+    return Array.from(map.values());
+  }, [isTeacher, personalDaily]);
+
+  // 教師模式：篩選後的日誌
+  const filteredPersonalDaily = useMemo(() => {
+    if (!isTeacher || selectedStudentId === 'all') return personalDaily;
+    return personalDaily.filter(d => d.user?.id === parseInt(selectedStudentId));
+  }, [isTeacher, personalDaily, selectedStudentId]);
 
   // 處理橫幅行動
   const handleBannerAction = (bannerType) => {
@@ -76,6 +99,20 @@ export function ReflectionLayout({
               <h2 className="text-h3 sm:text-h2 font-bold text-gray-800 flex items-center">
                 個人日誌
               </h2>
+
+              {/* 教師成員篩選 */}
+              {isTeacher && studentOptions.length > 0 && (
+                <select
+                  value={selectedStudentId}
+                  onChange={e => setSelectedStudentId(e.target.value)}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-body-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-customgreen/30 focus:border-customgreen"
+                >
+                  <option value="all">全部成員（{studentOptions.length}）</option>
+                  {studentOptions.map(s => (
+                    <option key={s.id} value={s.id}>{s.label}</option>
+                  ))}
+                </select>
+              )}
 
               {/* Action Buttons - only students can add */}
               {!isTeacher && !showTypeSelector && (
@@ -141,7 +178,7 @@ export function ReflectionLayout({
           <div className="flex-1 overflow-y-auto">
             <LogSection
               title=""
-              items={personalDaily}
+              items={filteredPersonalDaily}
               isLoading={personalIsLoading}
               isError={personalIsError}
               error={personalError}

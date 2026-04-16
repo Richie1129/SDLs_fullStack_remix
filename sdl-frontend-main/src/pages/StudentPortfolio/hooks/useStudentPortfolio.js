@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { getStudentPortfolioData, generateNarrative, requestFeedback, organizeNarrative, getNarrativeDraft, saveNarrativeDraft } from '../../../api/studentPortfolio';
 
-export function useStudentPortfolio(projectId) {
+export function useStudentPortfolio(projectId, studentId) {
   // 敘事狀態
   const [narrative, setNarrative] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -40,7 +40,7 @@ export function useStudentPortfolio(projectId) {
   // 載入草稿：進入頁面時從資料庫還原（只在 narrative 為空時填入）
   useEffect(() => {
     if (!projectId) return;
-    getNarrativeDraft(projectId)
+    getNarrativeDraft(projectId, studentId)
       .then(res => {
         if (res.data?.narrative_draft) {
           // 使用 functional update：若使用者在載入期間已輸入內容，不覆蓋
@@ -50,12 +50,13 @@ export function useStudentPortfolio(projectId) {
       })
       .catch(() => { /* 載入草稿失敗時靜默略過，不阻斷主流程 */ })
       .finally(() => { draftLoadedRef.current = true; });
-  }, [projectId]);
+  }, [projectId, studentId]);
 
   // 自動儲存草稿：narrative 變動後 debounce 1000ms 呼叫 API
   // AI 生成或整合期間跳過，避免每個 chunk 都重設 timer
+  // 教師查看模式（有 studentId）不儲存
   useEffect(() => {
-    if (!draftLoadedRef.current || isGenerating || isOrganizing) return;
+    if (!draftLoadedRef.current || isGenerating || isOrganizing || studentId) return;
     clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
       setIsSavingDraft(true);
@@ -77,8 +78,8 @@ export function useStudentPortfolio(projectId) {
     error,
     refetch
   } = useQuery(
-    ['studentPortfolio', projectId],
-    () => getStudentPortfolioData(projectId),
+    ['studentPortfolio', projectId, studentId],
+    () => getStudentPortfolioData(projectId, studentId),
     {
       enabled: !!projectId,
       select: (res) => res.data,

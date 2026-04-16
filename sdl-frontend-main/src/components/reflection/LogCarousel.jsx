@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, useMotionValue } from 'framer-motion';
 import LogCard from './LogCard';
 
@@ -10,8 +10,8 @@ const SPRING_OPTIONS = {
   damping: 50,
 };
 
-const LogCarousel = ({ 
-  items = [], 
+const LogCarousel = ({
+  items = [],
   onEdit,
   onDelete,
   onView5Rs,
@@ -21,6 +21,13 @@ const LogCarousel = ({
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const dragX = useMotionValue(0);
+
+  // items 變動時，確保 currentIndex 不超出範圍
+  useEffect(() => {
+    if (items.length > 0 && currentIndex >= items.length) {
+      setCurrentIndex(0);
+    }
+  }, [items.length, currentIndex]);
 
   const onDragEnd = () => {
     const x = dragX.get();

@@ -79,10 +79,9 @@ async function aggregateStudentPortfolioData(projectId, userId) {
       order: [['createdAt', 'ASC']]
     }),
 
-    // 個人正式提交（排除 Stage 5）
+    // 小組正式提交（排除 Stage 5）— submit 為小組共同成果，以 projectId 撈全部
     Submit.findAll({
       where: {
-        userId,
         projectId,
         stage: { [Op.notLike]: '5-%' }
       },

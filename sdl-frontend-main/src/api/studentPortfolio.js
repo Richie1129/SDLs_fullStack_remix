@@ -12,11 +12,13 @@ const authHeaders = () => {
 /**
  * 取得學習敘事草稿
  * @param {number} projectId
+ * @param {number} [studentId] - 教師查看特定學生時傳入
  */
-export const getNarrativeDraft = async (projectId) => {
+export const getNarrativeDraft = async (projectId, studentId) => {
+  const params = studentId ? { studentId } : {};
   const response = await apiClient.get(
     `/projects/${projectId}/portfolio/draft`,
-    { headers: authHeaders() }
+    { headers: authHeaders(), params }
   );
   return response.data;
 };
@@ -38,11 +40,13 @@ export const saveNarrativeDraft = async (projectId, narrativeText) => {
 /**
  * 取得個人學習歷程資料
  * @param {number} projectId
+ * @param {number} [studentId] - 教師查看特定學生時傳入
  */
-export const getStudentPortfolioData = async (projectId) => {
+export const getStudentPortfolioData = async (projectId, studentId) => {
+  const params = studentId ? { studentId } : {};
   const response = await apiClient.get(
     `/projects/${projectId}/portfolio/student`,
-    { headers: authHeaders() }
+    { headers: authHeaders(), params }
   );
   return response.data;
 };

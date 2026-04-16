@@ -20,7 +20,8 @@ import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩
 import { recordObservationEvent } from '../../api/usage';
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
-import { getStageInfo } from '../../utils/authUtils';
+import { getStageInfo, isTeacher } from '../../utils/authUtils';
+import { getProjectUser } from '../../api/users';
 
 // Option B: 四階段 SRL 循環（「歷程」標題已隱藏）
 const INSERT_TITLES = ["定標", "擇策", "監評", "調節"]; // [Option B 隱藏] "歷程"
@@ -44,9 +45,42 @@ export default function Protfolio() {
     // 使用觀摩模式 hook
     const { isObservationMode } = useObservationMode();
 
-    // 匯出學習歷程
-    const handleExportPortfolio = () => {
-        navigate(`/project/${projectId}/student-portfolio`);
+    // 匯出學習歷程：教師先選學生再匯出，學生直接進入個人歷程
+    const handleExportPortfolio = async () => {
+        if (!isTeacher()) {
+            navigate(`/project/${projectId}/student-portfolio`);
+            return;
+        }
+        try {
+            const members = await getProjectUser(projectId);
+            if (!Array.isArray(members) || members.length === 0) {
+                Swal.fire({ icon: 'info', title: '此專案尚無學生', confirmButtonColor: '#5BA491' });
+                return;
+            }
+            const inputOptions = {};
+            members.forEach(m => {
+                const label = m.class && m.seatNumber ? `${m.username}（${m.class} ${m.seatNumber}號）` : m.username;
+                inputOptions[m.id] = label;
+            });
+            const { value: studentId } = await Swal.fire({
+                title: '選擇要匯出的學生',
+                input: 'select',
+                inputOptions,
+                inputPlaceholder: '請選擇學生',
+                showCancelButton: true,
+                cancelButtonText: '取消',
+                confirmButtonText: '匯出',
+                confirmButtonColor: '#5BA491',
+                inputValidator: (value) => {
+                    if (!value) return '請選擇一位學生';
+                }
+            });
+            if (studentId) {
+                navigate(`/project/${projectId}/student-portfolio?studentId=${studentId}`);
+            }
+        } catch {
+            Swal.fire({ icon: 'error', title: '載入專案成員失敗', confirmButtonColor: '#5BA491' });
+        }
     };
     
     const {

@@ -11,7 +11,8 @@
 
 import { useState, useRef, useMemo, useEffect } from 'react';
 import './StudentPortfolio.print.css';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { isTeacher } from '../../utils/authUtils';
 import { FiDownload, FiZap, FiStopCircle, FiRefreshCw, FiFileText, FiInfo, FiMessageSquare, FiChevronDown, FiChevronUp, FiLayers, FiCheck, FiX, FiArrowLeft } from 'react-icons/fi';
 import Lottie from 'lottie-react';
 import PortfolioIcon from '../../assets/AnimationProtfoliio.json';
@@ -33,7 +34,12 @@ const TEMPLATE_MAP = {
 export default function StudentPortfolio() {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const contentRef = useRef(null);
+
+  // 教師透過 ?studentId=X 查看特定學生
+  const studentId = searchParams.get('studentId') ? parseInt(searchParams.get('studentId'), 10) : undefined;
+  const isTeacherView = isTeacher() && !!studentId;
 
   const [selectedTemplate, setSelectedTemplate] = useState('classic');
   const [showReminder, setShowReminder] = useState(false);
@@ -67,7 +73,7 @@ export default function StudentPortfolio() {
     clearFeedback,
     draftSavedAt,
     isSavingDraft
-  } = useStudentPortfolio(projectId);
+  } = useStudentPortfolio(projectId, studentId);
 
   const TemplateComponent = TEMPLATE_MAP[selectedTemplate];
 
@@ -235,32 +241,34 @@ export default function StudentPortfolio() {
 
           {/* 操作按鈕群 */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* AI 生成敘事 */}
-            {!narrative && !isGenerating ? (
-              <button
-                onClick={startGenerate}
-                disabled={!portfolioData}
-                className="flex items-center gap-2 px-btn-x py-btn-y rounded-lg border border-purple-200 text-purple-700 text-body-sm hover:bg-purple-50 transition-shadow duration-fast disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <FiZap className="w-4 h-4" />
-                AI 生成學習敘事
-              </button>
-            ) : isGenerating ? (
-              <button
-                onClick={stopGenerate}
-                className="flex items-center gap-2 px-btn-x py-btn-y rounded-lg border border-red-200 text-red-600 text-body-sm hover:bg-red-50 transition-shadow duration-fast"
-              >
-                <FiStopCircle className="w-4 h-4" />
-                停止生成
-              </button>
-            ) : (
-              <button
-                onClick={clearNarrative}
-                className="flex items-center gap-2 px-btn-x py-btn-y rounded-lg border border-gray-200 text-gray-500 text-body-sm hover:bg-gray-50 transition-shadow duration-fast"
-              >
-                <FiRefreshCw className="w-4 h-4" />
-                清除敘事
-              </button>
+            {/* AI 生成敘事（教師檢視模式下隱藏） */}
+            {!isTeacherView && (
+              !narrative && !isGenerating ? (
+                <button
+                  onClick={startGenerate}
+                  disabled={!portfolioData}
+                  className="flex items-center gap-2 px-btn-x py-btn-y rounded-lg border border-purple-200 text-purple-700 text-body-sm hover:bg-purple-50 transition-shadow duration-fast disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <FiZap className="w-4 h-4" />
+                  AI 生成學習敘事
+                </button>
+              ) : isGenerating ? (
+                <button
+                  onClick={stopGenerate}
+                  className="flex items-center gap-2 px-btn-x py-btn-y rounded-lg border border-red-200 text-red-600 text-body-sm hover:bg-red-50 transition-shadow duration-fast"
+                >
+                  <FiStopCircle className="w-4 h-4" />
+                  停止生成
+                </button>
+              ) : (
+                <button
+                  onClick={clearNarrative}
+                  className="flex items-center gap-2 px-btn-x py-btn-y rounded-lg border border-gray-200 text-gray-500 text-body-sm hover:bg-gray-50 transition-shadow duration-fast"
+                >
+                  <FiRefreshCw className="w-4 h-4" />
+                  清除敘事
+                </button>
+              )
             )}
 
             {/* 匯出 PDF */}
@@ -279,8 +287,8 @@ export default function StudentPortfolio() {
       {/* 主內容區 */}
       <div className="max-w-6xl mx-auto px-component-md py-component-md">
 
-        {/* AI 生成中提示 */}
-        {isGenerating && (
+        {/* AI 生成中提示（教師檢視模式下隱藏所有編輯區域） */}
+        {!isTeacherView && isGenerating && (
           <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-lg flex items-center gap-3 portfolio-no-print">
             <div className="w-4 h-4 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
             <span className="text-body-sm text-purple-700">AI 正在生成學習敘事，生成完成後將自動填入文件...</span>
@@ -288,7 +296,7 @@ export default function StudentPortfolio() {
         )}
 
         {/* AI 生成錯誤 */}
-        {generateError && (
+        {!isTeacherView && generateError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-lg text-body-sm text-red-600 portfolio-no-print">
             AI 生成失敗：{generateError}
           </div>
@@ -300,8 +308,8 @@ export default function StudentPortfolio() {
           <TemplateSelector selected={selectedTemplate} onSelect={setSelectedTemplate} />
         </div>
 
-        {/* 學習敘事編輯區 */}
-        <div className="bg-white rounded-xl border border-gray-200 p-component-md mb-component-md portfolio-no-print">
+        {/* 學習敘事編輯區（教師檢視模式下隱藏） */}
+        {!isTeacherView && <div className="bg-white rounded-xl border border-gray-200 p-component-md mb-component-md portfolio-no-print">
           <div className="flex items-start justify-between gap-3 mb-stack-sm">
             <div>
               <div className="text-h3 font-semibold text-gray-800">學習敘事</div>
@@ -420,10 +428,10 @@ export default function StudentPortfolio() {
               )}
             </div>
           )}
-        </div>
+        </div>}
 
         {/* AI 段落整合預覽面板 */}
-        {(organized || isOrganizing || organizeError) && (
+        {!isTeacherView && (organized || isOrganizing || organizeError) && (
           <div className="bg-white rounded-xl border border-teal-200 p-component-md mb-component-md portfolio-no-print">
             <div className="flex items-center justify-between mb-stack-sm">
               <div className="flex items-center gap-2">
@@ -528,7 +536,7 @@ export default function StudentPortfolio() {
         )}
 
         {/* AI 回饋面板 */}
-        {(feedback || isFeedbackGenerating || feedbackError) && (
+        {!isTeacherView && (feedback || isFeedbackGenerating || feedbackError) && (
           <div className="bg-white rounded-xl border border-indigo-200 p-component-md mb-component-md portfolio-no-print">
             <div className="flex items-center justify-between mb-stack-sm">
               <div className="flex items-center gap-2">
