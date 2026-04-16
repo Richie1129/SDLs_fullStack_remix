@@ -543,7 +543,8 @@ const TeacherOverview = () => {
   const navigate = useNavigate();
   const userName = getCurrentUsername();
 
-  const [selectedSemester, setSelectedSemester] = useState("all");
+  const [selectedSemester, setSelectedSemester] = useState(null); // null = 尚未初始化
+  const [selectedClass, setSelectedClass] = useState("all");
   const [activeStageFilter, setActiveStageFilter] = useState(null);
   const [previewProject, setPreviewProject] = useState(null);
 
@@ -556,17 +557,39 @@ const TeacherOverview = () => {
 
   const allProjects = data?.projects || [];
 
-  // 從全部專案中提取可用學期（不受篩選影響）
+  // 從全部專案中提取可用學期（降序，最新在前）
   const availableSemesters = useMemo(() => {
     const semesters = [...new Set(allProjects.map((p) => p.semester).filter(Boolean))];
     return semesters.sort((a, b) => b.localeCompare(a));
   }, [allProjects]);
 
+  // 預設選最新學期（資料載入後自動設定一次）
+  const effectiveSemester = selectedSemester ?? availableSemesters[0] ?? "all";
+
   // 按學期篩選
+  const semesterProjects = useMemo(() => {
+    if (effectiveSemester === "all") return allProjects;
+    return allProjects.filter((p) => p.semester === effectiveSemester);
+  }, [allProjects, effectiveSemester]);
+
+  // 從當前學期的專案中提取可用班級
+  const availableClasses = useMemo(() => {
+    const classSet = new Set();
+    semesterProjects.forEach((p) => {
+      (p.members || []).forEach((m) => {
+        if (m.class) classSet.add(m.class);
+      });
+    });
+    return [...classSet].sort((a, b) => a.localeCompare(b));
+  }, [semesterProjects]);
+
+  // 按班級篩選
   const projects = useMemo(() => {
-    if (selectedSemester === "all") return allProjects;
-    return allProjects.filter((p) => p.semester === selectedSemester);
-  }, [allProjects, selectedSemester]);
+    if (selectedClass === "all") return semesterProjects;
+    return semesterProjects.filter((p) =>
+      (p.members || []).some((m) => m.class === selectedClass)
+    );
+  }, [semesterProjects, selectedClass]);
 
   // 按階段篩選
   const filteredProjects = useMemo(() => {
@@ -632,33 +655,65 @@ const TeacherOverview = () => {
                 </div>
               </div>
 
-              {/* 學期篩選 */}
+              {/* 學期 + 班級篩選 */}
               {availableSemesters.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-body-sm text-gray-500 font-medium">學期：</span>
-                  <button
-                    onClick={() => setSelectedSemester("all")}
-                    className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
-                      selectedSemester === "all"
-                        ? "bg-teal-600 text-white"
-                        : "bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600"
-                    }`}
-                  >
-                    全部學期
-                  </button>
-                  {availableSemesters.map((sem) => (
+                <div className="space-y-2">
+                  {/* 學期 */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-body-sm text-gray-500 font-medium shrink-0">學期：</span>
                     <button
-                      key={sem}
-                      onClick={() => setSelectedSemester(sem)}
+                      onClick={() => { setSelectedSemester("all"); setSelectedClass("all"); }}
                       className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
-                        selectedSemester === sem
+                        effectiveSemester === "all"
                           ? "bg-teal-600 text-white"
                           : "bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600"
                       }`}
                     >
-                      {sem}
+                      全部學期
                     </button>
-                  ))}
+                    {availableSemesters.map((sem) => (
+                      <button
+                        key={sem}
+                        onClick={() => { setSelectedSemester(sem); setSelectedClass("all"); }}
+                        className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                          effectiveSemester === sem
+                            ? "bg-teal-600 text-white"
+                            : "bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600"
+                        }`}
+                      >
+                        {sem}
+                      </button>
+                    ))}
+                  </div>
+                  {/* 班級 */}
+                  {availableClasses.length > 1 && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-body-sm text-gray-500 font-medium shrink-0">班級：</span>
+                      <button
+                        onClick={() => setSelectedClass("all")}
+                        className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                          selectedClass === "all"
+                            ? "bg-blue-600 text-white"
+                            : "bg-white text-gray-600 border border-gray-300 hover:border-blue-500 hover:text-blue-600"
+                        }`}
+                      >
+                        全部班級
+                      </button>
+                      {availableClasses.map((cls) => (
+                        <button
+                          key={cls}
+                          onClick={() => setSelectedClass(cls)}
+                          className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                            selectedClass === cls
+                              ? "bg-blue-600 text-white"
+                              : "bg-white text-gray-600 border border-gray-300 hover:border-blue-500 hover:text-blue-600"
+                          }`}
+                        >
+                          {cls}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
