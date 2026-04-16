@@ -16,21 +16,38 @@ async function ensureOwnOrTeammate(req, res, next) {
     if (paramUserId === req.userId) return next();
 
     try {
+        // 先檢查同專案成員
         const myProjects = await UserProject.findAll({
             where: { userId: req.userId },
             attributes: ['projectId']
         });
         const projectIds = myProjects.map(p => p.projectId);
-        if (projectIds.length === 0) {
-            return res.status(403).json({ message: '無權存取其他使用者的資料' });
+
+        if (projectIds.length > 0) {
+            const shared = await UserProject.findOne({
+                where: { userId: paramUserId, projectId: projectIds }
+            });
+            if (shared) return next();
         }
-        const shared = await UserProject.findOne({
-            where: { userId: paramUserId, projectId: projectIds }
+
+        // 再檢查教師身份：目標學生所在專案的 mentor 也有權限
+        const targetProjects = await UserProject.findAll({
+            where: { userId: paramUserId },
+            attributes: ['projectId']
         });
-        if (!shared) {
-            return res.status(403).json({ message: '無權存取其他使用者的資料' });
+        if (targetProjects.length > 0) {
+            const Project = require('../models/project');
+            const mentored = await Project.findOne({
+                where: {
+                    id: targetProjects.map(p => p.projectId),
+                    mentorId: req.userId
+                },
+                attributes: ['id']
+            });
+            if (mentored) return next();
         }
-        next();
+
+        return res.status(403).json({ message: '無權存取其他使用者的資料' });
     } catch (err) {
         console.error('ensureOwnOrTeammate 查詢失敗:', err.message);
         return res.status(500).json({ message: '權限驗證失敗' });

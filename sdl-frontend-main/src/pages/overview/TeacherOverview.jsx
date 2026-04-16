@@ -1,361 +1,607 @@
-import React, { useState, useEffect } from "react";
-import { getProjectsByMentor } from "../../api/project";
-import { getProjectUser } from "../../api/users";
-import { getAllPersonalDaily } from "../../api/reflection";
-import { getKanbanColumns, getProjectActivity } from "../../api/kanban";
-import { getAllSubmit } from "../../api/submit";
+import React, { useState, useMemo, useCallback } from "react";
 import { useQuery } from "react-query";
 import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
-import { FiBookOpen, FiUsers, FiTrendingUp, FiAlertTriangle, FiStar, FiFileText, FiInfo } from 'react-icons/fi';
+import {
+  FiTarget, FiMap, FiBarChart2, FiRefreshCw,
+  FiCheckCircle, FiAlertTriangle, FiClock, FiEye,
+  FiX, FiChevronRight, FiLayout, FiMessageSquare
+} from "react-icons/fi";
 import TopBar from "../../components/TopBar";
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
-import { 
-  calculateProgress, 
-  formatRelativeTime, 
-  getStatusColor 
-} from './utils/overviewUtils';
+import { getCurrentUsername } from "../../utils/userUtils";
+import { getTeacherProjectsSummary } from "../../api/project";
+import { getAllSubmit } from "../../api/submit";
+import { formatRelativeTime } from "../../utils/timeUtils";
 
-const Tooltip = ({ text }) => {
-  const [show, setShow] = useState(false);
+// SDL 四階段定義
+const STAGES = [
+  { key: 1, name: "定標", icon: FiTarget, color: "blue" },
+  { key: 2, name: "擇策", icon: FiMap, color: "teal" },
+  { key: 3, name: "監評", icon: FiBarChart2, color: "amber" },
+  { key: 4, name: "調節", icon: FiRefreshCw, color: "purple" },
+];
+
+const SUB_STAGE_LABELS = {
+  "1-1": "提出研究主題",
+  "1-2": "提出研究目的",
+  "1-3": "提出研究問題",
+  "2-1": "訂定研究構想表",
+  "2-2": "設計研究記錄表",
+  "2-3": "規劃研究排程",
+  "3-1": "進行嘗試性研究",
+  "3-2": "分析資料與繪圖",
+  "3-3": "撰寫研究結果",
+  "4-1": "檢視研究進度",
+  "4-2": "進行研究討論",
+  "4-3": "撰寫研究結論",
+};
+
+// 顏色映射
+const COLOR_MAP = {
+  blue:   { bg: "bg-blue-50",   text: "text-blue-700",   border: "border-blue-200",   pill: "bg-blue-100 text-blue-700",   dot: "bg-blue-400" },
+  teal:   { bg: "bg-teal-50",   text: "text-teal-700",   border: "border-teal-200",   pill: "bg-teal-100 text-teal-700",   dot: "bg-teal-400" },
+  amber:  { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200",  pill: "bg-amber-100 text-amber-700",  dot: "bg-amber-400" },
+  purple: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-200", pill: "bg-purple-100 text-purple-700", dot: "bg-purple-400" },
+};
+
+/** 格式化階段顯示：「定標 · 提出研究主題 (1-1)」 */
+function formatStageLabel(currentStage, currentSubStage) {
+  const stage = STAGES.find((s) => s.key === currentStage);
+  const key = `${currentStage}-${currentSubStage}`;
+  const subLabel = SUB_STAGE_LABELS[key];
+  if (stage && subLabel) return `${stage.name} · ${subLabel} (${key})`;
+  if (stage) return `${stage.name} (${key})`;
+  return key;
+}
+
+// ─── 子元件 ───
+
+/** SDL 階段總覽 — 水平 pipeline + 每階段組名 */
+const StagePipeline = ({ projects, activeStageFilter, onStageClick }) => {
+  const grouped = useMemo(() => {
+    const map = { 1: [], 2: [], 3: [], 4: [] };
+    projects.forEach((p) => {
+      if (map[p.currentStage]) map[p.currentStage].push(p);
+    });
+    return map;
+  }, [projects]);
+
   return (
-    <div className="relative inline-flex ml-1">
-      <button
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
-        onFocus={() => setShow(true)}
-        onBlur={() => setShow(false)}
-        onClick={() => setShow(v => !v)}
-        className="w-4 h-4 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-500 flex items-center justify-center transition-colors duration-fast"
-        aria-label="說明"
-        type="button"
-      >
-        <FiInfo className="w-2.5 h-2.5" />
-      </button>
-      {show && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 bg-gray-800 text-white text-caption rounded-lg z-50 pointer-events-none shadow-lg leading-relaxed">
-          {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+    <div className="bg-white rounded-xl shadow-sm p-component-base sm:p-component-md-lg">
+      <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4">
+        SDL 階段總覽
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-stack-sm">
+        {STAGES.map((stage) => {
+          const c = COLOR_MAP[stage.color];
+          const isActive = activeStageFilter === stage.key;
+          const stageProjects = grouped[stage.key] || [];
+          const Icon = stage.icon;
+
+          return (
+            <button
+              key={stage.key}
+              onClick={() => onStageClick(stage.key)}
+              className={`text-left rounded-xl p-component-sm sm:p-component-base border-2 transition-all duration-fast ${
+                isActive
+                  ? `${c.border} ${c.bg} ring-2 ring-offset-1 ring-${stage.color}-300`
+                  : "border-gray-100 hover:border-gray-300 bg-white"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${c.bg} ${c.text}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className={`text-body-sm font-bold ${c.text}`}>
+                    {stage.name}
+                  </span>
+                  <span className="text-caption text-gray-400 ml-1">
+                    {stageProjects.length} 組
+                  </span>
+                </div>
+              </div>
+              {/* 組名列表 */}
+              <div className="flex flex-wrap gap-1 min-h-[28px]">
+                {stageProjects.length === 0 ? (
+                  <span className="text-caption text-gray-300">尚無</span>
+                ) : (
+                  stageProjects.map((p) => (
+                    <span
+                      key={p.id}
+                      className={`text-caption px-1.5 py-0.5 rounded-md ${c.pill} font-medium truncate max-w-[200px]`}
+                      title={`${p.name} — ${formatStageLabel(p.currentStage, p.currentSubStage)}`}
+                    >
+                      {p.name.length > 6 ? p.name.slice(0, 6) + "…" : p.name}
+                      <span className="opacity-60 ml-1">
+                        {SUB_STAGE_LABELS[`${p.currentStage}-${p.currentSubStage}`]
+                          ? `${p.currentStage}-${p.currentSubStage}`
+                          : p.currentSubStage}
+                      </span>
+                    </span>
+                  ))
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      {activeStageFilter && (
+        <div className="mt-3 flex justify-end">
+          <button
+            onClick={() => onStageClick(null)}
+            className="text-caption text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            清除篩選
+          </button>
         </div>
       )}
     </div>
   );
 };
 
+/** 活動狀態指示器 */
+const ActivityIndicator = ({ lastActivityAt, label }) => {
+  if (!lastActivityAt) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <FiAlertTriangle className="w-3.5 h-3.5 text-red-400" />
+        <span className="text-caption text-red-500">尚無{label}活動</span>
+      </div>
+    );
+  }
+
+  const daysSince = Math.floor(
+    (Date.now() - new Date(lastActivityAt).getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  if (daysSince <= 3) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <FiCheckCircle className="w-3.5 h-3.5 text-[#5BA491]" />
+        <span className="text-caption text-[#5BA491]">
+          {label}活躍（{formatRelativeTime(lastActivityAt)}）
+        </span>
+      </div>
+    );
+  }
+
+  if (daysSince <= 7) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <FiClock className="w-3.5 h-3.5 text-amber-500" />
+        <span className="text-caption text-amber-600">
+          {label} {daysSince} 天前
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <FiAlertTriangle className="w-3.5 h-3.5 text-red-400" />
+      <span className="text-caption text-red-500">
+        {label}沉寂 {daysSince} 天
+      </span>
+    </div>
+  );
+};
+
+/** 小組狀態卡片 */
+const GroupCard = ({ project, onPreview, onNavigate }) => {
+  const stage = STAGES.find((s) => s.key === project.currentStage);
+  const c = stage ? COLOR_MAP[stage.color] : COLOR_MAP.blue;
+
+  const { submitStatus, kanban, ideaWall, members } = project;
+  const reachedCount = submitStatus.reached.length;
+  const submittedCount = submitStatus.submitted.length;
+  const missingCount = submitStatus.missing.length;
+
+  // 計算缺少項目數用於排序
+  const totalIssues = missingCount
+    + (!kanban.lastActivityAt ? 1 : 0)
+    + (ideaWall.nodeCount === 0 ? 1 : 0);
+
+  return (
+    <div
+      className={`bg-white rounded-xl border ${
+        totalIssues > 2
+          ? "border-red-200"
+          : totalIssues > 0
+          ? "border-amber-200"
+          : "border-gray-200"
+      } hover:shadow-md transition-shadow duration-fast`}
+    >
+      {/* 卡片標題 */}
+      <div className="p-component-sm sm:p-component-base border-b border-gray-100">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-body font-semibold text-gray-800 truncate flex-1 mr-2">
+            {project.name}
+          </h3>
+          <span
+            className={`shrink-0 text-caption px-2 py-0.5 rounded-full font-medium ${c.pill}`}
+            title={formatStageLabel(project.currentStage, project.currentSubStage)}
+          >
+            {stage?.name} · {SUB_STAGE_LABELS[`${project.currentStage}-${project.currentSubStage}`] || project.currentSubStage} ({project.currentStage}-{project.currentSubStage})
+          </span>
+        </div>
+        {/* 班級 + 成員 */}
+        <div className="flex items-center gap-1.5 flex-wrap mt-1">
+          {(() => {
+            const classes = [...new Set(members.map((m) => m.class).filter(Boolean))];
+            return classes.length > 0 ? (
+              classes.map((cls) => (
+                <span key={cls} className="text-caption bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-medium">
+                  {cls}
+                </span>
+              ))
+            ) : null;
+          })()}
+          {members.map((m) => (
+            <span
+              key={m.id}
+              className="text-caption bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded"
+            >
+              {m.username}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* 完成度檢查 */}
+      <div className="p-component-sm sm:p-component-base space-y-2">
+        {/* 歷程檔案 */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-caption text-gray-500 font-medium">歷程檔案</span>
+            {reachedCount > 0 ? (
+              <span className={`text-caption font-bold ${
+                missingCount === 0 ? "text-[#5BA491]" : "text-amber-600"
+              }`}>
+                {submittedCount}/{reachedCount}
+              </span>
+            ) : (
+              <span className="text-caption font-bold text-gray-400">—</span>
+            )}
+          </div>
+          {reachedCount === 0 && submittedCount === 0 ? (
+            <p className="text-caption text-gray-400">尚未有任何歷程檔案</p>
+          ) : reachedCount > 0 ? (
+            <>
+              <div className="flex gap-0.5">
+                {submitStatus.reached.map((key) => {
+                  const isFilled = submitStatus.submitted.includes(key);
+                  return (
+                    <div
+                      key={key}
+                      className={`h-1.5 flex-1 rounded-full ${
+                        isFilled ? "bg-[#5BA491]" : "bg-red-300"
+                      }`}
+                      title={`${SUB_STAGE_LABELS[key] || key} — ${isFilled ? "已填" : "未填"}`}
+                    />
+                  );
+                })}
+              </div>
+              {missingCount > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {submitStatus.missing.map((key) => (
+                    <span
+                      key={key}
+                      className="text-caption text-red-500 bg-red-50 px-1 py-0.5 rounded"
+                    >
+                      {SUB_STAGE_LABELS[key] || key}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+
+        {/* Kanban */}
+        <ActivityIndicator
+          lastActivityAt={kanban.lastActivityAt}
+          label="Kanban"
+        />
+
+        {/* Idea Wall */}
+        <div className="flex items-center gap-1.5">
+          {ideaWall.nodeCount > 0 ? (
+            <>
+              <FiMessageSquare className="w-3.5 h-3.5 text-[#5BA491]" />
+              <span className="text-caption text-[#5BA491]">
+                Idea Wall {ideaWall.nodeCount} 則
+              </span>
+            </>
+          ) : (
+            <>
+              <FiAlertTriangle className="w-3.5 h-3.5 text-red-400" />
+              <span className="text-caption text-red-500">Idea Wall 無內容</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 動作按鈕 */}
+      <div className="p-component-sm sm:p-component-base border-t border-gray-100 flex gap-2">
+        <button
+          onClick={() => onPreview(project)}
+          className="flex-1 text-caption py-1.5 rounded-lg border border-teal-200 text-teal-700 hover:bg-teal-50 transition-colors duration-fast flex items-center justify-center gap-1"
+        >
+          <FiEye className="w-3.5 h-3.5" />
+          預覽歷程
+        </button>
+        <button
+          onClick={() => onNavigate(project.id)}
+          className="flex-1 text-caption py-1.5 rounded-lg bg-teal-600 text-white hover:bg-teal-600/90 hover:shadow-lg transition-all duration-fast flex items-center justify-center gap-1"
+        >
+          <FiLayout className="w-3.5 h-3.5" />
+          進入專案
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/** 解析 submit content — 可能是 JSON 字串或物件 */
+function parseSubmitContent(content) {
+  if (!content) return null;
+  if (typeof content === "object") return content;
+  try {
+    return JSON.parse(content);
+  } catch {
+    return { 內容: content }; // 純文字 fallback
+  }
+}
+
+/** 歷程預覽抽屜 */
+const PortfolioDrawer = ({ project, onClose }) => {
+  const { data: submits, isLoading } = useQuery(
+    ["portfolioPreview", project?.id],
+    () => getAllSubmit({ params: { projectId: project.id } }),
+    { enabled: !!project }
+  );
+
+  if (!project) return null;
+
+  // 建立子階段到提交內容的映射
+  const submitMap = useMemo(() => {
+    const map = {};
+    if (submits) {
+      submits.forEach((s) => {
+        if (!map[s.stage] || new Date(s.createdAt) > new Date(map[s.stage].createdAt)) {
+          map[s.stage] = s;
+        }
+      });
+    }
+    return map;
+  }, [submits]);
+
+  // 列出到目前階段為止的所有子階段
+  const allSubStages = useMemo(() => {
+    const result = [];
+    for (let s = 1; s <= project.currentStage; s++) {
+      const maxSub = s < project.currentStage ? 3 : project.currentSubStage;
+      for (let sub = 1; sub <= maxSub; sub++) {
+        result.push(`${s}-${sub}`);
+      }
+    }
+    return result;
+  }, [project.currentStage, project.currentSubStage]);
+
+  // 按主階段分組
+  const stageGroups = useMemo(() => {
+    const groups = {};
+    allSubStages.forEach((key) => {
+      const mainStage = parseInt(key.split("-")[0]);
+      if (!groups[mainStage]) groups[mainStage] = [];
+      groups[mainStage].push(key);
+    });
+    return groups;
+  }, [allSubStages]);
+
+  return (
+    <>
+      {/* 背景遮罩 */}
+      <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
+      {/* 抽屜面板 */}
+      <div className="fixed right-0 top-0 h-full w-full sm:w-[520px] bg-gray-50 shadow-xl z-50 flex flex-col">
+        {/* 標題 */}
+        <div className="flex items-center justify-between p-component-base bg-white border-b border-gray-200">
+          <div className="min-w-0">
+            <h3 className="text-h3 font-semibold text-gray-800 truncate">
+              {project.name}
+            </h3>
+            <p className="text-caption text-gray-500">
+              歷程檔案預覽 · {STAGES.find((s) => s.key === project.currentStage)?.name} {project.currentStage}-{project.currentSubStage}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+          >
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* 內容 — 按主階段分組 */}
+        <div className="flex-1 overflow-y-auto p-component-sm sm:p-component-base">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" />
+            </div>
+          ) : allSubStages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <FiAlertTriangle className="w-10 h-10 text-gray-300 mb-3" />
+              <p className="text-body text-gray-500 font-medium">尚未有任何歷程檔案</p>
+              <p className="text-caption text-gray-400 mt-1">此專案目前尚未到達需提交歷程的階段</p>
+            </div>
+          ) : (
+            Object.entries(stageGroups).map(([mainStageStr, subStageKeys]) => {
+              const mainStage = parseInt(mainStageStr);
+              const stage = STAGES.find((s) => s.key === mainStage);
+              const c = stage ? COLOR_MAP[stage.color] : COLOR_MAP.blue;
+
+              return (
+                <div key={mainStage} className="mb-4">
+                  {/* 主階段標題 */}
+                  <div className="flex items-center gap-2 mb-2 sticky top-0 bg-gray-50 py-1 z-10">
+                    <div className={`w-6 h-6 rounded-md flex items-center justify-center ${c.bg} ${c.text}`}>
+                      {React.createElement(stage?.icon || FiTarget, { className: "w-3.5 h-3.5" })}
+                    </div>
+                    <span className={`text-body-sm font-bold ${c.text}`}>
+                      {stage?.name}階段
+                    </span>
+                  </div>
+
+                  {/* 子階段卡片 */}
+                  <div className="space-y-2">
+                    {subStageKeys.map((key) => {
+                      const submit = submitMap[key];
+                      const stageName = SUB_STAGE_LABELS[key] || key;
+                      const parsed = submit ? parseSubmitContent(submit.content) : null;
+
+                      return (
+                        <div
+                          key={key}
+                          className={`rounded-lg border ${
+                            submit ? "border-gray-200 bg-white" : "border-amber-200 bg-amber-50/50"
+                          } p-component-sm`}
+                        >
+                          {/* 子階段標頭 */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-caption px-1.5 py-0.5 rounded ${c.pill} font-medium`}>
+                              {key}
+                            </span>
+                            <span className="text-body-sm font-medium text-gray-700">
+                              {stageName}
+                            </span>
+                            {submit ? (
+                              <FiCheckCircle className="w-4 h-4 text-[#5BA491] ml-auto shrink-0" />
+                            ) : (
+                              <FiAlertTriangle className="w-4 h-4 text-amber-500 ml-auto shrink-0" />
+                            )}
+                          </div>
+
+                          {submit && parsed ? (
+                            <div className="space-y-2">
+                              {Object.entries(parsed).map(([fieldName, fieldValue]) => (
+                                <div key={fieldName}>
+                                  <label className="block text-caption font-semibold text-gray-500 mb-0.5">
+                                    {fieldName}
+                                  </label>
+                                  <div className="text-body-sm text-gray-700 leading-relaxed bg-gray-50 rounded-md p-component-xs border border-gray-100 whitespace-pre-wrap break-words">
+                                    {fieldValue || "（空白）"}
+                                  </div>
+                                </div>
+                              ))}
+                              <div className="text-caption text-gray-400 pt-1 border-t border-gray-100">
+                                {formatRelativeTime(submit.createdAt)}
+                                {submit.User?.username && ` · ${submit.User.username}`}
+                                {submit.originalName && (
+                                  <span className="ml-2">
+                                    附件：{submit.originalName}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : !submit ? (
+                            <p className="text-body-sm text-amber-600">尚未填寫</p>
+                          ) : (
+                            <p className="text-body-sm text-gray-400">（無內容）</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* 底部操作 */}
+        <div className="border-t border-gray-200 p-component-base bg-white">
+          <button
+            onClick={() =>
+              window.open(`/project/${project.id}/teacherDashboard`, "_blank")
+            }
+            className="w-full py-2 rounded-lg bg-teal-600 text-white text-body-sm font-medium hover:bg-teal-600/90 hover:shadow-lg transition-all duration-fast flex items-center justify-center gap-2"
+          >
+            進入專案詳細頁
+            <FiChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ─── 主元件 ───
+
 const TeacherOverview = () => {
   const navigate = useNavigate();
   const userName = getCurrentUsername();
-  
-  // 狀態管理
-  const [allProjects, setAllProjects] = useState([]);
-  const [allStudents, setAllStudents] = useState([]);
-  const [allReflections, setAllReflections] = useState([]);
-  const [allSubmissions, setAllSubmissions] = useState([]);
-  const [allActivities, setAllActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('overview'); // 'overview', 'students'
-  const [selectedSemester, setSelectedSemester] = useState('all');
 
-  // 從所有專案中提取可用學期（降序排列）
-  const availableSemesters = React.useMemo(() => {
-    const semesters = [...new Set(allProjects.map(p => p.semester).filter(Boolean))];
+  const [selectedSemester, setSelectedSemester] = useState("all");
+  const [activeStageFilter, setActiveStageFilter] = useState(null);
+  const [previewProject, setPreviewProject] = useState(null);
+
+  // 永遠取得全部學期的專案（學期篩選在前端做）
+  const { data, isLoading } = useQuery(
+    ["teacherOverviewSummary"],
+    () => getTeacherProjectsSummary("all"),
+    { staleTime: 30000 }
+  );
+
+  const allProjects = data?.projects || [];
+
+  // 從全部專案中提取可用學期（不受篩選影響）
+  const availableSemesters = useMemo(() => {
+    const semesters = [...new Set(allProjects.map((p) => p.semester).filter(Boolean))];
     return semesters.sort((a, b) => b.localeCompare(a));
   }, [allProjects]);
 
-  // 根據學期篩選後的專案
-  const filteredProjects = React.useMemo(() => {
-    if (selectedSemester === 'all') return allProjects;
-    return allProjects.filter(p => p.semester === selectedSemester);
+  // 按學期篩選
+  const projects = useMemo(() => {
+    if (selectedSemester === "all") return allProjects;
+    return allProjects.filter((p) => p.semester === selectedSemester);
   }, [allProjects, selectedSemester]);
 
-  // 獲取教師的所有專案
-  const { data: projectData, isLoading: projectsLoading } = useQuery(
-    "teacherAllProjects", 
-    () => getProjectsByMentor(userName, 'all'),
-    {
-      onSuccess: (data) => {
-        setAllProjects(data || []);
-      }
-    }
-  );
+  // 按階段篩選
+  const filteredProjects = useMemo(() => {
+    if (!activeStageFilter) return projects;
+    return projects.filter((p) => p.currentStage === activeStageFilter);
+  }, [projects, activeStageFilter]);
 
-  // 獲取所有相關資料
-  useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        setLoading(true);
-        
-        if (!allProjects.length) return;
-
-        // 獲取所有專案的學生資料
-        const studentPromises = allProjects.map(async (project) => {
-          try {
-            const students = await getProjectUser(project.id);
-            return students?.map(s => ({ 
-              ...s, 
-              projectId: project.id, 
-              projectName: project.name,
-              projectProgress: calculateProgress(project.currentStage, project.currentSubStage)
-            })) || [];
-          } catch (error) {
-            console.error(`獲取專案 ${project.id} 學生失敗:`, error);
-            return [];
-          }
-        });
-
-        // 獲取所有專案的反思記錄
-        const reflectionPromises = allProjects.map(async (project) => {
-          try {
-            const reflections = await getAllPersonalDaily({ 
-              projectId: project.id, 
-              isTeacher: true 
-            });
-            return reflections?.map(r => ({ 
-              ...r, 
-              projectId: project.id, 
-              projectName: project.name 
-            })) || [];
-          } catch (error) {
-            console.error(`獲取專案 ${project.id} 反思失敗:`, error);
-            return [];
-          }
-        });
-
-        // 獲取所有專案的提交記錄
-        const submissionPromises = allProjects.map(async (project) => {
-          try {
-            const submissions = await getAllSubmit({ params: { projectId: project.id } });
-            return submissions?.map(s => ({ 
-              ...s, 
-              projectId: project.id, 
-              projectName: project.name 
-            })) || [];
-          } catch (error) {
-            console.error(`獲取專案 ${project.id} 提交失敗:`, error);
-            return [];
-          }
-        });
-
-        // 獲取所有專案的活動記錄
-        const activityPromises = allProjects.map(async (project) => {
-          try {
-            const activities = await getProjectActivity(project.id);
-            return activities?.map(a => ({ 
-              ...a, 
-              projectId: project.id, 
-              projectName: project.name 
-            })) || [];
-          } catch (error) {
-            console.error(`獲取專案 ${project.id} 活動失敗:`, error);
-            return [];
-          }
-        });
-
-        const [studentResults, reflectionResults, submissionResults, activityResults] = await Promise.all([
-          Promise.all(studentPromises),
-          Promise.all(reflectionPromises),
-          Promise.all(submissionPromises),
-          Promise.all(activityPromises)
-        ]);
-
-        // 合併資料
-        const allStudentsData = studentResults.flat();
-        const allReflectionsData = reflectionResults.flat();
-        const allSubmissionsData = submissionResults.flat();
-        const allActivitiesData = activityResults.flat();
-
-        setAllStudents(allStudentsData);
-        setAllReflections(allReflectionsData);
-        setAllSubmissions(allSubmissionsData);
-        setAllActivities(allActivitiesData);
-
-      } catch (error) {
-        console.error("獲取資料失敗:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (allProjects.length > 0) {
-      fetchAllData();
-    } else {
-      setLoading(false);
-    }
-  }, [allProjects]);
-
-  // SDL 四階段分布
-  const stageDistribution = React.useMemo(() => {
-    const stages = [
-      { key: 1, name: '定標', color: 'bg-blue-400',   barBg: 'bg-blue-50',   text: 'text-blue-700',  border: 'border-blue-200' },
-      { key: 2, name: '擇策', color: 'bg-teal-400',   barBg: 'bg-teal-50',   text: 'text-teal-700',  border: 'border-teal-200' },
-      { key: 3, name: '監評', color: 'bg-amber-400',  barBg: 'bg-amber-50',  text: 'text-amber-700', border: 'border-amber-200' },
-      { key: 4, name: '調節', color: 'bg-purple-400', barBg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-    ];
-    const total = filteredProjects.length;
-    const maxCount = Math.max(...stages.map(s => filteredProjects.filter(p => p.currentStage === s.key).length), 1);
-    return stages.map(stage => {
-      const count = filteredProjects.filter(p => p.currentStage === stage.key).length;
-      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-      const barWidth = Math.round((count / maxCount) * 100);
-      const isMax = count === maxCount && count > 0;
-      return { ...stage, count, pct, barWidth, isMax };
+  // 排序：缺少項目最多的排前面
+  const sortedProjects = useMemo(() => {
+    return [...filteredProjects].sort((a, b) => {
+      const issuesA =
+        a.submitStatus.missing.length +
+        (!a.kanban.lastActivityAt ? 1 : 0) +
+        (a.ideaWall.nodeCount === 0 ? 1 : 0);
+      const issuesB =
+        b.submitStatus.missing.length +
+        (!b.kanban.lastActivityAt ? 1 : 0) +
+        (b.ideaWall.nodeCount === 0 ? 1 : 0);
+      return issuesB - issuesA;
     });
   }, [filteredProjects]);
 
-  // 計算教學統計
-  const teachingStats = React.useMemo(() => {
-    const filteredProjectIds = new Set(filteredProjects.map(p => p.id));
-    const filteredStudents = allStudents.filter(s => filteredProjectIds.has(s.projectId));
-    const filteredReflections = allReflections.filter(r => filteredProjectIds.has(r.projectId));
-    const filteredSubmissions = allSubmissions.filter(s => filteredProjectIds.has(s.projectId));
+  const handleStageClick = useCallback((stageKey) => {
+    setActiveStageFilter((prev) => (prev === stageKey ? null : stageKey));
+  }, []);
 
-    const totalProjects = filteredProjects.length;
-    const totalStudents = filteredStudents.length;
-    const uniqueStudents = new Set(filteredStudents.map(s => s.id)).size;
-    
-    const averageProgress = totalProjects > 0 ? 
-      Math.round(filteredProjects.reduce((sum, project) => {
-        return sum + calculateProgress(project.currentStage, project.currentSubStage);
-      }, 0) / totalProjects) : 0;
+  const handleNavigate = useCallback(
+    (projectId) => navigate(`/project/${projectId}/teacherDashboard`),
+    [navigate]
+  );
 
-    const completedProjects = filteredProjects.filter(p => p.ProjectEnd).length;
-    const totalReflections = filteredReflections.length;
-    const totalSubmissions = filteredSubmissions.length;
-    
-    const thisWeekReflections = allReflections.filter(r => {
-      const oneWeekAgo = new Date();
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-      return new Date(r.createdAt) > oneWeekAgo;
-    }).length;
-
-    // 需要關注的學生（進度低於30% 或 7天無反思活動）
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const needAttentionList = filteredStudents
-      .map(student => {
-        const studentReflections = allReflections.filter(r =>
-          r.projectId === student.projectId &&
-          (r.userId === student.id || r.user_id === student.id)
-        );
-        const lastReflection = studentReflections
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
-        const lastActivityDate = lastReflection ? new Date(lastReflection.createdAt) : null;
-        const daysSinceActivity = lastActivityDate
-          ? Math.floor((Date.now() - lastActivityDate) / (1000 * 60 * 60 * 24))
-          : null;
-        const isSilent = daysSinceActivity === null || daysSinceActivity >= 7;
-        return { ...student, daysSinceActivity, isSilent };
-      })
-      .filter(student => student.projectProgress < 30 || student.isSilent);
-    const needAttentionStudents = needAttentionList.length;
-
-    // 優秀學生（進度高於80%）
-    const excellentStudents = filteredStudents.filter(student => {
-      return student.projectProgress >= 80;
-    }).length;
-
-    return {
-      totalProjects,
-      totalStudents,
-      uniqueStudents,
-      averageProgress,
-      completedProjects,
-      totalReflections,
-      totalSubmissions,
-      thisWeekReflections,
-      needAttentionStudents,
-      needAttentionList,
-      excellentStudents
-    };
-  }, [filteredProjects, allStudents, allReflections, allSubmissions]);
-
-  // 各專案健康度評分（進度 33% + 本週反思率 33% + 最近活躍度 34%）
-  const projectHealthScores = React.useMemo(() => {
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-
-    return filteredProjects.map(project => {
-      const progress = calculateProgress(project.currentStage, project.currentSubStage);
-      const projectStudents = allStudents.filter(s => s.projectId === project.id);
-      const studentCount = Math.max(projectStudents.length, 1);
-      const projectReflections = allReflections.filter(r => r.projectId === project.id);
-      const projectActivities = allActivities.filter(a => a.projectId === project.id);
-      const weeklyReflections = projectReflections.filter(r => new Date(r.createdAt) > oneWeekAgo).length;
-      const hasWeeklyActivity =
-        projectReflections.some(r => new Date(r.createdAt) > oneWeekAgo) ||
-        projectActivities.some(a => new Date(a.createdAt || a.updatedAt) > oneWeekAgo);
-      const hasBiweeklyActivity =
-        projectReflections.some(r => new Date(r.createdAt) > twoWeeksAgo) ||
-        projectActivities.some(a => new Date(a.createdAt || a.updatedAt) > twoWeeksAgo);
-
-      const progressScore = (progress / 100) * 33;
-      const reflectionScore = Math.min(weeklyReflections / studentCount, 1) * 33;
-      const activityScore = hasWeeklyActivity ? 34 : hasBiweeklyActivity ? 17 : 0;
-      const healthScore = Math.round(progressScore + reflectionScore + activityScore);
-
-      return {
-        ...project,
-        healthScore,
-        progress,
-        studentCount: projectStudents.length,
-        weeklyReflections,
-        hasWeeklyActivity,
-      };
-    }).sort((a, b) => a.healthScore - b.healthScore);
-  }, [filteredProjects, allStudents, allReflections, allActivities]);
-
-  // 最近教學活動
-  const recentActivities = React.useMemo(() => {
-    const activities = [];
-    
-    // 添加反思活動
-    allReflections.slice(0, 3).forEach(reflection => {
-      activities.push({
-        type: "reflection",
-        title: `學生提交反思`,
-        description: `${reflection.userName || '學生'} 在 ${reflection.projectName} 中提交學習反思`,
-        time: formatRelativeTime(reflection.createdAt),
-        projectName: reflection.projectName
-      });
-    });
-
-    // 添加提交活動
-    allSubmissions.slice(0, 3).forEach(submission => {
-      activities.push({
-        type: "submission",
-        title: `作業提交`,
-        description: `${submission.userName || '學生'} 在 ${submission.projectName} 中提交作業`,
-        time: formatRelativeTime(submission.createdAt),
-        projectName: submission.projectName
-      });
-    });
-
-    // 添加專案活動
-    allActivities.slice(0, 3).forEach(activity => {
-      activities.push({
-        type: "activity",
-        title: `專案活動`,
-        description: `${activity.projectName} - ${activity.action || activity.description}`,
-        time: formatRelativeTime(activity.createdAt),
-        projectName: activity.projectName
-      });
-    });
-
-    return activities
-      .sort((a, b) => new Date(b.createdAt || b.updatedAt) - new Date(a.createdAt || a.updatedAt))
-      .slice(0, 10);
-  }, [allReflections, allSubmissions, allActivities]);
-
-  // 獲取專案狀態顏色
-  const getProjectStatusColor = (status) => {
-    if (status === "優秀") return "bg-green-100 text-green-800";
-    if (status === "良好") return "bg-blue-100 text-blue-800";
-    return "bg-red-100 text-red-800";
-  };
-
-  if (projectsLoading || loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-teal-600"></div>
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-teal-600" />
       </div>
     );
   }
@@ -366,7 +612,7 @@ const TeacherOverview = () => {
       <main className="flex-1 overflow-y-auto">
         <div className="p-component-sm sm:p-component-md-lg">
           <div className="max-w-7xl mx-auto">
-            {/* 頁面標題與導航 */}
+            {/* 標題與返回 */}
             <div className="mb-6 sm:mb-8">
               <div className="flex items-center mb-4">
                 <button
@@ -377,480 +623,87 @@ const TeacherOverview = () => {
                   <HiArrowLeft size={24} />
                 </button>
                 <div>
-                  <h1 className="text-h2 sm:text-h1 lg:text-display font-extrabold text-teal-600 mb-2">
-                    教師總覽儀表板
+                  <h1 className="text-h2 sm:text-h1 font-extrabold text-teal-600 mb-1">
+                    各組狀態總覽
                   </h1>
-                  <p className="text-body sm:text-body-lg text-gray-600">
-                    歡迎回來，{userName}！掌握所有學生的學習狀況與專案進度。
+                  <p className="text-body-sm sm:text-body text-gray-500">
+                    {userName} 老師，快速掌握各組的歷程填寫、看板與 Idea Wall 狀態
                   </p>
                 </div>
               </div>
-              
-              <div className="flex flex-wrap gap-stack-xs sm:gap-3">
-                <button
-                  onClick={() => setViewMode('overview')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg text-body-sm font-medium transition-colors ${
-                    viewMode === 'overview' 
-                      ? 'bg-teal-600 text-white' 
-                      : 'bg-white text-teal-600 border border-teal-600 hover:bg-teal-50'
-                  }`}
-                >
-                  總覽
-                </button>
-                <button
-                  onClick={() => setViewMode('students')}
-                  className={`px-3 sm:px-4 py-2 rounded-lg text-body-sm font-medium transition-colors ${
-                    viewMode === 'students' 
-                      ? 'bg-teal-600 text-white' 
-                      : 'bg-white text-teal-600 border border-teal-600 hover:bg-teal-50'
-                  }`}
-                >
-                  學生管理
-                </button>
-              </div>
-            </div>
 
-            {/* 學期篩選 */}
-            {availableSemesters.length > 0 && (
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <span className="text-body-sm text-gray-500 font-medium">學期：</span>
-                <button
-                  onClick={() => setSelectedSemester('all')}
-                  className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
-                    selectedSemester === 'all'
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600'
-                  }`}
-                >
-                  全部學期
-                </button>
-                {availableSemesters.map(sem => (
+              {/* 學期篩選 */}
+              {availableSemesters.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-body-sm text-gray-500 font-medium">學期：</span>
                   <button
-                    key={sem}
-                    onClick={() => setSelectedSemester(sem)}
+                    onClick={() => setSelectedSemester("all")}
                     className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
-                      selectedSemester === sem
-                        ? 'bg-teal-600 text-white'
-                        : 'bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600'
+                      selectedSemester === "all"
+                        ? "bg-teal-600 text-white"
+                        : "bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600"
                     }`}
                   >
-                    {sem}
+                    全部學期
                   </button>
-                ))}
-              </div>
-            )}
-
-            {/* 統計卡片區域 */}
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-stack-sm sm:gap-stack-md mb-6 sm:mb-8">
-              {/* 指導專案 */}
-              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-caption text-[#888780]">指導專案</h3>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-teal-600">
-                    <FiBookOpen className="w-4 h-4" />
-                  </div>
-                </div>
-                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.totalProjects}</p>
-                <p className="text-caption text-[#888780] mb-3">完成 {teachingStats.completedProjects} 個</p>
-                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-teal-500" style={{ width: `${teachingStats.totalProjects > 0 ? 100 : 0}%` }} />
-                </div>
-              </div>
-
-              {/* 指導學生 */}
-              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-caption text-[#888780]">指導學生</h3>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E6F1FB] text-blue-600">
-                    <FiUsers className="w-4 h-4" />
-                  </div>
-                </div>
-                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.uniqueStudents}</p>
-                <p className="text-caption text-[#888780] mb-3">活躍學生數</p>
-                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-blue-400" style={{ width: `${teachingStats.uniqueStudents > 0 ? Math.min(100, teachingStats.uniqueStudents * 5) : 0}%` }} />
-                </div>
-              </div>
-
-              {/* 平均進度 */}
-              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-caption text-[#888780]">平均進度</h3>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-customgreen">
-                    <FiTrendingUp className="w-4 h-4" />
-                  </div>
-                </div>
-                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.averageProgress}%</p>
-                <p className="text-caption text-[#888780] mb-3">整體進度</p>
-                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-customgreen" style={{ width: `${teachingStats.averageProgress}%` }} />
-                </div>
-              </div>
-
-              {/* 需關注 */}
-              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-caption text-[#888780]">需關注</h3>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#FAEEDA] text-amber-600">
-                    <FiAlertTriangle className="w-4 h-4" />
-                  </div>
-                </div>
-                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.needAttentionStudents}</p>
-                <p className="text-caption text-[#888780] mb-3">進度 &lt;30%</p>
-                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-amber-400" style={{ width: `${teachingStats.uniqueStudents > 0 ? Math.round((teachingStats.needAttentionStudents / teachingStats.uniqueStudents) * 100) : 0}%` }} />
-                </div>
-              </div>
-
-              {/* 優秀學生 */}
-              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-caption text-[#888780]">優秀學生</h3>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#EAF3DE] text-teal-600">
-                    <FiStar className="w-4 h-4" />
-                  </div>
-                </div>
-                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.excellentStudents}</p>
-                <p className="text-caption text-[#888780] mb-3">進度 ≥80%</p>
-                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-teal-400" style={{ width: `${teachingStats.uniqueStudents > 0 ? Math.round((teachingStats.excellentStudents / teachingStats.uniqueStudents) * 100) : 0}%` }} />
-                </div>
-              </div>
-
-              {/* 本週反思 */}
-              <div className="bg-white border border-gray-200 hover:border-gray-400 transition-colors duration-fast rounded-xl p-component-sm sm:p-component-md">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-caption text-[#888780]">本週反思</h3>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-[#E1F5EE] text-teal-600">
-                    <FiFileText className="w-4 h-4" />
-                  </div>
-                </div>
-                <p className="text-h2 font-medium text-[#2C2C2A] mb-1">{teachingStats.thisWeekReflections}</p>
-                <p className="text-caption text-[#888780] mb-3">共 {teachingStats.totalReflections} 篇</p>
-                <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-teal-400" style={{ width: '65%' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* 根據viewMode顯示不同內容 */}
-            {viewMode === 'overview' && (
-              <div className="space-y-stack-md sm:space-y-stack-md-lg">
-              {/* ① SDL 四階段分布圖 */}
-              <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">SDL 階段分布</h2>
-                  <span className="text-caption text-gray-400">共 {filteredProjects.length} 個專案</span>
-                </div>
-                {filteredProjects.length === 0 ? (
-                  <p className="text-center text-gray-400 py-4 text-body-sm">尚無專案資料</p>
-                ) : (
-                  <div className="space-y-3">
-                    {stageDistribution.map(stage => (
-                      <div key={stage.key} className="flex items-center gap-3">
-                        <span className={`w-10 text-right text-body-sm font-semibold shrink-0 ${stage.text}`}>
-                          {stage.name}
-                        </span>
-                        <div className="flex-1 relative h-8 bg-gray-100 rounded-lg overflow-hidden">
-                          <div
-                            className={`h-full ${stage.color} rounded-lg transition-all duration-slow flex items-center`}
-                            style={{ width: stage.count === 0 ? '0%' : `${Math.max(stage.barWidth, 4)}%` }}
-                          />
-                          {stage.isMax && stage.count > 0 && (
-                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-caption font-medium text-gray-500 whitespace-nowrap">
-                              ← 本週重點關注
-                            </span>
-                          )}
-                        </div>
-                        <div className="shrink-0 flex items-center gap-1.5 w-24 justify-end">
-                          <span className={`text-body-sm font-bold ${stage.count > 0 ? stage.text : 'text-gray-300'}`}>
-                            {stage.count} 組
-                          </span>
-                          <span className="text-caption text-gray-400">({stage.pct}%)</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* ③ 各專案健康度橫向比較 */}
-              <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <div className="flex items-center">
-                      <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">各專案健康度一覽</h2>
-                      <Tooltip text="健康分（0–100）由三項加權：進度（33%）+ 本週每人平均反思數（33%）+ 近期活躍度（34%，涵蓋反思與活動記錄）。7 天內有動靜得 34 分，14 天內得 17 分，無活動得 0 分。分數越低排越前，方便優先關注。" />
-                    </div>
-                    <p className="text-caption text-gray-400 mt-0.5">綜合進度、本週反思率、最近動態 — 由低至高排列</p>
-                  </div>
-                  <span className="text-caption text-gray-400">{filteredProjects.length} 個專案</span>
-                </div>
-                {filteredProjects.length === 0 ? (
-                  <p className="text-center text-gray-400 py-4 text-body-sm">尚無專案資料</p>
-                ) : (
-                  <div className="space-y-2 max-h-72 overflow-y-auto scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-50">
-                    {projectHealthScores.map((project) => {
-                      const scoreStyle = project.healthScore >= 75
-                        ? { badge: 'bg-green-100 text-green-700 border-green-200', bar: 'bg-green-400', label: '運作良好' }
-                        : project.healthScore >= 45
-                        ? { badge: 'bg-amber-100 text-amber-700 border-amber-200', bar: 'bg-amber-400', label: '待關注' }
-                        : { badge: 'bg-red-100 text-red-700 border-red-200', bar: 'bg-red-400', label: '需介入' };
-
-                      return (
-                        <div key={project.id} className="flex items-center gap-3 p-component-xs border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors duration-fast">
-                          {/* 健康分數 */}
-                          <div className={`shrink-0 w-12 text-center px-1.5 py-1 rounded-lg border text-body-sm font-bold ${scoreStyle.badge}`}>
-                            {project.healthScore}
-                          </div>
-                          {/* 專案資訊 */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-body-sm font-medium text-gray-800 truncate">{project.name}</p>
-                              <span className={`shrink-0 text-caption px-1.5 py-0.5 rounded-full border ${scoreStyle.badge}`}>{scoreStyle.label}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className={`h-full ${scoreStyle.bar} rounded-full transition-all duration-slow`} style={{ width: `${project.healthScore}%` }} />
-                              </div>
-                              <div className="flex gap-2 text-caption text-gray-500 shrink-0">
-                                <span>進度 {project.progress}%</span>
-                                <span>·</span>
-                                <span>本週反思 {project.weeklyReflections} 篇</span>
-                                <span>·</span>
-                                <span className={project.hasWeeklyActivity ? 'text-green-600' : 'text-amber-600'}>
-                                  {project.hasWeeklyActivity ? '本週活躍' : '近期沉寂'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          {/* 進入按鈕 */}
-                          <button
-                            onClick={() => navigate(`/project/${project.id}/teacherDashboard`)}
-                            className="shrink-0 text-caption px-3 py-1 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors duration-fast"
-                          >
-                            查看
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-md sm:gap-stack-md-lg">
-                {/* 左側 - 專案總覽 */}
-                <div className="lg:col-span-2 space-y-stack-md sm:space-y-stack-md-lg">
-                  {/* 專案進度概覽 */}
-                  <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                    <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">專案進度概覽</h2>
-                    <div className="space-y-stack-sm max-h-96 overflow-y-auto">
-                      {filteredProjects.length > 0 ? (
-                        filteredProjects.map((project, index) => {
-                          const progress = calculateProgress(project.currentStage, project.currentSubStage);
-                          const projectStudents = allStudents.filter(s => s.projectId === project.id);
-                          const status = progress >= 80 ? "優秀" : progress >= 50 ? "良好" : "需關注";
-                          
-                          return (
-                            <div key={index} className="border border-gray-200 rounded-lg p-component-base hover:shadow-md transition-shadow">
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 space-y-stack-xs sm:space-y-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h3 className="font-semibold text-gray-800 text-body sm:text-body-lg">{project.name}</h3>
-                                  {project.semester && (
-                                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-caption font-medium rounded-full border border-indigo-200">
-                                      {project.semester}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center space-x-stack-xs">
-                                  <span className={`px-2 py-1 rounded-full text-caption font-medium ${getProjectStatusColor(status)}`}>
-                                    {status}
-                                  </span>
-                                  <button
-                                    onClick={() => navigate(`/project/${project.id}/kanban`)}
-                                    className="px-3 py-1 bg-teal-600 text-white text-caption rounded-lg hover:bg-teal-700 transition-colors"
-                                  >
-                                    進入專案
-                                  </button>
-                                </div>
-                              </div>
-                              
-                              <p className="text-gray-600 text-body-sm mb-2 truncate">{project.describe}</p>
-                              
-                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-caption text-gray-500 space-y-1 sm:space-y-0">
-                                <span>階段: {project.currentStage}-{project.currentSubStage}</span>
-                                <span>學生數: {projectStudents.length}</span>
-                              </div>
-                              
-                              <div className="mt-3">
-                                <div className="flex justify-between text-caption text-gray-500 mb-1">
-                                  <span>整體進度</span>
-                                  <span>{progress}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div 
-                                    className="bg-teal-600 h-2 rounded-full transition-all duration-slow" 
-                                    style={{ width: `${progress}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                              
-                              {projectStudents.length > 0 && (
-                                <div className="mt-2 flex items-center text-caption text-gray-500">
-                                  <span className="mr-2">學生:</span>
-                                  <div className="flex items-center space-x-1">
-                                    {projectStudents.slice(0, 3).map((student, idx) => (
-                                      <span key={idx} className="bg-gray-100 px-2 py-1 rounded text-caption">
-                                        {student.username}
-                                      </span>
-                                    ))}
-                                    {projectStudents.length > 3 && (
-                                      <span className="text-gray-400">+{projectStudents.length - 3}</span>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="text-center py-8 text-gray-500">
-                          <p>{selectedSemester === 'all' ? '尚未指導任何專案' : `${selectedSemester} 學期無專案`}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* 右側 - 最近活動和統計 */}
-                <div className="space-y-stack-md sm:space-y-stack-md-lg">
-                  {/* 最近教學活動 */}
-                  <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                    <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">最近活動</h2>
-                    <div className="space-y-stack-sm max-h-96 overflow-y-auto">
-                      {recentActivities.length > 0 ? (
-                        recentActivities.map((activity, index) => (
-                          <div key={index} className="border-l-4 border-teal-500 pl-4 py-2">
-                            <h4 className="font-medium text-gray-800 text-body-sm">{activity.title}</h4>
-                            <p className="text-caption text-gray-600 mt-1">{activity.description}</p>
-                            <div className="flex justify-between items-center mt-2">
-                              <span className="text-caption text-teal-600 font-medium">{activity.projectName}</span>
-                              <span className="text-caption text-gray-400">{activity.time}</span>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-gray-500 text-center py-4">暫無最近活動</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* ② 需要關注的學生 - 具名清單 */}
-                  <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-1.5">
-                        <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800">需要關注</h2>
-                        <div className="group relative">
-                          <FiInfo className="text-gray-400 w-4 h-4 cursor-help" />
-                          <div className="absolute left-0 top-5 z-10 hidden group-hover:block w-64 bg-gray-800 text-white text-caption rounded-lg p-2.5 leading-relaxed shadow-lg">
-                            依 AI 多維度分析（進度、活動頻率、反思記錄）自動排序，請結合您的觀察後再採取行動。
-                          </div>
-                        </div>
-                      </div>
-                      {teachingStats.needAttentionStudents > 0 && (
-                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-caption font-medium rounded-full">
-                          {teachingStats.needAttentionStudents} 人
-                        </span>
-                      )}
-                    </div>
-                    <div className="space-y-2 max-h-72 overflow-y-auto">
-                      {teachingStats.needAttentionStudents === 0 ? (
-                        <p className="text-gray-500 text-center py-4 text-body-sm">所有學生表現良好</p>
-                      ) : (
-                        teachingStats.needAttentionList.slice(0, 8).map((student, index) => {
-                          const isLowProgress = student.projectProgress < 30;
-                          const riskReason = isLowProgress
-                            ? (student.projectProgress < 10
-                              ? '幾乎無進度，需立即關注'
-                              : student.projectProgress < 20
-                              ? `進度僅 ${student.projectProgress}%，嚴重落後`
-                              : `進度 ${student.projectProgress}%，低於門檻 30%`)
-                            : (student.daysSinceActivity === null
-                              ? '尚未在此專案撰寫任何反思'
-                              : `已 ${student.daysSinceActivity} 天無學習活動`);
-                          return (
-                            <div key={index} className={`border rounded-lg p-component-sm ${isLowProgress ? 'border-amber-200 bg-amber-50' : 'border-orange-200 bg-orange-50'}`}>
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <div className="min-w-0">
-                                  <span className="text-body-sm font-semibold text-gray-800 block truncate">
-                                    {student.username}
-                                  </span>
-                                  <span className="text-caption text-gray-500 block truncate">{student.projectName}</span>
-                                </div>
-                                {isLowProgress ? (
-                                  <span className="shrink-0 text-caption font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-                                    {student.projectProgress}%
-                                  </span>
-                                ) : (
-                                  <span className="shrink-0 text-caption font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded">
-                                    {student.daysSinceActivity === null ? '從未' : `${student.daysSinceActivity}天`}
-                                  </span>
-                                )}
-                              </div>
-                              <p className={`text-caption mb-2 ${isLowProgress ? 'text-amber-700' : 'text-orange-700'}`}>{riskReason}</p>
-                              <button
-                                onClick={() => navigate(`/project/${student.projectId}/teacherDashboard`)}
-                                className="w-full text-caption bg-teal-600 text-white py-1 rounded hover:bg-teal-700 transition-colors duration-fast"
-                              >
-                                前往查看
-                              </button>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              </div>
-            )}
-
-            {/* 學生管理視圖 */}
-            {viewMode === 'students' && (
-              <div className="bg-white p-component-base sm:p-component-md-lg rounded-xl shadow-sm">
-                <h2 className="text-h3 sm:text-h2 font-semibold text-gray-800 mb-4 sm:mb-6">所有學生管理</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-stack-sm max-h-96 overflow-y-auto">
-                  {allStudents.filter(s => filteredProjects.some(p => p.id === s.projectId)).map((student, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-component-base">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-medium text-gray-800">{student.username}</h3>
-                        <span className={`px-2 py-1 rounded text-caption font-medium ${getStatusColor(student.projectProgress)}`}>
-                          {student.projectProgress}%
-                        </span>
-                      </div>
-                      <p className="text-body-sm text-gray-600 mb-2">{student.projectName}</p>
-                      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                        <div 
-                          className="bg-teal-600 h-2 rounded-full transition-all duration-slow" 
-                          style={{ width: `${student.projectProgress}%` }}
-                        ></div>
-                      </div>
-                      <button
-                        onClick={() => navigate(`/project/${student.projectId}/studentDashboard`)}
-                        className="w-full text-caption bg-teal-600 text-white py-1 rounded hover:bg-teal-700 transition-colors"
-                      >
-                        查看詳情
-                      </button>
-                    </div>
+                  {availableSemesters.map((sem) => (
+                    <button
+                      key={sem}
+                      onClick={() => setSelectedSemester(sem)}
+                      className={`px-3 py-1 rounded-full text-body-sm font-medium transition-colors ${
+                        selectedSemester === sem
+                          ? "bg-teal-600 text-white"
+                          : "bg-white text-gray-600 border border-gray-300 hover:border-teal-500 hover:text-teal-600"
+                      }`}
+                    >
+                      {sem}
+                    </button>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Section 1: SDL 階段總覽 */}
+            <div className="mb-6">
+              <StagePipeline
+                projects={projects}
+                activeStageFilter={activeStageFilter}
+                onStageClick={handleStageClick}
+              />
+            </div>
+
+            {/* Section 2: 小組狀態卡片 */}
+            {sortedProjects.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-stack-sm sm:gap-stack-md">
+                {sortedProjects.map((project) => (
+                  <GroupCard
+                    key={project.id}
+                    project={project}
+                    onPreview={setPreviewProject}
+                    onNavigate={handleNavigate}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm p-component-lg text-center">
+                <p className="text-body text-gray-400">
+                  {activeStageFilter
+                    ? "此階段尚無專案"
+                    : "尚未指導任何專案"}
+                </p>
               </div>
             )}
-
           </div>
         </div>
       </main>
+
+      {/* 歷程預覽抽屜 */}
+      {previewProject && (
+        <PortfolioDrawer
+          project={previewProject}
+          onClose={() => setPreviewProject(null)}
+        />
+      )}
     </div>
   );
 };

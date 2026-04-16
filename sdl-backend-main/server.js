@@ -231,6 +231,7 @@ app.use('/api/kb-coach', require('./routes/kbCoach')); // KB Coach - Phase 1
 app.use('/api/sdl-coach', require('./routes/sdlCoach')); // SDL Coach - 自主學習助手
 app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Task Assistant
 app.use('/api/teacher/help-seeking', require('./routes/teacherHelpSeeking')); // Teacher Help-Seeking Dashboard
+app.use('/api/teacher/overview', require('./routes/teacherOverview')); // Teacher Overview Dashboard
 app.use('/api/teacher-agent', require('./routes/teacherAgent')); // Teacher Analytics Agent
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));

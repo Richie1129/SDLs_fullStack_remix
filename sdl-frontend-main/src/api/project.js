@@ -41,6 +41,17 @@ export const getAvailableSemesters = async (mentorName) => {
     return response.data;
 };
 
+/**
+ * 取得教師所有專案的狀態摘要（總覽用）
+ * @param {string} [semester] - 學期篩選，預設 'all'
+ */
+export const getTeacherProjectsSummary = async (semester) => {
+    const params = {};
+    if (semester) params.semester = semester;
+    const response = await apiClient.get('/teacher/overview/projects-summary', { params });
+    return response.data;
+};
+
 export const createProject = async (data) => {
     const response = await apiClient.post(`/projects`, data)
     return response.data
