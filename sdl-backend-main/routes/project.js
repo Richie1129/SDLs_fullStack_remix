@@ -2,7 +2,9 @@
 const controller = require('../controllers/project');
 const router = require('express').Router();
 const { validateToken } = require('../middlewares/AuthMiddleware');
-const chatTurnController = require('../controllers/chatTurns');
+// chatTurns controller 已 rename 為 sdlCoachMessages（對應新表 sdl_coach_messages）
+// URL `/chat*` 保留不變以維持前端 contract
+const chatTurnController = require('../controllers/sdlCoachMessages');
 const { checkWritePermission } = require('../middlewares/projectViewingMiddleware');
 const { 
     checkProjectViewingPermission, 

@@ -267,9 +267,9 @@ Node.belongsToMany(Node, { as: 'predecessors', through: NodeRelation, ... });
 
 但**本 PR 不做**。原因：scope creep、而且助手知道學生「有求助迴避風險」可能會改變語氣，需要教學設計判斷（屬於 `sdl-coach-teacher-review-form.md` 的範疇）。
 
-### 3.2 回讀 `chat_turn` 的最近一輪自主學習對話
+### 3.2 回讀 `sdl_coach_messages`（原名 `chat_turn`）的最近一輪自主學習對話
 
-`sessionId='sdl-coach-${projectId}'` 的訊息都存在 `chat_turns` 表。snapshot 可以把最近 2–3 輪丟回去讓 LLM 有連貫性。
+`sessionId='sdl-coach-${projectId}'` 的訊息都存在 `sdl_coach_messages` 表（2026-04-17 從 `chat_turns` rename）。snapshot 可以把最近 2–3 輪丟回去讓 LLM 有連貫性。
 
 但**本 PR 不做**。原因：對話連貫性靠 `session_id` 綁定，目前 `askCoach` 是 stateless 呼叫，要加連貫性應該另開一個 feature。
 
