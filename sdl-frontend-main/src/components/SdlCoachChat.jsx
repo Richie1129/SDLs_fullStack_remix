@@ -204,6 +204,24 @@ export default function SdlCoachChat({
   const hasAnyContent = totalCount > 0;
   const showWelcome = !hasAnyContent && !isLoadingHistory;
   const hasHistory = history.length > 0;
+  // 有歷史但本次尚未發問時，分隔線後仍顯示快捷問題，讓學生每次回到對話都能直接起頭
+  const showQuickPromptsAfterDivider = hasHistory && messages.length === 0 && !isSubmitting && !isLoadingHistory;
+
+  const quickPromptsList = (
+    <div className="space-y-1.5">
+      {quickPrompts.map((q, i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => sendQuestion(q)}
+          disabled={isSubmitting}
+          className="block w-full text-left text-caption px-component-sm py-1.5 rounded-md bg-customgreen/10 hover:bg-customgreen/20 text-gray-700 border border-customgreen/20 transition-colors duration-fast disabled:opacity-50"
+        >
+          {q}
+        </button>
+      ))}
+    </div>
+  );
 
   const renderBubble = (m, idx, keyPrefix) => (
     <div key={`${keyPrefix}-${idx}`} className={`flex flex-col ${m.role === 'assistant' ? 'items-start' : 'items-end'}`}>
@@ -277,18 +295,8 @@ export default function SdlCoachChat({
                   我會用「探究與實作」的階段思維陪你想下一步——而不是直接給你答案。
                   {stageHint && <span className="block mt-1 text-customgreen font-medium">{stageHint}</span>}
                 </p>
-                <div className="mt-3 space-y-1.5">
-                  {quickPrompts.map((q, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => sendQuestion(q)}
-                      disabled={isSubmitting}
-                      className="block w-full text-left text-caption px-component-sm py-1.5 rounded-md bg-customgreen/10 hover:bg-customgreen/20 text-gray-700 border border-customgreen/20 transition-colors duration-fast disabled:opacity-50"
-                    >
-                      {q}
-                    </button>
-                  ))}
+                <div className="mt-3">
+                  {quickPromptsList}
                 </div>
               </div>
             </div>
@@ -304,6 +312,22 @@ export default function SdlCoachChat({
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-caption text-gray-400 px-2">本次新對話</span>
             <div className="flex-1 h-px bg-gray-200" />
+          </div>
+        )}
+
+        {/* 分隔線後的快捷問題：有歷史但本次尚未發問時顯示，讓學生每次回來都能直接起頭 */}
+        {showQuickPromptsAfterDivider && (
+          <div className="rounded-xl border border-customgreen/30 bg-white p-component-base">
+            <div className="flex items-start gap-stack-xs">
+              <FiCpu className="w-4 h-4 text-customgreen mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-caption text-gray-600 leading-relaxed mb-stack-xs">
+                  想聊點別的？可以從這裡起頭：
+                  {stageHint && <span className="block mt-1 text-customgreen font-medium">{stageHint}</span>}
+                </p>
+                {quickPromptsList}
+              </div>
+            </div>
           </div>
         )}
 
