@@ -1,18 +1,37 @@
 // SDL Coach Controller — 自主學習助手
 //
-// 用途：以「科學探究五階段 × 課綱」知識小抄為系統提示，提供學生學習方法論建議。
+// 用途：以「科學探究四階段 × 課綱」知識小抄為系統提示，提供學生學習方法論建議。
 // 與既有 rag_message（科展 RAG）互補：
 //   - rag_message → 查前人研究案例、具體實驗設計
-//   - sdlCoach    → 學習方法論、探究鷹架、五階段引導
+//   - sdlCoach    → 學習方法論、探究鷹架、四階段引導
 //
 // 參考文件：docs/sdl-coach-knowledge-base.md
+//         docs/sdl-coach-project-context-plan.md（snapshot 注入設計）
 
 const fs = require('fs');
 const path = require('path');
+const { Op } = require('sequelize');
 const { callWithFallback } = require('../services/llmGateway');
 const { logAudit } = require('../services/auditService');
+const {
+    SUB_STAGE_TITLES,
+    STAGE_TITLES,
+} = require('../services/fourStageFilterService');
 
-// 載入知識小抄（啟動時讀取一次，避免每次請求都讀檔）
+const UserProject = require('../models/user_project');
+const Project = require('../models/project');
+const Submit = require('../models/submit');
+const User = require('../models/user');
+const Kanban = require('../models/kanban');
+const Column = require('../models/column');
+const Task = require('../models/task');
+const Idea_wall = require('../models/idea_wall');
+const Node = require('../models/node');
+
+// ============================================
+// 知識小抄（system prompt 主幹）
+// ============================================
+
 const KNOWLEDGE_BASE_PATH = path.join(__dirname, '..', 'docs', 'sdl-coach-knowledge-base.md');
 let KNOWLEDGE_BASE = '';
 try {
@@ -22,10 +41,20 @@ try {
     console.error('[SDL Coach] 知識小抄載入失敗:', err.message);
 }
 
-const VALID_STAGES = ['定標', '擇策', '監評', '調節', '學習歷程'];
+// Option B：四階段（不含「學習歷程」，該功能改由獨立的匯出歷程檔案模組承擔）
+const VALID_STAGES = ['定標', '擇策', '監評', '調節'];
 
+// 單位：字元（非 token）。Gemma-4-26B-A4B-it 的 context window 是 256K tokens，
+// 3000 字元（約 3-4k tokens）遠低於模型上限；選 3000 是為「signal/noise 合理」「控制成本」
+// 而非 context window 限制。
 const MAX_QUESTION_LEN = 2000;
 const MAX_CONTEXT_LEN = 3000;
+// Promise.race 不會 cancel 背景 query，timeout 不宜過寬；正常 query <100ms
+const SNAPSHOT_TIMEOUT_MS = 2000;
+
+// ============================================
+// Prompt 組裝
+// ============================================
 
 // 清理輸入，移除常見 prompt injection 嘗試
 function sanitize(text) {
@@ -36,7 +65,6 @@ function sanitize(text) {
         .trim();
 }
 
-// 建構系統提示：小抄 + 身分角色設定
 function buildSystemInstruction() {
     if (!KNOWLEDGE_BASE) {
         return '你是自主學習助手，請以繁體中文回答學生的科學探究問題。';
@@ -55,8 +83,13 @@ function buildSystemInstruction() {
 - 禁止直接幫學生想題目 / 寫步驟 / 寫報告段落；用蘇格拉底式提問引導學生自己產出。`;
 }
 
-// 建構使用者提示：問題 + 階段 + 脈絡
-function buildUserPrompt({ question, currentStage, context }) {
+/**
+ * 組 user prompt。`context` 的 sanitize 政策分兩路：
+ * - 後端 snapshot（trusted 結構 + 已在 formatter 過篩學生欄位）→ 直接用，不再 sanitize
+ * - 前端傳入（untrusted）→ 套整包 sanitize
+ * 這樣避免 sanitize 偽陽性砍到系統產的 markdown 標題或學生的合法中文。
+ */
+function buildUserPrompt({ question, currentStage, context, contextTrusted = false }) {
     const parts = [];
 
     if (currentStage && VALID_STAGES.includes(currentStage)) {
@@ -64,14 +97,402 @@ function buildUserPrompt({ question, currentStage, context }) {
     }
 
     if (context) {
-        parts.push(`【當前任務脈絡】\n${sanitize(context).slice(0, MAX_CONTEXT_LEN)}`);
+        const contextBody = contextTrusted ? context : sanitize(context);
+        parts.push(`【當前任務脈絡】\n${contextBody.slice(0, MAX_CONTEXT_LEN)}`);
     }
 
     parts.push(`【學生問題】\n${sanitize(question).slice(0, MAX_QUESTION_LEN)}`);
-    parts.push('\n請依執行守則回答。');
+    // 尾端強制提醒
+    // 錨點策略：LLM 實測會略超錨點（說 250 實際寫 ~300），所以錨點設低於真正想要的上限
+    // 搭配 maxTokens=800 硬封頂，留給 LLM 足夠空間寫完結尾句，不會在列點中途被砍
+    parts.push(
+        '\n請依執行守則回答。**務必遵守**：\n' +
+        '1. 回應總長**嚴格不超過 250 字**（即使切換為英文或其他語言，上限等同 250 個漢字）\n' +
+        '2. 一次只給一個最小下一步鷹架，不要羅列多項建議\n' +
+        '3. 引用學生已提交的內容時，用「你們組」或提交者名字，不要用「你交了」\n' +
+        '4. 結尾務必用完整一句話收尾（回饋問題或邀請），不要在列點或逗號中途結束'
+    );
 
     return parts.join('\n\n');
 }
+
+// ============================================
+// 學生內容過篩（四層架構中的 L2 品質 + L3 隱私）
+// ============================================
+
+// L2：品質過篩 — 判定內容是否為低品質（測試字串、重複字元、純符號）
+// 注意：JavaScript 的 \W 不是 Unicode-aware，會把中日韓字元判為「非 word」，
+// 因此用 \p{L}（Unicode letter 類別）判斷，才能正確對應中文語料。
+function isLowQualityText(text) {
+    if (!text || typeof text !== 'string') return true;
+    const t = text.trim();
+    if (t.length < 3) return true;
+    if (!/\p{L}/u.test(t)) return true;                     // 不含任何字母（中英日韓皆算）→ 純符號/數字
+    if (/^(.)\1{2,}$/u.test(t)) return true;                // 重複字元（「aaaa」「嗯嗯嗯嗯」）
+    if (/^(test|測試|asdf|qwer|123|abc)$/i.test(t)) return true;  // 常見測試詞
+    return false;
+}
+
+// L3：PII redaction — 遮蔽個資格式，避免學生輸入外洩到 LLM provider
+// 涵蓋：身分證、手機（含國際碼 / 空格 / 點號分隔）、email
+// 不涵蓋：中文姓名（缺乏穩定 pattern），交由 system prompt 約束 LLM 不複誦
+function redactPII(text) {
+    if (!text) return text;
+    return text
+        .replace(/[A-Z]\d{9}/g, '[身分證]')
+        .replace(/(?:\+?886-?|0)9\d{2}[-.\s]?\d{3}[-.\s]?\d{3}/g, '[手機]')
+        .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '[email]');
+}
+
+// L4：針對學生輸入欄位的輕量注入過濾（比 sanitize 窄，只針對 role 指令與「忽略上面」類）
+// 僅用在學生可自由輸入的欄位（Submit value、Node title、Task title），不對系統生成的 markdown 結構做
+function stripInjection(text) {
+    if (!text || typeof text !== 'string') return '';
+    return text
+        .replace(/(?:忽略|無視|跳過|覆蓋|override|ignore|disregard|forget).*(?:指令|規則|instructions?|rules?|above|以上|前面)/gi, '[已過濾]')
+        .replace(/(?:system|系統|assistant|助手)\s*[:：]/gi, '[已過濾]');
+}
+
+// ============================================
+// Snapshot 組裝（formatter）
+// ============================================
+
+// 固定用台灣時區顯示；docker 容器 TZ 常是 UTC，不能靠 getHours() 預設
+function formatTime(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    const parts = new Intl.DateTimeFormat('zh-TW', {
+        timeZone: 'Asia/Taipei',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    }).formatToParts(d);
+    const get = (type) => parts.find(p => p.type === type)?.value || '';
+    // zh-TW 在某些環境回「2月」「5日」帶單位，統一用 pick 後 pad
+    const clean = (s) => s.replace(/\D/g, '').padStart(2, '0');
+    return `${clean(get('month'))}-${clean(get('day'))} ${clean(get('hour'))}:${clean(get('minute'))}`;
+}
+
+function formatSubmitContent(submit) {
+    // 檔案上傳類：content 常只是 label 或空物件，改顯示檔名
+    if (submit.originalName) {
+        return `[檔案] ${submit.originalName}`;
+    }
+    if (submit.content == null) return null;
+
+    // Sequelize 對 DataTypes.JSON（非 JSONB）在本專案回字串，需自行 parse
+    let value = submit.content;
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+            try { value = JSON.parse(trimmed); } catch { /* 當純文字處理 */ }
+        }
+    }
+
+    let raw;
+    if (value && typeof value === 'object') {
+        const parts = Object.entries(value)
+            .filter(([, v]) => v != null && v !== '' && !isLowQualityText(String(v)))
+            .map(([k, v]) => {
+                const val = typeof v === 'object' ? JSON.stringify(v) : String(v);
+                return `${k}：${val}`;
+            });
+        raw = parts.join(' / ');
+    } else {
+        raw = String(value);
+    }
+
+    if (isLowQualityText(raw)) return null;
+    // L3 PII redaction + L4 injection strip（僅對學生輸入欄位）
+    return stripInjection(redactPII(raw)).slice(0, 120);
+}
+
+function formatSubmitLine(submit, userNameMap) {
+    const body = formatSubmitContent(submit);
+    if (body == null) return null;
+    const time = formatTime(submit.createdAt);
+    const by = (submit.userId && userNameMap[submit.userId]) || '匿名';
+    return `- [${time} 由 ${by}] ${body}`;
+}
+
+function formatSnapshotNoStage({ project }) {
+    const lines = [
+        '## 專案',
+        `名稱：${project.name}`,
+        project.describe ? `描述：${project.describe}` : null,
+        '階段：尚未啟動任何階段',
+        '',
+        '> 註：此專案還沒進入定標階段。引導學生先從「我對什麼主題好奇」開始。',
+    ].filter(Boolean);
+    return lines.join('\n');
+}
+
+function formatSnapshot({ project, submits, userNameMap, kanban, ideaWall }) {
+    const sections = [];
+
+    // ① 專案
+    const subStageKey = `${project.currentStage}-${project.currentSubStage}`;
+    const stageTitle = STAGE_TITLES[project.currentStage] || '';
+    const subStageTitle = SUB_STAGE_TITLES[subStageKey] || '';
+    const stageLine = subStageTitle
+        ? `${subStageKey}（${stageTitle} / ${subStageTitle}）`
+        : `${subStageKey}（${stageTitle}）`;
+
+    const projectLines = [
+        '## 專案',
+        `名稱：${project.name}`,
+        project.describe ? `描述：${project.describe}` : null,
+        `階段：${stageLine}`,
+    ].filter(Boolean);
+    sections.push(projectLines.join('\n'));
+
+    // ② 專案提交進度（跨階段分組）
+    // 每個子階段取最新 1 筆 + 當前階段取最新 2 筆
+    const currentStageKey = subStageKey;
+    const byStage = new Map();
+    let filteredCount = 0;
+    for (const s of submits || []) {
+        if (!s.stage) continue;
+        const line = formatSubmitLine(s, userNameMap);
+        if (!line) { filteredCount++; continue; }
+        if (!byStage.has(s.stage)) byStage.set(s.stage, []);
+        const list = byStage.get(s.stage);
+        const limit = s.stage === currentStageKey ? 2 : 1;
+        if (list.length < limit) list.push(line);
+    }
+
+    if (byStage.size > 0) {
+        const submitSection = ['## 專案提交進度（跨階段，每子階段最新一筆，當前階段取 2 筆）'];
+        // 依 stage key 排序（"1-1" < "1-2" < ... < "3-2"）
+        const sortedKeys = [...byStage.keys()].sort((a, b) => {
+            const [aS, aSub] = a.split('-').map(Number);
+            const [bS, bSub] = b.split('-').map(Number);
+            return aS - bS || aSub - bSub;
+        });
+        for (const key of sortedKeys) {
+            const title = SUB_STAGE_TITLES[key] || '';
+            const marker = key === currentStageKey ? '（← 當前階段）' : '';
+            submitSection.push(`### ${key} ${title} ${marker}`.trim());
+            byStage.get(key).forEach(l => submitSection.push(l));
+        }
+        // 當前階段若沒提交，明確標示
+        if (!byStage.has(currentStageKey)) {
+            const title = SUB_STAGE_TITLES[currentStageKey] || '';
+            submitSection.push(`### ${currentStageKey} ${title}（← 當前階段）`.trim());
+            submitSection.push('- （本階段尚未提交）');
+        }
+        if (filteredCount > 0) {
+            submitSection.push(`> 另有 ${filteredCount} 筆因內容過短或低品質被省略`);
+        }
+        sections.push(submitSection.join('\n'));
+    } else {
+        const title = SUB_STAGE_TITLES[currentStageKey] || '';
+        sections.push(
+            `## 專案提交進度\n### ${currentStageKey} ${title}（← 當前階段）\n- （尚未提交任何內容，或全數因過短被省略）`
+        );
+    }
+
+    // ③ 看板任務（依 Kanban.column 陣列排序）
+    if (kanban && Array.isArray(kanban.columns) && kanban.columns.length > 0) {
+        const columnOrder = Array.isArray(kanban.column) ? kanban.column : [];
+        const byId = new Map(kanban.columns.map(c => [c.id, c]));
+        const orderedColumns = columnOrder.length > 0
+            ? columnOrder.map(id => byId.get(id)).filter(Boolean)
+            : kanban.columns;
+
+        const kanbanLines = ['## 看板任務（依學生自訂列表分組）'];
+        orderedColumns.forEach(col => {
+            const tasks = Array.isArray(col.tasks) ? col.tasks : [];
+            // Task 依 Column.task 陣列排序，再截前 3
+            const taskOrder = Array.isArray(col.task) ? col.task : [];
+            const taskById = new Map(tasks.map(t => [t.id, t]));
+            const orderedTasks = taskOrder.length > 0
+                ? taskOrder.map(id => taskById.get(id)).filter(Boolean)
+                : tasks;
+            const shown = orderedTasks.slice(0, 3);
+            // Column.name 是學生自訂欄位名（如「想法發散」「卡住的」），也經過學生輸入
+            const colName = stripInjection(redactPII(String(col.name || '').trim())).slice(0, 40) || '(未命名欄位)';
+            kanbanLines.push(`### ${colName}（${orderedTasks.length} 張）`);
+            // Task title 過濾：允許「1」「A」等簡記（length 1-2）
+            // 但長度 >=3 的純數字/符號（如「1324」「567」測試資料）過濾，避免 LLM 誤當進度引用
+            shown.forEach(t => {
+                const raw = String(t.title || '').trim();
+                if (!raw) return;
+                if (raw.length >= 3 && !/\p{L}/u.test(raw)) return; // 純符號/數字且 ≥3 位
+                const title = stripInjection(redactPII(raw)).slice(0, 60);
+                if (title) kanbanLines.push(`- ${title}`);
+            });
+        });
+        if (kanbanLines.length > 1) sections.push(kanbanLines.join('\n'));
+    }
+
+    // ④ 想法牆節點
+    if (ideaWall && Array.isArray(ideaWall.nodes) && ideaWall.nodes.length > 0) {
+        const total = ideaWall.nodes.length;
+        const titles = ideaWall.nodes
+            .map(n => stripInjection(redactPII(String(n.title || '').trim())))
+            .filter(t => t && !isLowQualityText(t));
+        const filtered = total - titles.length;
+        if (titles.length > 0) {
+            const tail = filtered > 0 ? `\n> 共 ${total} 個節點，其中 ${filtered} 個因內容過短被省略` : '';
+            sections.push(`## 想法牆節點\n${titles.join('、')}${tail}`);
+        }
+    }
+
+    return sections.join('\n\n');
+}
+
+// ============================================
+// 並行查詢與 timeout
+// ============================================
+
+function withTimeout(promise, ms, label) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms)
+        ),
+    ]);
+}
+
+/**
+ * 為當前專案組裝 LLM 可讀的脈絡 snapshot。
+ * 任一步驟失敗都吞掉、回空字串，不影響主流程。
+ *
+ * @param {number} projectId
+ * @param {number} userId    發問者
+ * @returns {Promise<string>}
+ */
+async function buildProjectSnapshot(projectId, userId) {
+    try {
+        // 1. 權限 + Project 並行（兩者互不依賴）
+        const [hasAccess, project] = await Promise.all([
+            UserProject.findOne({ where: { userId, projectId } }),
+            Project.findByPk(projectId, {
+                attributes: ['id', 'name', 'describe', 'currentStage', 'currentSubStage', 'ProjectEnd'],
+            }),
+        ]);
+        if (!hasAccess) return '';
+        if (!project) return '';
+
+        // 1.1 學生尚未啟動任何階段 → 僅回傳專案基本資訊
+        if (project.currentStage == null) {
+            return formatSnapshotNoStage({ project });
+        }
+        // 1.2 型別守衛：確保 currentStage 是整數，避免 LIKE 字元注入（未來型別漂移防線）
+        if (!Number.isInteger(project.currentStage)) {
+            console.warn(`[SDL Coach] currentStage 非整數 projectId=${projectId}`);
+            return formatSnapshotNoStage({ project });
+        }
+
+        // 2. 三路並行：Submit、Kanban、Idea_wall+Node（各自局部 try/catch，局部降級而非整包降級）
+        const stageInt = project.currentStage;
+        const safe = (promise, label) => promise.catch(err => {
+            console.warn(`[SDL Coach] ${label} 失敗 projectId=${projectId}:`, err.message);
+            return null;
+        });
+
+        const [submits, kanban, ideaWall] = await withTimeout(
+            Promise.all([
+                safe(Submit.findAll({
+                    where: {
+                        projectId,
+                        // Submit.stage 格式 "${stageInt}-${subStageInt}"
+                        // 不限定 stage — 取跨階段全部，formatter 內再分組精簡（見 plan 第 4.2 節）
+                        // 不限定 userId — 小組共用
+                    },
+                    attributes: ['stage', 'content', 'originalName', 'userId', 'createdAt'],
+                    order: [['stage', 'ASC'], ['createdAt', 'DESC']],
+                    // 每個子階段最多 3 筆已是上限（12 個子階段 × 3 = 36 筆），limit 不設硬上限
+                    // 但用 40 做防線避免異常專案爆量
+                    limit: 40,
+                }), 'Submit.findAll'),
+                safe(Kanban.findOne({
+                    where: { projectId },
+                    include: [{
+                        model: Column,
+                        attributes: ['id', 'name', 'task'],
+                        include: [{
+                            model: Task,
+                            attributes: ['id', 'title', 'updatedAt'],
+                        }],
+                    }],
+                }), 'Kanban.findOne'),
+                safe((async () => {
+                    const wall = await Idea_wall.findOne({
+                        where: { projectId },
+                        order: [['id', 'ASC']],
+                        attributes: ['id'],
+                    });
+                    if (!wall) return null;
+                    const nodes = await Node.findAll({
+                        where: { ideaWallId: wall.id },
+                        attributes: ['title'],
+                        limit: 20,
+                    });
+                    return { wall, nodes };
+                })(), 'Idea_wall+Node'),
+            ]),
+            SNAPSHOT_TIMEOUT_MS,
+            'buildProjectSnapshot.queries'
+        );
+
+        // 3. 補查 Submit 提交者的 username（userId → name map）
+        const submitterIds = [...new Set((submits || []).map(s => s.userId).filter(Boolean))];
+        const userNameMap = {};
+        if (submitterIds.length > 0) {
+            const users = await User.findAll({
+                where: { id: { [Op.in]: submitterIds } },
+                attributes: ['id', 'username'],
+            }).catch(err => {
+                console.warn(`[SDL Coach] User.findAll 失敗 projectId=${projectId}:`, err.message);
+                return [];
+            });
+            users.forEach(u => { userNameMap[u.id] = u.username; });
+        }
+
+        // 4. 組裝 markdown
+        const snapshot = formatSnapshot({
+            project,
+            submits,
+            userNameMap,
+            kanban,
+            ideaWall,
+        });
+
+        console.log(
+            `[SDL Coach] snapshot built projectId=${projectId} ` +
+            `submits=${(submits || []).length} nodes=${ideaWall?.nodes?.length ?? 0} chars=${snapshot.length}`
+        );
+
+        return snapshot.slice(0, MAX_CONTEXT_LEN);
+    } catch (err) {
+        console.warn(
+            `[SDL Coach] buildProjectSnapshot 失敗 projectId=${projectId} userId=${userId}:`,
+            err.message
+        );
+        return '';
+    }
+}
+
+// 給單元測試與煙霧測試腳本用
+exports._internals = {
+    isLowQualityText,
+    redactPII,
+    stripInjection,
+    formatSubmitContent,
+    formatSnapshot,
+    formatSnapshotNoStage,
+    buildProjectSnapshot,
+    buildSystemInstruction,
+    buildUserPrompt,
+};
+
+// ============================================
+// Handlers
+// ============================================
 
 /**
  * POST /api/sdl-coach/ask
@@ -83,42 +504,68 @@ exports.askCoach = async (req, res) => {
     if (!question || typeof question !== 'string' || !question.trim()) {
         return res.status(400).json({
             success: false,
-            message: '請提供學生問題 (question)'
+            message: '請提供學生問題 (question)',
         });
     }
 
     if (question.length > MAX_QUESTION_LEN) {
         return res.status(400).json({
             success: false,
-            message: `問題長度不得超過 ${MAX_QUESTION_LEN} 字`
+            message: `問題長度不得超過 ${MAX_QUESTION_LEN} 字`,
         });
     }
 
     if (currentStage && !VALID_STAGES.includes(currentStage)) {
         return res.status(400).json({
             success: false,
-            message: `currentStage 必須為: ${VALID_STAGES.join('、')}`
+            message: `currentStage 必須為: ${VALID_STAGES.join('、')}`,
         });
     }
 
+    // 後端主動組 snapshot；fallback 到前端傳的 context；最後才空字串
+    let projectContext = '';
+    if (projectId && req.userId) {
+        projectContext = await buildProjectSnapshot(projectId, req.userId);
+    }
+    const finalContext = projectContext || context || '';
+    // snapshot 是後端組的 + formatter 已對學生輸入欄位做過 L3/L4 過篩，視為 trusted
+    const contextTrusted = !!projectContext;
+
     const systemPrompt = buildSystemInstruction();
-    const userPrompt = buildUserPrompt({ question, currentStage, context });
+    const userPrompt = buildUserPrompt({
+        question,
+        currentStage,
+        context: finalContext,
+        contextTrusted,
+    });
 
     try {
-        // Fallback 鏈: Gemma-4 → GPT-OSS-20B → Gemini-3.1 (DEFAULT_FALLBACK_CHAIN)
-        const result = await callWithFallback({
-            systemPrompt,
-            userPrompt
-        });
+        // maxTokens=800 對應 400-500 中文字（中文 1 字≈1.5-2 token），為目標「250 字上限」留 1.5x 餘裕
+        // 搭配 buildUserPrompt 尾端「嚴格 250 字」錨點，雙保險：
+        //   - LLM 自律（錨點 250 → 實際 ~280-320）
+        //   - maxTokens 硬封頂（800 tokens ≈ 450 中文字，足以容納完整收尾句）
+        const result = await callWithFallback({ systemPrompt, userPrompt, maxTokens: 800 });
+
+        // 若被 maxTokens 硬砍（finish_reason=length），記 warning 並在回答尾端標註
+        // 讓學生知道，也讓運維看得到截斷比例
+        let answer = result.content;
+        const truncated = result.finishReason === 'length';
+        if (truncated) {
+            console.warn(
+                `[SDL Coach] 回應被 maxTokens 截斷 provider=${result.model} ` +
+                `questionLen=${question.length} answerLen=${answer.length}`
+            );
+            answer += '\n\n（上面回應超過長度上限被截斷，你可以再問我繼續哪個部分。）';
+        }
 
         res.json({
             success: true,
-            answer: result.content,
+            answer,
             provider: result.model,
-            stage: currentStage || null
+            stage: currentStage || null,
+            truncated,
         });
 
-        // 審計追蹤：SDL Coach 提問
         logAudit(req, {
             action: 'SDL_COACH_ASK',
             targetType: 'SdlCoach',
@@ -126,19 +573,24 @@ exports.askCoach = async (req, res) => {
             metadata: {
                 questionLength: question.length,
                 stage: currentStage || null,
-                hasContext: !!context,
-                provider: result.model
-            }
+                hasContext: !!finalContext,
+                contextSource: projectContext
+                    ? 'snapshot'
+                    : (context ? 'frontend' : 'none'),
+                snapshotChars: projectContext ? projectContext.length : 0,
+                provider: result.model,
+                answerChars: answer.length,
+                truncated,
+            },
         }).catch(err => {
             console.error('[Audit] 記錄 SDL_COACH_ASK 失敗:', err.message);
         });
-
     } catch (err) {
         console.error('[SDL Coach] 呼叫 LLM 失敗:', err.message);
         res.status(500).json({
             success: false,
             message: '自主學習助手暫時無法回應，請稍後再試',
-            error: err.message
+            error: err.message,
         });
     }
 };
@@ -152,6 +604,6 @@ exports.health = (req, res) => {
         success: true,
         knowledgeBaseLoaded: KNOWLEDGE_BASE.length > 0,
         knowledgeBaseSize: KNOWLEDGE_BASE.length,
-        validStages: VALID_STAGES
+        validStages: VALID_STAGES,
     });
 };

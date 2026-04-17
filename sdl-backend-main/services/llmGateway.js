@@ -189,11 +189,12 @@ async function callVLLM(modelKey, options = {}) {
         );
 
         const content = response.data?.choices?.[0]?.message?.content;
+        const finishReason = response.data?.choices?.[0]?.finish_reason;
         if (!content) {
             throw new Error(`${config.displayName} 返回空內容`);
         }
 
-        const result = { content, model: config.displayName };
+        const result = { content, model: config.displayName, finishReason };
 
         // 如果請求 JSON 模式，嘗試解析
         if (jsonMode) {
@@ -346,6 +347,7 @@ async function callWithFallback(options = {}) {
         responseSchema,
         fallbackChain = DEFAULT_FALLBACK_CHAIN,
         timeout = 30000,
+        maxTokens,        // 可選：傳入則覆寫 vLLM 預設 2000 / Gemini 預設 2048
     } = options;
 
     const errors = [];
@@ -360,6 +362,7 @@ async function callWithFallback(options = {}) {
                     userPrompt,
                     timeout,
                     jsonMode,
+                    ...(maxTokens ? { maxTokens } : {}),
                 });
                 // 統一回傳格式
                 return {
@@ -367,6 +370,7 @@ async function callWithFallback(options = {}) {
                     model: result.model,
                     parsed: result.parsed || undefined,
                     data: result.parsed || undefined, // 向後相容 kbCoach 的 { data, model } 格式
+                    finishReason: result.finishReason,
                 };
             }
 
@@ -375,6 +379,7 @@ async function callWithFallback(options = {}) {
                     prompt: [{ role: 'user', parts: [{ text: userPrompt }] }],
                     systemInstruction: systemPrompt,
                     temperature: 0.7,
+                    ...(maxTokens ? { maxOutputTokens: maxTokens } : {}),
                 };
 
                 if (responseSchema) {
