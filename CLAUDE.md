@@ -73,6 +73,8 @@ npm run migrate:undo # 回滾遷移
 
 ### 專案特有規則
 
+- **禁止使用「§」符號**（包含文件、commit 訊息、程式註解）— 章節引用改寫「第 N 節」「第 N.M 節」；遇到既有文件含 §，一併改掉
+- **未來工作寫 `future-list.md`**（專案根目錄）— 「目前不做、未來可能做」的項目統一進此檔，不要再另外在 plan 文件開 backlog 章節；plan 文件最多寫「詳見 `future-list.md` F00X」引用
 - **禁止在 UI 使用 emoji** — 圖示一律用 `react-icons`
 - **Auth 頁面一致性** — 修改 `Login.jsx`/`Register.jsx`/`ForgotPassword.jsx`/`ResetPassword.jsx` 任一頁時，主動同步其他頁面（共用 `customgreen` + `duration-normal` + `h-screen overflow-hidden`）
 - **多步驟 UX** — 實作前先確認：預填選取 vs 自動執行？按鈕文字？
