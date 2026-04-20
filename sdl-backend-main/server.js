@@ -241,6 +241,7 @@ app.use('/api', require('./routes/comments'));
 app.use('/api/auth', require('./routes/auth'));  // Refresh Token 路由
 app.use('/api/auth', require('./routes/passwordReset'));
 app.use('/api/schools', require('./routes/school')); // 學校清單（供下拉選單使用）
+app.use('/api/admin', require('./routes/admin')); // Admin Dashboard（最高權限管理）
 
 // 監控儀表板 API - 查看系統效能和記憶體數據
 // Development: 直接訪問 http://localhost:3000/api/metrics
