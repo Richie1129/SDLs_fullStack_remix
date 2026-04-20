@@ -57,6 +57,9 @@ services:
       - VLLM_BASE_URL=${VLLM_BASE_URL}
       - VLLM_MODEL_NAME=${VLLM_MODEL_NAME}
       - VLLM_API_KEY=${VLLM_API_KEY}
+    # Admin 通關密碼 hash 透過 env_file 載入，避免 compose 對 bcrypt 的 $ 做變數替換
+    env_file:
+      - ./.env
     volumes:
       - "./sdl-backend-main:/sdl-backend-main"
       - "/sdl-backend-main/node_modules"
