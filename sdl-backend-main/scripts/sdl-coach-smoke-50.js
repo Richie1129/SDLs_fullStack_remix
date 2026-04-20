@@ -184,6 +184,89 @@ async function run() {
         lines.push('');
     }
 
+    // ============================================
+    // 多輪對話驗證（確認 history 有被回灌到 LLM）
+    // ============================================
+    lines.push('');
+    lines.push('## 多輪對話驗證');
+    lines.push('');
+    lines.push('驗證方式：直接帶 history 呼叫 callWithFallback，觀察第 2 輪回應是否引用第 1 輪主題。');
+    lines.push('');
+
+    const multiTurnScript = [
+        { role: 'user', content: '我想研究學校附近的水質' },
+        { role: 'assistant', content: '很好的方向！在定標階段，可以先想想：你最好奇「水質」的哪個面向？是跟健康相關、跟生態相關、還是跟工廠排放相關？先收斂一個角度，後面選方法才不會發散。你目前最想切入哪一個？' },
+    ];
+    const followUpQuestion = '那要怎麼開始？';
+
+    const mtSystemPrompt = _internals.buildSystemInstruction();
+    const mtUserPrompt = _internals.buildUserPrompt({
+        question: followUpQuestion,
+        currentStage: '定標',
+        context: projectContext,
+        contextTrusted: true,
+    });
+
+    // 控制組：不給 history
+    const noHistStart = Date.now();
+    let noHistAnswer = '';
+    let noHistProvider = '';
+    try {
+        const res = await callWithFallback({
+            systemPrompt: mtSystemPrompt,
+            userPrompt: mtUserPrompt,
+            timeout: 60000,
+        });
+        noHistAnswer = res.content;
+        noHistProvider = res.model;
+    } catch (err) {
+        noHistAnswer = `ERROR: ${err.message}`;
+    }
+    const noHistMs = Date.now() - noHistStart;
+
+    // 實驗組：給 history
+    const withHistStart = Date.now();
+    let withHistAnswer = '';
+    let withHistProvider = '';
+    try {
+        const res = await callWithFallback({
+            systemPrompt: mtSystemPrompt,
+            userPrompt: mtUserPrompt,
+            history: multiTurnScript,
+            timeout: 60000,
+        });
+        withHistAnswer = res.content;
+        withHistProvider = res.model;
+    } catch (err) {
+        withHistAnswer = `ERROR: ${err.message}`;
+    }
+    const withHistMs = Date.now() - withHistStart;
+
+    // 粗略檢查：有 history 的回答應包含「水質」或「水」關鍵詞
+    const hitKeyword = /水質|水/.test(withHistAnswer);
+
+    lines.push(`### 情境`);
+    lines.push('');
+    lines.push('- 第 1 輪（user）：我想研究學校附近的水質');
+    lines.push('- 第 1 輪（assistant，pre-seeded）：縮小水質面向的引導');
+    lines.push(`- 第 2 輪追問：\`${followUpQuestion}\``);
+    lines.push('');
+    lines.push('### 控制組（無 history）');
+    lines.push('');
+    lines.push(`- provider: \`${noHistProvider || 'ERROR'}\` / ${noHistMs}ms / ${noHistAnswer.length} chars`);
+    lines.push('');
+    noHistAnswer.split('\n').forEach(l => lines.push('> ' + l));
+    lines.push('');
+    lines.push('### 實驗組（有 history）');
+    lines.push('');
+    lines.push(`- provider: \`${withHistProvider || 'ERROR'}\` / ${withHistMs}ms / ${withHistAnswer.length} chars`);
+    lines.push(`- 是否提及「水質/水」關鍵詞：${hitKeyword ? '✅ 是' : '❌ 否'}`);
+    lines.push('');
+    withHistAnswer.split('\n').forEach(l => lines.push('> ' + l));
+    lines.push('');
+
+    console.log(`[smoke-50] 多輪：控制組 ${noHistMs}ms / 實驗組 ${withHistMs}ms / 關鍵詞命中=${hitKeyword}`);
+
     fs.writeFileSync(OUTPUT_PATH, lines.join('\n'), 'utf8');
     console.log(`[smoke-50] 報告已寫入：${OUTPUT_PATH}`);
     console.log(`[smoke-50] 總結：成功 ${successCount}/${QUESTIONS.length}、平均 ${avgMs}ms`);

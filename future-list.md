@@ -404,7 +404,47 @@
 
 ---
 
+### F015: SDL Coach 科學術語 Tooltip / Glossary
+
+- **類別**：Frontend / Education
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-04-20
+- **提案來源**：多輪對話 + 認知師徒制 prompt 調整後的對話，使用者觀察 LLM 回應會出現「自變項 / 應變項 / 控制變因」等術語，高中生未必懂
+- **為什麼現在不做**：
+  - 已在 `controllers/sdlCoach.js` 的 system prompt 加了「使用術語首次在括號附口語注解」的規則，涵蓋主要 pain point
+  - Tooltip 要做 glossary 維護 + 前端渲染掃描 + 詞義歧義處理（「假設」當名詞 vs 動詞），非小工程
+  - 應先觀察 prompt 方案是否足以讓學生理解，再決定要不要追加 tooltip
+- **觸發條件**（任一成立）：
+  - 教師或學生反饋「看不懂某術語」超過 3 次
+  - prompt 注解方案失效（LLM 忽略規則或注解太繁重）
+  - 進入監評階段後出現較多統計詞彙（p 值、顯著差異、標準差）且學生明顯卡住
+- **怎麼做**：
+  1. 後端維護 glossary（`sdl-backend-main/docs/sdl-coach-glossary.json` 或 `glossary` DB table），每條含：`term`, `short_explanation`, `full_explanation`
+  2. 提供 `GET /api/sdl-coach/glossary` 端點（cache-friendly，語料不常變）
+  3. 前端 `MessageContent` 元件渲染 markdown 時 post-process，把命中詞彙替換成 `<span class="term" data-tooltip="...">詞</span>`
+  4. 用 `@radix-ui/react-tooltip` 或 headlessui popover；mobile 要改 tap-to-show
+  5. 限定白名單詞彙（不要所有專業詞彙都標注），避免對話滿是藍線字
+- **估計工作量**：`M`（glossary + API ~2 小時，前端渲染與 tooltip UI ~4 小時）
+- **依賴 / 前置條件**：
+  - glossary 內容需科學教育專業審定
+  - 前端 markdown 渲染管線（`MessageContent.jsx`）要能擴充 post-process hook
+- **風險 / 副作用**：
+  - 詞義歧義（「假設」當名詞還是動詞）誤標
+  - 過多 tooltip 反而讓學生分心 / 閱讀負擔增加
+  - 術語定義過時或不精確會誤導學生
+- **替代方案**：
+  - 繼續依賴 prompt 注解規則（目前方案），只在觸發條件達成後啟動本項
+  - 退而求其次：在 SDL Coach 頁面側邊加一個「名詞小字典」按鈕，手動查詢
+- **相關檔案**：
+  - `sdl-backend-main/controllers/sdlCoach.js`（執行守則「科學方法論術語注解」那條）
+  - `sdl-frontend-main/src/components/MessageContent.jsx`
+  - `sdl-frontend-main/src/components/SdlCoachChat.jsx`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
 - **2026-04-17**：完成 F014（`chat_turns` → `sdl_coach_messages`），作為首個完成案例；舊 migrations 的 `chat-turns` 命名保留為歷史紀錄不改
+- **2026-04-20**：新增 F015（科學術語 Tooltip / Glossary）；伴隨 SDL Coach 多輪對話上線與認知師徒制 prompt 調整提出，prompt 注解為主、tooltip 為補充方案

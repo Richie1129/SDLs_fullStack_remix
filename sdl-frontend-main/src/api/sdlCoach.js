@@ -9,13 +9,14 @@ const STAGE_LABELS = {
 
 export const stageNumberToLabel = (stage) => STAGE_LABELS[stage] || null;
 
-export const askSdlCoach = async ({ question, currentStage, context, projectId }) => {
+export const askSdlCoach = async ({ question, currentStage, context, projectId, sessionId }) => {
   const stageLabel = typeof currentStage === 'number' ? stageNumberToLabel(currentStage) : currentStage;
   const res = await apiClient.post('/sdl-coach/ask', {
     question,
     currentStage: stageLabel || undefined,
     context: context || undefined,
     projectId: projectId || undefined,
+    sessionId: sessionId || undefined,
   }, {
     timeout: 60000,
   });

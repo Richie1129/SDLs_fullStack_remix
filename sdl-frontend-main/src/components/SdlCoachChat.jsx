@@ -156,7 +156,7 @@ export default function SdlCoachChat({
         turnId = created?.id || null;
       } catch (_) { /* 寫歷史失敗不阻斷對話 */ }
 
-      const data = await askSdlCoach({ question: text, currentStage, projectId });
+      const data = await askSdlCoach({ question: text, currentStage, projectId, sessionId });
 
       let answer;
       if (data?.success) {

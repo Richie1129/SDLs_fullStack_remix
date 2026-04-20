@@ -27,6 +27,7 @@ const Column = require('../models/column');
 const Task = require('../models/task');
 const Idea_wall = require('../models/idea_wall');
 const Node = require('../models/node');
+const SdlCoachMessage = require('../models/sdl_coach_message');
 
 // ============================================
 // 知識小抄（system prompt 主幹）
@@ -51,6 +52,16 @@ const MAX_QUESTION_LEN = 2000;
 const MAX_CONTEXT_LEN = 3000;
 // Promise.race 不會 cancel 背景 query，timeout 不宜過寬；正常 query <100ms
 const SNAPSHOT_TIMEOUT_MS = 2000;
+
+// 多輪對話：最近 N 對（user+assistant pair）回灌給 LLM
+// 3 對的理由：
+// - 學生單次對話深度通常 2-4 輪，3 對足以涵蓋指涉場景
+// - 再遠的脈絡由 snapshot 的 Submit/Kanban 補齊，不需歷史補
+// - Token 保守原則（詳見 docs/sdl-coach-multi-turn-plan.md）
+const MAX_HISTORY_TURNS = 3;
+// 單則訊息字元上限（最終防線）：assistant 本來就有 250 字錨點 + 800 maxTokens 硬頂；
+// user 有 MAX_QUESTION_LEN=2000 限制。1000 字 cap 只防極端舊資料。
+const HISTORY_MESSAGE_CHAR_CAP = 1000;
 
 // ============================================
 // Prompt 組裝
@@ -78,9 +89,12 @@ function buildSystemInstruction() {
 - 全程繁體中文。
 - 語氣溫暖但務實，像一位經驗豐富的高中自然科老師。
 - 單次回覆不超過 300 字（除非學生明確要求更詳細）。
-- 回答格式建議：1) 幫學生定位階段 2) 1-3 個具體鷹架提問或行動 3) 結尾一句回饋問題。
+- 回答格式建議：1) 幫學生定位階段 2) 1-3 個**抽象樣板、對照提問或下一步引導** 3) 結尾一句回饋問題。
 - 禁止捏造文獻或研究結論。
-- 禁止直接幫學生想題目 / 寫步驟 / 寫報告段落；用蘇格拉底式提問引導學生自己產出。`;
+- 禁止直接幫學生想題目 / 寫步驟 / 寫報告段落。
+- 採認知師徒制：示範句型用**抽象樣板**（如「在 A 條件下，B 會不會 C」）、引用學生提交讓他對照（reflection）、要求學生用自己的話把思考講出來（articulation）、隨學生掌握度逐步撤除鷹架（fading）。禁止把學生專案的主題、變因、生物或化學現象填進示範句（即使加「例如」前綴）——那會取代學生應該做的 exploration。**即使是「把學生描述套進樣板」的示範也禁止**，套用本身就是學生該做的 articulation。
+- 引用學生專案資訊（描述、提交、看板、想法牆）僅用於**定位與確認脈絡**，不要順勢延伸成具體實驗計畫或研究問題。
+- 使用科學方法論術語（自變項、應變項、控制變因、假設、對照組、顯著差異、p 值、標準差等）時，**首次出現**在括號內附一句口語解釋（例：「自變項（你主動要改變的那個條件）」、「控制變因（實驗中保持不變的因素）」）；同一則回覆內再次出現則不必重複。若學生明顯不懂某個詞，優先用生活譬喻說明，再扣回正式定義。`;
 }
 
 /**
@@ -477,6 +491,60 @@ async function buildProjectSnapshot(projectId, userId) {
     }
 }
 
+// ============================================
+// 對話歷史載入（多輪對話）
+// ============================================
+
+/**
+ * 撈指定 session 的最近 N 對完整對話，組成 LLM 可讀的 history array。
+ * 只取「user+assistant 都完成」的 turn（assistantContent 非 null），避免把半截 streaming 送給 LLM。
+ *
+ * 任何失敗都吞掉回空陣列，退化為 stateless，不阻斷主流程。
+ *
+ * @param {number|string} projectId
+ * @param {string} sessionId
+ * @returns {Promise<Array<{role: 'user'|'assistant', content: string}>>}
+ */
+async function loadRecentHistory(projectId, sessionId) {
+    if (!projectId || !sessionId) return [];
+    try {
+        const rows = await SdlCoachMessage.findAll({
+            where: {
+                projectId: parseInt(projectId, 10),
+                sessionId,
+                assistantContent: { [Op.ne]: null },
+            },
+            order: [['createdAt', 'DESC']],
+            limit: MAX_HISTORY_TURNS,
+            attributes: ['userContent', 'assistantContent'],
+        });
+
+        const history = [];
+        // DESC 取最近 N → reverse 回 ASC 讓時間順序正確
+        for (const r of rows.reverse()) {
+            if (r.userContent) {
+                history.push({
+                    role: 'user',
+                    content: String(r.userContent).slice(0, HISTORY_MESSAGE_CHAR_CAP),
+                });
+            }
+            if (r.assistantContent) {
+                history.push({
+                    role: 'assistant',
+                    content: String(r.assistantContent).slice(0, HISTORY_MESSAGE_CHAR_CAP),
+                });
+            }
+        }
+        return history;
+    } catch (err) {
+        console.warn(
+            `[SDL Coach] loadRecentHistory 失敗 projectId=${projectId} sessionId=${sessionId}:`,
+            err.message
+        );
+        return [];
+    }
+}
+
 // 給單元測試與煙霧測試腳本用
 exports._internals = {
     isLowQualityText,
@@ -488,6 +556,7 @@ exports._internals = {
     buildProjectSnapshot,
     buildSystemInstruction,
     buildUserPrompt,
+    loadRecentHistory,
 };
 
 // ============================================
@@ -499,7 +568,7 @@ exports._internals = {
  * Body: { question, currentStage?, context?, projectId? }
  */
 exports.askCoach = async (req, res) => {
-    const { question, currentStage, context, projectId } = req.body || {};
+    const { question, currentStage, context, projectId, sessionId } = req.body || {};
 
     if (!question || typeof question !== 'string' || !question.trim()) {
         return res.status(400).json({
@@ -531,6 +600,17 @@ exports.askCoach = async (req, res) => {
     // snapshot 是後端組的 + formatter 已對學生輸入欄位做過 L3/L4 過篩，視為 trusted
     const contextTrusted = !!projectContext;
 
+    // 多輪對話歷史：sessionId 必須由前端傳入；未傳 → 不回灌（保留未來多 session 擴充空間，
+    // 也避免後端自行猜 `sdl-coach-${projectId}` 若前端改動後讀到別人的歷史）
+    const history = sessionId
+        ? await loadRecentHistory(projectId, sessionId)
+        : [];
+
+    console.log(
+        `[SDL Coach] ask built projectId=${projectId || 'none'} ` +
+        `historyTurns=${history.length / 2} snapshotChars=${projectContext.length}`
+    );
+
     const systemPrompt = buildSystemInstruction();
     const userPrompt = buildUserPrompt({
         question,
@@ -544,7 +624,7 @@ exports.askCoach = async (req, res) => {
         // 搭配 buildUserPrompt 尾端「嚴格 250 字」錨點，雙保險：
         //   - LLM 自律（錨點 250 → 實際 ~280-320）
         //   - maxTokens 硬封頂（800 tokens ≈ 450 中文字，足以容納完整收尾句）
-        const result = await callWithFallback({ systemPrompt, userPrompt, maxTokens: 800 });
+        const result = await callWithFallback({ systemPrompt, userPrompt, history, maxTokens: 800 });
 
         // 若被 maxTokens 硬砍（finish_reason=length），記 warning 並在回答尾端標註
         // 讓學生知道，也讓運維看得到截斷比例
@@ -578,6 +658,7 @@ exports.askCoach = async (req, res) => {
                     ? 'snapshot'
                     : (context ? 'frontend' : 'none'),
                 snapshotChars: projectContext ? projectContext.length : 0,
+                historyTurns: history.length / 2,
                 provider: result.model,
                 answerChars: answer.length,
                 truncated,

@@ -141,6 +141,7 @@ function parseJsonResponse(raw) {
  * @param {object} options
  * @param {string} options.systemPrompt - 系統提示詞
  * @param {string} options.userPrompt - 使用者提示詞
+ * @param {Array}  [options.history=[]] - 多輪對話歷史 [{role:'user'|'assistant', content:string}]，插在 system 與當前 user 之間
  * @param {number} [options.timeout=30000] - 請求超時 (ms)
  * @param {number} [options.temperature=0.7]
  * @param {number} [options.maxTokens=2000]
@@ -156,18 +157,25 @@ async function callVLLM(modelKey, options = {}) {
     const {
         systemPrompt = '',
         userPrompt = '',
+        history = [],
         timeout = 30000,
         temperature = 0.7,
         maxTokens = 2000,
         jsonMode = false,
     } = options;
 
+    const messages = [{ role: 'system', content: systemPrompt }];
+    for (const m of history) {
+        if (m && (m.role === 'user' || m.role === 'assistant')
+            && typeof m.content === 'string' && m.content.trim()) {
+            messages.push({ role: m.role, content: m.content });
+        }
+    }
+    messages.push({ role: 'user', content: userPrompt });
+
     const requestBody = {
         model: config.modelName,
-        messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-        ],
+        messages,
         temperature,
         max_tokens: maxTokens,
     };
@@ -333,6 +341,7 @@ const DEFAULT_FALLBACK_CHAIN = [
  * @param {object} options
  * @param {string} options.systemPrompt
  * @param {string} options.userPrompt
+ * @param {Array}  [options.history=[]] - 多輪對話歷史 [{role:'user'|'assistant', content:string}]
  * @param {boolean} [options.jsonMode=false]
  * @param {object} [options.responseSchema] - Gemini 專用
  * @param {Array}  [options.fallbackChain] - 自訂 fallback 順序
@@ -343,6 +352,7 @@ async function callWithFallback(options = {}) {
     const {
         systemPrompt,
         userPrompt,
+        history = [],
         jsonMode = false,
         responseSchema,
         fallbackChain = DEFAULT_FALLBACK_CHAIN,
@@ -360,6 +370,7 @@ async function callWithFallback(options = {}) {
                 const result = await callVLLM(step.key, {
                     systemPrompt,
                     userPrompt,
+                    history,
                     timeout,
                     jsonMode,
                     ...(maxTokens ? { maxTokens } : {}),
@@ -375,8 +386,21 @@ async function callWithFallback(options = {}) {
             }
 
             if (step.type === 'gemini') {
+                // Gemini 使用 'user' / 'model' roles（非 'assistant'），需要映射
+                const geminiContents = [];
+                for (const m of history) {
+                    if (m && (m.role === 'user' || m.role === 'assistant')
+                        && typeof m.content === 'string' && m.content.trim()) {
+                        geminiContents.push({
+                            role: m.role === 'assistant' ? 'model' : 'user',
+                            parts: [{ text: m.content }],
+                        });
+                    }
+                }
+                geminiContents.push({ role: 'user', parts: [{ text: userPrompt }] });
+
                 const geminiOpts = {
-                    prompt: [{ role: 'user', parts: [{ text: userPrompt }] }],
+                    prompt: geminiContents,
                     systemInstruction: systemPrompt,
                     temperature: 0.7,
                     ...(maxTokens ? { maxOutputTokens: maxTokens } : {}),
