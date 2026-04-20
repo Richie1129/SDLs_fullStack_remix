@@ -5,17 +5,19 @@
 //   - 若帳號不存在 → 新建
 //   - 若帳號已存在 → 更新密碼
 //
-// 使用（在容器內執行）：
-//   docker exec -it sdl_admin-api-1 sh -c "
-//     ADMIN_ACCOUNT=admintsai \\
-//     ADMIN_EMAIL=admin@sdl.local \\
-//     ADMIN_USERNAME=系統管理員 \\
-//     ADMIN_PASSWORD='你的明文密碼' \\
-//     node scripts/seed-admin.js
-//   "
+// 使用（在容器內執行，需為單行指令，勿貼成多行）：
+//   docker exec -it sdl_dev-api-1 sh -c 'ADMIN_ACCOUNT=admintsai ADMIN_EMAIL=admin@sdl.local ADMIN_USERNAME=系統管理員 ADMIN_PASSWORD="你的明文密碼" node scripts/seed-admin.js'
 //
-// 明文密碼僅存在於這條指令的環境變數，不會寫入任何檔案。
-// 建議執行後清理 shell history。
+// 容器名稱依環境切換：
+//   - dev 環境：    sdl_dev-api-1
+//   - admin 環境：  sdl_admin-api-1
+//   - prod 環境：   sdl_prod-api-1（或部署時實際名稱）
+//
+// 注意：
+//   1. 貼到 terminal 時**必須保持單行**，多行貼上時 shell 會把前幾行的 VAR=value
+//      當作「指令」執行（不會 export 到 node process），導致 ADMIN_* 環境變數為空
+//   2. 明文密碼僅存在於這條指令的環境變數，不會寫入任何檔案
+//   3. 執行後建議清理 shell history：history -c
 
 require('dotenv').config();
 const bcrypt = require('bcrypt');

@@ -6,8 +6,14 @@
 //   通關密碼透過 stdin 互動輸入（不留 shell history），
 //   與 .env 的 ADMIN_RECOVERY_HASH 做 bcrypt 比對。
 //
-// 使用：
-//   docker exec -it sdl_admin-api-1 node scripts/admin-recover.js
+// 使用（容器名稱依環境切換）：
+//   docker exec -it sdl_dev-api-1 node scripts/admin-recover.js      # dev 環境
+//   docker exec -it sdl_admin-api-1 node scripts/admin-recover.js    # admin 環境
+//
+// 前置條件：
+//   容器內必須有 ADMIN_RECOVERY_HASH 環境變數（透過 .env 的 env_file 載入）。
+//   若你選擇不把 hash 放 .env，改成每次救援時手動傳入，改跑：
+//     docker exec -it sdl_dev-api-1 sh -c 'ADMIN_RECOVERY_HASH='\''$2b$12$xxxxx'\'' node scripts/admin-recover.js'
 //
 // 流程：
 //   1. 腳本 prompt 你輸入通關密碼（不顯示）
