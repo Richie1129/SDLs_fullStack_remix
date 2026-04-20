@@ -1,0 +1,185 @@
+name: sdl_admin
+
+# ============================================================================
+# Admin 專用開發環境（isolated from dev DB）
+# ============================================================================
+# 用途：開發 admin dashboard 功能時使用，獨立 DB / MinIO / 容器，避免污染 dev。
+#
+# 啟動：docker compose -f docker-compose.admin.yml up --build
+# 訪問：http://localhost:8081
+# 完全清除：docker compose -f docker-compose.admin.yml down -v
+#
+# Port 對照（避免與 dev 衝突）：
+#   nginx         8081 （dev: 8080）
+#   frontend      5175 （dev: 5174）
+#   postgres      5434 （dev: 5433）
+#   minio API     9004 （dev: 9002）
+#   minio Console 9005 （dev: 9003）
+#   pgadmin       5557 （dev: 5556）
+# ============================================================================
+
+services:
+  nginx:
+    image: nginx
+    restart: always
+    ports:
+      - 8081:80
+    volumes:
+      - "./nginx.conf:/etc/nginx/nginx.conf"
+    depends_on:
+      - api
+      - front
+    networks:
+      - admin_network
+
+  api:
+    build:
+      context: ./sdl-backend-main
+    image: stone881129/sdl-api:admin
+    expose:
+      - 3000
+    environment:
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_NAME=${PG_NAME}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY_2=${GEMINI_API_KEY_2}
+      - RAGFLOW_API_KEY=${RAGFLOW_API_KEY}
+      - RAGFLOW_BASE_URL=${RAGFLOW_BASE_URL}
+      - VITE_RAGFLOW_CHAT_ID=${VITE_RAGFLOW_CHAT_ID}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - METRICS_TOKEN=${METRICS_TOKEN}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - HSUEH_VLLM_BASE_URL=${HSUEH_VLLM_BASE_URL}
+      - HSUEH_VLLM_MODEL_NAME=${HSUEH_VLLM_MODEL_NAME}
+      - HSUEH_VLLM_API_KEY=${HSUEH_VLLM_API_KEY}
+      - VLLM_BASE_URL=${VLLM_BASE_URL}
+      - VLLM_MODEL_NAME=${VLLM_MODEL_NAME}
+      - VLLM_API_KEY=${VLLM_API_KEY}
+      # Admin 通關密碼 hash（bcrypt），由 scripts/hash-recovery.js 產出後貼進 .env
+      - ADMIN_RECOVERY_HASH=${ADMIN_RECOVERY_HASH}
+    volumes:
+      - "./sdl-backend-main:/sdl-backend-main"
+      - "/sdl-backend-main/node_modules"
+      - "./sdl-backend-main/daily_file:/sdl-backend-main/daily_file"
+      - "./logs:/logs"
+    networks:
+      - admin_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  front:
+    build:
+      context: ./sdl-frontend-main
+    image: stone881129/sdl-front:admin
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5175:5173"
+    volumes:
+      - "./sdl-frontend-main:/sdl-frontend-main"
+      - "/sdl-frontend-main/node_modules"
+    networks:
+      - admin_network
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${PG_NAME}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+    ports:
+      - "5434:5432"
+    networks:
+      - admin_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data_admin:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    ports:
+      - "9004:9000"
+      - "9005:9001"
+    networks:
+      - admin_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    volumes:
+      - minio_data_admin:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+    networks:
+      - admin_network
+    entrypoint: >
+      /bin/sh -c "
+      echo '初始化 MinIO (admin env)...';
+      /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY;
+      if /usr/bin/mc ls myminio/$$MINIO_BUCKET_NAME > /dev/null 2>&1; then
+        echo 'Bucket 已存在: '$$MINIO_BUCKET_NAME;
+      else
+        echo '創建 bucket: '$$MINIO_BUCKET_NAME;
+        /usr/bin/mc mb myminio/$$MINIO_BUCKET_NAME;
+        echo 'Bucket 創建成功';
+      fi;
+      echo 'MinIO 初始化完成';
+      "
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+    volumes:
+      - pgadmin_data_admin:/var/lib/pgadmin
+    ports:
+      - "5557:80"
+    networks:
+      - admin_network
+
+networks:
+  admin_network:
+
+volumes:
+  postgres_data_admin:
+  minio_data_admin:
+  pgadmin_data_admin:
