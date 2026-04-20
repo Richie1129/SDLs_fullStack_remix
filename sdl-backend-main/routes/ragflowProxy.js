@@ -4,6 +4,7 @@ const https = require('https');
 const config = require('../config');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
 const { validateToken } = require('../middlewares/AuthMiddleware');
+const { requireAiEnabled } = require('../services/aiAccessService');
 
 const router = express.Router();
 
@@ -59,7 +60,7 @@ router.post('/:chatId/sessions', validateToken, async (req, res) => {
 });
 
 // RAGFlow 完成請求
-router.post('/:chatId/completions', validateToken, async (req, res) => {
+router.post('/:chatId/completions', validateToken, requireAiEnabled, async (req, res) => {
     try {
         const { chatId } = req.params;
 
@@ -136,7 +137,7 @@ router.delete('/:chatId/sessions/:sessionId', validateToken, async (req, res) =>
 });
 
 // RAGFlow 檢索請求
-router.post('/retrieval', validateToken, async (req, res) => {
+router.post('/retrieval', validateToken, requireAiEnabled, async (req, res) => {
     try {
         const response = await axios.post(
             `${config.ragflow.baseUrl}/api/v1/retrieval`,

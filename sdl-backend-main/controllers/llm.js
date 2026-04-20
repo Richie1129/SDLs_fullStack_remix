@@ -6,9 +6,14 @@ const genai = new GoogleGenAI({
 });
 
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+const { isAiEnabled } = require('../services/aiAccessService');
 
 exports.generateIdea = async (req, res) => {
   try {
+    if (!(await isAiEnabled(req.userId))) {
+      return res.status(403).json({ error: 'AI_DISABLED', message: 'AI 功能已停用，請聯絡管理員' });
+    }
+
     const { title, content } = req.body;
 
     // 第一階段：判斷最適合的想法發展類型

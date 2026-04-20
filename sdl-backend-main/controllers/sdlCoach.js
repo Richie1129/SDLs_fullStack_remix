@@ -13,6 +13,7 @@ const path = require('path');
 const { Op } = require('sequelize');
 const { callWithFallback } = require('../services/llmGateway');
 const { logAudit } = require('../services/auditService');
+const { isAiEnabled } = require('../services/aiAccessService');
 const {
     SUB_STAGE_TITLES,
     STAGE_TITLES,
@@ -568,6 +569,10 @@ exports._internals = {
  * Body: { question, currentStage?, context?, projectId? }
  */
 exports.askCoach = async (req, res) => {
+    if (!(await isAiEnabled(req.userId))) {
+        return res.status(403).json({ error: 'AI_DISABLED', message: 'AI 功能已停用，請聯絡管理員' });
+    }
+
     const { question, currentStage, context, projectId, sessionId } = req.body || {};
 
     if (!question || typeof question !== 'string' || !question.trim()) {

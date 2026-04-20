@@ -1,6 +1,7 @@
 // [Refactored] AI 呼叫統一由 llmGateway 處理
 const { callVLLM: gwCallVLLM, callGemini: gwCallGemini, callWithFallback, parseJsonResponse } = require('../services/llmGateway');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+const { isAiEnabled } = require('../services/aiAccessService');
 const Node = require('../models/node');
 const IdeaWall = require('../models/idea_wall');
 const AiFeedback = require('../models/ai_feedback');
@@ -172,6 +173,10 @@ async function callAIWithFallback(agentType, userPrompt) {
 exports.provideGuidance = async (req, res) => {
   const startTime = Date.now();
   try {
+    if (!(await isAiEnabled(req.userId))) {
+      return res.status(403).json({ error: 'AI_DISABLED', message: 'AI 功能已停用，請聯絡管理員' });
+    }
+
     const {
       title, content, nodeId, relatedNodes = [], projectId, agentType = 'IMPROVER',
       helpSeekingIntent = null,

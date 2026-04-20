@@ -196,10 +196,15 @@ async function callGeminiAPI(prompt) {
 }
 
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
+const { isAiEnabled } = require('../services/aiAccessService');
 
 // 主要的 5Rs 分析功能 (作為 Express.js 路由處理器)
 exports.analyze5RsReflection = async (req, res) => {
   try {
+    if (!(await isAiEnabled(req.userId))) {
+      return res.status(403).json({ error: 'AI_DISABLED', message: 'AI 功能已停用，請聯絡管理員' });
+    }
+
     const { studentContent, preferredProvider = 'auto' } = req.body;
 
     // 驗證輸入

@@ -6,6 +6,7 @@
  */
 
 const { callGeminiGrounding } = require('../services/llmGateway');
+const { isAiEnabled } = require('../services/aiAccessService');
 
 /**
  * POST /api/assistant/grounding
@@ -13,6 +14,10 @@ const { callGeminiGrounding } = require('../services/llmGateway');
  */
 exports.getExternalLinks = async (req, res) => {
   try {
+    if (!(await isAiEnabled(req.userId))) {
+      return res.status(403).json({ error: 'AI_DISABLED', message: 'AI 功能已停用，請聯絡管理員' });
+    }
+
     const { question } = req.body;
 
     if (!question || typeof question !== 'string' || !question.trim()) {

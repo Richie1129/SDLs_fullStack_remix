@@ -8,6 +8,7 @@ const Comment = require('../models/comment');
 const { Op } = require('sequelize');
 const { logAudit } = require('../services/auditService');
 const helpSeekingEffectivenessService = require('../services/helpSeekingEffectivenessService');
+const { isAiEnabled } = require('../services/aiAccessService');
 
 // Helper functions
 function calculateStartDate(timeRange) {
@@ -104,6 +105,10 @@ async function analyzeCard(req, res) {
  */
 async function generateSuggestions(req, res) {
   try {
+    if (!(await isAiEnabled(req.userId))) {
+      return res.status(403).json({ error: 'AI_DISABLED', message: 'AI 功能已停用，請聯絡管理員' });
+    }
+
     const {
       taskId,
       projectId,
