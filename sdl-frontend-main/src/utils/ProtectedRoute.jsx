@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { authStorage, userStorage } from '../services/storageService';
 
 export const ProtectedLogin = () => {
@@ -12,6 +12,14 @@ export const ProtectedLogin = () => {
 
 export const ProtectedRoute = () => {
     const auth = authStorage.get("accessToken");
-    // H12: 修正三元邏輯 — 有 token 則顯示子路由，否則跳轉登入
-    return auth ? <Outlet /> : <Navigate to='/'/>;
+    const location = useLocation();
+    if (!auth) return <Navigate to='/' />;
+
+    // Admin 只能訪問 /admin 一個頁面，其他 protected 路由全部導向 /admin
+    const role = userStorage.get('role');
+    if (role === 'admin' && location.pathname !== '/admin') {
+        return <Navigate to='/admin' replace />;
+    }
+
+    return <Outlet />;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiSearch, FiKey, FiUsers, FiUser, FiZap, FiZapOff, FiLogOut } from 'react-icons/fi';
+import { FiSearch, FiKey, FiUsers, FiUser, FiZap, FiZapOff, FiLogOut } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { listUsers, resetUserPassword, toggleAiAccess } from '../../api/admin';
 import { userStorage, authStorage } from '../../services/storageService';
@@ -133,12 +133,6 @@ export default function AdminDashboard() {
         <div className="min-h-screen bg-gray-50">
             <div className="bg-white shadow-sm border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
-                    <button
-                        onClick={() => navigate('/homepage')}
-                        className="p-2 text-gray-500 hover:text-customgreen hover:bg-customgreen/10 rounded-lg transition-colors duration-normal"
-                    >
-                        <FiArrowLeft className="text-lg" />
-                    </button>
                     <div className="flex items-center gap-2 flex-1">
                         <div className="p-2 bg-customgreen/10 rounded-lg">
                             <FiUsers className="text-customgreen text-lg" />
