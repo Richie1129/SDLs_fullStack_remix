@@ -47,6 +47,12 @@ const User = sequelize.define('user', {
         type: DataTypes.DATE,
         allowNull: true,
         field: 'password_reset_at'
+    },
+    aiEnabled: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+        field: 'ai_enabled'
     }
 }, {
     tableName: 'users',
@@ -55,7 +61,8 @@ const User = sequelize.define('user', {
         { fields: ['role'] },                    // 角色篩選
         { fields: ['class'] },                   // 班級分組
         { fields: ['role', 'class'] },          // 複合查詢
-        { fields: ['school_id'] }               // 學校篩選
+        { fields: ['school_id'] },              // 學校篩選
+        { fields: ['ai_enabled'] }              // admin: AI 開關篩選
     ]
 });
 
