@@ -5,22 +5,22 @@
 //   - 若帳號不存在 → 新建
 //   - 若帳號已存在 → 更新密碼
 //
-// 使用（在容器內執行，需為單行指令，勿貼成多行）：
-//   docker exec -it sdl_dev-api-1 sh -c 'ADMIN_ACCOUNT=admintsai ADMIN_EMAIL=admin@sdl.local ADMIN_USERNAME=系統管理員 ADMIN_PASSWORD="你的明文密碼" node scripts/seed-admin.js'
+// 使用（兩種模式）：
+//   A. 互動模式（推薦，密碼完全不進 shell history）：
+//      docker exec -it <api容器名> node scripts/seed-admin.js
+//      → 腳本 prompt 輸入帳號 / Email / 姓名 / 密碼（密碼打字不回顯）
+//   B. Env var 模式（給 CI/自動化）：
+//      docker exec -e ADMIN_ACCOUNT=admintsai -e ADMIN_EMAIL=... -e ADMIN_PASSWORD=... <api容器名> node scripts/seed-admin.js
+//      缺的欄位會切回互動 prompt
 //
 // 容器名稱依環境切換：
-//   - dev 環境：    sdl_dev-api-1
-//   - admin 環境：  sdl_admin-api-1
-//   - prod 環境：   sdl_prod-api-1（或部署時實際名稱）
-//
-// 注意：
-//   1. 貼到 terminal 時**必須保持單行**，多行貼上時 shell 會把前幾行的 VAR=value
-//      當作「指令」執行（不會 export 到 node process），導致 ADMIN_* 環境變數為空
-//   2. 明文密碼僅存在於這條指令的環境變數，不會寫入任何檔案
-//   3. 執行後建議清理 shell history：history -c
+//   - dev：    sdl_dev-api-1
+//   - admin：  sdl_admin-api-1
+//   - prod：   sdls_fullstack_remix_v3_lazyinwork-api-1（或部署時實際名稱）
 
 require('dotenv').config();
 const bcrypt = require('bcrypt');
+const { promptHidden, promptVisible } = require('./_promptHidden');
 
 const User = require('../models/user');
 const sequelize = require('../util/database');
@@ -28,15 +28,18 @@ const sequelize = require('../util/database');
 const SALT_ROUNDS = 10;
 
 async function main() {
-    const account = process.env.ADMIN_ACCOUNT;
-    const email = process.env.ADMIN_EMAIL;
-    const username = process.env.ADMIN_USERNAME || '系統管理員';
-    const password = process.env.ADMIN_PASSWORD;
+    let account = process.env.ADMIN_ACCOUNT;
+    let email = process.env.ADMIN_EMAIL;
+    let username = process.env.ADMIN_USERNAME;
+    let password = process.env.ADMIN_PASSWORD;
+
+    if (!account) account = await promptVisible('帳號', 'admintsai');
+    if (!email) email = await promptVisible('Email', 'admin@sdl.local');
+    if (!username) username = await promptVisible('使用者名稱', '系統管理員');
+    if (!password) password = await promptHidden('密碼（打字不會顯示）：');
 
     if (!account || !email || !password) {
-        console.error('錯誤：請設定環境變數 ADMIN_ACCOUNT / ADMIN_EMAIL / ADMIN_PASSWORD');
-        console.error('範例：');
-        console.error('  ADMIN_ACCOUNT=admintsai ADMIN_EMAIL=admin@sdl.local ADMIN_PASSWORD=xxx node scripts/seed-admin.js');
+        console.error('錯誤：帳號、Email、密碼為必填');
         process.exit(1);
     }
 

@@ -22,9 +22,8 @@
 //   4. 寫入 audit log：ADMIN_RECOVERY_TRIGGERED
 
 require('dotenv').config();
-const readline = require('readline');
 const bcrypt = require('bcrypt');
-const { Writable } = require('stream');
+const { promptHidden } = require('./_promptHidden');
 
 const User = require('../models/user');
 const AuditEvent = require('../models/audit_event');
@@ -32,32 +31,6 @@ const sequelize = require('../util/database');
 
 const ADMIN_ACCOUNT = process.env.ADMIN_ACCOUNT || 'admintsai';
 const SALT_ROUNDS = 10;
-
-// 讀取密碼但不回顯
-function promptHidden(question) {
-    const mutableStdout = new Writable({
-        write(chunk, encoding, callback) {
-            if (!this.muted) process.stdout.write(chunk, encoding);
-            callback();
-        }
-    });
-    mutableStdout.muted = false;
-
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: mutableStdout,
-        terminal: true
-    });
-
-    return new Promise(resolve => {
-        rl.question(question, answer => {
-            rl.close();
-            process.stdout.write('\n');
-            resolve(answer);
-        });
-        mutableStdout.muted = true;
-    });
-}
 
 function generateTempPassword() {
     const digits = Math.floor(100000 + Math.random() * 900000);
