@@ -1,11 +1,13 @@
 import React from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
-import { authStorage } from '../services/storageService';
+import { authStorage, userStorage } from '../services/storageService';
 
 export const ProtectedLogin = () => {
     const auth = authStorage.get("accessToken");
-    // H12: 修正三元邏輯 — 有 token 則跳轉首頁，否則顯示登入頁
-    return auth ? <Navigate to='/homepage'/> : <Outlet />;
+    if (!auth) return <Outlet />;
+    // admin 登入後固定導向 /admin；其他角色導向 /homepage
+    const role = userStorage.get('role');
+    return <Navigate to={role === 'admin' ? '/admin' : '/homepage'} />;
 }
 
 export const ProtectedRoute = () => {

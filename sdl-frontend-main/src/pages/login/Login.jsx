@@ -175,8 +175,9 @@ export default function Login() {
         accessToken: res.data.accessToken, username: res.data.username,
         role: res.data.role, class: res.data.class, seatNumber: res.data.seatNumber,
       }));
+      const landingPath = res.data.role === 'admin' ? '/admin' : '/homepage';
       Swal.fire({ icon: 'success', title: '登入成功', text: `歡迎回來，${res.data.username}！`, timer: 1500, showConfirmButton: false })
-        .then(() => navigate('/homepage'));
+        .then(() => navigate(landingPath));
     }
   });
 
