@@ -128,7 +128,7 @@ const HelpSeekingAwareness = ({ userId, projectId }) => {
                       <p className="text-h3 font-bold text-teal-700">
                         {effectivenessStats.resolved} / {effectivenessStats.checked}
                       </p>
-                      <p className="text-caption text-teal-600 mt-1">求助後任務有進展</p>
+                      <p className="text-caption text-teal-600 mt-1">求助後任務狀態有變化</p>
                     </div>
                     {effectivenessStats.avgScore !== null && (
                       <div className="flex-1 bg-blue-50 border border-blue-100 rounded-lg p-3 text-center">

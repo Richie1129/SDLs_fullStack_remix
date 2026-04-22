@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { getProject } from "../../api/project";
-import { FiBarChart2, FiHelpCircle, FiLink, FiUser, FiUsers } from 'react-icons/fi';
+import { FiBarChart2, FiHelpCircle, FiLink, FiUser, FiUsers, FiShare2 } from 'react-icons/fi';
+
+import KnowledgeGraphView from "../knowledge-graph/KnowledgeGraphView";
 
 // Hooks
 import { useTeacherDashboard } from "./hooks/useTeacherDashboard";
@@ -53,6 +55,8 @@ const TeacherManagementDashboard = () => {
   const [analyticsViewMode, setAnalyticsViewMode] = useState('analytics');
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  // Tab：儀表板 / 知識圖譜
+  const [activeTab, setActiveTab] = useState('dashboard');
   
   // 用戶角色
   const userRole = getCurrentUserRole();
@@ -320,12 +324,12 @@ const TeacherManagementDashboard = () => {
 
   return (
     <div className="h-full w-full bg-gray-50 overflow-hidden">
-      <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100 hover:scrollbar-thumb-customgreen/80" 
+      <div className={`h-full ${activeTab === 'graph' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-customgreen scrollbar-track-gray-100 hover:scrollbar-thumb-customgreen/80'}`}
            style={{ scrollBehavior: 'smooth' }}>
-        <div className="p-component-sm sm:p-component-md-lg">
-          <div className="max-w-7xl mx-auto">
+        <div className={`${activeTab === 'graph' ? 'py-component-xs px-component-xs flex-1 min-h-0 flex flex-col' : 'p-component-sm sm:p-component-md-lg'}`}>
+          <div className={`${activeTab === 'graph' ? 'max-w-none w-full flex-1 min-h-0 flex flex-col' : 'max-w-7xl'} mx-auto`}>
             {/* 標題和檢視模式切換 */}
-            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-4 sm:mb-6 space-y-3 lg:space-y-0">
+            <div className={`flex flex-col lg:flex-row lg:justify-between lg:items-center ${activeTab === 'graph' ? 'mb-2 px-component-xs' : 'mb-4 sm:mb-6'} space-y-3 lg:space-y-0 flex-shrink-0`}>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <h1 className="text-h3 sm:text-h2 lg:text-h1 font-extrabold text-teal-600">
                   {userRole === 'teacher' ? '教師管理儀表板' : '我的學習歷程'}
@@ -342,31 +346,68 @@ const TeacherManagementDashboard = () => {
                 )}
               </div>
               
-              {userRole === 'teacher' && (
-                <ViewModeButtons
-                  viewMode={viewMode}
-                  setViewMode={(nextMode) => {
-                    setViewMode(nextMode);
-                    if (nextMode === 'students') {
-                      setStudentViewMode('all-students');
-                    }
-                    if (nextMode === 'analytics') {
-                      setAnalyticsViewMode('analytics');
-                    }
-                  }}
-                />
-              )}
+              <div className="flex flex-wrap items-center gap-stack-xs">
+                <div className="inline-flex items-center bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+                  <button
+                    onClick={() => setActiveTab('dashboard')}
+                    className={`inline-flex items-center gap-1.5 px-btn-x py-btn-y rounded-lg text-body-sm font-medium transition-colors duration-normal
+                      ${activeTab === 'dashboard'
+                        ? 'bg-customgreen text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                    aria-pressed={activeTab === 'dashboard'}
+                  >
+                    <FiBarChart2 className="w-4 h-4" />
+                    <span>{userRole === 'teacher' ? '管理儀表板' : '學習儀表板'}</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('graph')}
+                    className={`inline-flex items-center gap-1.5 px-btn-x py-btn-y rounded-lg text-body-sm font-medium transition-colors duration-normal
+                      ${activeTab === 'graph'
+                        ? 'bg-customgreen text-white shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                    aria-pressed={activeTab === 'graph'}
+                  >
+                    <FiShare2 className="w-4 h-4" />
+                    <span>知識圖譜</span>
+                  </button>
+                </div>
+
+                {userRole === 'teacher' && activeTab === 'dashboard' && (
+                  <ViewModeButtons
+                    viewMode={viewMode}
+                    setViewMode={(nextMode) => {
+                      setViewMode(nextMode);
+                      if (nextMode === 'students') {
+                        setStudentViewMode('all-students');
+                      }
+                      if (nextMode === 'analytics') {
+                        setAnalyticsViewMode('analytics');
+                      }
+                    }}
+                  />
+                )}
+              </div>
             </div>
 
-            {/* 統計卡片 */}
-            <DashboardErrorBoundary>
-              <StatsCards classStats={classStats} />
-            </DashboardErrorBoundary>
+            {activeTab === 'graph' ? (
+              <KnowledgeGraphView
+                projectId={parsedProjectId}
+                role={userRole === 'teacher' ? 'teacher' : 'student'}
+                className="flex-1 min-h-0"
+              />
+            ) : (
+              <>
+                {/* 統計卡片 */}
+                <DashboardErrorBoundary>
+                  <StatsCards classStats={classStats} />
+                </DashboardErrorBoundary>
 
-            {/* 主要內容區域 */}
-            <div className="space-y-stack-md pb-6">
-              {renderViewContent()}
-            </div>
+                {/* 主要內容區域 */}
+                <div className="space-y-stack-md pb-6">
+                  {renderViewContent()}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

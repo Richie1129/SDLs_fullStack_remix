@@ -340,7 +340,10 @@ export const useChatSession = () => {
               'Content-Type': 'application/json',
               'accessToken': token // ✅ 後端期望 accessToken header
             },
-            body: JSON.stringify({ question: userQuestion }),
+            body: JSON.stringify({
+              question: userQuestion,
+              projectId: getCurrentProjectId(),
+            }),
           }).then(res => res.json())
         ]);
 

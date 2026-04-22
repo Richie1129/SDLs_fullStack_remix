@@ -1,17 +1,19 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
 import { useParams } from "react-router-dom";
+import { FiBarChart2, FiShare2 } from "react-icons/fi";
 
 // 自定義 Hooks
 import { useProjectData } from "./hooks/useProjectData";
 import { useStudentMetrics } from "./hooks/useStudentMetrics";
 import { useUsageSession } from "./hooks/useUsageSession";
 
+// 知識圖譜
+import KnowledgeGraphView from "../knowledge-graph/KnowledgeGraphView";
+
 // 子組件
 import TeamStats from "./components/TeamStats";
 import PersonalData from "./components/PersonalData";
-import LearningTrack from "./components/LearningTrack";
 import LearningGoals from "./components/LearningGoals";
-import TeammatesList from "./components/TeammatesList";
 import Achievements from "./components/Achievements";
 import StudentSelfRiskAlert from "./components/StudentSelfRiskAlert";
 import FiveRsRadarChart from "./components/FiveRsRadarChart";
@@ -66,7 +68,10 @@ const StudentDashboard = () => {
   
   // 計算學生指標
   const metrics = useStudentMetrics(projectData, userName, projectId, userId);
-  const { teamStats, personalData, learningTrack, teammates, learningGoals, achievements } = metrics;
+  const { teamStats, personalData, learningGoals, achievements } = metrics;
+
+  // Tab 切換：儀表板 / 知識圖譜
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   // 載入狀態
   if (loading) {
@@ -74,19 +79,58 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="w-full h-full bg-gray-50 overflow-y-auto">
-      <div className="p-component-sm sm:p-component-md-lg">
-        <div className="max-w-7xl mx-auto pb-6">
+    <div className={`w-full h-full bg-gray-50 ${activeTab === 'graph' ? 'overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
+      <div className={`${activeTab === 'graph' ? 'py-component-xs px-component-xs flex-1 min-h-0 flex flex-col' : 'p-component-sm sm:p-component-md-lg'}`}>
+        <div className={`${activeTab === 'graph' ? 'max-w-none w-full flex-1 min-h-0 flex flex-col' : 'max-w-7xl pb-6'} mx-auto`}>
           {/* 頁面標題 */}
-          <div className="mb-4 sm:mb-6">
-            <h1 className="text-h3 sm:text-h2 lg:text-h1 font-extrabold text-teal-600 mb-2">我的學習歷程</h1>
-            <p className="text-body-sm sm:text-body text-gray-600">歡迎回來，{personalData?.name || '學習者'}！繼續你的學習旅程吧。</p>
-            {ideaNodes.length > 0 && (
-              <p className="text-caption text-gray-500 mt-1">
-                已載入 {ideaNodes.length} 個想法節點，{kanbanTasks.length} 個任務
-              </p>
-            )}
+          <div className={`${activeTab === 'graph' ? 'mb-2 px-component-xs' : 'mb-4 sm:mb-6'} flex flex-col md:flex-row md:items-end md:justify-between gap-stack-xs flex-shrink-0`}>
+            <div>
+              <h1 className="text-h3 sm:text-h2 lg:text-h1 font-extrabold text-teal-600 mb-2">我的學習歷程</h1>
+              <p className="text-body-sm sm:text-body text-gray-600">歡迎回來，{personalData?.name || '學習者'}！繼續你的學習旅程吧。</p>
+              {ideaNodes.length > 0 && (
+                <p className="text-caption text-gray-500 mt-1">
+                  已載入 {ideaNodes.length} 個想法節點，{kanbanTasks.length} 個任務
+                </p>
+              )}
+            </div>
+            <div className="inline-flex items-center bg-white rounded-xl shadow-sm border border-gray-200 p-1 self-start md:self-end">
+              <button
+                onClick={() => setActiveTab('dashboard')}
+                className={`inline-flex items-center gap-1.5 px-btn-x py-btn-y rounded-lg text-body-sm font-medium transition-colors duration-normal
+                  ${activeTab === 'dashboard'
+                    ? 'bg-customgreen text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                aria-pressed={activeTab === 'dashboard'}
+              >
+                <FiBarChart2 className="w-4 h-4" />
+                <span>學習儀表板</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('graph')}
+                className={`inline-flex items-center gap-1.5 px-btn-x py-btn-y rounded-lg text-body-sm font-medium transition-colors duration-normal
+                  ${activeTab === 'graph'
+                    ? 'bg-customgreen text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}
+                aria-pressed={activeTab === 'graph'}
+              >
+                <FiShare2 className="w-4 h-4" />
+                <span>知識圖譜</span>
+              </button>
+            </div>
           </div>
+
+          {activeTab === 'graph' && (
+            <KnowledgeGraphView
+              projectId={projectId}
+              role="student"
+              currentUserName={userName}
+              className="flex-1 min-h-0"
+            />
+          )}
+
+          {activeTab === 'dashboard' && (
+          <>
+
 
           {/* ④ 個人自我風險提示 */}
           <StudentSelfRiskAlert personalData={personalData} projectId={projectId} />
@@ -103,9 +147,6 @@ const StudentDashboard = () => {
                 ideaNodes={ideaNodes} 
                 kanbanTasks={kanbanTasks} 
               />
-
-              {/* 學習軌跡 */}
-              <LearningTrack learningTrack={learningTrack} />
 
               {/* 4 週學習節律熱圖 */}
               <ActivityHeatmap
@@ -134,9 +175,6 @@ const StudentDashboard = () => {
                 classSummary={classSummary}
               />
 
-              {/* 團隊成員狀況 */}
-              <TeammatesList teammates={teammates} personalData={personalData} />
-
               {/* 近期成就 */}
               <Achievements achievements={achievements} />
 
@@ -145,6 +183,8 @@ const StudentDashboard = () => {
 
             </div>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

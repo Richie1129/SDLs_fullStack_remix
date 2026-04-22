@@ -233,6 +233,7 @@ app.use('/api/ai-task-assistant', require('./routes/aiTaskAssistant')); // AI Ta
 app.use('/api/teacher/help-seeking', require('./routes/teacherHelpSeeking')); // Teacher Help-Seeking Dashboard
 app.use('/api/teacher/overview', require('./routes/teacherOverview')); // Teacher Overview Dashboard
 app.use('/api/teacher-agent', require('./routes/teacherAgent')); // Teacher Analytics Agent
+app.use('/api/knowledge-graph', require('./routes/knowledgeGraph')); // Knowledge Graph Dashboard
 app.use('/api/file', require('./routes/file'));
 app.use('/api/audit', require('./routes/auditClient'));
 app.use('/api/usage', require('./routes/usage'));
