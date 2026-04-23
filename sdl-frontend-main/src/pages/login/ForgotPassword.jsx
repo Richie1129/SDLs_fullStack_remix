@@ -35,8 +35,8 @@ export default function ForgotPassword() {
       {/* ── 左側：品牌面板 ── */}
       <div className="hidden md:flex flex-col justify-between w-1/2 relative overflow-hidden px-12 lg:px-16 py-10 bg-customgreen">
         {/* 裝飾圓 */}
-        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-paper-soft/10 pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-paper-soft/[0.07] pointer-events-none" />
 
         {/* Logo */}
         <div className="relative z-10 flex items-baseline gap-3 motion-safe:animate-rise">
@@ -64,7 +64,7 @@ export default function ForgotPassword() {
       </div>
 
       {/* ── 右側：表單 ── */}
-      <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-gray-50 px-8 sm:px-14 lg:px-20 xl:px-28">
+      <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-paper px-8 sm:px-14 lg:px-20 xl:px-28">
 
         {/* 行動版 Logo */}
         <div className="md:hidden mb-10">
@@ -76,21 +76,21 @@ export default function ForgotPassword() {
           {!isSuccess ? (
             <>
               <div className="mb-8">
-                <h2 className="text-h1 font-bold text-gray-900">忘記密碼</h2>
-                <p className="text-body-sm text-gray-500 mt-1">
+                <h2 className="text-h1 font-bold text-ink">忘記密碼</h2>
+                <p className="text-body-sm text-ink-muted mt-1">
                   輸入你的電子郵件，我們將發送重設連結
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-body-sm font-medium text-gray-700 mb-1.5">電子郵件</label>
+                  <label className="block text-body-sm font-medium text-ink mb-1.5">電子郵件</label>
                   <div className="relative">
-                    <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                    <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                     <input
                       type="email" name="email" placeholder="請輸入電子郵件地址"
                       value={email} onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-gray-200 text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-paper-soft border border-line text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast"
                       required autoFocus
                     />
                   </div>
@@ -127,20 +127,20 @@ export default function ForgotPassword() {
                 <div className="w-14 h-14 rounded-2xl bg-customgreen/10 flex items-center justify-center text-customgreen text-3xl mb-6">
                   <FiCheckCircle />
                 </div>
-                <h2 className="text-h1 font-bold text-gray-900">郵件已送出</h2>
-                <p className="text-body-sm text-gray-500 mt-1">請查收你的電子郵件收件匣</p>
+                <h2 className="text-h1 font-bold text-ink">郵件已送出</h2>
+                <p className="text-body-sm text-ink-muted mt-1">請查收你的電子郵件收件匣</p>
               </div>
 
               <div className="p-5 bg-customgreen/5 border border-customgreen/20 rounded-2xl mb-6">
-                <p className="text-body-sm text-gray-600 leading-relaxed">{message}</p>
-                <p className="text-body-sm text-gray-500 mt-2">
+                <p className="text-body-sm text-ink-muted leading-relaxed">{message}</p>
+                <p className="text-body-sm text-ink-muted mt-2">
                   若未收到，請確認垃圾郵件資料夾。
                 </p>
               </div>
 
               <button
                 onClick={() => { setIsSuccess(false); setEmail(''); setMessage(''); }}
-                className="w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-600 font-medium text-body hover:bg-gray-50 transition-colors duration-fast mb-4"
+                className="w-full py-3 rounded-xl bg-paper-soft border border-line text-ink-muted font-medium text-body hover:bg-paper transition-colors duration-fast mb-4"
               >
                 重新發送
               </button>

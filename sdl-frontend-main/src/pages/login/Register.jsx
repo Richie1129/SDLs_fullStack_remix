@@ -128,7 +128,7 @@ export default function Register() {
     }
   };
 
-  const inputClass = 'w-full pl-10 pr-4 py-3 rounded-xl bg-white border border-gray-200 text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast';
+  const inputClass = 'w-full pl-10 pr-4 py-3 rounded-xl bg-paper-soft border border-line text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast';
 
   return (
     // 桌面：左右分欄 h-screen；手機：單欄全高可捲動
@@ -137,8 +137,8 @@ export default function Register() {
       {/* ── 左側：品牌面板（桌面才顯示，sticky） ── */}
       <div className="hidden md:flex flex-col justify-between w-1/2 sticky top-0 h-screen overflow-hidden px-12 lg:px-16 py-10 bg-customgreen flex-shrink-0">
         {/* 裝飾圓 */}
-        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 pointer-events-none" />
-        <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-white/[0.07] pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-paper-soft/10 pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-paper-soft/[0.07] pointer-events-none" />
 
         {/* Logo */}
         <div className="relative z-10 flex items-baseline gap-3 motion-safe:animate-rise">
@@ -160,7 +160,7 @@ export default function Register() {
               { icon: <MdSchool />, text: '與同學即時協作' },
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3 motion-safe:animate-rise" style={{ animationDelay: `${450 + i * 100}ms` }}>
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0 bg-white/20">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0 bg-paper-soft/20">
                   {b.icon}
                 </div>
                 <span className="text-white/80 text-body-sm">{b.text}</span>
@@ -179,7 +179,7 @@ export default function Register() {
       </div>
 
       {/* ── 右側：表單區（桌面內部捲動；手機全寬頁面捲動） ── */}
-      <div className="w-full md:w-1/2 md:h-screen md:overflow-y-auto bg-gray-50 flex flex-col">
+      <div className="w-full md:w-1/2 md:h-screen md:overflow-y-auto bg-paper flex flex-col">
 
         {/* ── 手機版品牌頭部（桌面隱藏） ── */}
         <div className="md:hidden bg-customgreen px-6 pt-10 pb-6 flex-shrink-0">
@@ -196,17 +196,17 @@ export default function Register() {
         <div className="px-6 sm:px-10 md:px-8 lg:px-20 xl:px-28 py-8 md:py-10 flex-1">
           <div className="w-full max-w-lg mx-auto motion-safe:animate-rise" style={{ animationDelay: '200ms' }}>
             <div className="mb-7">
-              <h2 className="text-h1 font-bold text-gray-900">建立帳號</h2>
-              <p className="text-body-sm text-gray-500 mt-1">填寫以下資訊完成註冊</p>
+              <h2 className="text-h1 font-bold text-ink">建立帳號</h2>
+              <p className="text-body-sm text-ink-muted mt-1">填寫以下資訊完成註冊</p>
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
               {/* 學校 */}
               <div ref={schoolRef} className="relative">
-                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">學校</label>
+                <label className="block text-body-sm font-medium text-ink mb-1.5">學校</label>
                 <div className="relative">
-                  <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <FiSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                   <input
                     type="text"
                     placeholder="輸入學校名稱或縣市搜尋"
@@ -222,7 +222,7 @@ export default function Register() {
                   />
                 </div>
                 {showSuggestions && filteredSchools.length > 0 && (
-                  <ul className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto">
+                  <ul className="absolute z-50 w-full bg-paper-soft border border-line rounded-xl shadow-lg mt-1 max-h-48 overflow-y-auto">
                     {filteredSchools.map(school => (
                       <li
                         key={school.id}
@@ -230,48 +230,48 @@ export default function Register() {
                         className="px-4 py-2.5 cursor-pointer hover:bg-customgreen/5 text-body-sm flex justify-between items-center"
                       >
                         <span>{school.name}</span>
-                        <span className="text-caption text-gray-400">{school.city}</span>
+                        <span className="text-caption text-ink-subtle">{school.city}</span>
                       </li>
                     ))}
                   </ul>
                 )}
                 {schoolSearch.trim() && !userData.school_id && filteredSchools.length === 0 && (
-                  <p className="text-caption text-gray-400 mt-1">查無符合的學校</p>
+                  <p className="text-caption text-ink-subtle mt-1">查無符合的學校</p>
                 )}
               </div>
 
               {/* 姓名 */}
               <div>
-                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">姓名</label>
+                <label className="block text-body-sm font-medium text-ink mb-1.5">姓名</label>
                 <div className="relative">
-                  <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                   <input type="text" name="username" placeholder="請輸入姓名" onChange={handleChange} className={inputClass} required />
                 </div>
               </div>
 
               {/* 帳號 */}
               <div>
-                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">帳號</label>
+                <label className="block text-body-sm font-medium text-ink mb-1.5">帳號</label>
                 <div className="relative">
-                  <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <FiUser className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                   <input type="text" name="account" placeholder="請輸入帳號（學號）" onChange={handleChange} className={inputClass} required />
                 </div>
               </div>
 
               {/* 電子郵件 */}
               <div>
-                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">電子郵件</label>
+                <label className="block text-body-sm font-medium text-ink mb-1.5">電子郵件</label>
                 <div className="relative">
-                  <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                   <input type="email" name="email" placeholder="請輸入電子郵件" onChange={handleChange} className={inputClass} required />
                 </div>
               </div>
 
               {/* 確認電子郵件 */}
               <div>
-                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">確認電子郵件</label>
+                <label className="block text-body-sm font-medium text-ink mb-1.5">確認電子郵件</label>
                 <div className="relative">
-                  <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <FiMail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                   <input type="email" name="confirmEmail" placeholder="再次輸入電子郵件" onChange={handleChange} className={inputClass} required autoComplete="off" />
                 </div>
               </div>
@@ -279,9 +279,9 @@ export default function Register() {
               {/* 密碼 / 確認密碼（手機單欄，sm 以上並排） */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-body-sm font-medium text-gray-700 mb-1.5">密碼</label>
+                  <label className="block text-body-sm font-medium text-ink mb-1.5">密碼</label>
                   <div className="relative">
-                    <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                    <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                     <input
                       type={showPassword ? 'text' : 'password'} name="password"
                       placeholder="至少 8 碼，含英數" minLength="8"
@@ -291,16 +291,16 @@ export default function Register() {
                       type="button"
                       onClick={() => setShowPassword(prev => !prev)}
                       aria-label={showPassword ? '隱藏密碼' : '顯示密碼'}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-muted transition-colors duration-fast"
                     >
                       {showPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-body-sm font-medium text-gray-700 mb-1.5">確認密碼</label>
+                  <label className="block text-body-sm font-medium text-ink mb-1.5">確認密碼</label>
                   <div className="relative">
-                    <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                    <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                     <input
                       type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword"
                       placeholder="再輸入一次密碼" minLength="8"
@@ -310,7 +310,7 @@ export default function Register() {
                       type="button"
                       onClick={() => setShowConfirmPassword(prev => !prev)}
                       aria-label={showConfirmPassword ? '隱藏密碼' : '顯示密碼'}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-muted transition-colors duration-fast"
                     >
                       {showConfirmPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
                     </button>
@@ -320,9 +320,9 @@ export default function Register() {
 
               {/* 身份 */}
               <div>
-                <label className="block text-body-sm font-medium text-gray-700 mb-1.5">身份</label>
+                <label className="block text-body-sm font-medium text-ink mb-1.5">身份</label>
                 <div className="relative">
-                  <FiBriefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                  <FiBriefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                   <select name="role" onChange={handleChange} className={`${inputClass} appearance-none`} required>
                     <option value="student">學生</option>
                     <option value="teacher">教師</option>
@@ -334,16 +334,16 @@ export default function Register() {
               {userData.role === 'student' && (
                 <div className="grid grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-body-sm font-medium text-gray-700 mb-1.5">班級</label>
+                    <label className="block text-body-sm font-medium text-ink mb-1.5">班級</label>
                     <div className="relative">
-                      <MdGroups className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                      <MdGroups className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                       <input type="text" name="class" placeholder="例：301" value={userData.class} onChange={handleChange} className={inputClass} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-body-sm font-medium text-gray-700 mb-1.5">座號</label>
+                    <label className="block text-body-sm font-medium text-ink mb-1.5">座號</label>
                     <div className="relative">
-                      <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                      <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                       <input type="text" name="seatNumber" placeholder="例：15" value={userData.seatNumber} onChange={handleChange} className={inputClass} />
                     </div>
                   </div>
@@ -368,7 +368,7 @@ export default function Register() {
             </form>
 
             {/* 手機版底部返回登入 */}
-            <p className="mt-6 text-body-sm text-gray-500 md:hidden text-center">
+            <p className="mt-6 text-body-sm text-ink-muted md:hidden text-center">
               已有帳號？
               <Link to="/" className="font-semibold ml-1 text-customgreen hover:underline">返回登入</Link>
             </p>

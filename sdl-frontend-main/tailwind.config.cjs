@@ -68,6 +68,16 @@ module.exports = {
         // 品牌色（保留）
         'customgreen': '#5BA491',
         'customgray': '#F6F5F8',
+
+        // Anthropic-style 暖色調（paper / ink / line）
+        'paper': '#F5F4EE',         // 暖米白主背景
+        'paper-dark': '#EDEBE3',    // 暖米白次層背景
+        'paper-soft': '#FBFAF6',    // 最淺的暖白（卡片用）
+        'ink': '#1F1E1D',           // 深墨棕主文字
+        'ink-muted': '#6B6763',     // 次級文字
+        'ink-subtle': '#8F8A83',    // 輔助文字
+        'line': '#E4DFD4',          // 細邊框
+        'line-strong': '#CFC8B9',   // 強邊框（input）
         
         // 新增信任藍色系
         'trust-blue': {

@@ -115,15 +115,15 @@ export default function ResetPassword() {
     });
   };
 
-  const inputClass = 'w-full pl-10 pr-10 py-3 rounded-xl bg-white border border-gray-200 text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast';
+  const inputClass = 'w-full pl-10 pr-10 py-3 rounded-xl bg-paper-soft border border-line text-body focus:outline-none focus:border-customgreen focus:ring-2 focus:ring-customgreen/20 transition-all duration-fast';
 
   // ── 載入中 ──
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-paper">
         <div className="text-center">
           <div className="w-10 h-10 border-3 border-customgreen/30 border-t-customgreen rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-body-sm text-gray-500">驗證連結中...</p>
+          <p className="text-body-sm text-ink-muted">驗證連結中...</p>
         </div>
       </div>
     );
@@ -135,8 +135,8 @@ export default function ResetPassword() {
       <div className="flex min-h-screen">
         {/* 左側品牌面板 */}
         <div className="hidden md:flex flex-col justify-between w-1/2 relative overflow-hidden px-12 lg:px-16 py-10 bg-customgreen">
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
+          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-paper-soft/10 pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-paper-soft/[0.07] pointer-events-none" />
 
           <div className="relative z-10 flex items-baseline gap-3">
             <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
@@ -161,7 +161,7 @@ export default function ResetPassword() {
         </div>
 
         {/* 右側內容 */}
-        <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-gray-50 px-8 sm:px-14 lg:px-20 xl:px-28">
+        <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-paper px-8 sm:px-14 lg:px-20 xl:px-28">
           <div className="md:hidden mb-10">
             <span className="font-bold text-h2 tracking-tight text-customgreen">SDLS</span>
           </div>
@@ -170,8 +170,8 @@ export default function ResetPassword() {
             <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-red-500 text-3xl mb-6">
               <FiAlertCircle />
             </div>
-            <h2 className="text-h1 font-bold text-gray-900 mb-2">連結無效</h2>
-            <p className="text-body-sm text-gray-500 mb-6">{error}</p>
+            <h2 className="text-h1 font-bold text-ink mb-2">連結無效</h2>
+            <p className="text-body-sm text-ink-muted mb-6">{error}</p>
 
             <Link
               to="/forgot-password"
@@ -183,7 +183,7 @@ export default function ResetPassword() {
 
             <Link
               to="/"
-              className="flex items-center justify-center w-full py-3 rounded-xl bg-white border border-gray-200 text-gray-600 font-medium text-body hover:bg-gray-50 transition-colors duration-fast"
+              className="flex items-center justify-center w-full py-3 rounded-xl bg-paper-soft border border-line text-ink-muted font-medium text-body hover:bg-paper transition-colors duration-fast"
             >
               返回登入
             </Link>
@@ -199,8 +199,8 @@ export default function ResetPassword() {
       <div className="flex min-h-screen">
         {/* 左側品牌面板 */}
         <div className="hidden md:flex flex-col justify-between w-1/2 relative overflow-hidden px-12 lg:px-16 py-10 bg-customgreen">
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
-          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
+          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-paper-soft/10 pointer-events-none" />
+          <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-paper-soft/[0.07] pointer-events-none" />
 
           <div className="relative z-10 flex items-baseline gap-3">
             <span className="text-white font-bold text-h2 tracking-tight">SDLS</span>
@@ -220,7 +220,7 @@ export default function ResetPassword() {
         </div>
 
         {/* 右側內容 */}
-        <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-gray-50 px-8 sm:px-14 lg:px-20 xl:px-28">
+        <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-paper px-8 sm:px-14 lg:px-20 xl:px-28">
           <div className="md:hidden mb-10">
             <span className="font-bold text-h2 tracking-tight text-customgreen">SDLS</span>
           </div>
@@ -229,11 +229,11 @@ export default function ResetPassword() {
             <div className="w-14 h-14 rounded-2xl bg-customgreen/10 flex items-center justify-center text-customgreen text-3xl mb-6">
               <FiCheckCircle />
             </div>
-            <h2 className="text-h1 font-bold text-gray-900 mb-2">密碼重設成功！</h2>
-            <p className="text-body-sm text-gray-500 mb-2">你的密碼已成功更新。</p>
+            <h2 className="text-h1 font-bold text-ink mb-2">密碼重設成功！</h2>
+            <p className="text-body-sm text-ink-muted mb-2">你的密碼已成功更新。</p>
 
             <div className="p-5 bg-customgreen/5 border border-customgreen/20 rounded-2xl mb-6">
-              <p className="text-body-sm text-gray-600 leading-relaxed">
+              <p className="text-body-sm text-ink-muted leading-relaxed">
                 3 秒後將自動跳轉到登入頁面，你也可以直接點選下方按鈕。
               </p>
             </div>
@@ -258,8 +258,8 @@ export default function ResetPassword() {
       {/* ── 左側：品牌面板 ── */}
       <div className="hidden md:flex flex-col justify-between w-1/2 relative overflow-hidden px-12 lg:px-16 py-10 bg-customgreen">
         {/* 裝飾圓 */}
-        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-white/10 pointer-events-none" />
-        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-white/[0.07] pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-paper-soft/10 pointer-events-none" />
+        <div className="absolute -bottom-16 -left-16 w-56 h-56 rounded-full bg-paper-soft/[0.07] pointer-events-none" />
 
         {/* Logo */}
         <div className="relative z-10 flex items-baseline gap-3">
@@ -281,7 +281,7 @@ export default function ResetPassword() {
               { icon: <FiLock />, text: '建議包含英文與數字' },
             ].map((b, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0 bg-white/20">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-lg flex-shrink-0 bg-paper-soft/20">
                   {b.icon}
                 </div>
                 <span className="text-white/80 text-body-sm">{b.text}</span>
@@ -300,7 +300,7 @@ export default function ResetPassword() {
       </div>
 
       {/* ── 右側：表單 ── */}
-      <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-gray-50 px-8 sm:px-14 lg:px-20 xl:px-28">
+      <div className="flex flex-col justify-center w-full md:w-1/2 min-h-screen bg-paper px-8 sm:px-14 lg:px-20 xl:px-28">
 
         {/* 行動版 Logo */}
         <div className="md:hidden mb-10">
@@ -309,11 +309,11 @@ export default function ResetPassword() {
 
         <div className="w-full max-w-sm mx-auto">
           <div className="mb-8">
-            <h2 className="text-h1 font-bold text-gray-900">重設密碼</h2>
-            <p className="text-body-sm text-gray-500 mt-1">
+            <h2 className="text-h1 font-bold text-ink">重設密碼</h2>
+            <p className="text-body-sm text-ink-muted mt-1">
               {userName && userAccount
-                ? <>為 <span className="font-semibold text-gray-700">{userName}</span>（帳號：<span className="font-semibold text-gray-700">{userAccount}</span>）設定新密碼</>
-                : <>為 <span className="font-semibold text-gray-700">{userEmail}</span> 設定新密碼</>
+                ? <>為 <span className="font-semibold text-ink">{userName}</span>（帳號：<span className="font-semibold text-ink">{userAccount}</span>）設定新密碼</>
+                : <>為 <span className="font-semibold text-ink">{userEmail}</span> 設定新密碼</>
               }
             </p>
           </div>
@@ -321,9 +321,9 @@ export default function ResetPassword() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             {/* 新密碼 */}
             <div>
-              <label className="block text-body-sm font-medium text-gray-700 mb-1.5">新密碼</label>
+              <label className="block text-body-sm font-medium text-ink mb-1.5">新密碼</label>
               <div className="relative">
-                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                 <input
                   type={showNewPassword ? 'text' : 'password'}
                   name="newPassword"
@@ -339,7 +339,7 @@ export default function ResetPassword() {
                   type="button"
                   onClick={() => setShowNewPassword(prev => !prev)}
                   aria-label={showNewPassword ? '隱藏密碼' : '顯示密碼'}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-muted transition-colors duration-fast"
                 >
                   {showNewPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
                 </button>
@@ -348,9 +348,9 @@ export default function ResetPassword() {
 
             {/* 確認新密碼 */}
             <div>
-              <label className="block text-body-sm font-medium text-gray-700 mb-1.5">確認新密碼</label>
+              <label className="block text-body-sm font-medium text-ink mb-1.5">確認新密碼</label>
               <div className="relative">
-                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg pointer-events-none" />
+                <FiLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
@@ -365,7 +365,7 @@ export default function ResetPassword() {
                   type="button"
                   onClick={() => setShowConfirmPassword(prev => !prev)}
                   aria-label={showConfirmPassword ? '隱藏密碼' : '顯示密碼'}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-fast"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-ink-subtle hover:text-ink-muted transition-colors duration-fast"
                 >
                   {showConfirmPassword ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
                 </button>
@@ -374,8 +374,8 @@ export default function ResetPassword() {
 
             {/* 密碼要求提示 */}
             <div className="p-4 bg-customgreen/5 border border-customgreen/15 rounded-xl">
-              <p className="text-body-sm text-gray-600 font-medium mb-1.5">密碼要求：</p>
-              <ul className="text-body-sm text-gray-500 space-y-0.5 list-disc list-inside">
+              <p className="text-body-sm text-ink-muted font-medium mb-1.5">密碼要求：</p>
+              <ul className="text-body-sm text-ink-muted space-y-0.5 list-disc list-inside">
                 <li>至少 8 個字元</li>
                 <li>建議包含英文大小寫、數字和特殊字元</li>
               </ul>
