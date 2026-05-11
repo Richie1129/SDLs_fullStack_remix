@@ -146,6 +146,7 @@ function parseJsonResponse(raw) {
  * @param {number} [options.temperature=0.7]
  * @param {number} [options.maxTokens=2000]
  * @param {boolean} [options.jsonMode=false] - 是否要求 JSON 回應
+ * @param {object}  [options.jsonSchema] - 若提供，使用 vLLM guided_json 強制 schema（自動啟用 jsonMode）
  * @returns {Promise<{content: string, model: string, parsed?: object}>}
  */
 async function callVLLM(modelKey, options = {}) {
@@ -162,6 +163,7 @@ async function callVLLM(modelKey, options = {}) {
         temperature = 0.7,
         maxTokens = 2000,
         jsonMode = false,
+        jsonSchema = null,
     } = options;
 
     const messages = [{ role: 'system', content: systemPrompt }];
@@ -180,8 +182,13 @@ async function callVLLM(modelKey, options = {}) {
         max_tokens: maxTokens,
     };
 
-    if (jsonMode) {
+    const wantJson = jsonMode || !!jsonSchema;
+    if (wantJson) {
         requestBody.response_format = { type: 'json_object' };
+    }
+    if (jsonSchema) {
+        // vLLM 特有 (OpenAI-compatible 擴充)：強制輸出符合 schema
+        requestBody.guided_json = jsonSchema;
     }
 
     const headers = { 'Content-Type': 'application/json' };
@@ -205,7 +212,7 @@ async function callVLLM(modelKey, options = {}) {
         const result = { content, model: config.displayName, finishReason };
 
         // 如果請求 JSON 模式，嘗試解析
-        if (jsonMode) {
+        if (wantJson) {
             const parsed = parseJsonResponse(content);
             if (!parsed) {
                 logger.warn({ modelKey, rawContent: content.substring(0, 300) },

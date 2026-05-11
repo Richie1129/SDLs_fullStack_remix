@@ -2,6 +2,7 @@
 const { callVLLM: gwCallVLLM, callGemini: gwCallGemini, callWithFallback, parseJsonResponse } = require('../services/llmGateway');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
 const { isAiEnabled } = require('../services/aiAccessService');
+const logger = require('../config/logger');
 const Node = require('../models/node');
 const IdeaWall = require('../models/idea_wall');
 const AiFeedback = require('../models/ai_feedback');
@@ -102,6 +103,41 @@ const AGENT_OUTPUT_SCHEMA = {
 // [Refactored] extractFirstJsonObject 已移至 llmGateway.parseJsonResponse
 
 /**
+ * 強制 JSON 輸出格式說明（附加在 persona prompt 後）
+ * 雙保險：搭配 vLLM guided_json 與 Gemini responseSchema 一起使用
+ */
+const SCHEMA_INSTRUCTION = `
+---
+
+**輸出格式（嚴格遵守，欄位名必須完全一致）：**
+
+請以下列 JSON 結構回應，不可使用其他欄位名稱（例如不可用 thought、response、reason）：
+
+\`\`\`json
+{
+  "isCoachable": true,
+  "uncoachableReason": "",
+  "thinkingProcess": "步驟1：我觀察到... → 步驟2：因此我判斷... → 步驟3：所以我決定...",
+  "content": "給學生看的 Markdown 內容",
+  "suggestedActions": [
+    { "label": "按鈕文字", "actionType": "REPLY", "payload": "預填內容" },
+    { "label": "按鈕文字", "actionType": "CREATE_NEW", "payload": "預填內容" },
+    { "label": "按鈕文字", "actionType": "READ_MORE", "payload": "" }
+  ]
+}
+\`\`\`
+
+欄位說明：
+- \`isCoachable\` (boolean, 必填)：內容是否有實質可引導之處。判斷要寬鬆——只要有半成形想法就設 true，僅在完全空白/亂碼時才 false。
+- \`uncoachableReason\` (string)：僅 isCoachable=false 時填寫，友善說明缺少什麼資訊。
+- \`thinkingProcess\` (string, isCoachable=true 必填)：你的逐步思考，用「→」分隔步驟。
+- \`content\` (string, isCoachable=true 必填)：要發布給學生的 Markdown 回應。
+- \`suggestedActions\` (array, isCoachable=true 必填至少 3 項)：行動建議陣列。actionType 限定 REPLY/CREATE_NEW/READ_MORE。
+
+只輸出 JSON，不要包 markdown code fence、不要加說明文字。
+`;
+
+/**
  * 根據 agentType 建構系統提示詞
  */
 function buildSystemPrompt(agentType) {
@@ -109,7 +145,27 @@ function buildSystemPrompt(agentType) {
   if (!persona) {
     throw new Error(`未知的 Agent 類型: ${agentType}`);
   }
-  return persona.prompt;
+  return persona.prompt + SCHEMA_INSTRUCTION;
+}
+
+/**
+ * 驗證 AI 回傳結構是否符合 schema 最低要求
+ * 不符就拋錯讓 fallback 鏈接手
+ */
+function validateAgentOutput(parsed, modelLabel) {
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error(`${modelLabel} 回傳非物件`);
+  }
+  if (typeof parsed.isCoachable !== 'boolean') {
+    const keys = Object.keys(parsed).join(',');
+    throw new Error(`${modelLabel} 未遵守 schema：缺少 isCoachable 或型別錯誤 (實際欄位: ${keys})`);
+  }
+  if (parsed.isCoachable === true) {
+    if (typeof parsed.content !== 'string' || !parsed.content.trim()) {
+      throw new Error(`${modelLabel} isCoachable=true 但 content 為空`);
+    }
+  }
+  return parsed;
 }
 
 /**
@@ -124,33 +180,35 @@ async function callAIWithFallback(agentType, userPrompt) {
   const systemPrompt = buildSystemPrompt(agentType);
   const errors = [];
 
-  // 第一層：Gemma-4-27b
+  // 第一層：Gemma (vLLM + guided_json)
   try {
-    console.log('🤖 嘗試使用 Gemma-4-27B...');
+    logger.info('[KB Coach] 嘗試使用 Gemma-4-26B (guided_json)...');
     const result = await gwCallVLLM('gemma', {
-      systemPrompt, userPrompt, jsonMode: true
+      systemPrompt, userPrompt, jsonMode: true, jsonSchema: AGENT_OUTPUT_SCHEMA
     });
+    validateAgentOutput(result.parsed, result.model);
     return { data: result.parsed, model: result.model };
   } catch (error) {
-    errors.push({ model: 'Gemma-4-27B', error: error.message });
-    console.warn('⚠️ Gemma-4-27B 失敗，fallback 到 GPT-OSS');
+    errors.push({ model: 'Gemma-4-26B', error: error.message });
+    logger.warn({ err: error.message }, '[KB Coach] Gemma 失敗，fallback 到 GPT-OSS');
   }
 
-  // 第二層：GPT-OSS-20b
+  // 第二層：GPT-OSS (vLLM + guided_json)
   try {
-    console.log('🤖 嘗試使用 GPT-OSS-20B...');
+    logger.info('[KB Coach] 嘗試使用 GPT-OSS-20B (guided_json)...');
     const result = await gwCallVLLM('gpt-oss', {
-      systemPrompt, userPrompt, jsonMode: true
+      systemPrompt, userPrompt, jsonMode: true, jsonSchema: AGENT_OUTPUT_SCHEMA
     });
+    validateAgentOutput(result.parsed, result.model);
     return { data: result.parsed, model: result.model };
   } catch (error) {
     errors.push({ model: 'GPT-OSS-20B', error: error.message });
-    console.warn('⚠️ GPT-OSS-20B 失敗，fallback 到 Gemini');
+    logger.warn({ err: error.message }, '[KB Coach] GPT-OSS 失敗，fallback 到 Gemini');
   }
 
   // 第三層：Gemini (結構化輸出)
   try {
-    console.log('🤖 使用最終 fallback: Gemini-3.1-Flash-Lite-Preview');
+    logger.info('[KB Coach] 使用最終 fallback: Gemini');
     const result = await gwCallGemini({
       prompt: [{ role: 'user', parts: [{ text: systemPrompt + '\n\n' + userPrompt }] }],
       responseMimeType: 'application/json',
@@ -159,10 +217,12 @@ async function callAIWithFallback(agentType, userPrompt) {
     });
     const responseText = result.content || '';
     if (!responseText) throw new Error('Gemini 返回空回應');
-    return { data: JSON.parse(responseText), model: 'Gemini-3.1-Flash-Lite-Preview' };
+    const parsed = JSON.parse(responseText);
+    validateAgentOutput(parsed, 'Gemini-3.1-Flash-Lite-Preview');
+    return { data: parsed, model: 'Gemini-3.1-Flash-Lite-Preview' };
   } catch (error) {
     errors.push({ model: 'Gemini-3.1-Flash-Lite-Preview', error: error.message });
-    console.error('❌ 所有模型都失敗了:', errors);
+    logger.error({ errors }, '[KB Coach] 所有模型都失敗了');
     throw new Error(`所有 AI 模型都無法回應。錯誤摘要: ${errors.map(e => `${e.model}: ${e.error}`).join('; ')}`);
   }
 }
