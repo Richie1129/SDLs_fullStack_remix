@@ -73,12 +73,14 @@ jobs:
   # Job 2：SSH 進伺服器部署（依賴 build 成功才執行）
   # ────────────────────────────────────────────────────────────────
   deploy:
-    runs-on: ubuntu-latest
+    # self-hosted runner 架在目標伺服器同區網，才能連到內網 IP
+    runs-on: self-hosted
     needs: build
 
     steps:
       - name: 🚀 Deploy to server
-        uses: appleboy/ssh-action@master
+        # 釘選 composite 版本：self-hosted runner 不需 docker build action 映像
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
@@ -91,7 +93,7 @@ jobs:
 
             # 定義部署目標
             DEPLOY_TARGETS=(
-              "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
+              "/home/richie/SDLs_fullStack_remix|docker-compose.yml|sdl"
             )
 
             # ── 全域拉取精確版本映像檔 ──────────────────────────────
@@ -125,18 +127,18 @@ jobs:
 
               # 只拉取 api 和 front 映像，不動 postgres/minio 避免觸發重建
               echo "🔄 同步 $service_name Compose 映像 (api + front)..."
-              docker-compose -f "$compose_file" pull api front
+              docker compose -f "$compose_file" pull api front
 
               # ── Migration 安全防護 ──────────────────────────────────
               # --no-deps：不啟動/重建依賴服務，postgres 已在運行中
               # 容器仍會加入 compose 定義的網路，可連到 postgres
               echo "🧬 執行 $service_name Sequelize migration（臨時容器）..."
               # 確保 postgres 已啟動，再取得容器 ID
-              docker-compose -f "$compose_file" up -d postgres > /dev/null
-              POSTGRES_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q postgres | head -1)
+              docker compose -f "$compose_file" up -d postgres > /dev/null
+              POSTGRES_CONTAINER_ID=$(docker compose -f "$compose_file" ps -q postgres | head -1)
               if [ -z "$POSTGRES_CONTAINER_ID" ]; then
                 echo "❌ 找不到 postgres 容器，無法執行 migration"
-                docker-compose -f "$compose_file" ps
+                docker compose -f "$compose_file" ps
                 exit 1
               fi
 
@@ -165,8 +167,8 @@ jobs:
 
               if [ "$READY" != "true" ]; then
                 echo "❌ postgres 未能在時間內穩定啟動"
-                docker-compose -f "$compose_file" ps
-                docker-compose -f "$compose_file" logs --tail=80 postgres
+                docker compose -f "$compose_file" ps
+                docker compose -f "$compose_file" logs --tail=80 postgres
                 exit 1
               fi
 
@@ -201,7 +203,7 @@ jobs:
 
               # 無停機替換：直接 up -d，Docker 自動重啟變更的容器
               echo "🚀 啟動 $service_name 新服務（零停機替換）..."
-              docker-compose -f "$compose_file" up -d
+              docker compose -f "$compose_file" up -d
 
               echo "✅ $service_name 部署完成！"
             done
@@ -214,12 +216,12 @@ jobs:
   # Job 3：驗證部署結果（依賴 deploy 成功才執行）
   # ────────────────────────────────────────────────────────────────
   verify:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: deploy
 
     steps:
       - name: 🎯 Verify deployment
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
@@ -231,7 +233,7 @@ jobs:
 
             # 驗證部署目標 (復用相同數據結構)
             VERIFY_TARGETS=(
-              "/home/hsueh/SDLs_fullStack_remix_v3_lazyinwork|docker-compose.yml|lazyinwork"
+              "/home/richie/SDLs_fullStack_remix|docker-compose.yml|sdl"
             )
 
             # 遍歷驗證每個服務
@@ -250,22 +252,22 @@ jobs:
                 exit 1
               fi
 
-              docker-compose -f "$compose_file" ps
+              docker compose -f "$compose_file" ps
 
-              INVALID=$(docker-compose -f "$compose_file" ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
+              INVALID=$(docker compose -f "$compose_file" ps | awk 'NR>1 && $0 !~ /Up/ {print $1, $5}')
 
               if [ -n "$INVALID" ]; then
                 echo "❌ $service_name 以下容器未正常運行："
                 echo "$INVALID"
-                docker-compose -f "$compose_file" logs --tail=100
+                docker compose -f "$compose_file" logs --tail=100
                 exit 1
               else
                 echo "✅ $service_name 所有容器皆正常運行"
               fi
 
-              API_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q api | head -1)
-              FRONT_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q front | head -1)
-              POSTGRES_CONTAINER_ID=$(docker-compose -f "$compose_file" ps -q postgres | head -1)
+              API_CONTAINER_ID=$(docker compose -f "$compose_file" ps -q api | head -1)
+              FRONT_CONTAINER_ID=$(docker compose -f "$compose_file" ps -q front | head -1)
+              POSTGRES_CONTAINER_ID=$(docker compose -f "$compose_file" ps -q postgres | head -1)
 
               API_IMAGE=$(docker inspect "$API_CONTAINER_ID" --format '{{.Config.Image}}')
               FRONT_IMAGE=$(docker inspect "$FRONT_CONTAINER_ID" --format '{{.Config.Image}}')
@@ -303,13 +305,13 @@ jobs:
                 docker exec -u postgres "$POSTGRES_CONTAINER_ID" \
                   psql -U postgres -d postgres -c "ALTER ROLE \"$PG_USER\" WITH PASSWORD '$ESCAPED_PG_PASSWORD';" > /dev/null || {
                   echo "❌ $service_name 無法同步 PostgreSQL 角色密碼"
-                  docker-compose -f "$compose_file" logs --tail=80 postgres
+                  docker compose -f "$compose_file" logs --tail=80 postgres
                   exit 1
                 }
 
                 if ! verify_public_db; then
                   echo "❌ $service_name PostgreSQL 對外映射埠 15432 密碼驗證仍然失敗"
-                  docker-compose -f "$compose_file" logs --tail=120 postgres
+                  docker compose -f "$compose_file" logs --tail=120 postgres
                   exit 1
                 fi
 

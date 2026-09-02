@@ -1,0 +1,163 @@
+# 伺服器端部署用 Compose 檔（來源受版本控管，部署時複製到伺服器）
+#
+# 用法：複製到伺服器部署目錄並命名為 docker-compose.yml，
+#       同目錄需有 nginx.conf 與 .env（含 IMAGE_TAG 與各項機密設定）。
+# CI（.github/workflows/deploy.yml）只會 pull api/front 並 up -d，
+# 不會覆寫此檔；此檔有更動時需手動同步到伺服器。
+#
+# 與 docker-compose.prod.yml 的差異：
+# - 映像使用 ${IMAGE_TAG}（由 CI 寫入 .env），不使用 latest、無 build 區塊
+# - postgres 對外映射 15432（deploy.yml 的 verify job 會驗證此埠）
+# - 無 certbot/443（內網僅 HTTP 80；對外 HTTPS 由 Cloudflare Tunnel 在邊緣終結）
+# - cloudflared 服務掛在 profile "tunnel"，需 .env 同時設定
+#   COMPOSE_PROFILES=tunnel 與 CLOUDFLARE_TUNNEL_TOKEN 才會啟動
+
+services:
+  nginx:
+    image: nginx
+    restart: always
+    ports:
+      - 80:80
+    volumes:
+      - "./nginx.conf:/etc/nginx/nginx.conf"
+    depends_on:
+      - api
+      - front
+    networks:
+      - agent_network
+
+  # Cloudflare Tunnel：science.wuretedu.com → http://nginx:80（在 Zero Trust 後台設定 Public Hostname）
+  # 未設定 token 前不啟動，避免 crash loop 讓 verify job 誤判為部署失敗
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - nginx
+    networks:
+      - agent_network
+
+  api:
+    image: stone881129/sdl-api:${IMAGE_TAG:-sdls-v3}
+    restart: always
+    expose:
+      - 3000
+    env_file: .env
+    environment:
+      # 覆寫 .env：容器內部網路固定走 compose service name
+      - NODE_ENV=production
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - MINIO_ENDPOINT=http://minio:9000
+    volumes:
+      - "./daily_file:/sdl-backend-main/daily_file"
+      - "./logs:/logs"
+    networks:
+      - agent_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  front:
+    image: stone881129/sdl-front:${IMAGE_TAG:-sdls-v3}
+    restart: always
+    expose:
+      - 5173
+    networks:
+      - agent_network
+
+  postgres:
+    image: postgres:17
+    restart: always
+    environment:
+      - POSTGRES_DB=${PG_NAME}
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+    ports:
+      # verify job 會從主機以 127.0.0.1:15432 驗證 DB 連線
+      - "15432:5432"
+    networks:
+      - agent_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio:latest
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    ports:
+      # 9000 需對外映射，瀏覽器才能透過 MINIO_PUBLIC_ENDPOINT 取得檔案
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - agent_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-sdl-files}
+    networks:
+      - agent_network
+    entrypoint: >
+      /bin/sh -c "
+      echo '初始化 MinIO...';
+      /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY;
+      if /usr/bin/mc ls myminio/$$MINIO_BUCKET_NAME > /dev/null 2>&1; then
+        echo 'Bucket 已存在: '$$MINIO_BUCKET_NAME;
+      else
+        echo '創建 bucket: '$$MINIO_BUCKET_NAME;
+        /usr/bin/mc mb myminio/$$MINIO_BUCKET_NAME;
+        echo 'Bucket 創建成功';
+      fi;
+      echo 'MinIO 初始化完成';
+      "
+
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+      - PGADMIN_CONFIG_CONSOLE_LOG_LEVEL=40
+      - GUNICORN_ACCESS_LOGFILE=/dev/null
+    ports:
+      - "5555:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - agent_network
+
+networks:
+  agent_network:
+
+volumes:
+  postgres_data:
+  minio_data:
+  pgadmin_data:
