@@ -49,7 +49,7 @@ services:
       - agent_network
 
   api:
-    image: stone881129/sdl-api:${IMAGE_TAG:-sdls-v3}
+    image: ghcr.io/richie1129/sdl-api:${IMAGE_TAG:-sdls-v3}
     restart: always
     # Docker json-file log 輪替：避免 SQL/HTTP 日誌無上限成長吃滿磁碟
     logging:
@@ -80,7 +80,7 @@ services:
         condition: service_completed_successfully
 
   front:
-    image: stone881129/sdl-front:${IMAGE_TAG:-sdls-v3}
+    image: ghcr.io/richie1129/sdl-front:${IMAGE_TAG:-sdls-v3}
     restart: always
     expose:
       - 5173

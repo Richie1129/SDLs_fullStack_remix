@@ -12,11 +12,13 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-  DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
   SERVER_HOST: ${{ secrets.SERVER_HOST }}
   SERVER_USER: ${{ secrets.SERVER_USER }}
   SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+  # 映像一律推到 GitHub Container Registry：private 映像沒有數量限制，
+  # 推與拉都用 workflow 自帶的 GITHUB_TOKEN，不需要額外 secret。ghcr 的映像名稱必須全小寫。
+  API_IMAGE: ghcr.io/richie1129/sdl-api
+  FRONT_IMAGE: ghcr.io/richie1129/sdl-front
   # 動態映像標籤：使用 Git commit SHA 作為唯一版號
   IMAGE_TAG: ${{ github.sha }}
 
@@ -26,6 +28,9 @@ jobs:
   # ────────────────────────────────────────────────────────────────
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: 📥 Checkout code
@@ -34,11 +39,12 @@ jobs:
       - name: 🔧 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔐 Log in to Docker Hub
+      - name: 🔐 Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_USERNAME }}
-          password: ${{ env.DOCKER_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 🏗️ Build and push backend image
         uses: docker/build-push-action@v5
@@ -48,8 +54,8 @@ jobs:
           push: true
           # 雙標籤：精確 SHA 版本 + sdls-v3 備用/最新標籤
           tags: |
-            stone881129/sdl-api:${{ env.IMAGE_TAG }}
-            stone881129/sdl-api:sdls-v3
+            ${{ env.API_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.API_IMAGE }}:sdls-v3
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -61,8 +67,8 @@ jobs:
           push: true
           # 雙標籤：精確 SHA 版本 + sdls-v3 備用/最新標籤
           tags: |
-            stone881129/sdl-front:${{ env.IMAGE_TAG }}
-            stone881129/sdl-front:sdls-v3
+            ${{ env.FRONT_IMAGE }}:${{ env.IMAGE_TAG }}
+            ${{ env.FRONT_IMAGE }}:sdls-v3
           # 傳入 VITE_* 建構時變數（不在 .env 中，需透過 Secrets 傳入）
           build-args: |
             VITE_RAGFLOW_CHAT_ID=${{ secrets.VITE_RAGFLOW_CHAT_ID }}
@@ -76,20 +82,30 @@ jobs:
     # self-hosted runner 架在目標伺服器同區網，才能連到內網 IP
     runs-on: self-hosted
     needs: build
+    permissions:
+      contents: read
+      packages: read
 
     steps:
       - name: 🚀 Deploy to server
         # 釘選 composite 版本：self-hosted runner 不需 docker build action 映像
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           host: ${{ env.SERVER_HOST }}
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
           command_timeout: 300s
-          # 將 IMAGE_TAG 傳入 SSH 環境，腳本直接以 $NEW_TAG 使用
-          envs: IMAGE_TAG
+          # 將 IMAGE_TAG、映像名稱與 ghcr 登入資訊傳入 SSH 環境
+          envs: IMAGE_TAG,API_IMAGE,FRONT_IMAGE,GHCR_USER,GHCR_TOKEN
           script: |
             NEW_TAG="${IMAGE_TAG}"
+
+            # 以本次 workflow 的 GITHUB_TOKEN 登入 ghcr.io（只在 job 期間有效，結尾會登出；
+            # 手動在伺服器 pull 私有映像時，需自備 read:packages 的 PAT 執行 docker login ghcr.io）
+            echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USER}" --password-stdin
 
             # 定義部署目標
             DEPLOY_TARGETS=(
@@ -98,8 +114,8 @@ jobs:
 
             # ── 全域拉取精確版本映像檔 ──────────────────────────────
             echo "📦 全域拉取映像檔 (tag: ${NEW_TAG})..."
-            docker pull stone881129/sdl-api:${NEW_TAG}
-            docker pull stone881129/sdl-front:${NEW_TAG}
+            docker pull "${API_IMAGE}:${NEW_TAG}"
+            docker pull "${FRONT_IMAGE}:${NEW_TAG}"
 
             # 遍歷部署目標
             for target in "${DEPLOY_TARGETS[@]}"; do
@@ -181,7 +197,7 @@ jobs:
                 -e PG_HOST=127.0.0.1 \
                 -e PG_PORT=5432 \
                 -e NODE_ENV=production \
-                stone881129/sdl-api:${NEW_TAG} npx sequelize-cli db:migrate || {
+                "${API_IMAGE}:${NEW_TAG}" npx sequelize-cli db:migrate || {
                 echo "❌ $service_name Migration 失敗，中止部署以保護線上服務"
                 exit 1
               }
@@ -195,7 +211,7 @@ jobs:
                 -e PG_HOST=127.0.0.1 \
                 -e PG_PORT=5432 \
                 -e NODE_ENV=production \
-                "stone881129/sdl-api:${NEW_TAG}" node scripts/seedSchools.js || {
+                "${API_IMAGE}:${NEW_TAG}" node scripts/seedSchools.js || {
                 echo "⚠️ Seed 失敗（非致命，繼續部署）"
               }
               echo "✅ $service_name Seed 完成"
@@ -212,6 +228,9 @@ jobs:
             echo "🧹 清理舊映像檔..."
             docker image prune -f
 
+            # 不把短效的 GITHUB_TOKEN 留在伺服器的 ~/.docker/config.json
+            docker logout ghcr.io || true
+
   # ────────────────────────────────────────────────────────────────
   # Job 3：驗證部署結果（依賴 deploy 成功才執行）
   # ────────────────────────────────────────────────────────────────
@@ -227,7 +246,7 @@ jobs:
           username: ${{ env.SERVER_USER }}
           key: ${{ env.SERVER_SSH_KEY }}
           command_timeout: 180s
-          envs: IMAGE_TAG
+          envs: IMAGE_TAG,API_IMAGE,FRONT_IMAGE
           script: |
             NEW_TAG="${IMAGE_TAG}"
 
@@ -269,16 +288,16 @@ jobs:
               FRONT_CONTAINER_ID=$(docker compose -f "$compose_file" ps -q front | head -1)
               POSTGRES_CONTAINER_ID=$(docker compose -f "$compose_file" ps -q postgres | head -1)
 
-              API_IMAGE=$(docker inspect "$API_CONTAINER_ID" --format '{{.Config.Image}}')
-              FRONT_IMAGE=$(docker inspect "$FRONT_CONTAINER_ID" --format '{{.Config.Image}}')
+              RUNNING_API_IMAGE=$(docker inspect "$API_CONTAINER_ID" --format '{{.Config.Image}}')
+              RUNNING_FRONT_IMAGE=$(docker inspect "$FRONT_CONTAINER_ID" --format '{{.Config.Image}}')
 
-              if [ "$API_IMAGE" != "stone881129/sdl-api:${NEW_TAG}" ]; then
-                echo "❌ $service_name API 映像版本不符: $API_IMAGE"
+              if [ "$RUNNING_API_IMAGE" != "${API_IMAGE}:${NEW_TAG}" ]; then
+                echo "❌ $service_name API 映像版本不符: $RUNNING_API_IMAGE"
                 exit 1
               fi
 
-              if [ "$FRONT_IMAGE" != "stone881129/sdl-front:${NEW_TAG}" ]; then
-                echo "❌ $service_name Frontend 映像版本不符: $FRONT_IMAGE"
+              if [ "$RUNNING_FRONT_IMAGE" != "${FRONT_IMAGE}:${NEW_TAG}" ]; then
+                echo "❌ $service_name Frontend 映像版本不符: $RUNNING_FRONT_IMAGE"
                 exit 1
               fi
 

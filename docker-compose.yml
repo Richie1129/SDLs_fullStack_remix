@@ -16,7 +16,7 @@ services:
     build:
       context: ./sdl-backend-main
       # dockerfile: dockerfile
-    image: stone881129/sdl-api:latest     # <--- 加這行
+    image: ghcr.io/richie1129/sdl-api:latest
     expose:
       - 3000
     environment:
@@ -73,7 +73,7 @@ services:
     build:
       context: ./sdl-frontend-main
       # dockerfile: dockerfile
-    image: stone881129/sdl-front:latest   
+    image: ghcr.io/richie1129/sdl-front:latest   
     expose:
       - 5173
     volumes:

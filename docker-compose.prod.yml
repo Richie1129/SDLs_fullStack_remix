@@ -37,7 +37,7 @@ services:
     build:
       context: ./sdl-backend-main
       dockerfile: Dockerfile.prod
-    image: stone881129/sdl-api:latest
+    image: ghcr.io/richie1129/sdl-api:latest
     restart: always
     # Docker json-file log 輪替：避免 SQL/HTTP 日誌無上限成長吃滿磁碟
     logging:
@@ -85,7 +85,7 @@ services:
       # VITE_* 需在 build 階段注入；builder 已不再 COPY .env
       args:
         VITE_RAGFLOW_CHAT_ID: ${VITE_RAGFLOW_CHAT_ID}
-    image: stone881129/sdl-front:latest
+    image: ghcr.io/richie1129/sdl-front:latest
     restart: always
     expose:
       - 5173

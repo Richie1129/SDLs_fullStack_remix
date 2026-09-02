@@ -35,7 +35,7 @@ services:
   api:
     build:
       context: ./sdl-backend-main
-    image: stone881129/sdl-api:admin
+    image: ghcr.io/richie1129/sdl-api:admin
     expose:
       - 3000
     environment:
@@ -90,7 +90,7 @@ services:
   front:
     build:
       context: ./sdl-frontend-main
-    image: stone881129/sdl-front:admin
+    image: ghcr.io/richie1129/sdl-front:admin
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "5175:5173"

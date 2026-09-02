@@ -18,7 +18,7 @@ services:
     build:
       context: ./sdl-backend-main
       # dockerfile: dockerfile
-    image: stone881129/sdl-api:latest     # <--- 加這行
+    image: ghcr.io/richie1129/sdl-api:latest
     expose:
       - 3000
     environment:
@@ -79,7 +79,7 @@ services:
     build:
       context: ./sdl-frontend-main
       # dockerfile: dockerfile
-    image: stone881129/sdl-front:latest
+    image: ghcr.io/richie1129/sdl-front:latest
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "5174:5173"  # 開發環境映射到 5174（5173 可能被主分支佔用）
