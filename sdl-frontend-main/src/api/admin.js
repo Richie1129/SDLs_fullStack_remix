@@ -19,3 +19,10 @@ export const toggleAiAccess = async (userId, aiEnabled) => {
     const response = await apiClient.patch(`/admin/users/${userId}/ai-access`, { aiEnabled });
     return response.data;
 };
+
+// PATCH /api/admin/users/:userId/role
+// role 只能是 'student' | 'teacher'（admin 不可透過 API 指派）
+export const updateUserRole = async (userId, role) => {
+    const response = await apiClient.patch(`/admin/users/${userId}/role`, { role });
+    return response.data;
+};

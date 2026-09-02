@@ -85,34 +85,69 @@ class BaseSocketHandler {
     }
 
     /**
-     * H14: 驗證 Column 確實屬於聲稱的 projectId
-     * 防止使用者操作不屬於自己專案的資源
+     * H14: 載入 Column 並驗證它確實屬於聲稱的 projectId
+     * 防止使用者操作不屬於自己專案的資源。回傳 status 讓呼叫端區分「不存在」與「不屬於此專案」。
+     * @param {number} columnId
+     * @param {number|string} claimedProjectId - client 聲稱的 projectId（已通過 withPermission）
+     * @param {Object} [options] - { transaction }
+     * @returns {Promise<{status: 'OK'|'NOT_FOUND'|'MISMATCH', column: Object|null}>}
      */
-    async verifyColumnProject(columnId, claimedProjectId) {
+    async loadColumnInProject(columnId, claimedProjectId, options = {}) {
         const Column = require('../models/column');
         const Kanban = require('../models/kanban');
         const column = await Column.findByPk(columnId, {
-            include: [{ model: Kanban, attributes: ['id', 'projectId'] }]
+            include: [{ model: Kanban, attributes: ['id', 'projectId'] }],
+            transaction: options.transaction
         });
-        if (!column || !column.kanban) return false;
-        return String(column.kanban.projectId) === String(claimedProjectId);
+        if (!column) return { status: 'NOT_FOUND', column: null };
+        const actualProjectId = column.kanban?.projectId;
+        if (actualProjectId == null || String(actualProjectId) !== String(claimedProjectId)) {
+            return { status: 'MISMATCH', column: null };
+        }
+        return { status: 'OK', column };
     }
 
     /**
-     * H14: 驗證 Task 確實屬於聲稱的 projectId
+     * H14: 載入 Task 並驗證它確實屬於聲稱的 projectId
+     * @returns {Promise<{status: 'OK'|'NOT_FOUND'|'MISMATCH', task: Object|null}>}
      */
-    async verifyTaskProject(taskId, claimedProjectId) {
+    async loadTaskInProject(taskId, claimedProjectId, options = {}) {
         const Task = require('../models/task');
         const Column = require('../models/column');
         const Kanban = require('../models/kanban');
         const task = await Task.findByPk(taskId, {
             include: [{
                 model: Column,
+                attributes: ['id', 'name'],
                 include: [{ model: Kanban, attributes: ['id', 'projectId'] }]
-            }]
+            }],
+            transaction: options.transaction
         });
-        if (!task || !task.column || !task.column.kanban) return false;
-        return String(task.column.kanban.projectId) === String(claimedProjectId);
+        if (!task) return { status: 'NOT_FOUND', task: null };
+        const actualProjectId = task.column?.kanban?.projectId;
+        if (actualProjectId == null || String(actualProjectId) !== String(claimedProjectId)) {
+            return { status: 'MISMATCH', task: null };
+        }
+        return { status: 'OK', task };
+    }
+
+    /**
+     * H14: 載入 Node 並驗證它確實屬於聲稱的 projectId（Node → IdeaWall → projectId）
+     * @returns {Promise<{status: 'OK'|'NOT_FOUND'|'MISMATCH', node: Object|null}>}
+     */
+    async loadNodeInProject(nodeId, claimedProjectId, options = {}) {
+        const Node = require('../models/node');
+        const IdeaWall = require('../models/idea_wall'); // 同時確保 Node.ideaWallId 關聯已註冊
+        const node = await Node.findByPk(nodeId, { transaction: options.transaction });
+        if (!node) return { status: 'NOT_FOUND', node: null };
+        const ideaWall = node.ideaWallId != null
+            ? await IdeaWall.findByPk(node.ideaWallId, { attributes: ['id', 'projectId'], transaction: options.transaction })
+            : null;
+        const actualProjectId = ideaWall?.projectId;
+        if (actualProjectId == null || String(actualProjectId) !== String(claimedProjectId)) {
+            return { status: 'MISMATCH', node: null };
+        }
+        return { status: 'OK', node };
     }
 
     /**

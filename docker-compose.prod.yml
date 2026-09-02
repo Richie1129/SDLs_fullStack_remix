@@ -47,6 +47,10 @@ services:
         max-file: "3"
     expose:
       - 3000
+    # 映像已不含 .env（.dockerignore 排除），JWT_SECRET / RAGFLOW_* / METRICS_TOKEN / EMAIL_* 等全部由 env_file 注入；
+    # 下方 environment 只覆寫容器內固定值
+    env_file:
+      - ./.env
     environment:
       - PG_HOST=postgres
       - PG_PORT=5432
@@ -78,6 +82,9 @@ services:
     build:
       context: ./sdl-frontend-main
       dockerfile: Dockerfile.prod
+      # VITE_* 需在 build 階段注入；builder 已不再 COPY .env
+      args:
+        VITE_RAGFLOW_CHAT_ID: ${VITE_RAGFLOW_CHAT_ID}
     image: stone881129/sdl-front:latest
     restart: always
     expose:

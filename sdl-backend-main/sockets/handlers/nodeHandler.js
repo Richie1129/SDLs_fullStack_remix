@@ -174,8 +174,25 @@ class NodeHandler {
         const updatedBy = this.getCurrentUsername(data) || owner || "未知";
 
         try {
-            // 取得原始資料以比較變更
-            const originalNode = await Node.findByPk(id);
+            // H14: 由 DB 反查節點歸屬，確認它真的屬於聲稱的 projectId（同時取得原始資料以比較變更）
+            const { status, node: originalNode } = await this.loadNodeInProject(id, projectId);
+
+            if (status === 'NOT_FOUND') {
+                this.emitError('nodeUpdate', {
+                    message: '節點不存在，可能已被刪除',
+                    code: 'NODE_NOT_FOUND'
+                });
+                return;
+            }
+
+            if (status !== 'OK') {
+                console.warn(`拒絕更新節點 ${id}：不屬於專案 ${projectId}（user: ${updatedBy}）`);
+                this.emitError('nodeUpdate', {
+                    message: '節點不屬於此專案',
+                    code: 'RESOURCE_MISMATCH'
+                });
+                return;
+            }
 
             // R2-H7: Node.update 回傳 [affectedCount]，改用 reload 取得實際資料
             await Node.update(
@@ -236,14 +253,46 @@ class NodeHandler {
         const deletedBy = this.getCurrentUsername(data) || owner || "未知";
         
         try {
-            // 先記錄節點刪除日誌（在刪除前保存完整資訊）
-            console.log('🔍 記錄節點刪除日誌:', { id, projectId, title, deletedBy });
+            // H14: 由 DB 反查節點歸屬，確認它真的屬於聲稱的 projectId；不採信 client 傳來的資料
+            const { status, node } = await this.loadNodeInProject(id, projectId);
+
+            if (status === 'MISMATCH') {
+                console.warn(`拒絕刪除節點 ${id}：不屬於專案 ${projectId}（user: ${deletedBy}）`);
+                this.emitError('nodeDelete', {
+                    message: '節點不屬於此專案',
+                    code: 'RESOURCE_MISMATCH',
+                    details: { nodeId: id, projectId }
+                });
+                return;
+            }
+
+            if (status === 'NOT_FOUND') {
+                // 節點已不存在（例如兩人同時刪除）：沒有東西可刪、也沒有歸屬可驗，維持冪等成功讓前端狀態收斂
+                console.warn(`節點 ${id} 不存在，視為已刪除`);
+                this.broadcastToProject(projectId, "nodeSync", {
+                    action: 'delete',
+                    nodeId: id,
+                    _socketId: this.socket.id
+                });
+                this.emitSuccess('nodeDelete', {
+                    message: '節點已不存在',
+                    code: 'NODE_DELETE_SUCCESS',
+                    nodeId: id,
+                    nodeTitle: title || '未知標題'
+                });
+                return;
+            }
+
+            const nodeTitle = node.title || title || '未知標題';
+
+            // 先記錄節點刪除日誌（在刪除前保存完整資訊；標題取自 DB）
+            console.log('🔍 記錄節點刪除日誌:', { id, projectId, title: nodeTitle, deletedBy });
             const changeLogResult = await logNodeChange({
                 nodeId: id, // 先使用真實的節點ID記錄
                 changeType: 'delete',
                 changedBy: deletedBy,
                 projectId: projectId,
-                description: `刪除了節點「${title || '未知標題'}」`
+                description: `刪除了節點「${nodeTitle}」`
             });
             console.log('✅ 節點刪除記錄已保存:', changeLogResult.id);
 
@@ -287,20 +336,20 @@ class NodeHandler {
                 type: 'delete',
                 source: 'node',
                 nodeId: id,
-                nodeTitle: title || '未知標題',
+                nodeTitle: nodeTitle,
                 user: deletedBy,
                 timestamp: new Date().toISOString(),
                 projectId: projectId
             });
             
-            console.log(`✅ 節點刪除成功: ${id} - ${title}`);
+            console.log(`✅ 節點刪除成功: ${id} - ${nodeTitle}`);
             
             // 發送成功事件給前端
             this.emitSuccess('nodeDelete', {
                 message: '節點刪除成功',
                 code: 'NODE_DELETE_SUCCESS',
                 nodeId: id,
-                nodeTitle: title || '未知標題'
+                nodeTitle: nodeTitle
             });
 
         } catch (error) {
@@ -333,13 +382,17 @@ class NodeHandler {
         try {
             console.log(`📌 建立節點連線: ${from_id} → ${to_id}`);
 
-            // 驗證兩個節點是否存在
-            const fromNode = await Node.findByPk(from_id);
-            const toNode = await Node.findByPk(to_id);
-
-            if (!fromNode || !toNode) {
+            // H14: 兩個節點都必須存在且屬於聲稱的 projectId，否則可把他人專案的節點連進此想法牆
+            const fromCheck = await this.loadNodeInProject(from_id, projectId);
+            const toCheck = await this.loadNodeInProject(to_id, projectId);
+            if (fromCheck.status === 'NOT_FOUND' || toCheck.status === 'NOT_FOUND') {
                 throw new Error('來源節點或目標節點不存在');
             }
+            if (fromCheck.status !== 'OK' || toCheck.status !== 'OK') {
+                throw new Error('來源節點或目標節點不屬於此專案');
+            }
+            const fromNode = fromCheck.node;
+            const toNode = toCheck.node;
 
             // 權限檢查：只有來源節點的擁有者可以建立連線
             if (fromNode.owner !== createdBy) {
@@ -436,12 +489,21 @@ class NodeHandler {
         try {
             console.log(`🗑️ 刪除節點連線: ${from_id} → ${to_id}`);
 
-            // 權限檢查：只有來源節點的擁有者可以刪除連線
-            const fromNode = await Node.findByPk(from_id);
-            if (!fromNode) {
+            // H14: 來源與目標節點都必須屬於聲稱的 projectId
+            const fromCheck = await this.loadNodeInProject(from_id, projectId);
+            if (fromCheck.status === 'NOT_FOUND') {
                 throw new Error('來源節點不存在');
             }
-            
+            if (fromCheck.status !== 'OK') {
+                throw new Error('來源節點不屬於此專案');
+            }
+            const toCheck = await this.loadNodeInProject(to_id, projectId);
+            if (toCheck.status !== 'OK') {
+                throw new Error(toCheck.status === 'NOT_FOUND' ? '目標節點不存在' : '目標節點不屬於此專案');
+            }
+            const fromNode = fromCheck.node;
+
+            // 權限檢查：只有來源節點的擁有者可以刪除連線
             if (fromNode.owner !== deletedBy) {
                 throw new Error('您沒有權限刪除此連線');
             }

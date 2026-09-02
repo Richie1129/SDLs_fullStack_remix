@@ -172,23 +172,14 @@ class TaskHandler {
             // 使用交易更新任務
             const t = await sequelize.transaction();
             try {
-                // H14: 在 transaction 內取得原始資料並驗證歸屬
-                const originalTask = await Task.findByPk(cardData.id, {
-                    transaction: t,
-                    include: [{
-                        model: Column,
-                        attributes: ['id'],
-                        include: [{ model: Kanban, attributes: ['id', 'projectId'] }]
-                    }]
-                });
-                if (!originalTask) {
+                // H14: 在 transaction 內由 DB 反查歸屬（fail-closed：查不到所屬專案一律拒絕）
+                const { status, task: originalTask } = await this.loadTaskInProject(cardData.id, projectId, { transaction: t });
+                if (status === 'NOT_FOUND') {
                     await t.rollback();
                     this.emitError('taskUpdate', { message: '任務不存在', code: 'TASK_NOT_FOUND' });
                     return;
                 }
-                // 驗證 Task 確實屬於聲稱的 projectId
-                const actualProjectId = originalTask.column?.kanban?.projectId;
-                if (actualProjectId && String(actualProjectId) !== String(projectId)) {
+                if (status !== 'OK') {
                     await t.rollback();
                     this.emitError('taskUpdate', { message: '任務不屬於此專案', code: 'RESOURCE_MISMATCH' });
                     return;
@@ -278,27 +269,19 @@ class TaskHandler {
     static async handleTaskDelete(data) {
         const { cardData, projectId } = data;
         const currentUser = this.getCurrentUser(data);
-        const deletedBy = currentUser?.username || cardData.owner || "未知";
+        const deletedBy = currentUser?.username || cardData?.owner || "未知";
+        const taskId = cardData?.id;
 
         try {
-            // 先收集需要刪除的 MinIO 檔案（Transaction 前讀取，commit 後再刪）
-            let fileNamesToDelete = [];
-            try {
-                const { extractTaskFileNames } = require('../../utils/minioFileHelper');
-                fileNamesToDelete = extractTaskFileNames(cardData);
-            } catch (fileErr) {
-                console.warn('收集 MinIO 檔案清單錯誤:', fileErr.message);
-            }
-
             // 使用 Transaction + Row Lock 確保 Column 陣列更新與 Task 刪除的原子性
             const t = await sequelize.transaction();
-            let columnIdToUse, columnName;
+            let columnIdToUse, columnName, taskRow;
+            let fileNamesToDelete = [];
             try {
-                const taskRow = await Task.findByPk(cardData.id, {
-                    transaction: t
-                });
+                // H14: 由 DB 反查任務歸屬，確認它真的屬於聲稱的 projectId；不採信 client 傳來的 cardData
+                const { status, task } = await this.loadTaskInProject(taskId, projectId, { transaction: t });
 
-                if (!taskRow) {
+                if (status === 'NOT_FOUND') {
                     await t.rollback();
                     this.emitError('taskDelete', {
                         message: '任務不存在，可能已被刪除',
@@ -306,7 +289,27 @@ class TaskHandler {
                     });
                     return;
                 }
+
+                if (status !== 'OK') {
+                    await t.rollback();
+                    console.warn(`拒絕刪除任務 ${taskId}：不屬於專案 ${projectId}（user: ${deletedBy}）`);
+                    this.emitError('taskDelete', {
+                        message: '任務不屬於此專案',
+                        code: 'RESOURCE_MISMATCH'
+                    });
+                    return;
+                }
+
+                taskRow = task;
                 columnIdToUse = taskRow.columnId;
+
+                // 需要清理的 MinIO 檔案一律取自 DB 內的任務資料（Transaction 內讀取，commit 後再刪）
+                try {
+                    const { extractTaskFileNames } = require('../../utils/minioFileHelper');
+                    fileNamesToDelete = extractTaskFileNames(taskRow);
+                } catch (fileErr) {
+                    console.warn('收集 MinIO 檔案清單錯誤:', fileErr.message);
+                }
 
                 // 鎖定 Column row 防止並發刪除覆蓋陣列
                 const column = await Column.findByPk(columnIdToUse, {
@@ -325,16 +328,16 @@ class TaskHandler {
                 }
 
                 columnName = column.name || '未知列表';
-                console.log(`開始刪除任務 ${cardData.id}...`);
+                console.log(`開始刪除任務 ${taskId}...`);
 
                 // 從列表中移除任務 ID
                 column.task = (Array.isArray(column.task) ? column.task : [])
-                    .filter(taskId => Number(taskId) !== Number(cardData.id));
+                    .filter(id => Number(id) !== Number(taskId));
                 await column.save({ transaction: t });
 
                 // 刪除任務記錄
                 await Task.destroy({
-                    where: { id: cardData.id },
+                    where: { id: taskId },
                     transaction: t,
                     individualHooks: true,
                     req: data._reqContext
@@ -364,14 +367,14 @@ class TaskHandler {
                 }
             }
 
-            // 記錄任務刪除日誌（非關鍵路徑）
+            // 記錄任務刪除日誌（非關鍵路徑；標題取自 DB）
             try {
                 await logTaskChange({
-                    taskId: cardData.id,
+                    taskId: taskId,
                     changeType: 'delete',
                     changedBy: deletedBy,
                     projectId: projectId,
-                    description: `在「${columnName}」中刪除任務「${cardData.title}」`
+                    description: `在「${columnName}」中刪除任務「${taskRow.title}」`
                 });
             } catch (logError) {
                 console.warn('任務刪除日誌記錄失敗:', logError.message);
@@ -379,26 +382,26 @@ class TaskHandler {
 
             // 廣播刪除事件
             this.broadcastToProject(projectId, "taskDeleted", {
-                taskId: cardData.id,
+                taskId: taskId,
                 columnId: columnIdToUse,
                 deletedBy: deletedBy
             });
 
             this.broadcastToProject(projectId, "activityUpdate", {
                 type: 'delete',
-                taskId: cardData.id,
-                taskTitle: cardData.title,
+                taskId: taskId,
+                taskTitle: taskRow.title,
                 user: deletedBy,
                 timestamp: new Date(),
                 columnName: columnName,
                 taskDetails: {
-                    content: cardData.content,
-                    labels: cardData.labels,
-                    assignees: cardData.assignees
+                    content: taskRow.content,
+                    labels: taskRow.labels,
+                    assignees: taskRow.assignees
                 }
             });
 
-            console.log(`任務 ${cardData.id} 刪除完成`);
+            console.log(`任務 ${taskId} 刪除完成`);
 
         } catch (error) {
             console.error('任務刪除錯誤:', error);
@@ -426,6 +429,20 @@ class TaskHandler {
             const t = await sequelize.transaction();
             let sourceColumn, destColumn, sourceTasks, destTasks;
             try {
+                // H14: 任務與來源／目標欄位都必須屬於聲稱的 projectId，否則可跨專案搬運任務（等同讀取他人資料）
+                const taskCheck = await this.loadTaskInProject(taskId, projectId, { transaction: t });
+                const sourceCheck = await this.loadColumnInProject(sourceColumnId, projectId, { transaction: t });
+                const destCheck = await this.loadColumnInProject(destColumnId, projectId, { transaction: t });
+                if (taskCheck.status !== 'OK' || sourceCheck.status !== 'OK' || destCheck.status !== 'OK') {
+                    await t.rollback();
+                    console.warn(`拒絕拖曳任務 ${taskId}（${sourceColumnId} → ${destColumnId}）：資源不屬於專案 ${projectId}`);
+                    this.emitError('taskDrag', {
+                        message: '任務或列表不屬於此專案',
+                        code: 'RESOURCE_MISMATCH'
+                    });
+                    return;
+                }
+
                 // 一致的 lock ordering（永遠先鎖 ID 較小的欄位）防止 deadlock
                 if (sourceColumnId === destColumnId) {
                     sourceColumn = await Column.findByPk(sourceColumnId, {

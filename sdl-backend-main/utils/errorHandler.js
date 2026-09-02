@@ -10,14 +10,15 @@ const path = require('path');
 const LOGS_DIR = path.join(__dirname, '..', '..', 'logs', 'errors');
 try { fs.mkdirSync(LOGS_DIR, { recursive: true }); } catch {}
 
-// 請求 body 中需要遮蔽的敏感欄位
-const SENSITIVE_FIELDS = ['password', 'newPassword', 'oldPassword', 'token', 'secret', 'refreshToken'];
+// 請求 body 中需要遮蔽的敏感欄位：精確名單 + 欄位名稱樣式（大小寫不分），寧可多遮不可漏
+const SENSITIVE_FIELDS = ['password', 'newPassword', 'oldPassword', 'currentPassword', 'confirmPassword', 'tempPassword', 'token', 'secret', 'refreshToken', 'accessToken'];
+const SENSITIVE_KEY_RE = /password|passwd|pwd|token|secret|api[-_]?key|credential|authorization/i;
 
 function sanitizeBody(body) {
     if (!body || typeof body !== 'object') return body;
     const cleaned = { ...body };
-    SENSITIVE_FIELDS.forEach(field => {
-        if (field in cleaned) cleaned[field] = '***';
+    Object.keys(cleaned).forEach(key => {
+        if (SENSITIVE_FIELDS.includes(key) || SENSITIVE_KEY_RE.test(key)) cleaned[key] = '***';
     });
     return cleaned;
 }
@@ -278,6 +279,7 @@ function writeSocketErrorReport(error, eventName, socketUser) {
 module.exports = {
     // 錯誤報告
     writeErrorReport,
+    sanitizeBody,
     writeSocketErrorReport,
 
     // 全域攔截

@@ -542,9 +542,35 @@
 
 ---
 
+### F020: JWT claim 失效機制（roleChangedAt / token 版本）
+
+- **類別**：Backend / Auth
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-03
+- **提案來源**：2026-09-03 資安止血項 code review（admin 變更角色端點 H3）
+- **為什麼現在不做**：
+  - 止血版已讓 `requireAdmin` 一律查 DB，admin 端點不再信任 JWT 內的 role；但其他以 `req.user.role` 判斷 teacher 的路徑（`checkProjectOwnerOrTeacher`、teacherAgent、auditClient 等）在 access token 到期前（預設 24 小時）仍沿用舊角色
+  - 全面改成每次查 DB 會影響高頻端點效能，需要一個「claim 版本」機制而非逐點修補
+- **觸發條件**（任一成立）：
+  - 出現需要即時撤銷教師權限的事件（帳號誤開通、離職）
+  - 縮短 `JWT_EXPIRES_IN` 到 1 小時以下仍不滿足需求
+- **怎麼做**：
+  1. `users` 加 `role_changed_at`（或整數 `token_version`），變更角色／重設密碼時更新
+  2. `validateToken` 以 `me:` 快取查該欄位，JWT 的 `iat` 早於 `role_changed_at` 即回 401 `TOKEN_STALE`，前端走既有 refresh 流程重新簽發
+  3. 簽 token 時把 `token_version` 放進 payload，比對不符即拒絕
+- **估計工作量**：`S`
+- **依賴 / 前置條件**：無
+- **風險 / 副作用**：所有使用者在上線當下需重新登入一次；`me:` 快取 TTL（60 秒）內仍有短暫延遲
+- **替代方案**：把 `JWT_EXPIRES_IN` 縮到 15 分鐘並依賴 refresh rotation
+- **相關檔案**：`sdl-backend-main/middlewares/AuthMiddleware.js`、`sdl-backend-main/middlewares/requireAdmin.js`、`sdl-backend-main/controllers/adminController.js`、`sdl-backend-main/config/index.js`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
 - **2026-04-17**：完成 F014（`chat_turns` → `sdl_coach_messages`），作為首個完成案例；舊 migrations 的 `chat-turns` 命名保留為歷史紀錄不改
 - **2026-04-20**：新增 F015（科學術語 Tooltip / Glossary）；伴隨 SDL Coach 多輪對話上線與認知師徒制 prompt 調整提出，prompt 注解為主、tooltip 為補充方案
 - **2026-09-02**：新增 F016–F019；依效能審查報告（`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md`）完成 23 項中的短期修法後，把差量廣播、總覽聚合端點、presigned 圖片、反思 BLOB 下線四項登錄為後續工作
+- **2026-09-03**：新增 F020（JWT claim 失效機制）；資安止血項 code review 指出角色降級在 access token 到期前不生效，止血版先讓 `requireAdmin` 一律查 DB，全面方案登錄為後續工作

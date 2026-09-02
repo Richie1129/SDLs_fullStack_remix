@@ -224,9 +224,17 @@ exports.loginUser = async (req, res) => {
 // register user
 exports.registerUser = async (req, res) => {
     try {
-        const { username, account, email, password, role, seatNumber, school_id } = req.body;
+        const { username, account, email, password, seatNumber, school_id } = req.body;
         const classField = req.body.class;
         const schoolId = school_id || null;
+
+        // 安全：角色一律由伺服器決定，忽略 body 的 role。
+        // teacher 只能由 admin 後台（PATCH /api/admin/users/:id/role）開通，admin 只能由 scripts/seed-admin.js 建立。
+        const role = 'student';
+        const requestedRole = req.body.role;
+        if (requestedRole && requestedRole !== 'student') {
+            logger.warn({ account, requestedRole }, '註冊請求夾帶非 student 角色，已忽略');
+        }
 
         logger.info({ account, email, role, class: classField }, '收到註冊請求');
 

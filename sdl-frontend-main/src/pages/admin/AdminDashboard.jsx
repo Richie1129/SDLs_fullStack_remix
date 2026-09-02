@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiKey, FiUsers, FiUser, FiZap, FiZapOff, FiLogOut } from 'react-icons/fi';
+import { FiSearch, FiKey, FiUsers, FiUser, FiUserCheck, FiUserMinus, FiZap, FiZapOff, FiLogOut } from 'react-icons/fi';
 import Swal from 'sweetalert2';
-import { listUsers, resetUserPassword, toggleAiAccess } from '../../api/admin';
+import { listUsers, resetUserPassword, toggleAiAccess, updateUserRole } from '../../api/admin';
 import { userStorage, authStorage } from '../../services/storageService';
 
 const PAGE_SIZE_OPTIONS = [1, 10, 20, 50, 100];
@@ -12,6 +12,19 @@ const ROLE_OPTIONS = [
     { value: 'teacher', label: '教師' },
     { value: 'admin', label: '管理員' },
 ];
+
+// 角色切換按鈕的內容；admin 帳號不提供切換（admin 只能由 seed 腳本建立）
+function roleActionFor(user) {
+    if (user.role === 'admin') return null;
+    const isTeacher = user.role === 'teacher';
+    return {
+        nextRole: isTeacher ? 'student' : 'teacher',
+        nextLabel: isTeacher ? '學生' : '教師',
+        label: isTeacher ? '設為學生' : '設為教師',
+        Icon: isTeacher ? FiUserMinus : FiUserCheck,
+        className: isTeacher ? 'bg-gray-500 hover:bg-gray-500/90' : 'bg-blue-500 hover:bg-blue-500/90',
+    };
+}
 
 function formatDate(iso) {
     if (!iso) return '—';
@@ -127,6 +140,29 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleChangeRole = async (user) => {
+        const action = roleActionFor(user);
+        if (!action) return;
+        const confirm = await Swal.fire({
+            icon: 'question',
+            title: action.label,
+            text: `確定要將「${user.username}」（${user.account}）設為${action.nextLabel}？該使用者需重新登入後生效。`,
+            showCancelButton: true,
+            confirmButtonText: '確定',
+            cancelButtonText: '取消',
+            confirmButtonColor: '#5BA491',
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            await updateUserRole(user.id, action.nextRole);
+            // 重抓列表：角色篩選器不是「全部」時，局部更新會留下與篩選條件矛盾的列
+            fetchUsers();
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: '更新失敗', text: err?.response?.data?.message || '請稍後再試', confirmButtonColor: '#5BA491' });
+        }
+    };
+
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return (
@@ -139,7 +175,7 @@ export default function AdminDashboard() {
                         </div>
                         <div>
                             <h1 className="text-h3 font-bold text-gray-800">Admin Dashboard</h1>
-                            <p className="text-caption text-gray-500">用戶管理與 AI 功能權限</p>
+                            <p className="text-caption text-gray-500">用戶管理、角色與 AI 功能權限</p>
                         </div>
                     </div>
                     <button
@@ -206,7 +242,9 @@ export default function AdminDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                    {users.map(u => (
+                                    {users.map(u => {
+                                        const roleAction = roleActionFor(u);
+                                        return (
                                         <tr key={u.id} className="hover:bg-gray-50 transition-colors duration-normal">
                                             <td className="px-4 py-3 text-body-sm text-gray-500">{u.id}</td>
                                             <td className="px-4 py-3 text-body-sm text-gray-700 font-mono">{u.account}</td>
@@ -262,17 +300,28 @@ export default function AdminDashboard() {
                                                     >
                                                         {u.aiEnabled ? '關 AI' : '開 AI'}
                                                     </button>
+                                                    {roleAction && (
+                                                        <button
+                                                            onClick={() => handleChangeRole(u)}
+                                                            className={`px-3 py-1.5 text-white text-caption rounded-lg hover:shadow-lg transition-all duration-normal ${roleAction.className}`}
+                                                        >
+                                                            <span className="inline-flex items-center gap-1"><roleAction.Icon /> {roleAction.label}</span>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
-                                    ))}
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
 
                         {/* 行動版卡片 */}
                         <div className="md:hidden divide-y divide-gray-100">
-                            {users.map(u => (
+                            {users.map(u => {
+                                const roleAction = roleActionFor(u);
+                                return (
                                 <div key={u.id} className="p-4">
                                     <div className="flex items-start justify-between gap-3 mb-2">
                                         <div className="min-w-0 flex-1">
@@ -296,10 +345,10 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2 mt-3">
+                                    <div className="grid grid-cols-2 gap-2 mt-3">
                                         <button
                                             onClick={() => handleReset(u)}
-                                            className="flex-1 px-3 py-1.5 bg-amber-500 text-white text-caption rounded-lg hover:bg-amber-500/90 transition-all duration-normal"
+                                            className="px-3 py-1.5 bg-amber-500 text-white text-caption rounded-lg hover:bg-amber-500/90 hover:shadow-lg transition-all duration-normal"
                                         >
                                             <span className="inline-flex items-center justify-center gap-1"><FiKey /> 重設密碼</span>
                                         </button>
@@ -307,15 +356,24 @@ export default function AdminDashboard() {
                                             onClick={() => handleToggleAi(u)}
                                             className={
                                                 u.aiEnabled
-                                                    ? 'flex-1 px-3 py-1.5 bg-gray-500 text-white text-caption rounded-lg hover:bg-gray-500/90 transition-all duration-normal'
-                                                    : 'flex-1 px-3 py-1.5 bg-customgreen text-white text-caption rounded-lg hover:bg-customgreen/90 transition-all duration-normal'
+                                                    ? 'px-3 py-1.5 bg-gray-500 text-white text-caption rounded-lg hover:bg-gray-500/90 hover:shadow-lg transition-all duration-normal'
+                                                    : 'px-3 py-1.5 bg-customgreen text-white text-caption rounded-lg hover:bg-customgreen/90 hover:shadow-lg transition-all duration-normal'
                                             }
                                         >
                                             {u.aiEnabled ? '關 AI' : '開 AI'}
                                         </button>
+                                        {roleAction && (
+                                            <button
+                                                onClick={() => handleChangeRole(u)}
+                                                className={`col-span-2 px-3 py-1.5 text-white text-caption rounded-lg hover:shadow-lg transition-all duration-normal ${roleAction.className}`}
+                                            >
+                                                <span className="inline-flex items-center justify-center gap-1"><roleAction.Icon /> {roleAction.label}</span>
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

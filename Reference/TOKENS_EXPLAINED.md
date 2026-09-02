@@ -2,6 +2,9 @@
 
 本專案使用**兩種不同的 tokens**，它們有完全不同的用途和設定方式。
 
+> **安全規範：本文件不得出現任何實際密鑰值。** 所有 token 的實際值只存在於伺服器 `.env`（權限 600），
+> 這裡只說明用途、設定方式與輪替步驟。歷史版本曾在此寫入 `JWT_SECRET` 明文，該值視為已洩漏、不得再使用，必須輪替（步驟見下方「當前值」）。
+
 ---
 
 ## 🔐 Token 對照表
@@ -19,9 +22,13 @@
 簽署和驗證 JWT (JSON Web Tokens)，用於用戶登入系統。
 
 ### 當前值
+見伺服器 `.env` 的 `JWT_SECRET`（本文件不記錄實際值）。
+
+產生／輪替新值：
 ```bash
-JWT_SECRET=1112c25be07de8dd7cbdeb752596df7b28dc6698ac5d47e8cda7c1395a247ec4
+openssl rand -hex 32
 ```
+輪替後必須清空 `refresh_tokens` 表並重啟 api，所有使用者需重新登入。
 
 ### 工作流程
 ```
@@ -42,7 +49,7 @@ JWT_SECRET=1112c25be07de8dd7cbdeb752596df7b28dc6698ac5d47e8cda7c1395a247ec4
 ```javascript
 // 登入時生成 token
 const token = jwt.sign(
-  { userId: 123, account: 'stone881129' },
+  { userId: 123, account: 'example_user' },
   JWT_SECRET,  // ← 使用這個 secret
   { expiresIn: '1h' }
 );
@@ -71,10 +78,8 @@ const decoded = jwt.verify(
 ### 用途
 保護 `/api/metrics` 端點，防止未授權者查看系統監控數據。
 
-### 當前值（Development）
-```bash
-METRICS_TOKEN=dev-monitoring-token-please-change-in-production
-```
+### 當前值
+見伺服器 `.env` 的 `METRICS_TOKEN`（本文件不記錄實際值；開發環境請自行設一個本機用的隨機字串）。
 
 ### 工作流程
 ```
@@ -100,7 +105,8 @@ curl http://localhost/api/metrics
 **Production（需要 token）**:
 ```bash
 # 必須提供 X-Metrics-Token header
-curl -H "X-Metrics-Token: dev-monitoring-token-please-change-in-production" \
+# 從 .env 讀取，避免把 token 打進 shell history
+curl -H "X-Metrics-Token: $(grep '^METRICS_TOKEN=' .env | cut -d= -f2-)" \
      https://your-production-domain.com/api/metrics
 ```
 
@@ -239,5 +245,5 @@ curl http://localhost/api/metrics  # 無需 token
 
 ---
 
-**最後更新**: 2025-10-18
-**版本**: v1.0.0
+**最後更新**: 2026-09-03（移除所有明文密鑰值）
+**版本**: v1.1.0

@@ -160,8 +160,16 @@ class ColumnHandler {
                 throw new Error('Kanban 記錄不存在');
             }
 
+            // H14: 只接受真正屬於此 kanban 的欄位 ID（去重），client 漏掉的欄位依原順序補回，避免欄位「消失」
+            const ownedColumns = await Column.findAll({ attributes: ['id'], where: { kanbanId: kanbanRow.id } });
+            const ownedIds = new Set(ownedColumns.map(c => Number(c.id)));
+            const oldOrder = Array.isArray(kanbanRow.column) ? kanbanRow.column : [];
+            newOrder = [...new Set(newOrder.filter(id => ownedIds.has(id)))];
+            for (const id of oldOrder) {
+                if (ownedIds.has(Number(id)) && !newOrder.includes(Number(id))) newOrder.push(Number(id));
+            }
+
             // 記錄列表重新排序
-            const oldOrder = kanbanRow.column;
             try {
                 await logColumnReorder(oldOrder, newOrder, changedBy, roomProjectId);
             } catch (logError) {
@@ -202,41 +210,34 @@ class ColumnHandler {
     static async handleColumnDelete(data) {
         const { columnData, kanbanId } = data;
         const deletedBy = this.getCurrentUsername(data);
+        // 注意：前端傳來的 kanbanId 實際上是 projectId
+        const projectId = kanbanId;
+        const columnId = Number(columnData?.id);
 
         try {
-            // 注意：前端傳來的 kanbanId 實際上是 projectId
-            const rawTasks = Array.isArray(columnData.task) ? columnData.task : [];
-            const taskIds = rawTasks.map(t => (t && typeof t === 'object') ? t.id : t).filter(Boolean);
-
-            // 先收集需要刪除的 MinIO 檔案名（在 Transaction 前讀取，commit 後再刪）
-            let fileNamesToDelete = [];
-            try {
-                const { extractTaskFileNames } = require('../../utils/minioFileHelper');
-                let tasksForCleanup = rawTasks;
-                if (tasksForCleanup.length > 0 && (typeof tasksForCleanup[0] !== 'object' || tasksForCleanup[0] === null)) {
-                    tasksForCleanup = await Task.findAll({ where: { id: { [Op.in]: taskIds } } });
-                }
-                for (const task of tasksForCleanup) {
-                    fileNamesToDelete.push(...extractTaskFileNames(task));
-                }
-                fileNamesToDelete = [...new Set(fileNamesToDelete)];
-            } catch (fileErr) {
-                console.warn('收集 MinIO 檔案清單錯誤:', fileErr.message);
+            if (!Number.isInteger(columnId)) {
+                this.emitError('columnDelete', {
+                    message: '缺少有效的列表 ID',
+                    code: 'INVALID_COLUMN_ID'
+                });
+                return;
             }
 
             // 使用 Transaction 確保三步操作的原子性
             const t = await sequelize.transaction();
             let updatedColumns;
+            let fileNamesToDelete = [];
+            let columnName = columnData?.name || '未知列表';
             try {
                 const kanban = await Kanban.findOne({
-                    where: { projectId: kanbanId },
+                    where: { projectId },
                     lock: t.LOCK.UPDATE,
                     transaction: t
                 });
 
                 if (!kanban) {
                     await t.rollback();
-                    console.error("找不到 Kanban 記錄:", kanbanId);
+                    console.error("找不到 Kanban 記錄:", projectId);
                     this.emitError('columnDelete', {
                         message: 'Kanban 記錄不存在',
                         code: 'KANBAN_NOT_FOUND'
@@ -244,26 +245,66 @@ class ColumnHandler {
                     return;
                 }
 
-                // 步驟 1: 更新 Kanban 表，移除欄位 ID
-                updatedColumns = kanban.column.filter(columnId => columnId !== columnData.id);
-                await kanban.update({ column: updatedColumns }, { transaction: t });
+                // H14: 由 DB 反查欄位歸屬，確認它真的屬於聲稱的 projectId；不採信 client 傳來的 columnData
+                const { status, column } = await this.loadColumnInProject(columnId, projectId, { transaction: t });
+                const currentOrder = Array.isArray(kanban.column) ? kanban.column : [];
+                const inOrder = currentOrder.some(id => Number(id) === columnId);
 
-                // 步驟 2: 刪除欄位中的所有任務
-                if (taskIds.length > 0) {
-                    console.log(`🗑️ 開始刪除欄位 ${columnData.name} 中的 ${taskIds.length} 個任務...`);
-                    await Task.destroy({
-                        where: { id: { [Op.in]: taskIds } },
-                        transaction: t,
-                        individualHooks: true,
-                        req: data._reqContext
+                if (status === 'MISMATCH') {
+                    await t.rollback();
+                    console.warn(`拒絕刪除列表 ${columnId}：不屬於專案 ${projectId}（user: ${deletedBy}）`);
+                    this.emitError('columnDelete', {
+                        message: '列表不屬於此專案',
+                        code: 'RESOURCE_MISMATCH'
                     });
+                    return;
                 }
 
-                // 步驟 3: 刪除欄位本身
-                await Column.destroy({ where: { id: columnData.id }, transaction: t });
+                if (status === 'NOT_FOUND' && !inOrder) {
+                    await t.rollback();
+                    this.emitError('columnDelete', {
+                        message: '列表不存在，可能已被刪除',
+                        code: 'COLUMN_NOT_FOUND'
+                    });
+                    return;
+                }
+
+                // 步驟 1: 更新 Kanban 表，移除欄位 ID（欄位 row 已不存在但殘留在順序陣列時，只做這步清理）
+                updatedColumns = currentOrder.filter(id => Number(id) !== columnId);
+                await kanban.update({ column: updatedColumns }, { transaction: t });
+
+                if (column) {
+                    columnName = column.name || columnName;
+
+                    // 步驟 2: 刪除欄位中的所有任務；清單由 DB 依 columnId 反查，並順便收集要清理的 MinIO 檔案
+                    const tasks = await Task.findAll({ where: { columnId: column.id }, lock: t.LOCK.UPDATE, transaction: t });
+                    const taskIds = tasks.map(task => task.id);
+                    try {
+                        const { extractTaskFileNames } = require('../../utils/minioFileHelper');
+                        for (const task of tasks) {
+                            fileNamesToDelete.push(...extractTaskFileNames(task));
+                        }
+                        fileNamesToDelete = [...new Set(fileNamesToDelete)];
+                    } catch (fileErr) {
+                        console.warn('收集 MinIO 檔案清單錯誤:', fileErr.message);
+                    }
+
+                    if (taskIds.length > 0) {
+                        console.log(`🗑️ 開始刪除欄位 ${columnName} 中的 ${taskIds.length} 個任務...`);
+                        await Task.destroy({
+                            where: { id: { [Op.in]: taskIds } },
+                            transaction: t,
+                            individualHooks: true,
+                            req: data._reqContext
+                        });
+                    }
+
+                    // 步驟 3: 刪除欄位本身
+                    await Column.destroy({ where: { id: column.id }, transaction: t });
+                }
 
                 // 更新專案時間戳
-                await Project.update({ updatedAt: new Date() }, { where: { id: kanbanId }, transaction: t });
+                await Project.update({ updatedAt: new Date() }, { where: { id: projectId }, transaction: t });
 
                 await t.commit();
             } catch (txErr) {
@@ -275,7 +316,7 @@ class ColumnHandler {
             if (fileNamesToDelete.length > 0) {
                 try {
                     const { batchDeleteMinioFiles } = require('../../utils/minioFileHelper');
-                    console.log(`📁 欄位 ${columnData.name} 發現 ${fileNamesToDelete.length} 個檔案需要刪除`);
+                    console.log(`📁 欄位 ${columnName} 發現 ${fileNamesToDelete.length} 個檔案需要刪除`);
                     const deleteResult = await batchDeleteMinioFiles(fileNamesToDelete);
                     console.log(`🗑️ MinIO 檔案清理結果: ${deleteResult.success} 成功, ${deleteResult.failed} 失敗`);
                 } catch (fileCleanupError) {
@@ -286,24 +327,24 @@ class ColumnHandler {
             // 記錄列表刪除日誌（非關鍵路徑）
             try {
                 await logColumnChange({
-                    columnId: columnData.id,
+                    columnId: columnId,
                     changeType: 'delete',
                     changedBy: deletedBy,
-                    projectId: kanbanId,
-                    description: `刪除了列表「${columnData.name}」及其包含的任務`
+                    projectId: projectId,
+                    description: `刪除了列表「${columnName}」及其包含的任務`
                 });
             } catch (logError) {
                 console.warn('列表刪除日誌記錄失敗:', logError.message);
             }
 
             // 廣播刪除事件
-            this.broadcastToProject(kanbanId, "columnDeleted", {
+            this.broadcastToProject(projectId, "columnDeleted", {
                 kanbanId,
                 updatedColumns,
-                deletedColumnId: columnData.id
+                deletedColumnId: columnId
             });
 
-            console.log(`✅ 欄位和其任務刪除成功: ${columnData.name}`);
+            console.log(`✅ 欄位和其任務刪除成功: ${columnName}`);
 
         } catch (error) {
             console.error("處理欄位刪除錯誤:", error);

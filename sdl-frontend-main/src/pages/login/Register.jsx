@@ -7,7 +7,7 @@ import Swal from 'sweetalert2';
 import { authStorage, userStorage } from '../../services/storageService';
 import { useTracking } from '../../providers/TrackingProvider';
 import { MdArrowForward, MdSchool, MdGroups } from 'react-icons/md';
-import { FiUser, FiLock, FiMail, FiHash, FiBriefcase, FiSearch, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiUser, FiLock, FiMail, FiHash, FiSearch, FiEye, FiEyeOff } from 'react-icons/fi';
 
 export default function Register() {
   const [userData, setUserData] = useState({ role: 'student', class: '', seatNumber: '', school_id: '' });
@@ -52,13 +52,7 @@ export default function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUserData(prev => {
-      if (name === 'role') {
-        if (value === 'teacher') return { ...prev, role: value, class: '', seatNumber: '' };
-        return { ...prev, role: value };
-      }
-      return { ...prev, [name]: value };
-    });
+    setUserData(prev => ({ ...prev, [name]: value }));
   };
 
   const validateInput = () => {
@@ -318,37 +312,26 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* 身份 */}
-              <div>
-                <label className="block text-body-sm font-medium text-ink mb-1.5">身份</label>
-                <div className="relative">
-                  <FiBriefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
-                  <select name="role" onChange={handleChange} className={`${inputClass} appearance-none`} required>
-                    <option value="student">學生</option>
-                    <option value="teacher">教師</option>
-                  </select>
+              {/* 班級 / 座號（註冊帳號一律為學生；教師由管理員後台開通，後端會忽略任何 role 參數） */}
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-body-sm font-medium text-ink mb-1.5">班級</label>
+                  <div className="relative">
+                    <MdGroups className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
+                    <input type="text" name="class" placeholder="例：301" value={userData.class} onChange={handleChange} className={inputClass} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-body-sm font-medium text-ink mb-1.5">座號</label>
+                  <div className="relative">
+                    <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
+                    <input type="text" name="seatNumber" placeholder="例：15" value={userData.seatNumber} onChange={handleChange} className={inputClass} />
+                  </div>
                 </div>
               </div>
-
-              {/* 班級 / 座號（學生限定） */}
-              {userData.role === 'student' && (
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-body-sm font-medium text-ink mb-1.5">班級</label>
-                    <div className="relative">
-                      <MdGroups className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
-                      <input type="text" name="class" placeholder="例：301" value={userData.class} onChange={handleChange} className={inputClass} />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-body-sm font-medium text-ink mb-1.5">座號</label>
-                    <div className="relative">
-                      <FiHash className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-subtle text-lg pointer-events-none" />
-                      <input type="text" name="seatNumber" placeholder="例：15" value={userData.seatNumber} onChange={handleChange} className={inputClass} />
-                    </div>
-                  </div>
-                </div>
-              )}
+              <p className="text-caption text-ink-muted">
+                註冊帳號一律為學生身份；教師帳號請由管理員於後台開通。
+              </p>
 
               {/* 錯誤訊息 */}
               {error && (

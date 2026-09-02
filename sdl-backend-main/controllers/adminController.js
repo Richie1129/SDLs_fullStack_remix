@@ -2,6 +2,9 @@ const bcrypt = require('bcrypt');
 const { Op } = require('sequelize');
 
 const User = require('../models/user');
+const RefreshToken = require('../models/refresh_token');
+const sequelize = require('../util/database');
+const apiCache = require('../services/apiCache');
 const { logAudit } = require('../services/auditService');
 const logger = require('../config/logger');
 
@@ -142,5 +145,72 @@ exports.toggleAiAccess = async (req, res) => {
     } catch (err) {
         logger.error({ err: err.message }, '[admin] toggleAiAccess 失敗');
         return res.status(500).json({ message: '更新 AI 權限失敗', error: err.message });
+    }
+};
+
+// PATCH /api/admin/users/:userId/role
+// Body: { role: 'student' | 'teacher' }
+// 教師身分只能由 admin 在此開通（註冊 API 一律給 student）。
+// admin 角色不可透過 API 指派或變更，只能由 scripts/seed-admin.js 建立。
+const ASSIGNABLE_ROLES = ['student', 'teacher'];
+
+exports.updateUserRole = async (req, res) => {
+    try {
+        const targetUserId = Number(req.params.userId);
+        const { role } = req.body || {};
+
+        if (!Number.isInteger(targetUserId) || targetUserId <= 0) {
+            return res.status(400).json({ message: 'userId 必須是正整數' });
+        }
+
+        if (!ASSIGNABLE_ROLES.includes(role)) {
+            return res.status(400).json({ message: 'role 只能是 student 或 teacher' });
+        }
+
+        const targetUser = await User.findByPk(targetUserId, {
+            attributes: ['id', 'account', 'username', 'role']
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ message: '找不到該使用者' });
+        }
+
+        if (targetUser.role === 'admin') {
+            return res.status(403).json({ message: '管理員角色不可透過此端點變更' });
+        }
+
+        const before = targetUser.role;
+        if (before === role) {
+            return res.json({ message: '角色未變更', role, account: targetUser.account, username: targetUser.username });
+        }
+
+        // 角色變更與 refresh token 撤銷放在同一交易：舊角色的長效 token 不得延續到新角色生效之後
+        await sequelize.transaction(async (t) => {
+            await targetUser.update({ role }, { transaction: t });
+            await RefreshToken.destroy({ where: { userId: targetUser.id }, transaction: t });
+        });
+        apiCache.del(`me:${targetUser.id}`);
+
+        logAudit(req, {
+            action: 'ADMIN_ROLE_CHANGE',
+            targetType: 'user',
+            targetId: String(targetUserId),
+            metadata: {
+                targetAccount: targetUser.account,
+                before,
+                after: role,
+                changedBy: req.userId
+            }
+        }).catch(() => {});
+
+        return res.json({
+            message: '角色更新成功，該使用者需重新登入後生效',
+            role,
+            account: targetUser.account,
+            username: targetUser.username
+        });
+    } catch (err) {
+        logger.error({ err: err.message }, '[admin] updateUserRole 失敗');
+        return res.status(500).json({ message: '更新角色失敗' });
     }
 };

@@ -1,2 +1,12 @@
 node_modules
 daily_file/
+
+# 機密與版控資料絕不進映像（曾因 COPY . . 把 .env 打進公開映像）
+.env
+.env.*
+.git
+.gitignore
+
+# 執行期不需要的本機產物
+logs
+coverage

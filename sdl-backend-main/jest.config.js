@@ -12,7 +12,9 @@ module.exports = {
   testMatch: ['<rootDir>/tests/integration/**/*.test.js'],
   collectCoverageFrom: [
     'controllers/**/*.js',
+    'middlewares/**/*.js',
     'services/**/*.js',
+    'sockets/**/*.js',
     'utils/**/*.js',
     '!**/node_modules/**'
   ],

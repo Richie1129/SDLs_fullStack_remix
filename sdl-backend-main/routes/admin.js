@@ -9,5 +9,6 @@ router.use(validateToken, requireAdmin);
 router.get('/users', controller.listUsers);
 router.put('/users/:userId/reset-password', controller.resetUserPassword);
 router.patch('/users/:userId/ai-access', controller.toggleAiAccess);
+router.patch('/users/:userId/role', controller.updateUserRole);
 
 module.exports = router;

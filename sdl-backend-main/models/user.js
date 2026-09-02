@@ -10,6 +10,9 @@ const UserProject = require('./user_project');
 const RefreshToken = require('./refresh_token'); 
 const IdeaWallMessage = require('./idea_wall_message');
 
+// 系統允許的使用者角色白名單（與既有資料一致：student / teacher / admin）
+const USER_ROLES = ['student', 'teacher', 'admin'];
+
 const User = sequelize.define('user', {
     username: {
         type: DataTypes.TEXT,
@@ -29,7 +32,13 @@ const User = sequelize.define('user', {
     },
     role: {
         type: DataTypes.TEXT,
-        allowNull:false
+        allowNull:false,
+        validate: {
+            isIn: {
+                args: [USER_ROLES],
+                msg: 'role 只能是 student、teacher 或 admin'
+            }
+        }
     },
     class: {
         type: DataTypes.TEXT,
@@ -109,5 +118,7 @@ HelpSeekingAvoidanceRisk.belongsTo(User, { foreignKey: 'userId' });
 const Submit = require('./submit');
 User.hasMany(Submit, { foreignKey: 'userId' });
 Submit.belongsTo(User, { foreignKey: 'userId' });
+
+User.ROLES = USER_ROLES;
 
 module.exports = User;
