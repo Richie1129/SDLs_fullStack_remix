@@ -7,7 +7,9 @@
 #
 # 與 docker-compose.prod.yml 的差異：
 # - 映像使用 ${IMAGE_TAG}（由 CI 寫入 .env），不使用 latest、無 build 區塊
-# - postgres 對外映射 15432（deploy.yml 的 verify job 會驗證此埠）
+# - postgres 映射 127.0.0.1:15432（deploy.yml 的 verify job 會驗證此埠）
+# - postgres/minio/pgadmin 的主機埠一律只綁 127.0.0.1，不對區網開放；
+#   需要從其他機器操作時用 SSH 轉埠（例：ssh -L 5555:127.0.0.1:5555 richie@192.168.30.111）
 # - 無 certbot/443（內網僅 HTTP 80；對外 HTTPS 由 Cloudflare Tunnel 在邊緣終結）
 # - cloudflared 服務掛在 profile "tunnel"，需 .env 同時設定
 #   COMPOSE_PROFILES=tunnel 與 CLOUDFLARE_TUNNEL_TOKEN 才會啟動
@@ -81,8 +83,8 @@ services:
       - POSTGRES_USER=${PG_USER}
       - POSTGRES_PASSWORD=${PG_PASSWORD}
     ports:
-      # verify job 會從主機以 127.0.0.1:15432 驗證 DB 連線
-      - "15432:5432"
+      # verify job 會從主機以 127.0.0.1:15432 驗證 DB 連線；只綁 loopback，區網不可直連
+      - "127.0.0.1:15432:5432"
     networks:
       - agent_network
     healthcheck:
@@ -101,9 +103,10 @@ services:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
     ports:
-      # 9000 需對外映射，瀏覽器才能透過 MINIO_PUBLIC_ENDPOINT 取得檔案
-      - "9000:9000"
-      - "9001:9001"
+      # 檔案下載一律經 /api/file/ 由後端代理，瀏覽器不會直連 MinIO；
+      # 9000（S3 API）與 9001（console）只綁 loopback 供本機除錯
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     networks:
       - agent_network
     healthcheck:
@@ -148,7 +151,8 @@ services:
       - PGADMIN_CONFIG_CONSOLE_LOG_LEVEL=40
       - GUNICORN_ACCESS_LOGFILE=/dev/null
     ports:
-      - "5555:80"
+      # pgAdmin 只綁 loopback，需用 SSH 轉埠存取
+      - "127.0.0.1:5555:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
