@@ -1,7 +1,27 @@
 'use strict';
 
+// 原檔名為 20250209000000-create-help-seeking-logs.js，時間戳是 20260209 的筆誤，
+// 會排在 20250812094349-initial-schema 之前，導致全新 DB 上 users/projects 尚不存在而失敗。
+// 改名後為了相容已用舊檔名執行過的 DB：表已存在就跳過建立，並清掉 SequelizeMeta 的舊檔名紀錄。
+const LEGACY_NAME = '20250209000000-create-help-seeking-logs.js';
+
+const tableExists = async (queryInterface, name) => {
+  const tables = await queryInterface.showAllTables();
+  return tables.map((t) => (typeof t === 'string' ? t : t.tableName)).includes(name);
+};
+
+const removeLegacyMeta = (queryInterface) =>
+  queryInterface.sequelize.query('DELETE FROM "SequelizeMeta" WHERE name = :name', {
+    replacements: { name: LEGACY_NAME },
+  });
+
 module.exports = {
   up: async (queryInterface, Sequelize) => {
+    if (await tableExists(queryInterface, 'help_seeking_logs')) {
+      await removeLegacyMeta(queryInterface);
+      return;
+    }
+
     await queryInterface.createTable('help_seeking_logs', {
       id: {
         type: Sequelize.INTEGER,
@@ -69,6 +89,8 @@ module.exports = {
     await queryInterface.addIndex('help_seeking_logs', ['projectId']);
     await queryInterface.addIndex('help_seeking_logs', ['taskId']);
     await queryInterface.addIndex('help_seeking_logs', ['helpSeekingType']);
+
+    await removeLegacyMeta(queryInterface);
   },
 
   down: async (queryInterface, Sequelize) => {
