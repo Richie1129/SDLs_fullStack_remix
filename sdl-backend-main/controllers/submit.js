@@ -271,6 +271,8 @@ exports.getAllSubmit = async(req, res) => {
     try {
         const allSubmit = await Submit.findAll({
             where: { projectId: projectId },
+            // B9：fileData 是舊版 BLOB 欄位，列表不需要；前端一律走 fileUrl / fileName
+            attributes: { exclude: ['fileData'] },
             include: [{
                 model: User,
                 attributes: ['id', 'username'],

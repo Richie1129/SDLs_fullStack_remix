@@ -3,7 +3,8 @@ const User = require('../models/user');
 const Submit = require('../models/submit');
 const Idea_wall = require('../models/idea_wall');
 const Node = require('../models/node');
-const { getProjectActivities } = require('../services/activityService');
+const { getProjectsLastActivityAt } = require('../services/activityService');
+const { Op } = require('sequelize');
 const { filterStage5Data, FOUR_STAGE_CONFIG } = require('../services/fourStageFilterService');
 const { getTaiwanSemester } = require('../utils/semesterUtils');
 
@@ -56,55 +57,77 @@ exports.getProjectsSummary = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
 
-    // 並行取得每個專案的附加資料
-    const summaries = await Promise.all(projects.map(async (project) => {
+    // B10：原本每個專案並行 3 支查詢加 getProjectActivities（本身 4 支），20 個專案就是 140 個並行查詢。
+    // 改成跨專案一次聚合：submits 一次、idea_walls 一次、nodes GROUP BY 一次、最後活動 4 次，共 7 支查詢。
+    const projectIds = projects.map(p => p.id);
+
+    const [allSubmits, ideaWalls, lastActivityMap] = projectIds.length === 0
+      ? [[], [], new Map()]
+      : await Promise.all([
+        Submit.findAll({
+          where: { projectId: { [Op.in]: projectIds } },
+          attributes: ['projectId', 'stage', 'userId', 'createdAt'],
+          raw: true
+        }),
+        Idea_wall.findAll({
+          where: { projectId: { [Op.in]: projectIds } },
+          attributes: ['id', 'projectId'],
+          raw: true
+        }),
+        getProjectsLastActivityAt(projectIds).catch(() => new Map())
+      ]);
+
+    // 每個專案只取第一面 idea wall（與原本 findOne 行為一致）
+    const ideaWallByProject = new Map();
+    for (const wall of ideaWalls) {
+      if (!ideaWallByProject.has(wall.projectId)) ideaWallByProject.set(wall.projectId, wall);
+    }
+
+    const wallIds = [...ideaWallByProject.values()].map(w => w.id);
+    const nodeStatsByWall = new Map();
+    if (wallIds.length > 0) {
+      const nodeRows = await Node.findAll({
+        attributes: [
+          'ideaWallId',
+          [Node.sequelize.fn('COUNT', Node.sequelize.col('id')), 'nodeCount'],
+          [Node.sequelize.fn('MAX', Node.sequelize.col('createdAt')), 'lastNodeAt']
+        ],
+        where: { ideaWallId: { [Op.in]: wallIds } },
+        group: ['ideaWallId'],
+        raw: true
+      });
+      for (const row of nodeRows) {
+        nodeStatsByWall.set(row.ideaWallId, {
+          nodeCount: parseInt(row.nodeCount, 10) || 0,
+          lastNodeAt: row.lastNodeAt || null
+        });
+      }
+    }
+
+    const submitsByProject = new Map();
+    for (const submit of allSubmits) {
+      const list = submitsByProject.get(submit.projectId);
+      if (list) list.push(submit); else submitsByProject.set(submit.projectId, [submit]);
+    }
+
+    const summaries = projects.map((project) => {
       const p = project.toJSON();
       const projectId = p.id;
       const reached = getReachedSubStages(p.currentStage, p.currentSubStage);
 
-      // 並行查詢三項資料
-      const [submits, ideaWall, lastActivity] = await Promise.all([
-        // 1. 提交記錄（只取必要欄位）
-        Submit.findAll({
-          where: { projectId },
-          attributes: ['stage', 'userId', 'createdAt'],
-          raw: true
-        }),
-        // 2. Idea Wall + node 數
-        Idea_wall.findOne({
-          where: { projectId },
-          attributes: ['id'],
-          include: [{
-            model: Node,
-            attributes: ['id', 'createdAt'],
-            order: [['createdAt', 'DESC']],
-            limit: 1
-          }]
-        }),
-        // 3. Kanban 最後活動
-        getProjectActivities(projectId, { limit: 1 }).catch(() => [])
-      ]);
-
       // 計算提交狀態
+      const submits = submitsByProject.get(projectId) || [];
       const submittedStages = [...new Set(
         filterStage5Data(submits).map(s => s.stage)
       )];
       const missing = reached.filter(s => !submittedStages.includes(s));
 
       // Idea Wall 統計
-      let nodeCount = 0;
-      let lastNodeAt = null;
-      if (ideaWall) {
-        nodeCount = await Node.count({ where: { ideaWallId: ideaWall.id } });
-        if (ideaWall.nodes && ideaWall.nodes.length > 0) {
-          lastNodeAt = ideaWall.nodes[0].createdAt;
-        }
-      }
+      const wall = ideaWallByProject.get(projectId);
+      const nodeStats = wall ? (nodeStatsByWall.get(wall.id) || { nodeCount: 0, lastNodeAt: null }) : { nodeCount: 0, lastNodeAt: null };
 
       // Kanban 最後活動
-      const kanbanLastActivity = lastActivity.length > 0
-        ? lastActivity[0].createdAt || lastActivity[0].updatedAt
-        : null;
+      const lastActivityAt = lastActivityMap.get(projectId) || null;
 
       return {
         id: projectId,
@@ -125,14 +148,14 @@ exports.getProjectsSummary = async (req, res) => {
           missing
         },
         kanban: {
-          lastActivityAt: kanbanLastActivity
+          lastActivityAt
         },
         ideaWall: {
-          nodeCount,
-          lastNodeAt
+          nodeCount: nodeStats.nodeCount,
+          lastNodeAt: nodeStats.lastNodeAt
         }
       };
-    }));
+    });
 
     res.json({ projects: summaries });
   } catch (error) {

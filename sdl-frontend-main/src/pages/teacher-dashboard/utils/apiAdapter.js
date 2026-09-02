@@ -199,7 +199,7 @@ export class ApiAdapter {
     const promises = students.map(async (student) => {
       // AI 互動次數
       try {
-        const ragResult = await this.callWithRetry(getRagMessageHistory, student.id);
+        const ragResult = await this.callWithRetry(getRagMessageHistory, student.id, { projectId });
         aiCountByUserId[student.id] = ragResult.success && Array.isArray(ragResult.data) 
           ? ragResult.data.length 
           : 0;

@@ -17,6 +17,7 @@ import { useStageIndex, useSubStageIndex } from '../../hooks/useStageIndex';
 import KanbanErrorBoundary from '../../components/ErrorBoundary/KanbanErrorBoundary';
 import { useKanbanData } from './hooks/useKanbanData';
 import { useKanbanView } from './hooks/useKanbanView';
+import { useDebouncedValue } from './hooks/useDebouncedValue';
 import KanbanColumn from './components/KanbanColumn';
 import KanbanOnboarding from './components/KanbanOnboarding';
 import ExampleTasksDialog from './components/ExampleTasksDialog';
@@ -50,6 +51,21 @@ export default function Kanban() {
   });
 
   const renderedData = useKanbanView(kanbanData, viewConfig);
+
+  // 搜尋框：輸入立即反映在框內，篩選條件延遲 250ms 才套用，避免每敲一鍵就重算整張看板（F6）
+  const [searchInput, setSearchInput] = useState('');
+  const debouncedSearch = useDebouncedValue(searchInput, 250);
+  useEffect(() => {
+    setViewConfig(prev => (
+      (prev.filter?.keyword || '') === debouncedSearch
+        ? prev
+        : { ...prev, filter: { ...prev.filter, keyword: debouncedSearch } }
+    ));
+  }, [debouncedSearch]);
+  const clearSearch = () => {
+    setSearchInput('');
+    setViewConfig(prev => ({ ...prev, filter: { ...prev.filter, keyword: '' } }));
+  };
 
   // --- Local UI State ---
   const [showAddGroupInput, setShowAddGroupInput] = useState(false);
@@ -593,18 +609,12 @@ export default function Kanban() {
                 type="text"
                 placeholder="搜尋任務..."
                 className="pl-9 pr-3 py-2 w-48 border border-gray-300 rounded-lg text-ui bg-white focus:outline-none focus:ring-2 focus:ring-customgreen focus:border-transparent transition-shadow duration-fast placeholder:text-gray-400"
-                value={viewConfig.filter?.keyword || ''}
-                onChange={(e) => setViewConfig(prev => ({
-                  ...prev,
-                  filter: { ...prev.filter, keyword: e.target.value }
-                }))}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
               />
-              {viewConfig.filter?.keyword && (
+              {searchInput && (
                 <button
-                  onClick={() => setViewConfig(prev => ({
-                    ...prev,
-                    filter: { ...prev.filter, keyword: '' }
-                  }))}
+                  onClick={clearSearch}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -743,10 +753,13 @@ export default function Kanban() {
                 data-track
                 data-track-action="KANBAN_FILTER_CLEAR"
                 data-track-type="kanban"
-                onClick={() => setViewConfig(prev => ({
-                  ...prev,
-                  filter: { keyword: '', assignee: [], label: '', assigneeLogic: 'OR' }
-                }))}
+                onClick={() => {
+                  setSearchInput('');
+                  setViewConfig(prev => ({
+                    ...prev,
+                    filter: { keyword: '', assignee: [], label: '', assigneeLogic: 'OR' }
+                  }));
+                }}
                 className="px-3 py-2 text-ui text-gray-600 hover:text-gray-800 font-medium transition-colors duration-fast flex items-center gap-1"
                 title="清除所有篩選"
               >

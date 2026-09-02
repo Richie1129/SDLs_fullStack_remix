@@ -1,4 +1,10 @@
 const { GoogleGenAI } = require('@google/genai');
+
+// SSE 串流整體上限（毫秒），可由 LLM_STREAM_TIMEOUT_MS 覆寫（B7）
+const STREAM_TIMEOUT_MS = (() => {
+  const n = parseInt(process.env.LLM_STREAM_TIMEOUT_MS || '', 10);
+  return Number.isFinite(n) && n > 0 ? n : 120000;
+})();
 require('dotenv').config();
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -81,7 +87,23 @@ async function streamGeminiResponse(prompt, res, options = {}) {
       console.log('✅ [Gemini] 已設定 systemInstruction (Markdown 格式)');
     }
 
-    const stream = await genAI.models.generateContentStream(streamConfig);
+    // B7：伺服器端上限與斷線中止。
+    // 使用者關掉分頁時 abort 底層請求，避免 Gemini 串流在背景跑滿；
+    // 整體超過 STREAM_TIMEOUT_MS 也 abort，避免懸掛請求佔住連線。
+    const abortController = new AbortController();
+    const onClientClose = () => abortController.abort();
+    res.on('close', onClientClose);
+    const streamTimer = setTimeout(() => abortController.abort(), STREAM_TIMEOUT_MS);
+    streamConfig.config.abortSignal = abortController.signal;
+
+    let stream;
+    try {
+      stream = await genAI.models.generateContentStream(streamConfig);
+    } catch (startErr) {
+      clearTimeout(streamTimer);
+      res.off('close', onClientClose);
+      throw startErr;
+    }
     console.log('✅ [Gemini] generateContentStream 回應成功');
 
     // State machine for parsing <thinking> tags
@@ -215,6 +237,9 @@ async function streamGeminiResponse(prompt, res, options = {}) {
       }
     }
 
+    clearTimeout(streamTimer);
+    res.off('close', onClientClose);
+
     console.log(`✅ [Gemini] 串流完成 - 總共 ${chunkCount} chunks, ${totalChars} 字元`);
     console.log(`📊 [Gemini] 思考: ${thinkingContent.length} 字元, 答案: ${assistantContent.length} 字元`);
 
@@ -228,6 +253,11 @@ async function streamGeminiResponse(prompt, res, options = {}) {
     return { thinkingContent: thinkingContent.trim(), assistantContent: assistantContent.trim() };
 
   } catch (error) {
+    // 使用者已離開：不需要再寫回應
+    if (res.writableEnded || res.destroyed) {
+      console.warn('[Gemini] 串流在客戶端斷線後中止');
+      throw error;
+    }
     console.error('❌ [Gemini] 串流錯誤:', error);
     console.error('❌ [Gemini] 錯誤詳情:', {
       message: error.message,

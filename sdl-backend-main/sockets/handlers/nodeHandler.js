@@ -117,11 +117,7 @@ class NodeHandler {
             }
 
             // 更新專案時間戳
-            await Project.update({ id: projectId }, {
-                where: { id: projectId },
-                individualHooks: true,
-                req: data._reqContext
-            });
+            await Project.update({ updatedAt: new Date() }, { where: { id: projectId } });
 
             // 廣播差量事件給所有客戶端（帶 socketId 供 self-echo 過濾）
             const nodeJson = createdNode.toJSON();
@@ -211,11 +207,7 @@ class NodeHandler {
             }
 
             // 更新專案時間戳
-            await Project.update({ id: projectId }, {
-                where: { id: projectId },
-                individualHooks: true,
-                req: data._reqContext
-            });
+            await Project.update({ updatedAt: new Date() }, { where: { id: projectId } });
 
             // 廣播差量更新事件
             this.broadcastToProject(projectId, "nodeSync", {
@@ -281,9 +273,7 @@ class NodeHandler {
             }
 
             // 更新專案時間戳
-            await Project.update({ id: projectId }, {
-                where: { id: projectId }
-            });
+            await Project.update({ updatedAt: new Date() }, { where: { id: projectId } });
 
             // 廣播差量刪除事件
             this.broadcastToProject(projectId, "nodeSync", {
@@ -401,9 +391,7 @@ class NodeHandler {
 
             // 更新專案時間戳
             if (projectId) {
-                await Project.update({ id: projectId }, {
-                    where: { id: projectId }
-                });
+                await Project.update({ updatedAt: new Date() }, { where: { id: projectId } });
             }
 
             // 廣播差量連線建立事件
@@ -483,9 +471,7 @@ class NodeHandler {
 
             // 更新專案時間戳
             if (projectId) {
-                await Project.update({ id: projectId }, {
-                    where: { id: projectId }
-                });
+                await Project.update({ updatedAt: new Date() }, { where: { id: projectId } });
             }
 
             // 廣播差量連線刪除事件

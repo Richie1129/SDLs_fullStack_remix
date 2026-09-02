@@ -46,6 +46,45 @@ const VLLM_MODELS = {
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite-preview';
 
+// Gemini 呼叫的整體逾時（含所有備援金鑰的輪替），可由 LLM_TIMEOUT_MS 覆寫（B7）
+const DEFAULT_LLM_TIMEOUT_MS = (() => {
+    const n = parseInt(process.env.LLM_TIMEOUT_MS || '', 10);
+    return Number.isFinite(n) && n > 0 ? n : 60000;
+})();
+
+/**
+ * 建立帶 code = 'LLM_TIMEOUT' 的逾時錯誤
+ */
+function createTimeoutError(label, ms) {
+    const err = new Error(`[LLM Gateway] ${label} 逾時（${ms}ms）`);
+    err.code = 'LLM_TIMEOUT';
+    return err;
+}
+
+/**
+ * 用整體 deadline 包住一個 promise 工廠：
+ * - 逾時前先透過 AbortSignal 通知 SDK 取消底層 HTTP 請求
+ * - 同時 Promise.race 一個逾時 promise，避免 SDK 忽略 abort 而懸掛
+ * @template T
+ * @param {(signal: AbortSignal) => Promise<T>} factory
+ * @param {number} ms
+ * @param {string} label
+ * @returns {Promise<T>}
+ */
+function withDeadline(factory, ms, label) {
+    const controller = new AbortController();
+    let timer = null;
+    const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+            controller.abort();
+            reject(createTimeoutError(label, ms));
+        }, ms);
+    });
+    return Promise.race([factory(controller.signal), timeoutPromise]).finally(() => {
+        if (timer) clearTimeout(timer);
+    });
+}
+
 /** @returns {string[]} 可用的 Gemini API key 列表 */
 function getGeminiKeys() {
     return [process.env.GEMINI_API_KEY, process.env.GEMINI_API_KEY_2].filter(Boolean);
@@ -262,6 +301,7 @@ async function callGemini(options = {}) {
         tools,
         safetySettings = DEFAULT_SAFETY_SETTINGS,
         model = GEMINI_MODEL,
+        timeout = DEFAULT_LLM_TIMEOUT_MS,
     } = options;
 
     const keys = getGeminiKeys();
@@ -269,11 +309,20 @@ async function callGemini(options = {}) {
         throw new Error('[LLM Gateway] GEMINI_API_KEY 未設定');
     }
 
+    // 整體 deadline：所有金鑰輪替共用，避免 N 把金鑰就變成 N 倍等待
+    const deadline = Date.now() + timeout;
     let lastError = null;
 
     for (let i = 0; i < keys.length; i++) {
         const apiKey = keys[i];
         const keyAlias = i === 0 ? 'PRIMARY' : `BACKUP_${i}`;
+
+        const remainingMs = deadline - Date.now();
+        if (remainingMs <= 0) {
+            lastError = createTimeoutError(`Gemini (${keyAlias})`, timeout);
+            logger.warn(`[LLM Gateway] Gemini 整體逾時，略過剩餘金鑰`);
+            break;
+        }
 
         try {
             const client = getGeminiClient(apiKey);
@@ -297,11 +346,15 @@ async function callGemini(options = {}) {
                 config.tools = tools;
             }
 
-            const result = await client.models.generateContent({
-                model,
-                contents: prompt,
-                config,
-            });
+            const result = await withDeadline(
+                (signal) => client.models.generateContent({
+                    model,
+                    contents: prompt,
+                    config: { ...config, abortSignal: signal },
+                }),
+                remainingMs,
+                `Gemini (${keyAlias})`
+            );
 
             const text = result?.text || '';
             if (!text && !result?.candidates) {
@@ -325,7 +378,9 @@ async function callGemini(options = {}) {
         }
     }
 
-    throw new Error(`[LLM Gateway] Gemini 所有金鑰都失敗: ${lastError?.message}`);
+    const allFailed = new Error(`[LLM Gateway] Gemini 所有金鑰都失敗: ${lastError?.message}`);
+    if (lastError?.code === 'LLM_TIMEOUT') allFailed.code = 'LLM_TIMEOUT';
+    throw allFailed;
 }
 
 // ============================================================================
@@ -410,6 +465,7 @@ async function callWithFallback(options = {}) {
                     prompt: geminiContents,
                     systemInstruction: systemPrompt,
                     temperature: 0.7,
+                    timeout,
                     ...(maxTokens ? { maxOutputTokens: maxTokens } : {}),
                 };
 
@@ -522,6 +578,9 @@ async function callGeminiGrounding(question, options = {}) {
 // ============================================================================
 
 module.exports = {
+    DEFAULT_LLM_TIMEOUT_MS,
+    withDeadline,
+    createTimeoutError,
     // 核心 API
     callVLLM,
     callGemini,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery } from 'react-query';
 import { Draggable } from 'react-beautiful-dnd';
 import { Toaster } from 'react-hot-toast';
 import { FiEdit, FiHelpCircle } from "react-icons/fi";
@@ -11,7 +11,6 @@ import { recordObservationEvent } from '../../../../api/usage';
 import { formatTime } from '../../../../utils/timeUtils';
 import { useCardData } from './hooks/useCardData';
 import { useFileManagement } from './hooks/useFileManagement';
-import { useCardSocket } from './hooks/useCardSocket';
 import { CardDetailModal } from './components/CardDetailModal';
 import { CardImage, Tooltip, personImg } from './components/SharedComponents';
 import AITaskAssistantModal from '../../../../components/AITaskAssistant/AITaskAssistantModal';
@@ -41,13 +40,12 @@ function Carditem({ data, index, columnIndex }) {
   const [open, setOpen] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const { projectId } = useParams();
-  const queryClient = useQueryClient();
   const { isObservationMode } = useObservationMode();
 
   // ✅ 數據邏輯全在 hooks 裡（Linus: "關注數據結構"）
   const { cardData, setCardData } = useCardData(data);
   const fileOperations = useFileManagement(cardData, setCardData);
-  useCardSocket(cardData.id, projectId, queryClient);
+  // socket listener 已整併到看板層 useKanbanData（F7），卡片不再各自註冊
 
   // ✅ 權限邏輯統一（Linus: "消除特殊情況"）
   const permissions = {
@@ -57,10 +55,11 @@ function Carditem({ data, index, columnIndex }) {
   };
 
   // 獲取專案成員（用於指派）
+  // key 帶 projectId 並與 ObservationProvider / TopBar 共用同一組快取（F3、F5）
   const { data: menberData = [] } = useQuery(
-    "getProjectUser",
+    ['getProjectUser', projectId],
     () => getProjectUser(projectId),
-    { enabled: !!projectId }
+    { enabled: !!projectId, staleTime: 5 * 60 * 1000 }
   );
 
   /**

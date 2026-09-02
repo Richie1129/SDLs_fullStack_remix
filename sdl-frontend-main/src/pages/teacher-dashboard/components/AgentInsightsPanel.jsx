@@ -281,13 +281,26 @@ export default function AgentInsightsPanel({ projectId }) {
         });
     }, [projectId]);
 
-    // 冷卻倒計時
+    // 冷卻倒計時：目標時間存在 ref，整段冷卻期間只建立一個 interval；
+    // deps 只放原始值（onCooldown / cooldownUntil），倒數顯示值變動不會重建 interval
     const [cooldownDisplay, setCooldownDisplay] = useState('');
+    const cooldownUntilRef = useRef(null);
+    const isOnCooldown = Boolean(geminiCooldown?.onCooldown);
+    const cooldownUntil = geminiCooldown?.cooldownUntil ?? null;
     useEffect(() => {
-        if (!geminiCooldown?.onCooldown) { setCooldownDisplay(''); return; }
+        if (!isOnCooldown || !cooldownUntil) {
+            cooldownUntilRef.current = null;
+            setCooldownDisplay('');
+            return undefined;
+        }
+        cooldownUntilRef.current = cooldownUntil;
         const update = () => {
-            const remaining = geminiCooldown.cooldownUntil - Date.now();
-            if (remaining <= 0) { setGeminiCooldown(prev => ({ ...prev, onCooldown: false })); return; }
+            const remaining = cooldownUntilRef.current - Date.now();
+            if (remaining <= 0) {
+                setCooldownDisplay('');
+                setGeminiCooldown(prev => (prev ? { ...prev, onCooldown: false } : prev));
+                return;
+            }
             const mins = Math.floor(remaining / 60000);
             const secs = Math.floor((remaining % 60000) / 1000);
             setCooldownDisplay(`${mins}:${secs.toString().padStart(2, '0')}`);
@@ -295,7 +308,7 @@ export default function AgentInsightsPanel({ projectId }) {
         update();
         const interval = setInterval(update, 1000);
         return () => clearInterval(interval);
-    }, [geminiCooldown]);
+    }, [isOnCooldown, cooldownUntil]);
 
     const handleStartAnalysis = useCallback(async () => {
         if (!projectId || phase === 'running') return;

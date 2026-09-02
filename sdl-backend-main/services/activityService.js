@@ -318,6 +318,55 @@ const getProjectActivities = async (projectId, options = {}) => {
     });
 };
 
+/**
+ * 批次取得多個專案的最後活動時間（B10：教師總覽用）
+ *
+ * 原本每個專案各呼叫一次 getProjectActivities(projectId, { limit: 1 })，每次 4 支查詢；
+ * 這裡對四種來源各做一次 GROUP BY projectId 的 MAX 聚合，總共 4 支查詢，再取各專案的最大值。
+ *
+ * @param {number[]} projectIds
+ * @returns {Promise<Map<number, Date>>} projectId -> 最後活動時間（沒有任何活動的專案不會出現在 Map）
+ */
+const getProjectsLastActivityAt = async (projectIds) => {
+    const ids = [...new Set((projectIds || []).map(id => parseInt(id)).filter(Number.isFinite))];
+    const result = new Map();
+    if (ids.length === 0) return result;
+
+    const maxByProject = (Model, timeColumn, extraWhere = {}) => Model.findAll({
+        attributes: [
+            'projectId',
+            [Model.sequelize.fn('MAX', Model.sequelize.col(timeColumn)), 'lastAt']
+        ],
+        where: { projectId: { [Op.in]: ids }, ...extraWhere },
+        group: ['projectId'],
+        raw: true
+    });
+
+    const [taskRows, columnRows, nodeRows, commentRows] = await Promise.all([
+        maxByProject(TaskChangeLog, 'createdAt'),
+        maxByProject(ColumnChangeLog, 'createdAt'),
+        maxByProject(NodeChangeLog, 'createdAt'),
+        maxByProject(AuditEvent, 'timestamp', {
+            action: {
+                [Op.in]: ['COMMENT_CREATE', 'COMMENT_UPDATE', 'COMMENT_DELETE',
+                          'PROJECT_COMMENT_CREATE', 'PROJECT_COMMENT_UPDATE', 'PROJECT_COMMENT_DELETE']
+            }
+        })
+    ]);
+
+    for (const rows of [taskRows, columnRows, nodeRows, commentRows]) {
+        for (const row of rows) {
+            const pid = parseInt(row.projectId);
+            const at = row.lastAt ? new Date(row.lastAt) : null;
+            if (!pid || !at || Number.isNaN(at.getTime())) continue;
+            const prev = result.get(pid);
+            if (!prev || at > prev) result.set(pid, at);
+        }
+    }
+    return result;
+};
+
 module.exports = {
+    getProjectsLastActivityAt,
     getProjectActivities
 };

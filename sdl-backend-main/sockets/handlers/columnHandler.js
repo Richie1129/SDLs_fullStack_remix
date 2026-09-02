@@ -170,11 +170,7 @@ class ColumnHandler {
 
             // 更新順序
             await Kanban.update({ column: newOrder }, { where: { id: kanbanRow.id } });
-            await Project.update({ id: roomProjectId }, { 
-                where: { id: roomProjectId }, 
-                individualHooks: true, 
-                req: data._reqContext 
-            });
+            await Project.update({ updatedAt: new Date() }, { where: { id: roomProjectId } });
 
             // 發送最新完整資料
             const latest = await buildKanbanData(roomProjectId);
@@ -267,12 +263,7 @@ class ColumnHandler {
                 await Column.destroy({ where: { id: columnData.id }, transaction: t });
 
                 // 更新專案時間戳
-                await Project.update({ id: kanbanId }, {
-                    where: { id: kanbanId },
-                    transaction: t,
-                    individualHooks: true,
-                    req: data._reqContext
-                });
+                await Project.update({ updatedAt: new Date() }, { where: { id: kanbanId }, transaction: t });
 
                 await t.commit();
             } catch (txErr) {

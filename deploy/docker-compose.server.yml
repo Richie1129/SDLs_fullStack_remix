@@ -18,6 +18,12 @@ services:
   nginx:
     image: nginx
     restart: always
+    # Docker json-file log 輪替：避免 SQL/HTTP 日誌無上限成長吃滿磁碟
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - 80:80
     volumes:
@@ -45,6 +51,12 @@ services:
   api:
     image: stone881129/sdl-api:${IMAGE_TAG:-sdls-v3}
     restart: always
+    # Docker json-file log 輪替：避免 SQL/HTTP 日誌無上限成長吃滿磁碟
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     expose:
       - 3000
     env_file: .env
@@ -78,6 +90,24 @@ services:
   postgres:
     image: postgres:17
     restart: always
+    # 15 GB / 6 核主機的記憶體參數（原本全是映像預設值：shared_buffers 128MB）
+    # 詳見 docs/reports/PERFORMANCE_REVIEW_2026-09-02.md 第 2.1 節與 B12
+    command: >
+      postgres
+      -c shared_buffers=3GB
+      -c effective_cache_size=9GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=512MB
+      -c max_connections=100
+      -c random_page_cost=1.1
+    # 平行查詢的動態共享記憶體走 /dev/shm，Docker 預設 64MB 太小
+    shm_size: 1gb
+    # Docker json-file log 輪替：避免 SQL/HTTP 日誌無上限成長吃滿磁碟
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       - POSTGRES_DB=${PG_NAME}
       - POSTGRES_USER=${PG_USER}

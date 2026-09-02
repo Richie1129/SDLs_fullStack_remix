@@ -349,20 +349,29 @@ class SocketManager {
   }
 }
 
-// 創建全域實例
-const socketManager = new SocketManager();
+// Lazy 實例化：模組載入時不 new、不綁 window online/offline listener。
+// 只有真正呼叫 getSocketManager()（或下方 socket.* 便利方法）時才建立實例，
+// 避免只是 import 就多開一條沒人用的 socket 連線。
+let instance = null;
 
-// 導出便利方法
+export function getSocketManager() {
+  if (!instance) {
+    instance = new SocketManager();
+  }
+  return instance;
+}
+
+// 導出便利方法（每次呼叫時才取得實例）
 export const socket = {
-  connect: () => socketManager.connect(),
-  disconnect: () => socketManager.disconnect(),
-  emit: (event, data, callback) => socketManager.emit(event, data, callback),
-  on: (event, listener) => socketManager.on(event, listener),
-  off: (event, listener) => socketManager.off(event, listener),
-  onConnectionChange: (listener) => socketManager.onConnectionChange(listener),
-  onError: (listener) => socketManager.onError(listener),
-  getStatus: () => socketManager.getStatus(),
-  reset: () => socketManager.reset()
+  connect: () => getSocketManager().connect(),
+  disconnect: () => getSocketManager().disconnect(),
+  emit: (event, data, callback) => getSocketManager().emit(event, data, callback),
+  on: (event, listener) => getSocketManager().on(event, listener),
+  off: (event, listener) => getSocketManager().off(event, listener),
+  onConnectionChange: (listener) => getSocketManager().onConnectionChange(listener),
+  onError: (listener) => getSocketManager().onError(listener),
+  getStatus: () => getSocketManager().getStatus(),
+  reset: () => getSocketManager().reset()
 };
 
-export default socketManager;
+export default getSocketManager;

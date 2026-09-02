@@ -1,3 +1,5 @@
+const { QueryTypes } = require('sequelize');
+const sequelize = require('../util/database');
 const UsageSession = require('../models/usage_session');
 const ObservationLog = require('../models/observation_log');
 const User = require('../models/user');
@@ -182,39 +184,44 @@ exports.getSummary = async (req, res) => {
   try {
     const { projectId } = req.query;
     const userId = req.userId || req.user?.id;
-    
+
     if (!userId || !projectId) return res.status(400).json({ message: '缺少 userId 或 projectId' });
-    
-    const sessions = await UsageSession.findAll({ where: { userId, projectId } });
-    const nowMs = Date.now();
-    
-    // Separate ended and active sessions for cleaner logic
-    const endedSessions = sessions.filter(s => s.endedAt);
-    const activeSessions = sessions.filter(s => !s.endedAt);
-    
-    // Calculate total from ended sessions - use totalSeconds if available
-    const endedTotalSec = endedSessions.reduce((sum, s) => {
-      const sec = s.totalSeconds ?? Math.max(0, Math.floor((s.endedAt - s.startedAt) / 1000));
-      return sum + sec;
-    }, 0);
-    
-    // Calculate total from active sessions - use time since lastActiveAt, clamped to MAX_ACTIVE_GAP_SEC
-    const activeTotalSec = activeSessions.reduce((sum, s) => {
-      const timeSinceLastActive = Math.max(0, Math.floor((nowMs - new Date(s.lastActiveAt).getTime()) / 1000));
-      const clampedGap = Math.min(timeSinceLastActive, MAX_ACTIVE_GAP_SEC);
-      return sum + clampedGap;
-    }, 0);
-    
+
+    // B9：原本撈出該使用者在此專案的所有 session 在 JS 重算，改成一句 SQL 聚合。
+    // 邏輯與原本完全相同：
+    // - 已結束：totalSeconds，缺值時退回 endedAt - startedAt（不小於 0）
+    // - 進行中：now - lastActiveAt，夾在 [0, MAX_ACTIVE_GAP_SEC]
+    const [row] = await sequelize.query(
+      `SELECT
+         COUNT(*)::int AS "count",
+         COUNT(*) FILTER (WHERE "endedAt" IS NOT NULL)::int AS "endedCount",
+         COUNT(*) FILTER (WHERE "endedAt" IS NULL)::int AS "activeCount",
+         COALESCE(SUM(CASE WHEN "endedAt" IS NOT NULL THEN
+           COALESCE("totalSeconds", GREATEST(0, FLOOR(EXTRACT(EPOCH FROM ("endedAt" - "startedAt")))))
+         END), 0)::bigint AS "endedTotalSec",
+         COALESCE(SUM(CASE WHEN "endedAt" IS NULL THEN
+           LEAST(GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - "lastActiveAt")))), :maxGap)
+         END), 0)::bigint AS "activeTotalSec"
+       FROM usage_sessions
+       WHERE "userId" = :userId AND "projectId" = :projectId`,
+      {
+        replacements: { userId, projectId, maxGap: MAX_ACTIVE_GAP_SEC },
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    const endedTotalSec = Number(row?.endedTotalSec || 0);
+    const activeTotalSec = Number(row?.activeTotalSec || 0);
+    const count = Number(row?.count || 0);
     const totalSec = endedTotalSec + activeTotalSec;
-    const count = sessions.length;
     const averageSec = count > 0 ? Math.round(totalSec / count) : 0;
-    
-    res.json({ 
-      totalSeconds: totalSec, 
-      sessionCount: count, 
+
+    res.json({
+      totalSeconds: totalSec,
+      sessionCount: count,
       averageSeconds: averageSec,
-      activeSessions: activeSessions.length,
-      endedSessions: endedSessions.length,
+      activeSessions: Number(row?.activeCount || 0),
+      endedSessions: Number(row?.endedCount || 0),
       debug: {
         endedTotalSec,
         activeTotalSec,

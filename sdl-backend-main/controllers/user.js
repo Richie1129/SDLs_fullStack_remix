@@ -1,4 +1,6 @@
+const { Op } = require('sequelize');
 const User = require('../models/user');
+const permissionCache = require('../auth/permissionCache');
 const Project = require('../models/project');
 const School = require('../models/school');
 const RefreshToken = require('../models/refresh_token');
@@ -24,7 +26,22 @@ exports.getUsers = async (req, res) => {
             ? ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id']
             : ['id', 'username', 'role', 'class'];
 
-        const users = await User.findAll({ attributes });
+        // B9：支援可選篩選（role / class / search / limit），未帶參數時維持回傳全部
+        const where = {};
+        if (typeof req.query.role === 'string' && req.query.role.trim()) where.role = req.query.role.trim();
+        if (typeof req.query.class === 'string' && req.query.class.trim()) where.class = req.query.class.trim();
+        if (typeof req.query.search === 'string' && req.query.search.trim()) {
+            const keyword = `%${req.query.search.trim()}%`;
+            where[Op.or] = [
+                { username: { [Op.iLike]: keyword } },
+                { account: { [Op.iLike]: keyword } },
+            ];
+        }
+        const parsedLimit = parseInt(req.query.limit, 10);
+        const queryOptions = { attributes, where, order: [['id', 'ASC']] };
+        if (Number.isFinite(parsedLimit) && parsedLimit > 0) queryOptions.limit = Math.min(parsedLimit, 1000);
+
+        const users = await User.findAll(queryOptions);
         res.status(200).json({ user: users });
     } catch (err) {
         console.error('Error fetching users:', err);
@@ -346,6 +363,8 @@ exports.updateUserProfile = async (req, res) => {
             }
 
             await transaction.commit();
+            // 班級或學校可能變更，讓 socket 權限快取失效
+            permissionCache.invalidateUser(userId);
         } catch (txErr) {
             await transaction.rollback();
             throw txErr;

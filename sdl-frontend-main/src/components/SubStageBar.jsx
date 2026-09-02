@@ -189,7 +189,7 @@ export default function SubStageComponent() {
         setIgnoreHover(true);
     };
     // [Refactored] getStageColor / getTextColor 已統一至 stageUtils.js
-    const getProjectQuery = useQuery("getProject", () => getProject(projectId),
+    const getProjectQuery = useQuery(["getProject", projectId], () => getProject(projectId),
         {
             onSuccess: (data) => {
                 setStageInfo(data.currentStage, data.currentSubStage);
@@ -202,7 +202,7 @@ export default function SubStageComponent() {
     // 處理 socket 事件
     useEffect(() => {
         const handleRefreshKanban = (newStages) => {
-            queryClient.invalidateQueries('getProject');
+            queryClient.invalidateQueries(['getProject', projectId]);
         };
 
         socket.on('refreshKanban', handleRefreshKanban);
@@ -210,7 +210,7 @@ export default function SubStageComponent() {
         return () => {
             socket.off('refreshKanban', handleRefreshKanban);
         };
-    }, []);
+    }, [projectId, queryClient]);
 
     // useEffect(() => {
     // console.log("Updated currentStageIndex", currentStageIndex);

@@ -18,6 +18,13 @@ class ErrorReportingService {
     this.errorQueue = [];
     this.isOnline = navigator.onLine;
 
+    // 節流去重：同一 type+message+stack 在 60 秒內只送一次；全域每分鐘最多 10 筆
+    this.dedupeWindowMs = 60_000;
+    this.rateLimitWindowMs = 60_000;
+    this.rateLimitMax = 10;
+    this.recentErrorKeys = new Map(); // dedupeKey → 上次送出的時間戳
+    this.sentTimestamps = [];         // 最近一分鐘內送出的時間戳
+
     // 監聽網路狀態
     window.addEventListener('online', () => {
       this.isOnline = true;
@@ -111,14 +118,64 @@ class ErrorReportingService {
   }
 
   /**
-   * 提交錯誤報告
+   * 產生去重 key：type + message + stack 前 300 字（network error 另加 method+url）
    */
-  async submitError(errorReport) {
+  getDedupeKey(errorReport) {
+    const stack = typeof errorReport.stack === 'string' ? errorReport.stack.slice(0, 300) : '';
+    const endpoint = errorReport.method && errorReport.url ? `${errorReport.method} ${errorReport.url}` : '';
+    return [errorReport.type, errorReport.message, stack, endpoint].join('|');
+  }
+
+  /**
+   * 節流去重判斷；通過時會記錄本次送出，回傳 true
+   * - 同一 key 在 dedupeWindowMs 內只送一次
+   * - 全域 rateLimitWindowMs 內最多 rateLimitMax 筆
+   */
+  shouldSubmit(errorReport) {
+    const now = Date.now();
+    const key = this.getDedupeKey(errorReport);
+
+    const lastSent = this.recentErrorKeys.get(key);
+    if (lastSent !== undefined && now - lastSent < this.dedupeWindowMs) {
+      return false;
+    }
+
+    this.sentTimestamps = this.sentTimestamps.filter((t) => now - t < this.rateLimitWindowMs);
+    if (this.sentTimestamps.length >= this.rateLimitMax) {
+      return false;
+    }
+
+    this.recentErrorKeys.set(key, now);
+    this.sentTimestamps.push(now);
+
+    // 定期清掉過期 key，避免 Map 無限成長
+    if (this.recentErrorKeys.size > 200) {
+      for (const [k, t] of this.recentErrorKeys) {
+        if (now - t >= this.dedupeWindowMs) this.recentErrorKeys.delete(k);
+      }
+    }
+    return true;
+  }
+
+  /**
+   * 提交錯誤報告
+   * @param {object} errorReport
+   * @param {{ fromQueue?: boolean }} [options] fromQueue=true 表示離線佇列重送，入列時已通過節流檢查，不再重算
+   */
+  async submitError(errorReport, { fromQueue = false } = {}) {
     if (this.isDevelopment) {
       // 開發環境：詳細控制台輸出
       console.group(`🚨 錯誤上報 [${errorReport.type}]`);
       console.error('錯誤詳情:', errorReport);
       console.groupEnd();
+    }
+
+    // 節流去重：socket 重連風暴等重複錯誤不再逐次打 /api/errors
+    if (!fromQueue && !this.shouldSubmit(errorReport)) {
+      if (this.isDevelopment) {
+        console.log('錯誤報告已節流，略過上報');
+      }
+      return;
     }
 
     // 如果離線，添加到隊列
@@ -161,7 +218,7 @@ class ErrorReportingService {
     this.errorQueue = [];
 
     for (const errorReport of errors) {
-      await this.submitError(errorReport);
+      await this.submitError(errorReport, { fromQueue: true });
     }
   }
 

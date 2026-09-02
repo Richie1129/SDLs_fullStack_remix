@@ -39,7 +39,8 @@
     "quick-install": "node quick-install-minio.js",
     "migrate": "npx sequelize-cli db:migrate",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
-    "migrate:status": "npx sequelize-cli db:migrate:status"
+    "migrate:status": "npx sequelize-cli db:migrate:status",
+    "test:e2e": "jest --testMatch '<rootDir>/tests/e2e/**/*.test.js' '<rootDir>/tests/unit/**/*.test.js' --runInBand"
   },
   "author": "",
   "license": "ISC",

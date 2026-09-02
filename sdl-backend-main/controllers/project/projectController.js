@@ -2,6 +2,7 @@
 const Project = require('../../models/project')
 const User = require('../../models/user')
 const Kanban = require('../../models/kanban');
+const permissionCache = require('../../auth/permissionCache');
 const Column = require('../../models/column');
 const Task = require('../../models/task');
 const Daily_personal = require('../../models/daily_personal');
@@ -194,6 +195,7 @@ exports.createProject = async (req, res) => {
             school_id: creater ? creater.school_id : null
         }, { transaction: t, req });
         await createdProject.addUser(creater, { transaction: t });
+        permissionCache.invalidatePair(creater.id, createdProject.id);
 
         // initialize kanban
         const kanban = await Kanban.create({ column: [], projectId: createdProject.id }, { transaction: t });
@@ -489,6 +491,9 @@ exports.updateProject = async (req, res) => {
 
         await project.save();
 
+        // mentor 可能變更，讓 socket 權限快取失效
+        permissionCache.invalidateProject(project.id);
+
         // 清除相關用戶的專案列表快取
         apiCache.delByPrefix('projects:');
 
@@ -570,7 +575,7 @@ exports.deleteProject = async (req, res) => {
             }
 
             // 4. 收集提交記錄檔案
-            const submits = await Submit.findAll({ where: { projectId } });
+            const submits = await Submit.findAll({ where: { projectId }, attributes: { exclude: ['fileData', 'content'] } });
             for (const submit of submits) {
                 const submitFileNames = extractSubmitFileNames(submit);
                 allFileNames.push(...submitFileNames);
@@ -593,6 +598,7 @@ exports.deleteProject = async (req, res) => {
             await Kanban.destroy({ where: { projectId }, transaction: t });
             await Project.destroy({ where: { id: projectId }, individualHooks: true, req, transaction: t });
             await t.commit();
+            permissionCache.invalidateProject(projectId);
         } catch (txErr) {
             await t.rollback();
             throw txErr;

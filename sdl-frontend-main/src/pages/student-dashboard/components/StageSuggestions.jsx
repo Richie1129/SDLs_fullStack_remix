@@ -1,7 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiTarget, FiBookOpen, FiMessageSquare, FiZap, FiCpu, FiCheckSquare, FiChevronDown, FiChevronUp, FiArrowRight, FiX } from 'react-icons/fi';
-import SdlCoachChat from '../../../components/SdlCoachChat';
+import LazyFallback from '../../../components/LazyFallback';
+
+// 自主學習助手改為動態載入：學生儀表板首屏不再帶入對話元件，開啟時才下載
+const SdlCoachChat = lazy(() => import('../../../components/SdlCoachChat'));
 
 /* ─────────────────────────────────────────────
    Stage / Sub-stage 定義（與 SubStageBar.jsx 保持同步）
@@ -264,12 +267,14 @@ const StageSuggestions = ({ personalData, projectId }) => {
               </button>
             </div>
             <div className="flex-1 min-h-0">
-              <SdlCoachChat
-                embedded
-                projectId={projectId}
-                currentStage={stage}
-                currentSubStage={subStage}
-              />
+              <Suspense fallback={<LazyFallback label="載入自主學習助手…" className="h-full" />}>
+                <SdlCoachChat
+                  embedded
+                  projectId={projectId}
+                  currentStage={stage}
+                  currentSubStage={subStage}
+                />
+              </Suspense>
             </div>
           </div>
         </div>

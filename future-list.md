@@ -443,8 +443,108 @@
 
 ---
 
+### F016: 看板拖曳改差量廣播
+
+- **類別**：Backend / Frontend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-02
+- **提案來源**：`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md` 第 B5 節（階段三項目）
+- **為什麼現在不做**：
+  - 2026-09-02 已把 `buildKanbanData` 的逐欄 N+1 改成單次查詢，一次拖曳的 DB 成本已從約 20 次 round-trip 降到個位數
+  - 目前 `dragtaskItem` / `columnOrderUpdated` 廣播整張看板，前端 `useKanbanData.kanbanDragEvent` 以整板 JSON 比對做收斂；改差量要同時處理併發拖曳的順序衝突與 tempId 卡片，屬 socket 契約變更，需一起改前後端並做回歸
+  - 專案房間人數為小組規模（6 人以內），整板 payload 約 20 KB，尚未成為瓶頸
+- **觸發條件**（任一成立）：
+  - 單一看板卡片數超過 100 張，或 socket 出站流量在課堂尖峰明顯上升
+  - 學生回報拖曳後其他人畫面「跳動」或順序錯亂
+- **怎麼做**：
+  1. 後端 `taskHandler.handleTaskDrag` 改廣播 `{ taskId, fromColumnId, toColumnId, index, version }`，`columnHandler` 的欄位順序改廣播 `{ columnOrder }`
+  2. 前端 `useKanbanData` 用 payload 就地搬移卡片；收到的 version 落後於本地時忽略，落後過多時退回整板 invalidate
+  3. 保留整板事件一段時間作為 fallback，觀察一個學期再移除
+- **估計工作量**：`M`
+- **依賴 / 前置條件**：F7 已完成（socket listener 已整併到看板層）
+- **風險 / 副作用**：併發拖曳收斂錯誤會造成各端順序不一致；需要保留「重新整理即正確」的退路
+- **替代方案**：維持整板廣播，只在 payload 上做欄位瘦身
+- **相關檔案**：`sdl-backend-main/sockets/handlers/taskHandler.js`、`sdl-backend-main/sockets/handlers/columnHandler.js`、`sdl-frontend-main/src/pages/Kanban/hooks/useKanbanData.js`
+
+---
+
+### F017: 學生／管理總覽的後端聚合端點
+
+- **類別**：Backend / Frontend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-02
+- **提案來源**：`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md` 第 F10 節
+- **為什麼現在不做**：
+  - 2026-09-02 已做短期止血：`StudentOverview` 只抓目前選定學期的專案、搬進 React Query（staleTime 5 分鐘）、每批 3 個專案並行；`ManagementOverview` 與 `useTeacherData` 改用既有的 `batch-project-users` 批次端點
+  - 聚合端點需要重新定義總覽頁的資料契約（反思、聊天、活動、看板、想法牆、AI 互動七類），屬新 API 設計
+- **觸發條件**（任一成立）：
+  - 單一學生同學期專案數超過 5 個，總覽頁載入仍超過 3 秒
+  - 教師端要求跨學期一次看全部專案
+- **怎麼做**：
+  1. 新增 `GET /api/overview/student?semester=` 一次回傳各專案的統計摘要（後端用 `IN (...) GROUP BY` 聚合，參考 `teacherOverviewController.getProjectsSummary`）
+  2. 前端 `StudentOverview` 改吃摘要，明細（例如反思內容）改為展開時再抓
+- **估計工作量**：`L`
+- **依賴 / 前置條件**：—
+- **風險 / 副作用**：總覽頁圖表（GrowthTrendChart 等）依賴明細資料，聚合後需確認欄位夠用
+- **替代方案**：維持目前的分批與快取
+- **相關檔案**：`sdl-frontend-main/src/pages/overview/StudentOverview.jsx`、`sdl-backend-main/controllers/teacherOverviewController.js`
+
+---
+
+### F018: 受保護圖片改 presigned URL 由瀏覽器原生快取
+
+- **類別**：Backend / Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-02
+- **提案來源**：`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md` 第 F9 節
+- **為什麼現在不做**：
+  - 2026-09-02 已在 `AuthImage` 加模組層快取（同路徑共用 blob 與 in-flight 請求、引用計數延遲釋放），後端 `/api/file/image` 改 streaming、支援 `If-None-Match` 回 304、Cache-Control 改 `private`
+  - presigned URL 需讓瀏覽器直連 MinIO，目前 MinIO 9000 只綁 loopback、對外一律經 nginx 與後端代理（見 `deploy/docker-compose.server.yml`），要先決定是否開放對外路徑
+- **觸發條件**（任一成立）：
+  - 圖片流量成為 API 容器 CPU 或連線數的主要來源
+  - 決定讓 MinIO 經 nginx 對外提供唯讀路徑
+- **怎麼做**：
+  1. nginx 加 `/files/` 反代到 MinIO，後端 `/api/file/image/:name` 改回 302 到 presigned URL（`getPresignedDownloadUrl` 已存在）
+  2. `AuthImage` 對 302 目標直接用 `<img src>`，移除 blob 快取
+- **估計工作量**：`M`
+- **依賴 / 前置條件**：MinIO 對外路徑與 Cloudflare 快取策略決策
+- **風險 / 副作用**：presigned URL 有效期內可被轉傳；需評估教育資料的分享風險
+- **替代方案**：維持後端代理 + 瀏覽器 304 條件請求
+- **相關檔案**：`sdl-backend-main/routes/file.js`、`sdl-frontend-main/src/components/AuthImage.jsx`
+
+---
+
+### F019: 反思紀錄的 legacy fileData BLOB 欄位下線
+
+- **類別**：Backend / Data
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-02
+- **提案來源**：`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md` 第 B9 節（`services/dailyService.js` 老師視角撈全班反思）
+- **為什麼現在不做**：
+  - `submits` 的列表查詢已排除 `fileData`；但 `daily_personals` / `daily_teams` 的 `fileData` 仍被前端當作舊資料的 fallback（`FiveRsReflectionForm.jsx`、`DailyFormFields.jsx` 在沒有 `fileName` 時讀 `fileData`），列表查詢若排除會讓舊紀錄的附件消失
+  - 需要先把仍存在 BLOB 的舊紀錄搬到 MinIO 並補上 `fileName`，才能安全排除該欄位
+- **觸發條件**（任一成立）：
+  - 老師視角反思列表回應超過 2 秒
+  - 決定做一次歷史附件遷移（可併入 `docs/proposals/BACKUP_AND_STORAGE_PLAN.md`）
+- **怎麼做**：
+  1. 一次性腳本：把 `fileData IS NOT NULL AND fileName IS NULL` 的紀錄寫入 MinIO 並回填 `fileName` / `fileUrl`
+  2. 前端移除 `fileData` fallback
+  3. `dailyService.getDailies` 加 `attributes: { exclude: ['fileData'] }`，並依老師視角加分頁
+- **估計工作量**：`M`
+- **依賴 / 前置條件**：MinIO 備份策略（`docs/proposals/BACKUP_AND_STORAGE_PLAN.md`）
+- **風險 / 副作用**：遷移腳本需可重跑；遷移期間新舊路徑並存
+- **替代方案**：維持現狀
+- **相關檔案**：`sdl-backend-main/services/dailyService.js`、`sdl-frontend-main/src/components/FiveRsReflectionForm.jsx`、`sdl-frontend-main/src/pages/reflection/components/DailyFormFields.jsx`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
 - **2026-04-17**：完成 F014（`chat_turns` → `sdl_coach_messages`），作為首個完成案例；舊 migrations 的 `chat-turns` 命名保留為歷史紀錄不改
 - **2026-04-20**：新增 F015（科學術語 Tooltip / Glossary）；伴隨 SDL Coach 多輪對話上線與認知師徒制 prompt 調整提出，prompt 注解為主、tooltip 為補充方案
+- **2026-09-02**：新增 F016–F019；依效能審查報告（`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md`）完成 23 項中的短期修法後，把差量廣播、總覽聚合端點、presigned 圖片、反思 BLOB 下線四項登錄為後續工作

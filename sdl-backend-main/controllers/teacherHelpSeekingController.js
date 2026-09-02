@@ -176,17 +176,27 @@ async function getProjectHelpSeekingStats(req, res) {
       }
     });
 
-    // 轉換為陣列並計算個人品質分數
-    const studentList = await Promise.all(Object.values(studentStats).map(async (student) => {
-      // 查詢學生的迴避風險
-      const avoidanceRisk = await HelpSeekingAvoidanceRisk.findOne({
+    // B10：原本每位學生各 findOne 一次；改成一次 findAll（detectedAt DESC）建 Map，每人取最新一筆
+    const statUserIds = Object.values(studentStats).map(s => s.userId);
+    const latestRiskByUser = new Map();
+    if (statUserIds.length > 0) {
+      const unresolvedRisks = await HelpSeekingAvoidanceRisk.findAll({
         where: {
-          userId: student.userId,
+          userId: { [Op.in]: statUserIds },
           projectId,
           resolved: false
         },
         order: [['detectedAt', 'DESC']]
       });
+      for (const risk of unresolvedRisks) {
+        if (!latestRiskByUser.has(risk.userId)) latestRiskByUser.set(risk.userId, risk);
+      }
+    }
+
+    // 轉換為陣列並計算個人品質分數
+    const studentList = Object.values(studentStats).map((student) => {
+      // 查詢學生的迴避風險（Map 命中即為最新未解決的一筆，與原本 findOne + detectedAt DESC 相同）
+      const avoidanceRisk = latestRiskByUser.get(student.userId) || null;
 
       // 計算學生的平均成效分數
       const studentLogsWithScore = logs.filter(
@@ -205,7 +215,7 @@ async function getProjectHelpSeekingStats(req, res) {
         avgEffectivenessScore,
         avoidanceRiskLevel: avoidanceRisk ? avoidanceRisk.riskLevel : null
       };
-    }));
+    });
 
     // 按品質分數排序（低到高，突顯需要關注的學生）
     studentList.sort((a, b) => a.avgQualityScore - b.avgQualityScore);

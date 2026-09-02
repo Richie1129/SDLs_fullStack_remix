@@ -4,8 +4,12 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  // 只列「執行期才拼出來、Tailwind 掃描不到」的類名；靜態字串（含常數對照表）會被自動掃描，不需列入。
+  // - src/pages/overview/StudentOverview.jsx: s.text.replace('text-', 'bg-')
+  // - src/pages/overview/TeacherOverview.jsx: `ring-${stage.color}-300`
   safelist: [
-    {pattern: /(bg|text|top|left)-./}
+    'bg-blue-700', 'bg-teal-700', 'bg-amber-700', 'bg-purple-700',
+    'ring-blue-300', 'ring-teal-300', 'ring-amber-300', 'ring-purple-300',
   ],
   theme: {
     extend: {

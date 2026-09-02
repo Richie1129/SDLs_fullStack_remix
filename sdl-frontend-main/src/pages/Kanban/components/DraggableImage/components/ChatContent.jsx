@@ -1,6 +1,10 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import SdlCoachChat from '../../../../../components/SdlCoachChat';
+import { lazy, Suspense } from 'react';
+import LazyFallback from '../../../../../components/LazyFallback';
+
+// 自主學習助手改為動態載入：只有切到「自主學習助手」並按下開始後才下載該 chunk
+const SdlCoachChat = lazy(() => import('../../../../../components/SdlCoachChat'));
 
 const ChatContent = ({
   activeTab,
@@ -38,12 +42,14 @@ const ChatContent = ({
       {activeTab === 'mentor' ? (
         mentorStarted ? (
           <div className="h-full">
-            <SdlCoachChat
-              embedded
-              projectId={projectId}
-              currentStage={currentStage}
-              currentSubStage={currentSubStage}
-            />
+            <Suspense fallback={<LazyFallback label="載入自主學習助手…" className="h-full" />}>
+              <SdlCoachChat
+                embedded
+                projectId={projectId}
+                currentStage={currentStage}
+                currentSubStage={currentSubStage}
+              />
+            </Suspense>
           </div>
         ) : (
           <div className="h-full flex items-center justify-center">

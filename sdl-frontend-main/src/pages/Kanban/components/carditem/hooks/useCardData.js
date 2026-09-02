@@ -44,7 +44,23 @@ export function useCardData(initialData) {
       files: initialData.files || [],
       owner: initialData.owner || "",
     });
-  }, [initialData]); // 保持原始邏輯：依賴整個 data 對象
+    // deps 改成具體欄位（F6）：父層重新 render 傳入同內容的新物件時不再重算；
+    // 任一欄位（含陣列引用）變動仍會重新處理
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    initialData.id,
+    initialData.title,
+    initialData.content,
+    initialData.labels,
+    initialData.owner,
+    initialData.assignees,
+    initialData.columnId,
+    initialData.images,
+    initialData.files,
+    initialData.dueDate,
+    initialData.createdAt,
+    initialData.updatedAt,
+  ]);
 
   return { cardData, setCardData };
 }

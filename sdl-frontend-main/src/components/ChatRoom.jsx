@@ -5,6 +5,9 @@ import { socket } from '../utils/socket';
 import { TbSend } from "react-icons/tb";
 import { useLocation } from 'react-router-dom';
 import { getChatroomHistory } from '../api/chatroom';  // 引入API函数
+
+// 聊天史每頁筆數，與後端預設一致（B9）
+const CHAT_HISTORY_PAGE_SIZE = 200;
 import { formatTime } from '../utils/timeUtils';  // 使用統一的時間格式化函數
 import { useUsername } from '../hooks/useUserInfo'; // 引入 username hook
 import { getCurrentUserId } from '../utils/authUtils';
@@ -39,18 +42,25 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
         }
     }
 
+    // 後端一次只回最新 CHAT_HISTORY_PAGE_SIZE 筆（B9），更早的訊息用「載入更早訊息」往前翻
+    const [hasMoreHistory, setHasMoreHistory] = useState(false);
+    const [loadingEarlier, setLoadingEarlier] = useState(false);
+    const skipAutoScrollRef = useRef(false);
+
+    const formatHistory = (history) => (history || []).map(message => ({
+        ...message,
+        rawCreatedAt: message.createdAt,
+        createdAt: formatTime(message.createdAt, 'full') // 使用UTC时间转换
+    }));
+
     useEffect(() => {
         // 当聊天室打开且projectId有效时，加载历史消息
         if (chatRoomOpen && projectId) {
             const loadHistory = async () => {
                 try {
-                    const history = await getChatroomHistory(projectId);
-                    const formattedHistory = history.map(message => ({
-                        ...message,
-                        createdAt: formatTime(message.createdAt, 'full') // 使用UTC时间转换
-                    }));
-                    console.log(formattedHistory[0]?.createdAt)
-                    setMessageList(formattedHistory);
+                    const history = await getChatroomHistory(projectId, { limit: CHAT_HISTORY_PAGE_SIZE });
+                    setMessageList(formatHistory(history));
+                    setHasMoreHistory((history || []).length >= CHAT_HISTORY_PAGE_SIZE);
                 } catch (error) {
                     console.error('Failed to fetch chatroom history:', error);
                 }
@@ -59,7 +69,28 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
         }
     }, [projectId, chatRoomOpen]);  // 依赖projectId和chatRoomOpen
 
+    const loadEarlierMessages = async () => {
+        const oldest = messageList.find(m => m.id != null);
+        if (!oldest || loadingEarlier) return;
+        setLoadingEarlier(true);
+        try {
+            const older = await getChatroomHistory(projectId, { before: oldest.id, limit: CHAT_HISTORY_PAGE_SIZE });
+            skipAutoScrollRef.current = true;
+            setMessageList(prev => [...formatHistory(older), ...prev]);
+            setHasMoreHistory((older || []).length >= CHAT_HISTORY_PAGE_SIZE);
+        } catch (error) {
+            console.error('Failed to fetch earlier chatroom history:', error);
+        } finally {
+            setLoadingEarlier(false);
+        }
+    };
+
     useEffect(() => {
+        // 往前翻頁時保持目前位置，不要跳到底部
+        if (skipAutoScrollRef.current) {
+            skipAutoScrollRef.current = false;
+            return;
+        }
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messageList]);
 
@@ -96,6 +127,18 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                 </button>
             </div>
             <div className='flex-1 w-full py-2 sm:py-3 relative overflow-x-hidden overflow-y-scroll scrollbar-thin scrollbar-thumb-slate-400/70 scrollbar-track-slate-200 scrollbar-thumb-rounded-full scrollbar-track-rounded-full'>
+                {hasMoreHistory && (
+                    <div className='flex justify-center px-component-sm sm:px-component-base md:px-component-md pb-component-xs'>
+                        <button
+                            type='button'
+                            onClick={loadEarlierMessages}
+                            disabled={loadingEarlier}
+                            className='text-caption sm:text-body-sm text-ink-muted hover:text-ink underline underline-offset-2 transition-colors duration-fast disabled:opacity-50'
+                        >
+                            {loadingEarlier ? '載入中' : '載入更早的訊息'}
+                        </button>
+                    </div>
+                )}
                 {/* {
                     messageList.map((messages, index) => {
                         const imgIndex = parseInt(messages.userId) % 9;

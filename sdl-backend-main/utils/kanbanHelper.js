@@ -1,6 +1,10 @@
+const { Op } = require('sequelize');
 const Kanban = require('../models/kanban');
 const Column = require('../models/column');
 const Task = require('../models/task');
+
+// 對外輸出的任務欄位（順序即輸出 JSON 的 key 順序，不可改動）
+const TASK_OUTPUT_ATTRIBUTES = ['id', 'title', 'content', 'labels', 'owner', 'assignees', 'images', 'files', 'dueDate', 'createdAt', 'updatedAt'];
 
 /**
  * Kanban 資料建構輔助函數
@@ -36,22 +40,45 @@ class KanbanHelper {
                 .map(colId => colMap.get(colId))
                 .filter(Boolean);
 
-            // 為每個欄位附加有序的任務
-            for (let i = 0; i < orderedColumns.length; i++) {
-                const col = orderedColumns[i];
+            // 只查有任務的欄位；沒任務的欄位直接給空陣列（與原本逐欄查詢時的 continue 行為相同）
+            const columnIdsWithTasks = [];
+            for (const col of orderedColumns) {
                 const taskIds = Array.isArray(col.task) ? col.task : [];
-                
                 if (taskIds.length === 0) {
                     col.task = [];
-                    continue;
+                } else {
+                    columnIdsWithTasks.push(col.id);
                 }
+            }
 
+            // B5：一次查出所有欄位的任務，再在記憶體依 columnId 分組（取代迴圈內逐欄 findAll）
+            // columnId 放在最後一個 attribute，分組後再移除，確保輸出的 key 順序與原本完全一致
+            const tasksByColumn = new Map();
+            if (columnIdsWithTasks.length > 0) {
                 const tasks = await Task.findAll({
-                    attributes: ['id','title','content','labels','owner','assignees','images','files','dueDate','createdAt','updatedAt'],
-                    where: { columnId: col.id }
+                    attributes: [...TASK_OUTPUT_ATTRIBUTES, 'columnId'],
+                    where: { columnId: { [Op.in]: columnIdsWithTasks } }
                 });
 
-                const taskMap = new Map(tasks.map(t => [t.id, t.toJSON ? t.toJSON() : t]));
+                for (const t of tasks) {
+                    const json = t.toJSON ? t.toJSON() : t;
+                    const columnId = json.columnId;
+                    delete json.columnId;
+                    let group = tasksByColumn.get(columnId);
+                    if (!group) {
+                        group = new Map();
+                        tasksByColumn.set(columnId, group);
+                    }
+                    group.set(json.id, json);
+                }
+            }
+
+            // 為每個欄位附加有序的任務：只取「id 在 col.task 內且 columnId 確實為此欄位」的任務，順序依 col.task
+            for (const col of orderedColumns) {
+                const taskIds = Array.isArray(col.task) ? col.task : [];
+                if (taskIds.length === 0) continue;
+
+                const taskMap = tasksByColumn.get(col.id) || new Map();
                 col.task = taskIds.map(id => taskMap.get(id)).filter(Boolean);
             }
 

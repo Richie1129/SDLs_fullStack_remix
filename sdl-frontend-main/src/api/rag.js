@@ -14,8 +14,15 @@ export const getRAGHistory = async (userId) => {
 }
 
 // 取得使用者所有 RAG 訊息歷史（別名，保持向後相容）
-export const getRagMessageHistory = async (userId) => {
-    const response = await apiClient.get(`/rag_message/history/${userId}`);
+/**
+ * @param {string|number} userId
+ * @param {{ projectId?: string|number, limit?: number }} [options] 帶 projectId 時只取該專案的對話（後端預設回最新 1000 筆）
+ */
+export const getRagMessageHistory = async (userId, options = {}) => {
+    const params = {};
+    if (options.projectId) params.projectId = options.projectId;
+    if (options.limit) params.limit = options.limit;
+    const response = await apiClient.get(`/rag_message/history/${userId}`, { params });
     return response.data;
 }
 

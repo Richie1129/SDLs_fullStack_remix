@@ -2,6 +2,7 @@
 const Project = require('../../models/project')
 const User = require('../../models/user')
 const User_project = require('../../models/user_project');
+const permissionCache = require('../../auth/permissionCache');
 const sequelize = require('../../util/database');
 const { logAudit } = require('../../services/auditService');
 const apiCache = require('../../services/apiCache');
@@ -52,6 +53,9 @@ exports.inviteForProject = async (req, res) => {
         if (!created) {
             return res.status(400).json({ message: '你已經是此活動的其中一員!' });
         }
+
+        // 成員關係改變，讓 socket 權限快取失效
+        permissionCache.invalidatePair(userId, referralProject.id);
 
         console.log('Successfully invited user to project!');
 
@@ -104,6 +108,9 @@ exports.assignStudentsToGroup = async (req, res) => {
 
         // 將學生加入專案
         await project.addUsers(students);
+
+        // 成員關係改變，讓 socket 權限快取失效
+        permissionCache.invalidateProject(project.id);
         
         // 清除所有被分配學生的專案列表快取
         for (const sid of studentIds) {

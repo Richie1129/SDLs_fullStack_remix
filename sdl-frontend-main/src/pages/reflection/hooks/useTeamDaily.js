@@ -23,7 +23,7 @@ export function useTeamDaily(projectId) {
   const [showEmptyMessage, setShowEmptyMessage] = useState(false);
 
   // Query key for cache consistency
-  const QUERY_KEY = ["teamDaily"];
+  const QUERY_KEY = ["teamDaily", projectId];
 
   // Fetch team daily logs
   const { isLoading, isError, error } = useQuery({

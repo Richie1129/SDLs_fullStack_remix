@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getPresignedDownloadUrl, deleteFileFromMinio, fileExistsInMinio } = require('../config/minio');
+const { getPresignedDownloadUrl, deleteFileFromMinio, fileExistsInMinio, getFileStreamFromMinio } = require('../config/minio');
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const { logAudit } = require('../services/auditService');
 const Submit = require('../models/submit');
@@ -23,6 +23,46 @@ function isSafeFileName(name) {
 }
 
 /**
+ * 把 MinIO stream 接到 HTTP 回應（B6：不再把整個檔案讀進記憶體）
+ *
+ * - header 送出前出錯：回 JSON 錯誤
+ * - header 送出後出錯：只能中斷連線（res.destroy），不能再改狀態碼
+ * - 使用者中途取消下載：銷毀來源 stream，釋放與 MinIO 的連線
+ */
+function pipeMinioStream(req, res, source, { contentType, contentLength, etag, lastModified, cacheControl, contentDisposition }) {
+    res.setHeader('Content-Type', contentType);
+    if (typeof contentLength === 'number') res.setHeader('Content-Length', String(contentLength));
+    if (etag) res.setHeader('ETag', etag);
+    if (lastModified instanceof Date && !Number.isNaN(lastModified.getTime())) {
+        res.setHeader('Last-Modified', lastModified.toUTCString());
+    }
+    if (cacheControl) res.setHeader('Cache-Control', cacheControl);
+    if (contentDisposition) res.setHeader('Content-Disposition', contentDisposition);
+
+    let finished = false;
+    const onClientGone = () => {
+        if (finished) return;
+        finished = true;
+        if (typeof source.destroy === 'function') source.destroy();
+    };
+    res.on('close', onClientGone);
+
+    source.on('error', (err) => {
+        console.error('MinIO stream 讀取錯誤:', err.message);
+        if (finished) return;
+        finished = true;
+        if (res.headersSent) {
+            res.destroy(err);
+        } else {
+            res.status(500).json({ message: '檔案讀取失敗' });
+        }
+    });
+    source.on('end', () => { finished = true; });
+
+    source.pipe(res);
+}
+
+/**
  * 獲取圖片預簽名 URL (用於前端顯示)
  * GET /api/file/image/:fileName
  */
@@ -34,13 +74,14 @@ router.get('/image/:fileName', validateToken, async (req, res) => {
     }
 
     try {
-        const exists = await fileExistsInMinio(fileName);
-        if (!exists) {
-            return res.status(404).json({ message: '圖片不存在' });
+        // 條件請求：瀏覽器帶 If-None-Match 且物件未變更時直接 304，不傳內容
+        const ifNoneMatch = req.get('If-None-Match');
+        const result = await getFileStreamFromMinio(fileName, { ifNoneMatch });
+        if (result.notModified) {
+            if (result.etag) res.setHeader('ETag', result.etag);
+            res.setHeader('Cache-Control', 'private, max-age=3600');
+            return res.status(304).end();
         }
-
-        const { downloadFileFromMinio } = require('../config/minio');
-        const imageBuffer = await downloadFileFromMinio(fileName);
 
         // SVG 不以 inline 方式提供（防止儲存型 XSS）
         const ext = fileName.toLowerCase().split('.').pop();
@@ -53,15 +94,21 @@ router.get('/image/:fileName', validateToken, async (req, res) => {
         };
         const contentType = mimeTypes[ext] || 'application/octet-stream';
 
-        res.setHeader('Content-Type', contentType);
-        res.setHeader('Cache-Control', 'public, max-age=3600');
-        // 若副檔名不在白名單中（含 SVG），強制以附件下載
-        if (!mimeTypes[ext]) {
-            res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
-        }
-        res.send(imageBuffer);
+        pipeMinioStream(req, res, result.stream, {
+            contentType,
+            contentLength: result.contentLength,
+            etag: result.etag,
+            lastModified: result.lastModified,
+            // 需要 token 才能取得的資源：private，避免 Cloudflare 等共享快取存下來
+            cacheControl: 'private, max-age=3600',
+            // 若副檔名不在白名單中（含 SVG），強制以附件下載
+            contentDisposition: mimeTypes[ext] ? undefined : `attachment; filename="${encodeURIComponent(fileName)}"`,
+        });
 
     } catch (error) {
+        if (error.code === 'NOT_FOUND') {
+            return res.status(404).json({ message: '圖片不存在' });
+        }
         console.error('獲取圖片失敗:', error.message);
         res.status(500).json({ message: '獲取圖片失敗' });
     }
@@ -119,14 +166,7 @@ router.get('/direct/:fileName', validateToken, async (req, res) => {
     }
 
     try {
-        const { downloadFileFromMinio } = require('../config/minio');
-
-        const exists = await fileExistsInMinio(fileName);
-        if (!exists) {
-            return res.status(404).json({ message: '檔案不存在' });
-        }
-
-        const fileBuffer = await downloadFileFromMinio(fileName);
+        const result = await getFileStreamFromMinio(fileName);
 
         // 提取原始檔案名稱（移除時間戳前綴）
         const originalFileName = fileName.replace(/^\d+-[a-z0-9]+-/, '');
@@ -136,11 +176,19 @@ router.get('/direct/:fileName', validateToken, async (req, res) => {
             .replace(/['()]/g, escape)
             .replace(/\*/g, '%2A');
 
-        res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFileName}`);
-        res.setHeader('Content-Type', 'application/octet-stream');
-        res.send(fileBuffer);
+        pipeMinioStream(req, res, result.stream, {
+            contentType: 'application/octet-stream',
+            contentLength: result.contentLength,
+            etag: result.etag,
+            lastModified: result.lastModified,
+            cacheControl: 'private, no-cache',
+            contentDisposition: `attachment; filename*=UTF-8''${encodedFileName}`,
+        });
 
     } catch (error) {
+        if (error.code === 'NOT_FOUND') {
+            return res.status(404).json({ message: '檔案不存在' });
+        }
         console.error('檔案下載失敗:', error.message);
         res.status(500).json({ message: '檔案下載失敗' });
     }

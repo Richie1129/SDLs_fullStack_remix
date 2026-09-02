@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from 'react-query';
+import toast from 'react-hot-toast';
 import { getKanbanColumns } from '../../../api/kanban';
 import { socket } from '../../../utils/socket';
 import { getCurrentUsername } from '../../../utils/userUtils';
@@ -13,6 +14,15 @@ import Swal from 'sweetalert2';
  * @param {string} projectId - The ID of the project.
  * @returns {Object} - { kanbanData, isLoading, isError, error, actions }
  */
+/**
+ * 從事件 payload 取出任務 id（後端各事件欄位不一：taskItem 帶完整任務物件，activityUpdate / taskDeleted 帶 taskId）
+ */
+const extractTaskId = (payload) => {
+  if (!payload || typeof payload !== 'object') return null;
+  const id = payload.taskId ?? payload.id ?? null;
+  return id == null ? null : id;
+};
+
 export const useKanbanData = (projectId) => {
   const [kanbanData, setKanbanData] = useState([]);
   const queryClient = useQueryClient();
@@ -53,6 +63,62 @@ export const useKanbanData = (projectId) => {
         console.error("Failed to invalidate kanban queries:", error);
       });
     }
+  }, [projectId, queryClient]);
+
+  /**
+   * F7：taskItem 帶的是更新後的完整任務物件，直接以 taskId 在本地資料上替換該卡片（local + query cache），
+   * 找不到（例如卡片尚未載入）才退回整板 invalidate。
+   */
+  const handleTaskItemUpdated = useCallback((updatedTask) => {
+    const taskId = extractTaskId(updatedTask);
+    if (taskId == null) return;
+
+    // 該卡片的變更歷史需要重抓（原本每張卡片各自監聽，現在由看板層統一處理）
+    queryClient.invalidateQueries(['taskChangeLogs', taskId]).catch(() => {});
+
+    let found = false;
+    const patch = (columns) => {
+      if (!Array.isArray(columns)) return columns;
+      const next = columns.map(column => {
+        if (!Array.isArray(column.task)) return column;
+        const index = column.task.findIndex(t => t && String(t.id) === String(taskId));
+        if (index === -1) return column;
+        found = true;
+        const task = [...column.task];
+        task[index] = { ...task[index], ...updatedTask };
+        return { ...column, task };
+      });
+      return found ? next : columns;
+    };
+
+    setKanbanData(prev => {
+      const next = patch(prev);
+      if (found) queryClient.setQueryData(['kanbanDatas', projectId], next);
+      return next;
+    });
+
+    if (!found) {
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(() => {});
+    }
+  }, [projectId, queryClient]);
+
+  /**
+   * activityUpdate：只有活動流與該卡片的變更歷史需要更新，不重抓整張看板
+   */
+  const handleActivityUpdate = useCallback((payload) => {
+    const taskId = extractTaskId(payload);
+    if (taskId != null) {
+      queryClient.invalidateQueries(['taskChangeLogs', taskId]).catch(() => {});
+    }
+  }, [queryClient]);
+
+  /**
+   * taskDeleteError：只有發出刪除的這個 socket 會收到；以伺服器資料為準回滾樂觀更新
+   */
+  const handleTaskDeleteError = useCallback((err) => {
+    const msg = err?.message || '刪除失敗';
+    toast.error(msg);
+    queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(() => {});
   }, [projectId, queryClient]);
 
   const kanbanDragEvent = useCallback((data) => {
@@ -145,7 +211,27 @@ export const useKanbanData = (projectId) => {
         showConfirmButton: false
       });
     } catch (_) {}
-    queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(() => {});
+
+    // F7：以 taskId 局部移除該卡片；找不到才重抓整板
+    const taskId = extractTaskId(data);
+    let found = false;
+    if (taskId != null) {
+      queryClient.removeQueries(['taskChangeLogs', taskId]);
+      setKanbanData(prev => {
+        if (!Array.isArray(prev)) return prev;
+        const next = prev.map(column => {
+          if (!Array.isArray(column.task)) return column;
+          if (!column.task.some(t => t && String(t.id) === String(taskId))) return column;
+          found = true;
+          return { ...column, task: column.task.filter(t => !(t && String(t.id) === String(taskId))) };
+        });
+        if (found) queryClient.setQueryData(['kanbanDatas', projectId], next);
+        return found ? next : prev;
+      });
+    }
+    if (!found) {
+      queryClient.invalidateQueries(['kanbanDatas', projectId]).catch(() => {});
+    }
   }, [projectId, queryClient]);
 
   // --- Socket Subscription ---
@@ -158,7 +244,9 @@ export const useKanbanData = (projectId) => {
     console.log(`Joined project room: ${projectId}`);
 
     socket.on("taskItems", KanbanUpdateEvent);
-    socket.on("taskItem", KanbanUpdateEvent);
+    socket.on("taskItem", handleTaskItemUpdated);
+    socket.on("activityUpdate", handleActivityUpdate);
+    socket.on("taskDeleteError", handleTaskDeleteError);
     socket.on("taskItemCreated", handleTaskItemCreated);
     socket.on("taskDeleted", handleTaskDeleted);
     socket.on("dragtaskItem", kanbanDragEvent);
@@ -178,7 +266,9 @@ export const useKanbanData = (projectId) => {
 
     return () => {
       socket.off('taskItems', KanbanUpdateEvent);
-      socket.off('taskItem', KanbanUpdateEvent);
+      socket.off('taskItem', handleTaskItemUpdated);
+      socket.off("activityUpdate", handleActivityUpdate);
+      socket.off("taskDeleteError", handleTaskDeleteError);
       socket.off("taskItemCreated", handleTaskItemCreated);
       socket.off("dragtaskItem", kanbanDragEvent);
       socket.off("taskDeleted", handleTaskDeleted);
@@ -196,7 +286,8 @@ export const useKanbanData = (projectId) => {
   }, [
     socket, projectId, KanbanUpdateEvent, kanbanDragEvent, handleColumnCreated,
     handleTaskItemCreated, handleCreationError, handleColumnDeleted,
-    handleColumnDeleteError, handleTaskDeleted, queryClient
+    handleColumnDeleteError, handleTaskDeleted, handleTaskItemUpdated,
+    handleActivityUpdate, handleTaskDeleteError, queryClient
   ]);
 
   // --- Actions (Optimistic Updates) ---

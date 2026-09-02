@@ -76,7 +76,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   // 使用觀摩模式 hook
   const { isObservationMode, isLoading: isObservationLoading } = useObservationMode();
 
-  const getProjectUserQuery = useQuery("getProjectUser", () => getProjectUser(projectId), {
+  const getProjectUserQuery = useQuery(["getProjectUser", projectId], () => getProjectUser(projectId), {
     onSuccess: setProjectUsers,
     enabled: !!projectId,
   });
@@ -194,7 +194,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     return (
       <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2 flex-shrink-0">
         <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-h2">
-          <img src="/SDLS_LOGO_GEMINI.png" alt="Logo" className="h-14 w-auto" />
+          <img src="/SDLS_LOGO_GEMINI.webp" alt="Logo" width={132} height={56} className="h-14 w-auto" />
         </Link>
         <div className="flex items-center flex-shrink-0 gap-3">
           {/* 教師專用按鈕群 */}
@@ -266,7 +266,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
         <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-body-lg sm:text-h2">
-          <img src="/SDLS_LOGO_GEMINI.png" alt="Logo" className="h-10 sm:h-14 w-auto" />
+          <img src="/SDLS_LOGO_GEMINI.webp" alt="Logo" width={132} height={56} className="h-10 sm:h-14 w-auto" />
         </Link>
         {!isOverviewPage && projectId && (
         <p className="font-bold text-body-sm sm:text-h3 text-teal-900 truncate">{projectInfo.name || "..."}</p>

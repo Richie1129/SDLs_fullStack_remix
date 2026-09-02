@@ -12,7 +12,7 @@ const {
   filterSubmitsByStage,
   isValidFourStageFormat,
   FOUR_STAGE_CONFIG
-} = require('../services/fourStageFilterService');
+} = require('../../services/fourStageFilterService');
 
 const {
   aggregateBackendPortfolioData,
@@ -20,7 +20,7 @@ const {
   validateBackendPortfolio,
   STAGE_TITLES,
   SUB_STAGE_TITLES
-} = require('../services/portfolioBackendService');
+} = require('../../services/portfolioBackendService');
 
 // ============================================
 // Part 1: 四階段配置測試

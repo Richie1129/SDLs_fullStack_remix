@@ -50,7 +50,89 @@ function clampMetadataSize(obj, limit = 10 * 1024) {
   return { truncated: true };
 }
 
-// In-memory aggregation buffer for bursty actions (e.g., drag reorder)
+// ===== 批次寫入緩衝（B3）=====
+// 所有 audit row 先進 writeQueue，滿 AUDIT_BATCH_MAX_ROWS 筆或經過 AUDIT_BATCH_FLUSH_MS 就一次 bulkCreate。
+// 任一參數設為 0（或 1 筆）即關閉批次，回到逐筆 create（供測試或除錯）。
+const BATCH_MAX_ROWS = parseInt(process.env.AUDIT_BATCH_MAX_ROWS || '200', 10);
+const BATCH_FLUSH_MS = parseInt(process.env.AUDIT_BATCH_FLUSH_MS || '2000', 10);
+const batchingEnabled = Number.isFinite(BATCH_MAX_ROWS) && BATCH_MAX_ROWS > 1
+  && Number.isFinite(BATCH_FLUSH_MS) && BATCH_FLUSH_MS > 0;
+
+let writeQueue = [];
+let flushTimer = null;
+// 進行中的 flush，關機時要等它們完成
+const inFlightFlushes = new Set();
+
+function logAuditWriteError(message, err, extra) {
+  // flush 失敗一定要留下痕跡，不可吞掉
+  console.error(`[audit] ${message}`, err?.message || err, extra || '');
+}
+
+/**
+ * 一次 bulkCreate；失敗時退回逐筆 create，讓單筆壞資料不會拖累整批
+ * 欄位內容與原本 AuditEvent.create(row) 完全一致（同一個 row 物件，模型沒有 hook）
+ */
+async function writeRowsWithFallback(rows) {
+  try {
+    await AuditEvent.bulkCreate(rows);
+    return;
+  } catch (err) {
+    logAuditWriteError(`批次寫入失敗（${rows.length} 筆），改逐筆重試:`, err);
+  }
+  for (const row of rows) {
+    try {
+      await AuditEvent.create(row);
+    } catch (err) {
+      logAuditWriteError('單筆寫入失敗，該筆遺失:', err, {
+        action: row.action,
+        targetType: row.targetType,
+        targetId: row.targetId,
+        projectId: row.projectId,
+      });
+    }
+  }
+}
+
+/**
+ * 立刻把 writeQueue 寫進 DB；回傳的 promise 不會 reject
+ */
+function flushWriteQueue() {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  if (writeQueue.length === 0) return Promise.resolve();
+
+  const rows = writeQueue;
+  writeQueue = [];
+  const pending = writeRowsWithFallback(rows).finally(() => inFlightFlushes.delete(pending));
+  inFlightFlushes.add(pending);
+  return pending;
+}
+
+function scheduleFlush() {
+  if (flushTimer) return;
+  flushTimer = setTimeout(() => {
+    flushTimer = null;
+    flushWriteQueue();
+  }, BATCH_FLUSH_MS);
+  // 不讓 timer 阻止程序自然結束；beforeExit / SIGTERM 會補 flush
+  if (typeof flushTimer.unref === 'function') flushTimer.unref();
+}
+
+/**
+ * 把一筆 audit row 排進批次；批次關閉時等同直接 create
+ */
+function enqueueWrite(row) {
+  if (!batchingEnabled) return AuditEvent.create(row);
+
+  writeQueue.push(row);
+  if (writeQueue.length >= BATCH_MAX_ROWS) return flushWriteQueue();
+  scheduleFlush();
+  return Promise.resolve();
+}
+
+// ===== 拖曳等連發動作的聚合緩衝（同一 actor/action/target 只留最後一筆）=====
 const AGG_WINDOW_MS = parseInt(process.env.AUDIT_AGG_WINDOW_MS || '3000', 10);
 const aggregateBuffer = new Map();
 
@@ -58,8 +140,9 @@ async function flushAggregate(key) {
   const item = aggregateBuffer.get(key);
   if (!item) return;
   aggregateBuffer.delete(key);
-  // perform final write (no recursion)
-  await AuditEvent.create(item.row);
+  clearTimeout(item.timer);
+  // 最終寫入走批次緩衝（no recursion）
+  await enqueueWrite(item.row);
 }
 
 function enqueueAggregate(row) {
@@ -78,8 +161,17 @@ function enqueueAggregate(row) {
 async function flushAllAggregates() {
   const keys = Array.from(aggregateBuffer.keys());
   for (const k of keys) {
-    try { await flushAggregate(k); } catch (_) {}
+    try { await flushAggregate(k); } catch (err) { logAuditWriteError('聚合緩衝 flush 失敗:', err, { key: k }); }
   }
+}
+
+/**
+ * 關機或測試用：把聚合緩衝與批次緩衝全部寫進 DB，並等待進行中的 flush 結束
+ */
+async function flushAll() {
+  await flushAllAggregates();
+  await flushWriteQueue();
+  await Promise.allSettled(Array.from(inFlightFlushes));
 }
 
 let shutdownHandlersInstalled = false;
@@ -87,7 +179,7 @@ function installAuditShutdownHooks() {
   if (shutdownHandlersInstalled) return;
   shutdownHandlersInstalled = true;
   const safeFlush = async () => {
-    try { await flushAllAggregates(); } catch (_) {}
+    try { await flushAll(); } catch (err) { logAuditWriteError('關機 flush 失敗:', err); }
   };
   try { process.on('SIGTERM', safeFlush); } catch (_) {}
   try { process.on('SIGINT', safeFlush); } catch (_) {}
@@ -163,7 +255,7 @@ async function logAudit(req, payload) {
     if (shouldAggregate && AGG_WINDOW_MS > 0) {
       enqueueAggregate(row);
     } else {
-      await AuditEvent.create(row);
+      await enqueueWrite(row);
     }
   } catch (err) {
     // don't disrupt primary flow
@@ -171,4 +263,13 @@ async function logAudit(req, payload) {
   }
 }
 
-module.exports = { logAudit, safeDiff, summarizeText, clampMetadataSize, summarizeAttachment, installAuditShutdownHooks };
+module.exports = {
+  logAudit,
+  safeDiff,
+  summarizeText,
+  clampMetadataSize,
+  summarizeAttachment,
+  installAuditShutdownHooks,
+  flushAll,
+  flushAuditWrites: flushWriteQueue,
+};

@@ -82,10 +82,9 @@ const KanbanColumn = ({
                         <Carditem
                           key={item.id.toString()}
                           index={index}
-                          data={{
-                            ...item,
-                            isOptimistic: item.id.toString().startsWith('temp-')
-                          }}
+                          // 直接傳原物件：每次 render 建新物件會讓 Carditem 的 React.memo 失效（F6）；
+                          // 樂觀卡片可由 id 前綴 temp- 判斷，不再另外包一層
+                          data={item}
                           columnIndex={column.id}
                         />
                       ))

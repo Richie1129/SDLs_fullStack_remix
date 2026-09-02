@@ -375,8 +375,15 @@ const gracefulShutdown = (signal) => {
         });
     }
 
-    server.close(() => {
+    server.close(async () => {
         console.log('HTTP server closed');
+        // 把 audit 批次緩衝寫完再離開，避免關機時遺失最後幾秒的事件
+        try {
+            const { flushAll } = require('./services/auditService');
+            await flushAll();
+        } catch (err) {
+            console.error('[audit] 關機 flush 失敗:', err?.message || err);
+        }
         process.exit(0);
     });
 };

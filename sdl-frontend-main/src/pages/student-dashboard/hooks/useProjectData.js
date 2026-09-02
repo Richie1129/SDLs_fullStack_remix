@@ -175,7 +175,7 @@ export function useProjectData(projectId, userId) {
         if (members.length > 0) {
           const aiPromises = members.map(async (member) => {
             try {
-              const aiData = await getRagMessageHistory(member.id);
+              const aiData = await getRagMessageHistory(member.id, { projectId });
               return aiData || [];
             } catch (error) {
               console.error(`獲取成員 ${member.username} AI記錄失敗:`, error);
@@ -192,7 +192,7 @@ export function useProjectData(projectId, userId) {
 
           // 獲取個人AI記錄
           try {
-            const personalAi = await getRagMessageHistory(userId);
+            const personalAi = await getRagMessageHistory(userId, { projectId });
             setAiInteractions(personalAi || []);
           } catch (error) {
             console.error("獲取個人AI記錄失敗:", error);

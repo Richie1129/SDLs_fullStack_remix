@@ -107,6 +107,50 @@ const downloadFileFromMinio = async (fileName) => {
  * @param {string} fileName - 檔案名稱
  * @returns {Promise<void>}
  */
+/**
+ * 以 stream 方式取得 MinIO 物件（B6：取代整檔讀進記憶體）
+ *
+ * 回傳 Readable stream 與必要的回應 header 資訊，由呼叫端 pipe 到 HTTP 回應。
+ * 物件不存在時丟出帶 code = 'NOT_FOUND' 的錯誤，呼叫端可直接回 404，
+ * 不需要先 HeadObject 再 GetObject（省一次 round-trip）。
+ *
+ * @param {string} fileName
+ * @param {Object} [options]
+ * @param {string} [options.ifNoneMatch] 瀏覽器帶來的 If-None-Match，命中時回傳 { notModified: true, etag }
+ * @returns {Promise<{ stream: import('stream').Readable, contentLength?: number, contentType?: string, etag?: string, lastModified?: Date, notModified?: boolean }>}
+ */
+const getFileStreamFromMinio = async (fileName, options = {}) => {
+    const command = new GetObjectCommand({
+        Bucket: minioConfig.bucketName,
+        Key: fileName,
+        ...(options.ifNoneMatch ? { IfNoneMatch: options.ifNoneMatch } : {}),
+    });
+
+    try {
+        const response = await s3Client.send(command);
+        return {
+            stream: response.Body,
+            contentLength: typeof response.ContentLength === 'number' ? response.ContentLength : undefined,
+            contentType: response.ContentType,
+            etag: response.ETag,
+            lastModified: response.LastModified,
+        };
+    } catch (error) {
+        const status = error?.$metadata?.httpStatusCode;
+        if (status === 304) {
+            // 條件請求命中：物件未變更
+            return { notModified: true, etag: options.ifNoneMatch };
+        }
+        if (error?.name === 'NoSuchKey' || error?.Code === 'NoSuchKey' || status === 404) {
+            const notFound = new Error(`MinIO 物件不存在: ${fileName}`);
+            notFound.code = 'NOT_FOUND';
+            throw notFound;
+        }
+        console.error('MinIO stream 下載失敗:', error);
+        throw new Error(`MinIO 下載失敗: ${error.message}`);
+    }
+};
+
 const deleteFileFromMinio = async (fileName) => {
     console.log('🗑️ 從 MinIO 刪除檔案:', fileName);
 
@@ -181,6 +225,7 @@ module.exports = {
     minioConfig,
     uploadFileToMinio,
     downloadFileFromMinio,
+    getFileStreamFromMinio,
     deleteFileFromMinio,
     fileExistsInMinio,
     getPresignedDownloadUrl,

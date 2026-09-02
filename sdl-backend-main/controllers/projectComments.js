@@ -1,3 +1,5 @@
+// 單次列表最多回傳幾筆專案留言（B9）
+const PROJECT_COMMENT_LIST_MAX = 500;
 const ProjectComment = require('../models/project_comment');
 const ProjectCommentLike = require('../models/project_comment_like');
 const ProjectCommentAttachment = require('../models/project_comment_attachment');
@@ -12,16 +14,20 @@ exports.listByProject = async (req, res) => {
     const { projectId } = req.params;
     const currentUserId = req.userId;
 
+    // B9：三層 include 無上限；先以新到舊取最新 N 筆，下方再反轉成舊到新（回應順序不變）
     const comments = await ProjectComment.findAll({
       where: { projectId },
-      // Return in chronological order so frontend can render directly
-      order: [['createdAt', 'ASC']],
+      order: [['createdAt', 'DESC'], ['id', 'DESC']],
+      limit: PROJECT_COMMENT_LIST_MAX,
       include: [
         { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: ProjectCommentLike, as: 'likes', attributes: ['userId'] },
         { model: ProjectCommentAttachment, as: 'attachments' },
       ],
     });
+
+    // Return in chronological order so frontend can render directly
+    comments.reverse();
 
     const items = comments.map((c) => {
       const json = c.toJSON();

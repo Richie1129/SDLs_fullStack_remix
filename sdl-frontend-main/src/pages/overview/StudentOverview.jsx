@@ -14,6 +14,10 @@ import { FiBookOpen, FiTrendingUp, FiClipboard, FiMessageSquare, FiInfo, FiCpu }
 import TopBar from "../../components/TopBar";
 import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { getCurrentUserId } from '../../utils/authUtils';
+import { getCurrentSemester } from '../../utils/semesterUtils';
+
+// 總覽頁每批並行抓取的專案數（F10）
+const OVERVIEW_FETCH_BATCH = 3;
 import CrossProjectSuggestions from './components/CrossProjectSuggestions';
 import GrowthTrendChart from './components/GrowthTrendChart';
 import { 
@@ -82,146 +86,136 @@ const StudentOverview = () => {
 
   // 獲取學生的所有專案
   const { data: projectData, isLoading: projectsLoading } = useQuery(
-    "studentAllProjects", 
+    ["studentAllProjects", userId],
     () => getAllProject({ params: { userId, semester: 'all' } }),
     {
+      staleTime: 5 * 60 * 1000,
       onSuccess: (data) => {
         setAllProjects(data || []);
       }
     }
   );
 
-  // 獲取所有相關資料
+  // F10：專案列表載入後，預設切到目前學期（有該學期的專案才切），避免一開始就抓所有學期
+  const [semesterInitialized, setSemesterInitialized] = useState(false);
   useEffect(() => {
-    const fetchAllData = async () => {
-      try {
-        setLoading(true);
-        
-        if (!allProjects.length) return;
+    if (semesterInitialized || allProjects.length === 0) return;
+    setSemesterInitialized(true);
+    const current = getCurrentSemester();
+    if (current && allProjects.some(p => p.semester === current)) {
+      setSelectedSemester(current);
+    }
+  }, [allProjects, semesterInitialized]);
 
-        // 獲取所有專案的各種資料
-        const dataPromises = allProjects.map(async (project) => {
-          const projectData = { projectId: project.id, projectName: project.name };
-          
-          try {
-            const [
-              reflections,
-              members,
-              chatHistory,
-              projectActivity,
-              kanbanData,
-              ideaWallData
-            ] = await Promise.allSettled([
-              // 反思記錄
-              getAllPersonalDaily({ 
-                projectId: project.id, 
-                userId: userId,
-                isTeacher: false 
-              }),
-              // 團隊成員
-              getProjectUser(project.id),
-              // 聊天記錄
-              getChatroomHistory(project.id),
-              // 專案活動
-              getProjectActivity(project.id),
-              // Kanban 任務
-              getKanbanColumns(project.id),
-              // 想法牆
-              getIdeaWall(project.id, "1-1")
-            ]);
+  // F10：只抓目前選定學期的專案，搬進 useQuery（staleTime 5 分鐘）；
+  // 切分頁或切學期再切回來不會重打；每批最多 3 個專案並行，避免 8 個專案瞬間 56 個請求
+  const fetchProjectBundle = async (project) => {
+    const projectData = { projectId: project.id, projectName: project.name };
 
-            const results = {
-              reflections: reflections.status === 'fulfilled' ? 
-                (reflections.value || []).map(r => ({ ...r, ...projectData })) : [],
-              members: members.status === 'fulfilled' ? 
-                { [project.id]: members.value || [] } : { [project.id]: [] },
-              chatHistory: chatHistory.status === 'fulfilled' ? 
-                (chatHistory.value || []).map(c => ({ ...c, ...projectData })) : [],
-              projectActivity: projectActivity.status === 'fulfilled' ? 
-                (projectActivity.value || []).map(a => ({ ...a, ...projectData })) : [],
-              kanbanTasks: [],
-              ideaNodes: []
-            };
+    try {
+      const [
+        reflections,
+        members,
+        chatHistory,
+        projectActivity,
+        kanbanData,
+        ideaWallData
+      ] = await Promise.allSettled([
+        getAllPersonalDaily({ projectId: project.id, userId: userId, isTeacher: false }),
+        getProjectUser(project.id),
+        getChatroomHistory(project.id),
+        getProjectActivity(project.id),
+        getKanbanColumns(project.id),
+        getIdeaWall(project.id, "1-1")
+      ]);
 
-            // 處理 Kanban 任務
-            if (kanbanData.status === 'fulfilled' && kanbanData.value) {
-              kanbanData.value.forEach(column => {
-                if (column.task && Array.isArray(column.task)) {
-                  column.task.forEach(task => {
-                    results.kanbanTasks.push({
-                      ...task,
-                      ...projectData,
-                      columnName: column.name
-                    });
-                  });
-                }
-              });
-            }
+      const results = {
+        reflections: reflections.status === 'fulfilled' ?
+          (reflections.value || []).map(r => ({ ...r, ...projectData })) : [],
+        members: members.status === 'fulfilled' ?
+          { [project.id]: members.value || [] } : { [project.id]: [] },
+        chatHistory: chatHistory.status === 'fulfilled' ?
+          (chatHistory.value || []).map(c => ({ ...c, ...projectData })) : [],
+        projectActivity: projectActivity.status === 'fulfilled' ?
+          (projectActivity.value || []).map(a => ({ ...a, ...projectData })) : [],
+        kanbanTasks: [],
+        ideaNodes: []
+      };
 
-            // 處理想法節點
-            if (ideaWallData.status === 'fulfilled' && ideaWallData.value && ideaWallData.value.id) {
-              try {
-                const nodes = await getNodes(ideaWallData.value.id);
-                results.ideaNodes = (nodes || []).map(n => ({ ...n, ...projectData }));
-              } catch (error) {
-                console.error(`獲取專案 ${project.id} 想法節點失敗:`, error);
-              }
-            }
-
-            return results;
-          } catch (error) {
-            console.error(`獲取專案 ${project.id} 資料失敗:`, error);
-            return {
-              reflections: [],
-              members: { [project.id]: [] },
-              chatHistory: [],
-              projectActivity: [],
-              kanbanTasks: [],
-              ideaNodes: []
-            };
+      if (kanbanData.status === 'fulfilled' && kanbanData.value) {
+        kanbanData.value.forEach(column => {
+          if (column.task && Array.isArray(column.task)) {
+            column.task.forEach(task => {
+              results.kanbanTasks.push({ ...task, ...projectData, columnName: column.name });
+            });
           }
         });
-
-        // 獲取 AI 互動記錄
-        const aiInteractionsPromise = getRagMessageHistory(userId).catch(error => {
-          console.error("獲取 AI 互動失敗:", error);
-          return [];
-        });
-
-        const [projectResults, aiData] = await Promise.all([
-          Promise.all(dataPromises),
-          aiInteractionsPromise
-        ]);
-
-        // 合併所有資料
-        const allReflectionsData = projectResults.flatMap(r => r.reflections);
-        const allMembersData = projectResults.reduce((acc, r) => ({ ...acc, ...r.members }), {});
-        const allChatData = projectResults.flatMap(r => r.chatHistory);
-        const allActivityData = projectResults.flatMap(r => r.projectActivity);
-        const allTasksData = projectResults.flatMap(r => r.kanbanTasks);
-        const allNodesData = projectResults.flatMap(r => r.ideaNodes);
-
-        setAllReflections(allReflectionsData);
-        setProjectMembers(allMembersData);
-        setChatHistory(allChatData);
-        setAiInteractions(aiData || []);
-        setProjectActivities(allActivityData);
-        setKanbanTasks(allTasksData);
-        setIdeaNodes(allNodesData);
-
-      } catch (error) {
-        console.error("獲取資料失敗:", error);
-      } finally {
-        setLoading(false);
       }
-    };
 
-    if (allProjects.length > 0) {
-      fetchAllData();
-    } else {
-      setLoading(false);
+      if (ideaWallData.status === 'fulfilled' && ideaWallData.value && ideaWallData.value.id) {
+        try {
+          const nodes = await getNodes(ideaWallData.value.id);
+          results.ideaNodes = (nodes || []).map(n => ({ ...n, ...projectData }));
+        } catch (error) {
+          console.error(`獲取專案 ${project.id} 想法節點失敗:`, error);
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error(`獲取專案 ${project.id} 資料失敗:`, error);
+      return { reflections: [], members: { [project.id]: [] }, chatHistory: [], projectActivity: [], kanbanTasks: [], ideaNodes: [] };
     }
-  }, [allProjects, userId]);
+  };
+
+  const fetchOverviewData = async (projects) => {
+    const projectResults = [];
+    for (let i = 0; i < projects.length; i += OVERVIEW_FETCH_BATCH) {
+      const batch = projects.slice(i, i + OVERVIEW_FETCH_BATCH);
+      projectResults.push(...await Promise.all(batch.map(fetchProjectBundle)));
+    }
+    const aiData = await getRagMessageHistory(userId).catch(error => {
+      console.error("獲取 AI 互動失敗:", error);
+      return [];
+    });
+    return {
+      reflections: projectResults.flatMap(r => r.reflections),
+      members: projectResults.reduce((acc, r) => ({ ...acc, ...r.members }), {}),
+      chatHistory: projectResults.flatMap(r => r.chatHistory),
+      activities: projectResults.flatMap(r => r.projectActivity),
+      kanbanTasks: projectResults.flatMap(r => r.kanbanTasks),
+      ideaNodes: projectResults.flatMap(r => r.ideaNodes),
+      aiInteractions: aiData || []
+    };
+  };
+
+  const scopedProjectIds = React.useMemo(
+    () => filteredProjects.map(p => p.id).sort((a, b) => a - b),
+    [filteredProjects]
+  );
+  const { isFetching: overviewFetching } = useQuery(
+    ['studentOverviewData', userId, scopedProjectIds.join(',')],
+    () => fetchOverviewData(filteredProjects),
+    {
+      enabled: !projectsLoading && semesterInitialized,
+      staleTime: 5 * 60 * 1000,
+      keepPreviousData: true,
+      onSuccess: (data) => {
+        setAllReflections(data.reflections);
+        setProjectMembers(data.members);
+        setChatHistory(data.chatHistory);
+        setAiInteractions(data.aiInteractions);
+        setProjectActivities(data.activities);
+        setKanbanTasks(data.kanbanTasks);
+        setIdeaNodes(data.ideaNodes);
+      },
+      onError: (error) => console.error("獲取資料失敗:", error)
+    }
+  );
+
+  useEffect(() => {
+    setLoading(projectsLoading || (!semesterInitialized && allProjects.length > 0) || overviewFetching);
+  }, [projectsLoading, semesterInitialized, allProjects.length, overviewFetching]);
 
   // 篩選後的專案 ID 集合（供 personalStats 與 GrowthTrendChart 共用）
   const filteredProjectIds = React.useMemo(

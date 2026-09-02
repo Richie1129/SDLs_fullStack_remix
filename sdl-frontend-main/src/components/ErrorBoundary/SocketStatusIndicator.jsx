@@ -7,7 +7,7 @@ import { socket } from '../../services/socketManager';
  * "好品味是一種直覺" - 讓用戶清楚知道連接狀態
  */
 const SocketStatusIndicator = ({ position = 'bottom-right', compact = false }) => {
-  const [status, setStatus] = useState(socket.getStatus());
+  const [status, setStatus] = useState(() => socket.getStatus());
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {

@@ -500,7 +500,7 @@ export default function Login() {
           {/* 第一排：機構 + 版權 + 申請帳號 */}
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             <div className="flex items-center gap-2">
-              <img src="/NCU_logo.jpg" alt="國立中央大學校徽" className="w-5 h-5 object-contain rounded-full" />
+              <img src="/NCU_logo.webp" alt="國立中央大學校徽" width={20} height={20} className="w-5 h-5 object-contain rounded-full" />
               <span className="text-paper/60 text-caption">國立中央大學 網路學習科技研究所 WURET Team</span>
             </div>
             <span className="text-paper/25 text-caption">&middot;</span>

@@ -1,21 +1,40 @@
+const sequelize = require('../util/database');
 // controller for rag_message
 const Rag_message = require('../models/rag_message');
 const { logAudit, clampMetadataSize, summarizeText } = require('../services/auditService');
 const axios = require('axios');
 
 // 根據 userId 取得所有 RAG 訊息歷史
+// 單次最多回傳幾筆 RAG 訊息（B9）
+const RAG_HISTORY_DEFAULT_LIMIT = 1000;
+const RAG_HISTORY_MAX_LIMIT = 5000;
+
+/**
+ * GET /api/rag_message/history/:userId
+ * 回傳格式不變：訊息陣列，依 createdAt 由舊到新。
+ * 可選 query：projectId（只取該專案）、limit（預設 1000，上限 5000，取最新的 N 筆）
+ */
 exports.getRagMessageHistory = async (req, res) => {
     const userId = req.params.userId;
-    console.log("取得用戶 RAG 訊息歷史，userId:", userId);
+    const { projectId } = req.query;
+    const parsedLimit = parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0
+        ? Math.min(parsedLimit, RAG_HISTORY_MAX_LIMIT)
+        : RAG_HISTORY_DEFAULT_LIMIT;
 
     try {
+        const where = { userId: userId };
+        if (projectId) where.project_id = parseInt(projectId, 10);
+
+        // 先以新到舊取最新 N 筆，再反轉成舊到新，維持既有回應順序
         const messages = await Rag_message.findAll({
             attributes: ['id', 'userId', 'userName', 'input_message', 'response_message', 'sessionId', 'project_id', 'createdAt'],
-            where: { userId: userId },
-            order: [['createdAt', 'ASC']]
+            where,
+            order: [['createdAt', 'DESC'], ['id', 'DESC']],
+            limit,
         });
+        messages.reverse();
 
-        console.log("找到的訊息數量:", messages.length);
         res.status(200).json(messages);
     } catch (err) {
         console.error("取得歷史紀錄錯誤:", err);
@@ -97,41 +116,35 @@ exports.getUserSessions = async (req, res) => {
             console.log("✅ 啟用專案隔離，project_id:", whereCondition.project_id);
         }
 
-        // 先獲取所有該用戶的訊息，然後在 JavaScript 中處理去重
-        const messages = await Rag_message.findAll({
-            attributes: ['sessionId', 'userName', 'project_id', 'createdAt', 'session_title'],
+        // B9：原本撈出該使用者所有訊息在 JS 去重；改為 SQL 依 sessionId 分組，
+        // 每個會話只回一列（最後活動時間、任一 userName、任一非空標題）
+        const grouped = await Rag_message.findAll({
+            attributes: [
+                'sessionId',
+                [sequelize.fn('MAX', sequelize.col('userName')), 'userName'],
+                [sequelize.fn('MAX', sequelize.col('createdAt')), 'lastActivity'],
+                [sequelize.fn('MAX', sequelize.col('session_title')), 'sessionTitle'],
+            ],
             where: whereCondition,
-            order: [['createdAt', 'DESC']]
+            group: ['sessionId'],
+            order: [[sequelize.fn('MAX', sequelize.col('createdAt')), 'DESC']],
+            raw: true,
         });
 
-        // 在 JavaScript 中進行去重處理
-        const sessionMap = new Map();
-
-        messages.forEach(message => {
-            if (!sessionMap.has(message.sessionId)) {
-                // 改善用戶名稱顯示邏輯
-                let displayName = message.userName;
-                if (!displayName || displayName.trim() === '' || displayName === '未知用戶') {
-                    displayName = userId ? `用戶${userId}` : '未知用戶';
-                }
-
-                sessionMap.set(message.sessionId, {
-                    sessionId: message.sessionId,
-                    userName: displayName,
-                    userId: userId,
-                    lastActivity: message.createdAt,
-                    sessionTitle: message.session_title || null
-                });
-            } else if (message.session_title && !sessionMap.get(message.sessionId).sessionTitle) {
-                // 如果舊記錄有標題，補上（因為 DESC 排序，最新訊息可能沒標題）
-                sessionMap.get(message.sessionId).sessionTitle = message.session_title;
+        const sessions = grouped.map(row => {
+            // 改善用戶名稱顯示邏輯（與原本相同）
+            let displayName = row.userName;
+            if (!displayName || String(displayName).trim() === '' || displayName === '未知用戶') {
+                displayName = userId ? `用戶${userId}` : '未知用戶';
             }
+            return {
+                sessionId: row.sessionId,
+                userName: displayName,
+                userId: userId,
+                lastActivity: row.lastActivity,
+                sessionTitle: row.sessionTitle || null
+            };
         });
-
-        // 轉換為數組並按時間排序
-        const sessions = Array.from(sessionMap.values()).sort(
-            (a, b) => new Date(b.lastActivity) - new Date(a.lastActivity)
-        );
 
         console.log("找到的會話數量:", sessions.length);
         res.status(200).json(sessions);

@@ -12,8 +12,14 @@ export const useKanbanView = (kanbanData, viewConfig) => {
   const renderedData = useMemo(() => {
     if (!kanbanData) return [];
 
-    // Deep clone to avoid mutating original data during transformation
-    let processedData = JSON.parse(JSON.stringify(kanbanData));
+    // 淺拷貝（F6）：只複製會被改寫的欄位層與 task 陣列，task 物件本身共用引用。
+    // 原本 JSON.parse(JSON.stringify()) 每敲一個搜尋字元就深拷貝整張看板，
+    // 而且每次都產生全新的 task 物件，讓 Carditem 的 React.memo 全部失效。
+    // 下方所有轉換都只建立新陣列與新欄位物件，不會就地修改 task。
+    let processedData = kanbanData.map(column => ({
+      ...column,
+      task: Array.isArray(column.task) ? [...column.task] : [],
+    }));
 
     // 1. Filtering
     if (viewConfig.filter) {

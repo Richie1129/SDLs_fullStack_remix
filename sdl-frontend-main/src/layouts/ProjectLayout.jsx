@@ -6,6 +6,7 @@ import SubStageComponent from "../components/SubStageBar";
 import ActivityStream from "../components/ActivityStream";
 import ProjectCommentDrawer from "../components/ProjectCommentDrawer";
 import { CommentErrorBoundary, PageErrorBoundary } from "../components/ErrorBoundary";
+import { ObservationProvider } from "../providers/ObservationProvider";
 
 export default function ProjectLayout() {
   const location = useLocation();
@@ -19,6 +20,7 @@ export default function ProjectLayout() {
   }, [projectId, location.pathname]);
 
   return (
+    <ObservationProvider>
     <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-row">
       {/* Left navigation rail */}
       <SideBar />
@@ -68,5 +70,6 @@ export default function ProjectLayout() {
         </CommentErrorBoundary>
       )}
     </div>
+    </ObservationProvider>
   );
 }

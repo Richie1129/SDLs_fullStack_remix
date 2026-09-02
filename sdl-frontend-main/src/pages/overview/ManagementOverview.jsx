@@ -3,7 +3,7 @@ import TopBar from '../../components/TopBar';
 import toast, { Toaster } from 'react-hot-toast';
 import { useQuery, useQueryClient } from 'react-query';
 import { getAllProject, getProjectsByMentor } from '../../api/project';
-import { getAllTeachers, getProjectUser } from '../../api/users';
+import { getAllTeachers, getProjectUser, batchGetProjectUsers } from '../../api/users';
 import { useNavigate } from 'react-router-dom';
 import dateFormat from 'dateformat';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';  // 引入Font Awesome圖標
@@ -71,19 +71,25 @@ export default function ManagementOverview() {
             const projectIds = mentorProjects.map(project => project.id);
             console.log("老師的專案 ID 列表:", projectIds);
 
-            const projectUsersPromises = projectIds.map(async (projectId) => {
-                try {
-                    console.log(`正在獲取專案 ID ${projectId} 的用戶`);
-                    const users = await getProjectUser(projectId);
-                    console.log(`專案 ID ${projectId} 的用戶:`, users);
-                    return users.map(user => ({ ...user, projectId }));  // 這裡加入 projectId
-                } catch (err) {
-                    console.error(`獲取專案 ID ${projectId} 的用戶失敗`, err);
-                    return [];
-                }
-            });
-
-            const projectUsers = await Promise.all(projectUsersPromises);
+            // F10：原本每個專案各打一次 getProjectUser；改用批次端點一次取回，失敗才逐專案退回
+            let projectUsers;
+            try {
+                const usersByProject = await batchGetProjectUsers(projectIds);
+                projectUsers = projectIds.map(projectId =>
+                    (usersByProject?.[projectId] || []).map(user => ({ ...user, projectId }))
+                );
+            } catch (batchError) {
+                console.error("批次獲取專案用戶失敗，改用逐專案請求:", batchError);
+                projectUsers = await Promise.all(projectIds.map(async (projectId) => {
+                    try {
+                        const users = await getProjectUser(projectId);
+                        return (users || []).map(user => ({ ...user, projectId }));
+                    } catch (err) {
+                        console.error(`獲取專案 ID ${projectId} 的用戶失敗`, err);
+                        return [];
+                    }
+                }));
+            }
             const flatUsers = projectUsers.flat();
 
             console.log("所有專案的用戶資訊 (展開後):", flatUsers);

@@ -1,4 +1,7 @@
 const HelpSeekingLog = require('../models/help_seeking_log');
+
+// 跨專案偵測每批並行的專案數（B8）
+const DETECTION_BATCH_SIZE = 3;
 const HelpSeekingAvoidanceRisk = require('../models/help_seeking_avoidance_risk');
 const Task = require('../models/task');
 const User = require('../models/user');
@@ -94,30 +97,66 @@ function calculateAnalysisWindow(courseConfig) {
  * 4. 在線時間足夠但無產出
  * 5. 階段截止壓力
  */
-async function calculateStruggleScore(userId, projectId, courseConfig) {
+/**
+ * 一次撈出專案內所有任務（含所屬欄位名稱），供同專案各成員的分析共用（B8：消除逐人逐次查詢）
+ * @param {number} projectId
+ * @returns {Promise<Array<{ id:number, owner:string, updatedAt:Date, column:{ name:string } }>>}
+ */
+async function fetchProjectTasks(projectId) {
+  return Task.findAll({
+    attributes: ['id', 'owner', 'updatedAt', 'columnId'],
+    include: [{
+      model: Column,
+      required: true,
+      attributes: ['id', 'name'],
+      include: [{
+        model: Kanban,
+        required: true,
+        attributes: [],
+        where: { projectId }
+      }]
+    }],
+    order: [['updatedAt', 'ASC']]
+  });
+}
+
+/**
+ * 從專案任務中挑出屬於某位成員的任務。
+ * tasks.owner 存的是 username（不是 userId），所以用精確等值比對；
+ * 舊寫法 owner ILIKE '%userId%' 對具名使用者永遠比不到，等於此信號從未生效。
+ */
+function pickTasksOwnedBy(projectTasks, username) {
+  if (!username) return [];
+  const target = String(username).trim();
+  return projectTasks.filter(task => typeof task.owner === 'string' && task.owner.trim() === target);
+}
+
+/**
+ * 取得成員分析所需的 context（username 與專案任務）；呼叫端沒提供時自行查詢，維持舊簽名可用
+ */
+async function resolveStruggleContext(userId, projectId, context) {
+  let username = context?.username;
+  if (!username) {
+    const user = await User.findByPk(userId, { attributes: ['id', 'username'] });
+    username = user?.username || null;
+  }
+  const projectTasks = Array.isArray(context?.projectTasks)
+    ? context.projectTasks
+    : await fetchProjectTasks(projectId);
+  return { username, projectTasks };
+}
+
+async function calculateStruggleScore(userId, projectId, courseConfig, context = {}) {
   let score = 0;
   const signals = [];
 
   try {
     const analysisStartDate = calculateAnalysisWindow(courseConfig);
+    const { username, projectTasks } = await resolveStruggleContext(userId, projectId, context);
+    const ownedTasks = pickTasksOwnedBy(projectTasks, username);
 
     // 信號 1: 連續無任務進展（+3 分）
-    const recentTasks = await Task.findAll({
-      include: [{
-        model: Column,
-        required: true,
-        include: [{
-          model: Kanban,
-          required: true,
-          where: { projectId }
-        }]
-      }],
-      where: {
-        owner: { [Op.iLike]: `%${userId}%` },
-        updatedAt: { [Op.gte]: analysisStartDate }
-      },
-      order: [['updatedAt', 'ASC']]
-    });
+    const recentTasks = ownedTasks.filter(task => new Date(task.updatedAt) >= analysisStartDate);
 
     // 檢查是否有任何任務在分析窗口內有更新
     const hasRecentProgress = recentTasks.some(task => {
@@ -131,23 +170,10 @@ async function calculateStruggleScore(userId, projectId, courseConfig) {
     }
 
     // 信號 2: 任務被阻塞（+3 分）
-    const currentTasks = await Task.findAll({
-      include: [{
-        model: Column,
-        required: true,
-        include: [{
-          model: Kanban,
-          required: true,
-          where: { projectId }
-        }]
-      }],
-      where: {
-        owner: { [Op.iLike]: `%${userId}%` }
-      }
-    });
+    const currentTasks = ownedTasks;
 
     const hasBlockedTask = currentTasks.some(task => {
-      const columnName = task.column.name.toLowerCase();
+      const columnName = (task.column?.name || '').toLowerCase();
       return columnName.includes('阻擋') || 
              columnName.includes('block') || 
              columnName.includes('stuck');
@@ -411,13 +437,19 @@ async function detectProjectAvoidanceRisks(projectId) {
 
     const risks = [];
 
+    // B8：整個專案的任務只撈一次，各成員在記憶體內分組
+    const projectTasks = await fetchProjectTasks(projectId);
+
     // 對每個學生進行分析
     for (const user of project.users) {
       const userId = user.id;
 
       // 1. 計算困難信號分數
       const { score: struggleScore, signals: struggleSignals } = 
-        await calculateStruggleScore(userId, projectId, courseConfig);
+        await calculateStruggleScore(userId, projectId, courseConfig, {
+          username: user.username,
+          projectTasks,
+        });
 
       // 2. 計算求助活躍度分數
       const { activityScore: helpSeekingActivity, details: activityDetails } = 
@@ -627,16 +659,27 @@ async function detectAllActiveProjectsAvoidanceRisks() {
     const allResults = [];
     let totalHighRisk = 0;
     let totalMediumRisk = 0;
+    const startedAt = Date.now();
 
-    for (const project of activeProjects) {
-      const result = await detectProjectAvoidanceRisks(project.id);
-      
-      if (result.success) {
+    // B8：每批 DETECTION_BATCH_SIZE 個專案並行，批次之間用 setImmediate 讓步給 HTTP/socket 請求，
+    // 避免一次把 connection pool 佔滿或長時間霸住 event loop
+    for (let i = 0; i < activeProjects.length; i += DETECTION_BATCH_SIZE) {
+      const batch = activeProjects.slice(i, i + DETECTION_BATCH_SIZE);
+      const batchResults = await Promise.all(batch.map(async (project) => {
+        try {
+          return { project, result: await detectProjectAvoidanceRisks(project.id) };
+        } catch (err) {
+          console.error(`Avoidance detection failed for project ${project.id}:`, err?.message || err);
+          return { project, result: { success: false } };
+        }
+      }));
+
+      for (const { project, result } of batchResults) {
+        if (!result.success) continue;
         result.risks.forEach(risk => {
           if (risk.riskLevel === 'high') totalHighRisk++;
           if (risk.riskLevel === 'medium') totalMediumRisk++;
         });
-
         allResults.push({
           projectId: project.id,
           projectName: project.name,
@@ -644,9 +687,11 @@ async function detectAllActiveProjectsAvoidanceRisks() {
           risks: result.risks
         });
       }
+
+      await new Promise(resolve => setImmediate(resolve));
     }
 
-    console.log(`✅ Detection completed: ${totalHighRisk} high risk, ${totalMediumRisk} medium risk students found`);
+    console.log(`✅ Detection completed in ${Date.now() - startedAt}ms: ${activeProjects.length} projects, ${totalHighRisk} high risk, ${totalMediumRisk} medium risk students found`);
 
     return {
       success: true,
@@ -666,6 +711,8 @@ async function detectAllActiveProjectsAvoidanceRisks() {
 }
 
 module.exports = {
+  fetchProjectTasks,
+  pickTasksOwnedBy,
   getCourseConfig,
   calculateAnalysisWindow,
   calculateStruggleScore,

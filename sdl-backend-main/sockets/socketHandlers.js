@@ -22,7 +22,7 @@ class BaseSocketHandler {
             const projectId = data.projectId || data.kanbanId;
 
             try {
-                const permissionCheck = await PermissionGuard.checkProjectPermission(userId, projectId, action);
+                const permissionCheck = await PermissionGuard.checkProjectPermission(userId, projectId, action, { user: this.socket.user });
                 
                 if (!permissionCheck.hasPermission) {
                     const errorPayload = {

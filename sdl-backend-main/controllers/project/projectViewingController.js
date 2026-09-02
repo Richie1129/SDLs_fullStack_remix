@@ -2,6 +2,7 @@
 const Project = require('../../models/project')
 const User = require('../../models/user')
 const User_project = require('../../models/user_project');
+const permissionCache = require('../../auth/permissionCache');
 const sequelize = require('../../util/database');
 const { logAudit } = require('../../services/auditService');
 const { getTaiwanSemester } = require('../../utils/semesterUtils');
@@ -38,6 +39,9 @@ exports.updateViewingSettings = async (req, res) => {
         project.allowed_classes = is_open_for_viewing ? allowed_classes : null;
 
         await project.save();
+
+        // 觀摩權限改變，讓 socket 權限快取失效
+        permissionCache.invalidateProject(project.id);
         
         // 記錄審計事件（非阻塞）
         logAudit(req, {
@@ -505,6 +509,7 @@ exports.batchUpdateViewingSettings = async (req, res) => {
             project.allowed_classes = newAllowed;
 
             await project.save({ transaction: t });
+            permissionCache.invalidateProject(project.id);
 
             return {
                 projectId: project.id,

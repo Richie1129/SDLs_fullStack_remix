@@ -1,3 +1,5 @@
+// 單次列表最多回傳幾筆留言（B9）
+const COMMENT_LIST_MAX = 500;
 const Sequelize = require('sequelize');
 const Comment = require('../models/comment');
 const CommentLike = require('../models/comment_like');
@@ -13,9 +15,11 @@ exports.listByTask = async (req, res) => {
     const { taskId } = req.params;
     const currentUserId = req.userId;
 
+    // B9：三層 include 無上限；單一任務留言合理上限 500 筆（新到舊）
     const comments = await Comment.findAll({
       where: { taskId },
-      order: [['createdAt', 'DESC']],
+      order: [['createdAt', 'DESC'], ['id', 'DESC']],
+      limit: COMMENT_LIST_MAX,
       include: [
         { model: User, attributes: ['id', 'username', 'class', 'seatNumber', 'role'] },
         { model: CommentAttachment, as: 'attachments' },

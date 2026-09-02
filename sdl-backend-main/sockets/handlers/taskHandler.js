@@ -124,11 +124,7 @@ class TaskHandler {
             }
 
             // 更新專案時間戳
-            await Project.update({ id: projectId }, {
-                where: { id: projectId },
-                individualHooks: true,
-                req: data._reqContext
-            });
+            await Project.update({ updatedAt: new Date() }, { where: { id: projectId } });
 
             // 廣播任務創建事件
             this.broadcastToProject(projectId, "taskItemCreated", {
@@ -239,11 +235,7 @@ class TaskHandler {
                 }
 
                 // 更新專案時間戳
-                await Project.update({ id: projectId }, {
-                    where: { id: projectId },
-                    individualHooks: true,
-                    req: data._reqContext
-                });
+                await Project.update({ updatedAt: new Date() }, { where: { id: projectId } });
 
                 // 廣播更新事件（R2-H6: 廣播實際 Task 資料而非 affectedCount）
                 this.broadcastToProject(projectId, "taskItem", updatedTask);
