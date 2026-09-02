@@ -1,11 +1,34 @@
 /**
  * 完整的 StageManager 測試套件
  * 測試所有並發、競態、邊界條件
+ *
+ * 注意：useStageIndex.js 在模組載入時就建立全域單例 stageStore，
+ * 因此每個測試都要 vi.resetModules() 後重新 import，
+ * 否則 localStorage mock 不會被重新讀取、狀態會在測試之間互相污染。
+ * 階段範圍一律從 __DEV__.STAGE_CONFIG 讀取（目前為四階段、三子階段），
+ * 不要在測試裡硬編碼上限。
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useStageManager, useStageIndex, useSubStageIndex, __DEV__ } from '../../hooks/useStageIndex';
+
+const HOOK_MODULE = '../../hooks/useStageIndex';
+let useStageManager;
+let useStageIndex;
+let __DEV__;
+let STAGE;
+let SUB_STAGE;
+
+/**
+ * 重新載入 hook 模組，讓單例在目前的 localStorage / event listener mock 之上重新建立。
+ * 需要「預先寫入 localStorage 再啟動」的測試，設定完 getItem mock 後要再呼叫一次。
+ */
+const reloadHook = async () => {
+  delete window.__STAGE_MANAGER_SINGLETON__;
+  vi.resetModules();
+  ({ useStageManager, useStageIndex, __DEV__ } = await import(HOOK_MODULE));
+  ({ STAGE, SUB_STAGE } = __DEV__.STAGE_CONFIG);
+};
 
 // Mock localStorage for testing
 const createMockLocalStorage = () => {
@@ -40,7 +63,7 @@ const mockRemoveEventListener = vi.fn((event, callback) => {
 describe('StageManager', () => {
   let mockLocalStorage;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Setup localStorage mock
     mockLocalStorage = createMockLocalStorage();
     Object.defineProperty(window, 'localStorage', {
@@ -55,10 +78,8 @@ describe('StageManager', () => {
     // Reset all mocks
     vi.clearAllMocks();
     
-    // Clear any existing store state
-    if (window.__STAGE_MANAGER_SINGLETON__) {
-      delete window.__STAGE_MANAGER_SINGLETON__;
-    }
+    // 重新載入模組，讓單例在 mock 就緒後才建立
+    await reloadHook();
   });
 
   afterEach(() => {
@@ -73,25 +94,27 @@ describe('StageManager', () => {
       expect(result.current.currentSubStageIndex).toBe(1);
     });
 
-    test('should load from localStorage if available', () => {
+    test('should load from localStorage if available', async () => {
       mockLocalStorage.getItem.mockImplementation((key) => {
         if (key === 'currentStage') return '3';
-        if (key === 'currentSubStage') return '5';
+        if (key === 'currentSubStage') return String(SUB_STAGE.MAX);
         return null;
       });
+      await reloadHook();
 
       const { result } = renderHook(() => useStageManager());
       
       expect(result.current.currentStageIndex).toBe(3);
-      expect(result.current.currentSubStageIndex).toBe(5);
+      expect(result.current.currentSubStageIndex).toBe(SUB_STAGE.MAX);
     });
 
-    test('should handle invalid localStorage values', () => {
+    test('should handle invalid localStorage values', async () => {
       mockLocalStorage.getItem.mockImplementation((key) => {
         if (key === 'currentStage') return 'invalid';
         if (key === 'currentSubStage') return '-999';
         return null;
       });
+      await reloadHook();
 
       const { result } = renderHook(() => useStageManager());
       
@@ -115,9 +138,10 @@ describe('StageManager', () => {
     test('should reset substage when updating stage', async () => {
       mockLocalStorage.getItem.mockImplementation((key) => {
         if (key === 'currentStage') return '2';
-        if (key === 'currentSubStage') return '7';
+        if (key === 'currentSubStage') return String(SUB_STAGE.MAX);
         return null;
       });
+      await reloadHook();
 
       const { result } = renderHook(() => useStageManager());
       
@@ -132,9 +156,10 @@ describe('StageManager', () => {
     test('should not reset substage when specified', async () => {
       mockLocalStorage.getItem.mockImplementation((key) => {
         if (key === 'currentStage') return '2';
-        if (key === 'currentSubStage') return '7';
+        if (key === 'currentSubStage') return String(SUB_STAGE.MAX);
         return null;
       });
+      await reloadHook();
 
       const { result } = renderHook(() => useStageManager());
       
@@ -143,18 +168,18 @@ describe('StageManager', () => {
       });
       
       expect(result.current.currentStageIndex).toBe(3);
-      expect(result.current.currentSubStageIndex).toBe(7); // preserved
+      expect(result.current.currentSubStageIndex).toBe(SUB_STAGE.MAX); // preserved
     });
 
     test('should update both stage and substage atomically', async () => {
       const { result } = renderHook(() => useStageManager());
       
       await act(async () => {
-        result.current.updateBoth(4, 8);
+        result.current.updateBoth(STAGE.MAX, SUB_STAGE.MAX);
       });
       
-      expect(result.current.currentStageIndex).toBe(4);
-      expect(result.current.currentSubStageIndex).toBe(8);
+      expect(result.current.currentStageIndex).toBe(STAGE.MAX);
+      expect(result.current.currentSubStageIndex).toBe(SUB_STAGE.MAX);
       expect(mockLocalStorage.setItem).toHaveBeenCalledTimes(2);
     });
   });
@@ -178,6 +203,16 @@ describe('StageManager', () => {
       });
       
       expect(result.current.currentSubStageIndex).toBe(1); // clamped to default
+    });
+
+    test('should fall back to default when substage exceeds configured max', async () => {
+      const { result } = renderHook(() => useStageManager());
+      
+      await act(async () => {
+        result.current.setCurrentSubStageIndex(SUB_STAGE.MAX + 1);
+      });
+      
+      expect(result.current.currentSubStageIndex).toBe(SUB_STAGE.DEFAULT);
     });
   });
 
@@ -235,7 +270,7 @@ describe('StageManager', () => {
       // Simulate storage event from another tab
       mockLocalStorage.getItem.mockImplementation((key) => {
         if (key === 'currentStage') return '4';
-        if (key === 'currentSubStage') return '6';
+        if (key === 'currentSubStage') return '2';
         return null;
       });
       

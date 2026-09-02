@@ -162,14 +162,9 @@ export function CommentSection({ taskId, isObservationMode = false, openCommentI
     setFilesToUpload((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleCommentAttachmentDownload = async (attachment) => {
-    try {
-      await downloadFileWithAuth(attachment.fileName, attachment.originalName);
-    } catch (err) {
-      console.error('下載附件失敗:', err);
-      toast.error('下載附件失敗');
-    }
-  };
+  // downloadFileWithAuth 內部已處理錯誤與提示，不會拋出
+  const handleCommentAttachmentDownload = (attachment) =>
+    downloadFileWithAuth(attachment.fileName, attachment.originalName);
 
   return (
     <div className='space-y-stack-sm'>

@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import apiClient from '@/api/client';
 import FileDownload from 'js-file-download';
 import toast from 'react-hot-toast';
-import { buildApiUrl, buildFileImageUrl, buildFileDownloadUrl } from '@/utils/fileUrlBuilder.js';
+import { buildApiUrl, buildFileImageUrl, buildFileDownloadUrl, isFileMissingError, MISSING_FILE_MESSAGE } from '@/utils/fileUrlBuilder.js';
 import { validateFileSize } from '@/utils/fileValidation';
 
 const formatSize = (bytes) => {
@@ -122,7 +122,7 @@ export function useFileManagement(cardData, setCardData) {
       toast.success(`下載成功: ${file.originalName || file.fileName}`);
     } catch (err) {
       console.error('檔案下載失敗:', err);
-      toast.error('檔案下載失敗');
+      toast.error(isFileMissingError(err) ? MISSING_FILE_MESSAGE : '檔案下載失敗');
     }
   }, []);
 
@@ -142,7 +142,7 @@ export function useFileManagement(cardData, setCardData) {
       toast.success('圖片下載成功');
     } catch (err) {
       console.error('圖片下載失敗:', err);
-      toast.error('圖片下載失敗');
+      toast.error(isFileMissingError(err) ? MISSING_FILE_MESSAGE : '圖片下載失敗');
     }
   }, []);
 

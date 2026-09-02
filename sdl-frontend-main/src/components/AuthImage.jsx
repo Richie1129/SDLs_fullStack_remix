@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '@/api/client';
+import { isFileMissingError } from '@/utils/fileUrlBuilder';
 
 /**
  * AuthImage - 需要登入驗證的圖片元件
@@ -10,7 +11,8 @@ import apiClient from '@/api/client';
  */
 const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = null }) => {
   const [blobUrl, setBlobUrl] = useState(null);
-  const [error, setError] = useState(false);
+  // null | 'missing'（檔案已不存在，404）| 'failed'（其他錯誤）
+  const [error, setError] = useState(null);
   const prevBlobUrl = useRef(null);
 
   const normalizedSrc = typeof src === 'string'
@@ -26,7 +28,7 @@ const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = n
     if (!isApiImage) return;
 
     let cancelled = false;
-    setError(false);
+    setError(null);
     setBlobUrl(null);
 
     // 從 src 中取出相對路徑部分（去除 baseURL 前綴）
@@ -61,8 +63,8 @@ const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = n
         prevBlobUrl.current = url;
         setBlobUrl(url);
       })
-      .catch(() => {
-        if (!cancelled) setError(true);
+      .catch((err) => {
+        if (!cancelled) setError(isFileMissingError(err) ? 'missing' : 'failed');
       });
 
     return () => {
@@ -102,7 +104,7 @@ const AuthImage = ({ src, alt = '', className = '', style, onClick, fallback = n
         style={style}
         onClick={onClick}
       >
-        圖片載入失敗
+        {error === 'missing' ? '檔案已遺失' : '圖片載入失敗'}
       </div>
     );
   }

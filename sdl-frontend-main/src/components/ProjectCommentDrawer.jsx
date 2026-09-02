@@ -181,14 +181,9 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
     });
   };
 
-  // Download (aligned with Carditem.jsx logic)
-  const handleAttachmentDownload = async (attachment) => {
-    try {
-      await downloadFileWithAuth(attachment.fileName, attachment.originalName);
-    } catch (err) {
-      console.error('下載附件失敗:', err);
-    }
-  };
+  // downloadFileWithAuth 內部已處理錯誤與提示，不會拋出
+  const handleAttachmentDownload = (attachment) =>
+    downloadFileWithAuth(attachment.fileName, attachment.originalName);
   // Flat list: backend already returns chronological order
 
   const isImage = (mime = '') => mime.startsWith('image/');

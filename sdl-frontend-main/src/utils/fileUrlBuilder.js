@@ -1,5 +1,17 @@
 import apiClient from '@/api/client';
 import FileDownload from 'js-file-download';
+import toast from 'react-hot-toast';
+
+/** 檔案在物件儲存中已不存在時顯示給使用者的訊息 */
+export const MISSING_FILE_MESSAGE = '檔案已遺失，請重新上傳';
+
+/**
+ * 判斷是否為「檔案不存在」錯誤
+ * 後端 /api/file/image 與 /api/file/direct 在 MinIO 找不到物件時回 404
+ * @param {unknown} err - axios 錯誤物件
+ * @returns {boolean}
+ */
+export const isFileMissingError = (err) => err?.response?.status === 404;
 
 /**
  * 獲取 API 基礎 URL
@@ -41,12 +53,23 @@ export const buildFileImageUrl = (fileName) => {
 /**
  * 使用 accessToken 認證下載 MinIO 檔案
  * 解決 window.open / <a href> 無法帶 token 的問題
+ *
+ * 錯誤一律在此處理並顯示 toast，不會向外拋出，
+ * 呼叫端不需要各自 try/catch；需要知道結果時看回傳值即可。
  * @param {string} fileName - MinIO 儲存的檔案名稱
  * @param {string} [originalName] - 下載後的顯示名稱（選填）
+ * @returns {Promise<boolean>} 下載是否成功
  */
 export const downloadFileWithAuth = async (fileName, originalName) => {
-  const response = await apiClient.get(`/file/direct/${fileName}`, {
-    responseType: 'blob',
-  });
-  FileDownload(response.data, originalName || fileName);
+  try {
+    const response = await apiClient.get(`/file/direct/${fileName}`, {
+      responseType: 'blob',
+    });
+    FileDownload(response.data, originalName || fileName);
+    return true;
+  } catch (err) {
+    console.error('檔案下載失敗:', err);
+    toast.error(isFileMissingError(err) ? MISSING_FILE_MESSAGE : '檔案下載失敗');
+    return false;
+  }
 };
