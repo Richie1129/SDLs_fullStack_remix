@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FiSearch, FiKey, FiUsers, FiUser, FiUserCheck, FiUserMinus, FiZap, FiZapOff, FiLogOut } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { listUsers, resetUserPassword, toggleAiAccess, updateUserRole } from '../../api/admin';
+import { showTempPasswordDialog } from '../../utils/tempPasswordDialog';
 import { userStorage, authStorage } from '../../services/storageService';
 
 const PAGE_SIZE_OPTIONS = [1, 10, 20, 50, 100];
@@ -95,23 +96,10 @@ export default function AdminDashboard() {
 
         try {
             const data = await resetUserPassword(user.id);
-            await Swal.fire({
-                icon: 'success',
-                title: '重設成功',
-                html: `
-                    <p class="text-sm text-gray-600 mb-3">
-                        ${data.username} 的臨時密碼如下，請告知用戶盡快自行修改。
-                    </p>
-                    <div class="flex items-center justify-center gap-2 bg-gray-100 rounded-lg px-4 py-3">
-                        <span class="font-mono text-lg font-bold tracking-widest text-gray-800">${data.tempPassword}</span>
-                        <button
-                            onclick="navigator.clipboard.writeText('${data.tempPassword}').then(() => { this.textContent='已複製'; setTimeout(() => this.textContent='複製', 1500); })"
-                            class="ml-2 px-3 py-1 text-sm bg-teal-500 text-white rounded hover:bg-teal-600 transition-colors"
-                        >複製</button>
-                    </div>
-                `,
-                confirmButtonText: '關閉',
-                confirmButtonColor: '#5BA491',
+            await showTempPasswordDialog({
+                username: data.username,
+                tempPassword: data.tempPassword,
+                hint: '請告知用戶盡快自行修改。',
             });
             fetchUsers();
         } catch (err) {
