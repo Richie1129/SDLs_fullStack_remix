@@ -1,0 +1,26 @@
+# Dependabot：只監看 GitHub Actions 生態系
+# deploy.yml 的 action 已釘 commit SHA（repo 亦啟用 sha_pinning_required），
+# 版本不會自動跟上；由 Dependabot 每週檢查，PR 會同時更新 SHA 與行尾的 # vX.Y.Z 版本註解。
+# 此 repo 的 workflow 只在 push master 觸發，Dependabot PR 本身不會啟動部署，合併後才會。
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Taipei"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    groups:
+      # minor / patch 合併成一個 PR，降低噪音
+      actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+      # major 各自獨立 PR，方便逐一評估破壞性變更
