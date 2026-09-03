@@ -103,7 +103,6 @@ docs/
 
 | 文檔 | 說明 |
 |------|------|
-| [SECURITY_AUDIT_REPORT.md](reports/SECURITY_AUDIT_REPORT.md) | OWASP Top 10 安全審查報告 |
 | [AUDIT_COVERAGE_REPORT.md](reports/AUDIT_COVERAGE_REPORT.md) | 審計覆蓋率報告 |
 | [KB_COACH_IMPLEMENTATION.md](reports/KB_COACH_IMPLEMENTATION.md) | KB Coach 知識建構教練實作報告 |
 | [KB_COACH_HELP_SEEKING_ENHANCEMENT.md](reports/KB_COACH_HELP_SEEKING_ENHANCEMENT.md) | KB Coach 與求助引導整合增強 |

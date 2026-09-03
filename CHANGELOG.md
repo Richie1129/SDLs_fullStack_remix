@@ -308,7 +308,7 @@ Tab 從 4 個縮減為 2 個（總覽 / 學生管理），TeacherOverview.jsx �
   - Express Rate Limiting（API 請求頻率限制）
   - Helmet 安全標頭設定
   - 參數驗證與注入防護
-  - 📄 [安全審查報告](docs/reports/SECURITY_AUDIT_REPORT.md)
+  - 安全審查報告已移出公開 repo（含未修復項目位置，不宜公開）
 - **密碼重設安全設計**
   - `crypto.randomUUID()` 生成不可預測 Token
   - Token 使用後即刻銷毀，密碼重設後自動撤銷所有 Refresh Token
