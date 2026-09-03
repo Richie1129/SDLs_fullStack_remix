@@ -9,6 +9,7 @@ const { Op } = require('sequelize');
 const { logAudit } = require('../services/auditService');
 const helpSeekingEffectivenessService = require('../services/helpSeekingEffectivenessService');
 const { isAiEnabled } = require('../services/aiAccessService');
+const { isTeacherOrAdmin } = require('../middlewares/projectAccess');
 
 // Helper functions
 function calculateStartDate(timeRange) {
@@ -234,8 +235,8 @@ async function getHelpSeekingStats(req, res) {
     const { userId } = req.params;
     const { timeRange = '7d', projectId } = req.query;
 
-    // 授權檢查：只能查自己，或教師角色
-    if (parseInt(userId) !== req.user.id && req.user.role !== 'teacher') {
+    // 授權檢查：只能查自己，或 teacher/admin（角色一律查 DB，不信任 JWT 的 role）
+    if (parseInt(userId) !== req.user.id && !(await isTeacherOrAdmin(req.userId))) {
       return res.status(403).json({ error: 'Not authorized to view this data' });
     }
 
@@ -304,6 +305,11 @@ async function getTaskHistory(req, res) {
 
     if (!taskId) {
       return res.status(400).json({ error: 'Missing taskId' });
+    }
+
+    // 求助紀錄含後設認知資料，跨班觀摩者（唯讀）不可查看
+    if (req.readOnly === true && !(await isTeacherOrAdmin(req.userId))) {
+      return res.status(403).json({ message: '觀摩模式無法查看求助紀錄', code: 'PERMISSION_DENIED' });
     }
 
     const whereClause = { taskId };

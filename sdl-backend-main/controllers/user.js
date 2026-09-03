@@ -16,13 +16,14 @@ const config = require('../config');
 const { logAudit } = require('../services/auditService');
 const logger = require('../config/logger');
 const { writeErrorReport } = require('../utils/errorHandler');
+const { isTeacherOrAdmin } = require('../middlewares/projectAccess');
 
 //get all users
 exports.getUsers = async (req, res) => {
     try {
-        // H2: 根據角色限制回傳欄位 — 學生只能看到基本資訊
-        const role = req.user?.role; // 來自 AuthMiddleware (JWT decoded)
-        const attributes = role === 'teacher'
+        // H2: 根據角色限制回傳欄位 — 學生只能看到基本資訊（角色查 DB，不採信 JWT）
+        const privileged = await isTeacherOrAdmin(req.userId);
+        const attributes = privileged
             ? ['id', 'username', 'account', 'email', 'role', 'class', 'seatNumber', 'school_id']
             : ['id', 'username', 'role', 'class'];
 
@@ -69,23 +70,6 @@ exports.getTeachers = async (req, res) => {
     }
 }
 
-
-//get user by id
-exports.getUser = async (req, res) => {
-    try {
-        const userId = req.params.userId;
-        const user = await User.findByPk(userId, {
-            attributes: { exclude: ['password'] }
-        });
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        res.status(200).json({ user: user });
-    } catch (err) {
-        console.error('Error fetching user:', err);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}
 
 //get current user from token
 exports.getCurrentUser = async (req, res) => {
@@ -474,8 +458,8 @@ exports.updateUserPassword = async (req, res) => {
 // 取得此老師所有指導專案的學生列表（跨專案去重）
 exports.getTeacherStudents = async (req, res) => {
     try {
-        if (req.user?.role !== 'teacher') {
-            return res.status(403).json({ message: '權限不足' });
+        if (!(await isTeacherOrAdmin(req.userId))) {
+            return res.status(403).json({ message: '權限不足', code: 'PERMISSION_DENIED' });
         }
 
         // 找出此老師指導的所有專案
@@ -523,9 +507,9 @@ exports.getTeacherStudents = async (req, res) => {
 // 老師重設學生密碼（產生臨時密碼）
 exports.adminResetPassword = async (req, res) => {
     try {
-        // 只有 teacher 可以呼叫
-        if (req.user?.role !== 'teacher') {
-            return res.status(403).json({ message: '權限不足，僅教師可重設學生密碼' });
+        // 只有 teacher / admin 可以呼叫（角色查 DB，不採信 JWT）
+        if (!(await isTeacherOrAdmin(req.userId))) {
+            return res.status(403).json({ message: '權限不足，僅教師可重設學生密碼', code: 'PERMISSION_DENIED' });
         }
 
         const targetUserId = req.params.userId;

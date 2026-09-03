@@ -8,6 +8,7 @@ const IdeaWall = require('../models/idea_wall');
 const AiFeedback = require('../models/ai_feedback');
 const KbCoachHistory = require('../models/kb_coach_history');
 const { Op } = require('sequelize');
+const { isTeacherOrAdmin, canAccessProject, toPositiveInt } = require('../middlewares/projectAccess');
 
 /**
  * Agent Personas & System Prompts
@@ -528,13 +529,50 @@ exports.getHistory = async (req, res) => {
     const { projectId, nodeId, userId, agentType, limit = 20 } = req.query;
     const MAX_LIMIT = 100;
     const safeLimit = Math.min(parseInt(limit) || 20, MAX_LIMIT);
+    const requesterId = req.userId;
+    const privileged = await isTeacherOrAdmin(requesterId);
 
     // 建構查詢條件
     const whereClause = {};
-    if (projectId) whereClause.projectId = parseInt(projectId);
-    if (nodeId) whereClause.nodeId = parseInt(nodeId);
-    if (userId) whereClause.userId = parseInt(userId);
     if (agentType) whereClause.agentType = agentType;
+
+    const pid = toPositiveInt(projectId);
+    const nid = toPositiveInt(nodeId);
+
+    if (pid) {
+      whereClause.projectId = pid;
+      if (!privileged) {
+        const allowed = await canAccessProject(requesterId, pid, { allowViewer: true });
+        if (!allowed) {
+          return res.status(403).json({ message: '無權查看此專案的紀錄', code: 'PERMISSION_DENIED' });
+        }
+      }
+    } else if (nid) {
+      whereClause.nodeId = nid;
+      if (!privileged) {
+        const node = await Node.findByPk(nid, { attributes: ['id', 'ideaWallId'] });
+        const ideaWall = node && node.ideaWallId
+          ? await IdeaWall.findByPk(node.ideaWallId, { attributes: ['id', 'projectId'] })
+          : null;
+        const nodeProjectId = ideaWall ? ideaWall.projectId : null;
+        const allowed = nodeProjectId
+          ? await canAccessProject(requesterId, nodeProjectId, { allowViewer: true })
+          : false;
+        if (!allowed) {
+          return res.status(403).json({ message: '無權查看此紀錄', code: 'PERMISSION_DENIED' });
+        }
+      }
+    }
+
+    if (!privileged) {
+      // 非 teacher/admin：query 帶的 userId 一律忽略。
+      // 沒指定 projectId / nodeId 時只能看自己的；已通過專案存取檢查者，與 getHistoryDetail 一致，
+      // 同專案成員可互看共享節點上的建議紀錄（KB 協作情境）。
+      if (!pid && !nid) whereClause.userId = requesterId;
+    } else if (userId) {
+      const uid = toPositiveInt(userId);
+      if (uid) whereClause.userId = uid;
+    }
 
     const histories = await KbCoachHistory.findAll({
       where: whereClause,
@@ -592,6 +630,26 @@ exports.getHistoryDetail = async (req, res) => {
 
     if (!history) {
       return res.status(404).json({ error: '找不到此歷史記錄' });
+    }
+
+    const requesterId = req.userId;
+    let allowed = history.userId === requesterId;
+
+    if (!allowed) {
+      if (history.projectId) {
+        allowed = await canAccessProject(requesterId, history.projectId, { allowViewer: true });
+      } else if (history.ideaWallId) {
+        const ideaWall = await IdeaWall.findByPk(history.ideaWallId, { attributes: ['id', 'projectId'] });
+        allowed = ideaWall && ideaWall.projectId
+          ? await canAccessProject(requesterId, ideaWall.projectId, { allowViewer: true })
+          : await isTeacherOrAdmin(requesterId);
+      } else {
+        allowed = await isTeacherOrAdmin(requesterId);
+      }
+    }
+
+    if (!allowed) {
+      return res.status(403).json({ message: '無權查看此紀錄', code: 'PERMISSION_DENIED' });
     }
 
     res.status(200).json({

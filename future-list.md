@@ -567,6 +567,58 @@
 
 ---
 
+### F021: teacher 存取範圍收斂為 project.mentorId 綁定
+
+- **類別**：Security / Backend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-03
+- **提案來源**：2026-09-03 資安審查 High 項「teacher 角色權限過寬」；IDOR 修復時刻意維持現況
+- **為什麼現在不做**：
+  - 目前 teacher 對所有專案放行的判斷散在 `checkProjectOwnerOrTeacher`、`checkTeacherRole`、teacherAgent、auditClient 等多處，IDOR 修復先把新路由的判定集中到 `middlewares/projectAccess.js` 的 `getProjectAccess`，teacher 放行只剩一個判斷點
+  - 現行資料裡 `projects.mentorId` 是否每個專案都有填尚未盤點，貿然收斂會讓沒有 mentor 的專案教師端整個看不到
+- **觸發條件**（任一成立）：
+  - 平台跨校／跨機構使用，教師不應看到別校專案
+  - 完成 `projects.mentorId` 的補齊盤點（無 null）
+- **怎麼做**：
+  1. 盤點 `projects.mentorId` 為 null 的專案並補齊（或提供 admin 指派介面）
+  2. `getProjectAccess` 的 teacher 分支改為「僅當 `project.mentorId === userId`」，以 feature flag（例如 `TEACHER_SCOPE=mentor`）切換，預設維持全放行
+  3. 逐一把 `checkProjectOwnerOrTeacher`、teacherAgent、auditClient 的 teacher 判斷改呼叫 `getProjectAccess`
+  4. 回歸測試補「非 mentor 的教師 → 403」
+- **估計工作量**：`M`
+- **依賴 / 前置條件**：`projects.mentorId` 資料完整
+- **風險 / 副作用**：多位教師共同指導同一專案時需要多對多關聯（目前只有單一 mentorId）
+- **替代方案**：維持全放行，改以稽核紀錄追蹤教師跨專案讀取
+- **相關檔案**：`sdl-backend-main/middlewares/projectAccess.js`、`sdl-backend-main/middlewares/projectViewingMiddleware.js`、`sdl-backend-main/routes/teacherAgent.js`、`sdl-backend-main/routes/auditClient.js`
+
+---
+
+### F022: tasks 附件正規化，消除檔案授權的 unnest 全表掃描
+
+- **類別**：Backend / Performance
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-03
+- **提案來源**：2026-09-03 IDOR 修復（`utils/fileAccess.js`）code review W1：`tasks.files`（jsonb[]）與 `tasks.images`（text[]）只能 `unnest` 展開後比對，索引幫不上忙
+- **為什麼現在不做**：
+  - 其餘五張表的 `fileName` 已在 `20260903000001-add-file-name-indexes.js` 加索引，且「檔案 → 歸屬」結果以 fileName 為 key 快取 600 秒，目前資料量下 tasks 的掃描成本可接受
+  - 把陣列欄位拆成獨立附件表牽涉看板 socket 事件的 payload 與前端 `useFileManagement`，屬結構性重構，與 F019（反思 BLOB 下線）同類
+- **觸發條件**（任一成立）：
+  - DB 慢查詢紀錄出現 `unnest(t.files)` / `unnest(t.images)` 的 seq scan，或 `GET /api/file/image` p95 明顯上升
+  - 動到 F019 或看板附件模型時一併處理
+- **怎麼做**：
+  1. 新增 `task_attachments(taskId, fileName, kind, originalName, size, mimeType)`，`fileName` 加索引
+  2. 卡片儲存時同步寫入；migration 回填既有 `tasks.files` / `tasks.images`
+  3. `resolveFileScope` 改查 `task_attachments`，並把六次查詢合併成一條 UNION ALL
+  4. 前端仍以 `tasks.files` / `images` 為介面時，由後端組裝，逐步下線陣列欄位
+- **估計工作量**：`M`
+- **依賴 / 前置條件**：F019 的方向確認
+- **風險 / 副作用**：回填期間新舊兩套並存，需雙寫一段時間
+- **替代方案**：維持現狀，靠快取吸收
+- **相關檔案**：`sdl-backend-main/utils/fileAccess.js`、`sdl-backend-main/models/task.js`、`sdl-backend-main/sockets/handlers/taskHandler.js`、`sdl-frontend-main/src/pages/Kanban/components/carditem/hooks/useFileManagement.js`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
@@ -574,3 +626,4 @@
 - **2026-04-20**：新增 F015（科學術語 Tooltip / Glossary）；伴隨 SDL Coach 多輪對話上線與認知師徒制 prompt 調整提出，prompt 注解為主、tooltip 為補充方案
 - **2026-09-02**：新增 F016–F019；依效能審查報告（`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md`）完成 23 項中的短期修法後，把差量廣播、總覽聚合端點、presigned 圖片、反思 BLOB 下線四項登錄為後續工作
 - **2026-09-03**：新增 F020（JWT claim 失效機制）；資安止血項 code review 指出角色降級在 access token 到期前不生效，止血版先讓 `requireAdmin` 一律查 DB，全面方案登錄為後續工作
+- **2026-09-03**：新增 F021（teacher 範圍收斂為 mentorId）、F022（tasks 附件正規化）；High 級 IDOR／XSS 修復時把專案存取判定集中到 `middlewares/projectAccess.js`，fileName 索引已在同批 migration 補上，剩 teacher 全放行與 tasks 陣列欄位掃描兩項登錄為後續工作

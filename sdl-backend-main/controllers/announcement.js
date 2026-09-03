@@ -3,7 +3,9 @@ const { Op } = require('sequelize');
 const Announcement = require('../models/announcement');
 const Project = require('../models/project');
 const User = require('../models/user');
+const UserProject = require('../models/user_project');
 const { logAudit } = require('../services/auditService');
+const { isTeacherOrAdmin, canAccessProject, toPositiveInt } = require('../middlewares/projectAccess');
 
 // 發佈公告
 exports.createAnnouncement = async (req, res) => {
@@ -103,35 +105,55 @@ exports.createAnnouncement = async (req, res) => {
 exports.getAnnouncements = async (req, res) => {
     try {
         const { projectId } = req.query;
-        const userId = req.query.userId || req.headers['user-id']; // 可以從查詢參數或headers獲取
+        const userId = req.userId; // 一律取自已驗證的 token，不信任 query/headers 帶入的 userId
 
-        console.log("正在加載公告，projectId:", projectId, "userId:", userId);
-
-        let whereCondition = {};
+        let whereCondition;
 
         if (projectId && projectId !== 'all') {
-            // 獲取特定專案的公告 + 全域公告 + 發給當前用戶的個人公告
-            const conditions = [
-                { projectId: projectId }, // 專案公告
-                { projectId: null }        // 全域公告
-            ];
-
-            // 如果有用戶ID，也包含發給該用戶的個人公告
-            if (userId) {
-                conditions.push({ projectId: -parseInt(userId) }); // 個人公告
+            // 指定專案：非 teacher/admin 必須是該專案的成員/指導教師/跨班觀摩者才能查看
+            const pid = toPositiveInt(projectId);
+            if (!pid) {
+                return res.status(400).json({ message: '無效的專案 ID' });
             }
 
-            whereCondition = { [Op.or]: conditions };
+            if (!(await isTeacherOrAdmin(userId))) {
+                const allowed = await canAccessProject(userId, pid, { allowViewer: true });
+                if (!allowed) {
+                    return res.status(403).json({
+                        message: '無權查看此專案的公告',
+                        code: 'PERMISSION_DENIED'
+                    });
+                }
+            }
+
+            // 該專案的公告 + 全域公告 + 自己的個人公告
+            whereCondition = {
+                [Op.or]: [
+                    { projectId: pid },
+                    { projectId: null },
+                    { projectId: -userId }
+                ]
+            };
         } else {
-            // 如果是總覽頁面或沒有指定專案，顯示所有公告（但排除個人公告）
-            if (userId) {
-                whereCondition = {
-                    [Op.or]: [
-                        { projectId: { [Op.gte]: 0 } }, // 專案公告（包含 null）
-                        { projectId: null },            // 全域公告
-                        { projectId: -parseInt(userId) } // 該用戶的個人公告
-                    ]
-                };
+            // 總覽頁面：teacher/admin 看全部；學生只看全站公告 + 自己所屬專案的公告 + 自己的個人公告
+            if (await isTeacherOrAdmin(userId)) {
+                whereCondition = {};
+            } else {
+                const memberships = await UserProject.findAll({
+                    where: { userId },
+                    attributes: ['projectId']
+                });
+                const projectIds = memberships.map((m) => m.projectId);
+
+                const orConditions = [
+                    { projectId: null },      // 全站公告
+                    { projectId: -userId }    // 自己的個人公告
+                ];
+                if (projectIds.length > 0) {
+                    orConditions.push({ projectId: { [Op.in]: projectIds } }); // 自己所屬專案的公告
+                }
+
+                whereCondition = { [Op.or]: orConditions };
             }
         }
 
@@ -140,7 +162,6 @@ exports.getAnnouncements = async (req, res) => {
             order: [['createdAt', 'DESC']],
         });
 
-        console.log("公告列表加載成功:", announcements);
         res.status(200).json({ announcements });
     } catch (error) {
         console.error('無法加載公告:', error);

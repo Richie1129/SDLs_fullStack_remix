@@ -7,7 +7,6 @@ router.get('/', validateToken, controller.getUsers);
 router.get('/teachers', validateToken, controller.getTeachers);
 router.get('/me', validateToken, controller.getCurrentUser);
 router.get('/project/:projectId', validateToken, controller.getProjectUsers);
-router.get('/:userId', validateToken, controller.getUser);
 router.post('/batch-project-users', validateToken, controller.batchGetProjectUsers);
 router.post('/login', controller.loginUser);
 router.post('/register', controller.registerUser);

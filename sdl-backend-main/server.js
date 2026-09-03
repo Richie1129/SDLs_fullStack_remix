@@ -13,6 +13,7 @@ const { httpLogger } = require('./middlewares/logging');
 const { uploadToMinio } = require('./middlewares/minioUploadMiddleware');
 const { logAudit, clampMetadataSize } = require('./services/auditService');
 const { validateToken } = require('./middlewares/AuthMiddleware');
+const FileUpload = require('./models/file_upload');
 
 // 安全套件
 const helmet = require('helmet');
@@ -164,8 +165,7 @@ app.use('/api/daily_file', express.static(path.join(__dirname, 'daily_file')));
 console.log('Static file directory:', path.join(__dirname, 'daily_file'));
 
 // 檔案上傳路由 - 使用 MinIO（需要認證）
-app.post('/api/upload', validateToken, uploadToMinio('files', 10), (req, res) => {
-    console.log('MinIO uploaded files:', req.uploadedFiles);
+app.post('/api/upload', validateToken, uploadToMinio('files', 10), async (req, res) => {
     try {
         if (!req.uploadedFiles || req.uploadedFiles.length === 0) {
             return res.status(400).json({ message: 'No files uploaded' });
@@ -178,6 +178,17 @@ app.post('/api/upload', validateToken, uploadToMinio('files', 10), (req, res) =>
             mimeType: file.mimeType,
             size: file.size
         }));
+
+        // 記錄上傳者：卡片附件在按下儲存前不會出現在任何業務表，
+        // 讀取授權（utils/fileAccess.js）靠 file_uploads 判定「剛上傳、尚未儲存」的檔案屬於誰
+        try {
+            await FileUpload.bulkCreate(
+                files.map(f => ({ fileName: f.fileName, userId: req.userId })),
+                { ignoreDuplicates: true }
+            );
+        } catch (err) {
+            console.error('記錄檔案上傳者失敗:', err.message);
+        }
 
         // 記錄審計日誌
         logAudit(req, {

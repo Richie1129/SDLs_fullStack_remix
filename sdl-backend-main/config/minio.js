@@ -1,5 +1,4 @@
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // 📦 MinIO 配置
 const minioConfig = {
@@ -195,31 +194,6 @@ const fileExistsInMinio = async (fileName) => {
     }
 };
 
-/**
- * 生成預簽名下載 URL
- * @param {string} fileName - 檔案名稱
- * @param {number} expiresIn - 過期時間（秒）
- * @returns {Promise<string>} 預簽名 URL
- */
-const getPresignedDownloadUrl = async (fileName, expiresIn = 3600) => {
-    console.log('🔗 生成預簽名下載 URL:', fileName);
-
-    try {
-        const command = new GetObjectCommand({
-            Bucket: minioConfig.bucketName,
-            Key: fileName,
-        });
-
-        const url = await getSignedUrl(s3Client, command, { expiresIn });
-        console.log('✅ 預簽名 URL 生成成功');
-        
-        return url;
-    } catch (error) {
-        console.error('❌ 生成預簽名 URL 失敗:', error);
-        throw new Error(`生成預簽名 URL 失敗: ${error.message}`);
-    }
-};
-
 module.exports = {
     s3Client,
     minioConfig,
@@ -228,5 +202,4 @@ module.exports = {
     getFileStreamFromMinio,
     deleteFileFromMinio,
     fileExistsInMinio,
-    getPresignedDownloadUrl,
 }; 
