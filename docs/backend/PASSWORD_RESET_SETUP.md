@@ -44,8 +44,14 @@ sdl-backend-main/
 | 方法 | 端點 | 功能 |
 |------|------|------|
 | POST | `/api/auth/forgot-password` | 請求密碼重設 |
-| GET  | `/api/auth/reset-password/:token` | 驗證 token 有效性 |
+| POST | `/api/auth/reset-password/validate` | 驗證 token 有效性（token 放在 body，不進 access log） |
 | POST | `/api/auth/reset-password` | 重設密碼 |
+
+### 安全設計（2026-09-05 更新）
+
+- **token 只存雜湊**：`password_reset_tokens.token` 存的是 sha256 hex（migration `20260905000000-hash-password-reset-tokens.js` 已把既有明文列轉為雜湊），資料庫或備份外洩時拿不到可用的重設連結。
+- **信件連結用 fragment**：連結格式為 `${FRONTEND_URL}/reset-password#token=<uuid>`，瀏覽器不會把 `#` 之後的內容送到伺服器，token 不會出現在 nginx access log。前端仍相容舊格式 `?token=`。
+- **前端讀完即移除**：`ResetPassword.jsx` 掛載時讀取一次 token，隨即以 `replace` 導向 `/reset-password`，token 不留在瀏覽器歷史，也不會被錯誤回報或 Referer 帶出。
 
 ## 環境配置
 
@@ -121,7 +127,11 @@ const result = await response.json();
 ### 2. 驗證 Token
 
 ```javascript
-const response = await fetch(`/api/auth/reset-password/${token}`);
+const response = await fetch('/api/auth/reset-password/validate', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ token })
+});
 const result = await response.json();
 
 if (result.success) {

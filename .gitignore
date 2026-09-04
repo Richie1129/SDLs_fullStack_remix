@@ -162,3 +162,6 @@ daily_file/
 # SDL Coach 知識庫原始素材（PDF + 萃取 txt）
 # 運行時只需要 sdl-backend-main/docs/sdl-coach-knowledge-base.md
 自主學習/
+
+# claude-mem 等工具產生的設定備份
+.claude/*.bak-*

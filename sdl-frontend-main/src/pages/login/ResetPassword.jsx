@@ -1,14 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useMutation } from 'react-query';
 import axios from 'axios';
 import { useTracking } from '../../providers/TrackingProvider';
 import { MdArrowForward } from 'react-icons/md';
 import { FiLock, FiEye, FiEyeOff, FiCheckCircle, FiAlertCircle, FiShield } from 'react-icons/fi';
 
+// 驗證改走 POST、token 放 body：不進 nginx access log、瀏覽器歷史與 Referer
 const validateTokenAPI = async (token) => {
-  const response = await axios.get(`/api/auth/reset-password/${token}`);
+  const response = await axios.post('/api/auth/reset-password/validate', { token });
   return response.data;
+};
+
+// 重設信件把 token 放在 URL fragment（#token=...），瀏覽器不會把 fragment 送到伺服器；
+// 仍相容舊信件的 ?token=...（24 小時內寄出的連結）
+const extractResetToken = (location) => {
+  const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const fromHash = hashParams.get('token');
+  if (fromHash) return fromHash;
+  return new URLSearchParams(location.search).get('token');
+};
+
+const RESET_TOKEN_STORAGE_KEY = 'pwdResetToken';
+
+// 首次從網址讀到 token 時暫存進 sessionStorage（僅此分頁、不進網址列／Referer／錯誤回報），
+// 使用者在這頁重新整理才不會失去 token；重設成功或 token 無效時清掉
+const readResetToken = (location) => {
+  const fromUrl = extractResetToken(location);
+  try {
+    if (fromUrl) {
+      sessionStorage.setItem(RESET_TOKEN_STORAGE_KEY, fromUrl);
+      return fromUrl;
+    }
+    return sessionStorage.getItem(RESET_TOKEN_STORAGE_KEY);
+  } catch {
+    return fromUrl;
+  }
+};
+
+const clearStoredResetToken = () => {
+  try {
+    sessionStorage.removeItem(RESET_TOKEN_STORAGE_KEY);
+  } catch {
+    // sessionStorage 不可用時本來就沒存
+  }
 };
 
 const resetPasswordAPI = async ({ token, newPassword }) => {
@@ -20,9 +55,10 @@ const resetPasswordAPI = async ({ token, newPassword }) => {
 };
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const location = useLocation();
   const navigate = useNavigate();
+  // 只在首次掛載讀一次 token；隨後把它從網址移除，避免留在瀏覽器歷史或被 Referer／錯誤回報帶出
+  const [token] = useState(() => readResetToken(location));
   const { track } = useTracking();
 
   const [passwords, setPasswords] = useState({
@@ -49,6 +85,7 @@ export default function ResetPassword() {
       setIsLoading(false);
     },
     onError: (error) => {
+      clearStoredResetToken();
       setError(error.response?.data?.message || 'Token 無效或已過期');
       setIsValidToken(false);
       setIsLoading(false);
@@ -58,6 +95,7 @@ export default function ResetPassword() {
   // 重設密碼
   const resetPasswordMutation = useMutation(resetPasswordAPI, {
     onSuccess: () => {
+      clearStoredResetToken();
       setIsSuccess(true);
       setTimeout(() => {
         navigate('/');
@@ -76,6 +114,14 @@ export default function ResetPassword() {
     }
     tokenValidationMutation.mutate(token);
   }, [token]);
+
+  // 把 token 從網址移除（只在掛載時做一次；token 已存在 state 裡）
+  useEffect(() => {
+    if (location.hash || location.search) {
+      navigate('/reset-password', { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

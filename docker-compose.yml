@@ -90,7 +90,7 @@ services:
       - POSTGRES_USER=${PG_USER:-postgres}
       - POSTGRES_PASSWORD=${PG_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     networks:
       - agent_network
     healthcheck:
@@ -109,8 +109,8 @@ services:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     networks:
       - agent_network
     healthcheck:
@@ -155,7 +155,7 @@ services:
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     ports:
-      - "5555:80"
+      - "127.0.0.1:5555:80"
     networks:
       - agent_network
 

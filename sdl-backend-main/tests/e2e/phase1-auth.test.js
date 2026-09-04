@@ -16,6 +16,7 @@
  */
 
 const axios = require('axios');
+const crypto = require('crypto');
 const AuditEvent = require('./models/audit_event');
 const User = require('./models/user');
 const RefreshToken = require('./models/refresh_token');
@@ -405,6 +406,11 @@ async function testPasswordResetRequest() {
   }
 }
 
+// DB 只存 token 的 sha256（2026-09-05），測試拿不到信件裡的明文；
+// 這裡自己產生一組明文 token、把 DB 列改成它的雜湊，後續兩個測試共用
+let rawResetToken = null;
+const hashResetToken = (token) => crypto.createHash('sha256').update(String(token), 'utf8').digest('hex');
+
 // 8. 測試密碼重置 Token 驗證
 async function testPasswordResetTokenValidate() {
   logTest('PASSWORD_RESET_TOKEN_VALIDATE - 密碼重置 Token 驗證');
@@ -420,8 +426,12 @@ async function testPasswordResetTokenValidate() {
       logError('找不到重置 Token');
       return false;
     }
+
+    rawResetToken = crypto.randomUUID();
+    await resetToken.update({ token: hashResetToken(rawResetToken) });
     
-    const response = await axios.get(`${API_BASE_URL}/auth/reset-password/${resetToken.token}`);
+    // 驗證改走 POST，token 放 body
+    const response = await axios.post(`${API_BASE_URL}/auth/reset-password/validate`, { token: rawResetToken });
     
     if (response.status === 200) {
       logSuccess('Token 驗證成功!');
@@ -466,9 +476,14 @@ async function testPasswordResetExecute() {
       return false;
     }
     
+    if (!rawResetToken) {
+      logError('沒有可用的明文 token（testPasswordResetTokenValidate 需先執行）');
+      return false;
+    }
+
     const resetPassword = 'reset1234';
     const response = await axios.post(`${API_BASE_URL}/auth/reset-password`, {
-      token: resetToken.token,
+      token: rawResetToken,
       newPassword: resetPassword
     });
     

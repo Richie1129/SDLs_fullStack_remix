@@ -9,8 +9,8 @@
  * 3. 結構化 JSON 格式，易於解析
  *
  * 安全性：
- * - Development: 完全開放
- * - Production: 需要 X-Metrics-Token header
+ * - 只有明確設定 NODE_ENV=development 才開放
+ * - 其他情況（含 NODE_ENV 未設定）一律需要 X-Metrics-Token header；未設定 METRICS_TOKEN 則一律 403
  *
  * 使用方式：
  * ```bash
@@ -29,14 +29,27 @@
  */
 
 const express = require('express');
+const crypto = require('crypto');
 const router = express.Router();
+
+// 只有明確宣告 development 才視為開發環境；NODE_ENV 沒設定時當作生產（安全預設，2026-09-05 資安審查）
+const isDevEnv = () => process.env.NODE_ENV === 'development';
+
+// 固定時間比對，避免用回應時間差逐字猜 token
+function tokensMatch(provided, expected) {
+  if (typeof provided !== 'string' || typeof expected !== 'string') return false;
+  const a = Buffer.from(provided, 'utf8');
+  const b = Buffer.from(expected, 'utf8');
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 /**
  * 權限驗證中間件
  *
  * 邏輯：
- * - Development mode：無需驗證（isDev = true）
- * - Production mode：需要正確的 X-Metrics-Token
+ * - NODE_ENV=development：無需驗證
+ * - 其他：需要正確的 X-Metrics-Token；METRICS_TOKEN 未設定時直接 403
  *
  * Token 設定：
  * export METRICS_TOKEN=your-random-secret-token
@@ -47,25 +60,20 @@ const router = express.Router();
  * - 更安全
  */
 const authMetrics = (req, res, next) => {
-  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-  const metricsToken = process.env.METRICS_TOKEN;
-  const providedToken = req.headers['x-metrics-token'];
-
-  // Development: 直接通過
-  if (isDev) {
+  if (isDevEnv()) {
     return next();
   }
 
-  // Production: 檢查 token
+  const metricsToken = process.env.METRICS_TOKEN;
   if (!metricsToken) {
-    // 未設定 METRICS_TOKEN = 不允許訪問（安全預設）
-    return res.status(500).json({
-      error: 'Metrics token not configured',
-      message: 'Set METRICS_TOKEN environment variable'
+    // 未設定 METRICS_TOKEN = 不允許訪問（安全預設），且不透露是「沒設定」還是「錯誤」
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: 'Metrics access is disabled'
     });
   }
 
-  if (providedToken !== metricsToken) {
+  if (!tokensMatch(req.headers['x-metrics-token'], metricsToken)) {
     return res.status(403).json({
       error: 'Forbidden',
       message: 'Invalid or missing X-Metrics-Token header'
@@ -255,9 +263,7 @@ router.post('/metrics/reset', authMetrics, (req, res) => {
  * 僅在開發環境可用，生產環境會拒絕請求
  */
 router.post('/metrics/heapsnapshot', authMetrics, (req, res) => {
-  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-
-  if (!isDev) {
+  if (!isDevEnv()) {
     return res.status(403).json({
       error: 'Forbidden',
       message: 'Heap snapshot is only available in development mode',
@@ -317,3 +323,5 @@ function formatUptime(seconds) {
 }
 
 module.exports = router;
+// 供測試直接驗證權限判斷
+module.exports.authMetrics = authMetrics;

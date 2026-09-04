@@ -66,13 +66,15 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
     skip: () => process.env.NODE_ENV === 'test',
 });
+// 未設定 NODE_ENV 視為生產（與 routes/metrics.js 一致）：只有明確 development / test 才跳過限流
+const isNonProdEnv = () => process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
 const forgotPasswordLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,  // 1 小時
     max: 30,
     message: { message: '密碼重設請求次數過多，請稍後再試' },
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => process.env.NODE_ENV !== 'production',
+    skip: isNonProdEnv,
 });
 const aiLimiter = rateLimit({
     windowMs: 60 * 1000,       // 1 分鐘
@@ -259,6 +261,9 @@ app.use('/api/admin', require('./routes/admin')); // Admin Dashboard（最高權
 // Development: 直接訪問 http://localhost:3000/api/metrics
 // Production: 需要 X-Metrics-Token header
 app.use('/api', require('./routes/metrics'));
+
+// CSP 違規回報：nginx 對前端頁面送 Content-Security-Policy-Report-Only，report-uri 指到這裡
+app.use('/api', require('./routes/cspReport'));
 
 // 學習歷程匯出 API
 app.use('/api', require('./routes/export'));

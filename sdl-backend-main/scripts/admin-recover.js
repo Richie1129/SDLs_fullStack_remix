@@ -23,6 +23,7 @@
 
 require('dotenv').config();
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { promptHidden } = require('./_promptHidden');
 
 const User = require('../models/user');
@@ -33,7 +34,7 @@ const ADMIN_ACCOUNT = process.env.ADMIN_ACCOUNT || 'admintsai';
 const SALT_ROUNDS = 10;
 
 function generateTempPassword() {
-    const digits = Math.floor(100000 + Math.random() * 900000);
+    const digits = crypto.randomInt(100000, 1000000);
     return `SDL${digits}`;
 }
 

@@ -14,20 +14,28 @@ const transporter = nodemailer.createTransport({
 const sendPasswordResetEmail = async (email, resetToken) => {
     // 檢查是否為演示環境
     if (!process.env.EMAIL_USER || process.env.EMAIL_USER.includes('demo') || process.env.EMAIL_USER.includes('example')) {
+        const demoBase = process.env.FRONTEND_URL || 'http://localhost';
+        const resetUrl = `${demoBase}/reset-password#token=${resetToken}`;
+        // 明文連結只在 development / test 印出；其他環境若因 SMTP 設定缺失退回演示模式，只印遮蔽版，
+        // 避免可直接使用的重設 token 落進容器日誌（DB 已只存雜湊，日誌不能成為新的外洩點）
+        const printableUrl = (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test')
+            ? resetUrl
+            : `${demoBase}/reset-password#token=${String(resetToken).slice(0, 8)}…`;
         console.log('🔧 演示模式 - 模擬郵件發送');
         console.log(`📧 收件者: ${email}`);
-        console.log(`🔗 重設連結: ${process.env.FRONTEND_URL || 'http://localhost'}/reset-password?token=${resetToken}`);
+        console.log(`🔗 重設連結: ${printableUrl}`);
         console.log('✅ 模擬郵件發送成功');
 
         return {
             success: true,
             messageId: `demo-${Date.now()}`,
             demoMode: true,
-            resetUrl: `${process.env.FRONTEND_URL || 'http://localhost'}/reset-password?token=${resetToken}`
+            resetUrl
         };
     }
 
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    // token 放在 URL fragment（#token=）：瀏覽器不會把 fragment 送到伺服器，token 不會進 nginx access log
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password#token=${resetToken}`;
 
     const mailOptions = {
         from: process.env.EMAIL_FROM || process.env.EMAIL_USER,

@@ -8,6 +8,9 @@ const { sendPasswordResetEmail } = require('../services/emailService');
 const { revokeAllTokens } = require('./auth');
 const { logAudit } = require('../services/auditService');
 
+// DB 只存 token 的 sha256：資料庫或備份外洩時，拿不到可直接使用的重設連結（2026-09-05 資安審查）
+const hashResetToken = (token) => crypto.createHash('sha256').update(String(token), 'utf8').digest('hex');
+
 // 設定模型關聯
 PasswordResetToken.belongsTo(User, {
     as: "User",
@@ -48,10 +51,11 @@ const requestPasswordReset = async (req, res) => {
         });
 
         const resetToken = crypto.randomUUID();
+        const tokenHash = hashResetToken(resetToken);
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
         await PasswordResetToken.create({
-            token: resetToken,
+            token: tokenHash,
             userId: user.id,
             expiresAt: expiresAt
         });
@@ -61,7 +65,7 @@ const requestPasswordReset = async (req, res) => {
         } catch (emailError) {
             console.error('Email sending failed:', emailError);
             await PasswordResetToken.destroy({
-                where: { token: resetToken }
+                where: { token: tokenHash }
             });
 
             return res.status(500).json({
@@ -93,11 +97,12 @@ const requestPasswordReset = async (req, res) => {
     }
 };
 
+// POST /reset-password/validate：token 走 body，不進 access log、瀏覽器歷史與 Referer
 const validateResetToken = async (req, res) => {
     try {
-        const { token } = req.params;
+        const { token } = req.body || {};
 
-        if (!token) {
+        if (!token || typeof token !== 'string') {
             return res.status(400).json({
                 success: false,
                 message: '缺少重設 token'
@@ -106,7 +111,7 @@ const validateResetToken = async (req, res) => {
 
         const resetToken = await PasswordResetToken.findOne({
             where: {
-                token: token,
+                token: hashResetToken(token),
                 expiresAt: {
                     [Op.gt]: new Date()
                 }
@@ -127,7 +132,7 @@ const validateResetToken = async (req, res) => {
 
         // 【Linus式檢查】- 檢查 User 關聯是否載入成功
         if (!resetToken.User) {
-            console.error('Token found but User relation failed to load for token:', token);
+            console.error('Token found but User relation failed to load', { tokenId: resetToken.id });
             return res.status(500).json({
                 success: false,
                 message: '系統錯誤，請稍後再試'
@@ -164,7 +169,7 @@ const resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
 
-        if (!token || !newPassword) {
+        if (!token || typeof token !== 'string' || !newPassword) {
             return res.status(400).json({
                 success: false,
                 message: '缺少必要的參數'
@@ -183,7 +188,7 @@ const resetPassword = async (req, res) => {
         try {
             const resetToken = await PasswordResetToken.findOne({
                 where: {
-                    token: token,
+                    token: hashResetToken(token),
                     expiresAt: {
                         [Op.gt]: new Date()
                     }
@@ -207,7 +212,7 @@ const resetPassword = async (req, res) => {
 
             if (!resetToken.User) {
                 await t.rollback();
-                console.error('Token found but User relation failed to load for token:', token);
+                console.error('Token found but User relation failed to load', { tokenId: resetToken.id });
                 return res.status(500).json({
                     success: false,
                     message: '系統錯誤，請稍後再試'
@@ -280,5 +285,6 @@ module.exports = {
     requestPasswordReset,
     validateResetToken,
     resetPassword,
-    cleanupExpiredTokens
+    cleanupExpiredTokens,
+    hashResetToken
 };

@@ -580,8 +580,8 @@ exports.adminResetPassword = async (req, res) => {
             }
         }
 
-        // 產生臨時密碼：SDL + 6 位隨機數字
-        const randomDigits = Math.floor(100000 + Math.random() * 900000);
+        // 產生臨時密碼：SDL + 6 位隨機數字（crypto.randomInt：Math.random 可預測，不可用於密碼）
+        const randomDigits = crypto.randomInt(100000, 1000000);
         const tempPassword = `SDL${randomDigits}`;
 
         const hashedPassword = await bcrypt.hash(tempPassword, saltRounds);

@@ -11,6 +11,26 @@ import { getCurrentUserId } from '../utils/authUtils';
  * 3. 可擴展：支持多種錯誤監控服務
  */
 
+// 網址裡可能帶密碼重設 token 等敏感 query／fragment：上報前先遮蔽，fragment 整段丟掉
+const SENSITIVE_PARAM_HINTS = ['token', 'password', 'secret', 'code', 'key'];
+
+function redactUrl(href) {
+  if (typeof href !== 'string' || !href) return href ?? null;
+  try {
+    const url = new URL(href, window.location.origin);
+    for (const key of [...url.searchParams.keys()]) {
+      const lower = key.toLowerCase();
+      if (SENSITIVE_PARAM_HINTS.some((hint) => lower.includes(hint))) {
+        url.searchParams.set(key, '[REDACTED]');
+      }
+    }
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return href.split(/[?#]/)[0];
+  }
+}
+
 class ErrorReportingService {
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === 'development';
@@ -74,11 +94,12 @@ class ErrorReportingService {
    * 上報網路請求錯誤
    */
   reportNetworkError(url, method, statusCode, responseText, errorId) {
+    const safeUrl = redactUrl(url);
     const errorReport = this.createErrorReport({
       type: 'network_error',
       id: errorId,
-      message: `Network error: ${method} ${url} ${statusCode}`,
-      url: url,
+      message: `Network error: ${method} ${safeUrl} ${statusCode}`,
+      url: safeUrl,
       method: method,
       statusCode: statusCode,
       responseText: this.isDevelopment ? responseText : undefined,
@@ -95,7 +116,7 @@ class ErrorReportingService {
     const baseReport = {
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
-      url: window.location.href,
+      url: redactUrl(window.location.href),
       viewport: {
         width: window.innerWidth,
         height: window.innerHeight
@@ -259,8 +280,9 @@ class ErrorReportingService {
       const storage = {};
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        // 過濾敏感信息
-        if (!key.includes('token') && !key.includes('password')) {
+        // 過濾敏感信息（不分大小寫：accessToken / refreshToken 也要擋）
+        const lowerKey = key.toLowerCase();
+        if (!lowerKey.includes('token') && !lowerKey.includes('password')) {
           storage[key] = localStorage.getItem(key);
         }
       }
@@ -273,6 +295,7 @@ class ErrorReportingService {
 
 // 創建全域實例
 const errorReportingService = new ErrorReportingService();
+export { redactUrl };
 
 // 監聽全域 JavaScript 錯誤
 window.addEventListener('error', (event) => {

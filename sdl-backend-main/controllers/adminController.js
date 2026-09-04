@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { Op } = require('sequelize');
 
 const User = require('../models/user');
@@ -71,7 +72,8 @@ exports.resetUserPassword = async (req, res) => {
             return res.status(404).json({ message: '找不到該使用者' });
         }
 
-        const randomDigits = Math.floor(100000 + Math.random() * 900000);
+        // crypto.randomInt：Math.random 可預測，不可用於臨時密碼
+        const randomDigits = crypto.randomInt(100000, 1000000);
         const tempPassword = `SDL${randomDigits}`;
         const hashedPassword = await bcrypt.hash(tempPassword, SALT_ROUNDS);
 

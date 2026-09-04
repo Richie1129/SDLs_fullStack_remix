@@ -35,6 +35,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
       - METRICS_TOKEN=${METRICS_TOKEN}
+      # routes/metrics.js 只在明確 development 才免 token；未設定一律視為生產
+      - NODE_ENV=development
       # MinIO 環境變數
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
       # - MINIO_PUBLIC_ENDPOINT=${MINIO_PUBLIC_ENDPOINT}

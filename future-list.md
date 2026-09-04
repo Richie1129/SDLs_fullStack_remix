@@ -617,6 +617,26 @@
 - **替代方案**：維持現狀，靠快取吸收
 - **相關檔案**：`sdl-backend-main/utils/fileAccess.js`、`sdl-backend-main/models/task.js`、`sdl-backend-main/sockets/handlers/taskHandler.js`、`sdl-frontend-main/src/pages/Kanban/components/carditem/hooks/useFileManagement.js`
 
+### F023: 前端 CSP 由 Report-Only 轉為正式強制
+
+- **類別**：Security / Frontend / Deploy
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-05
+- **提案來源**：2026-09-03 資安審查 High 項「前端 token 存 localStorage 且 nginx 全站無安全標頭」；2026-09-05 已在 `nginx.conf` 對前端頁面加上 nosniff / X-Frame-Options / Referrer-Policy / Permissions-Policy / HSTS，CSP 則只以 `Content-Security-Policy-Report-Only` 送出，違規由 `POST /api/csp-report`（`routes/cspReport.js`）寫進 API 日誌
+- **為什麼現在不做**：
+  - 本機建置產物掃描：`html2pdf`、`socket.io`、`recharts`、`vis-network` 四個 chunk 含 `Function("return this")` 全域偵測，`sweetalert2` 含 `new Function(`，`index.es` chunk 含 `eval(`。沒有 `'unsafe-eval'` 直接強制 `script-src 'self'` 可能讓這些模組初始化失敗，需要真實流量回報確認哪些是實際執行路徑
+  - 學習歷程匯出（`StudentPortfolio`）與教師儀錶板列印（`QuickActions`）用 `document.write` 寫入 about:blank iframe／視窗，會繼承頁面 CSP，需要確認 Google Fonts 與 inline style 的規則足夠
+- **觸發條件**（任一成立）：
+  - 上線 Report-Only 兩週後，`docker compose logs api | grep '\[csp\]'` 的回報只剩已知且可接受的來源
+  - 再次發生前端 XSS 類漏洞
+- **怎麼做**：
+  1. 彙整回報中的 `effectiveDirective` / `blockedUri`，逐一決定是放寬規則還是修程式（例如把需要 eval 的套件換掉或升級）
+  2. 若 `script-src` 仍需 `'unsafe-eval'`，優先評估以 `'wasm-unsafe-eval'` 或套件升級替代，最後才放寬
+  3. `nginx.conf` 的 `$csp_report_only` 改名為正式 policy，`add_header Content-Security-Policy ... always;`，保留 `report-uri` 持續監看
+  4. scp 到伺服器 `~/SDLs_fullStack_remix/nginx.conf` 後 `docker compose exec nginx nginx -t && docker compose exec nginx nginx -s reload`，用 Chrome 逐頁確認 console 無 CSP 錯誤
+- **相關檔案**：`nginx.conf`、`sdl-backend-main/routes/cspReport.js`、`sdl-frontend-main/src/pages/StudentPortfolio/index.jsx`、`sdl-frontend-main/src/pages/teacher-dashboard/components/QuickActions.jsx`
+
 ---
 
 ## 變更記錄
@@ -627,3 +647,4 @@
 - **2026-09-02**：新增 F016–F019；依效能審查報告（`docs/reports/PERFORMANCE_REVIEW_2026-09-02.md`）完成 23 項中的短期修法後，把差量廣播、總覽聚合端點、presigned 圖片、反思 BLOB 下線四項登錄為後續工作
 - **2026-09-03**：新增 F020（JWT claim 失效機制）；資安止血項 code review 指出角色降級在 access token 到期前不生效，止血版先讓 `requireAdmin` 一律查 DB，全面方案登錄為後續工作
 - **2026-09-03**：新增 F021（teacher 範圍收斂為 mentorId）、F022（tasks 附件正規化）；High 級 IDOR／XSS 修復時把專案存取判定集中到 `middlewares/projectAccess.js`，fileName 索引已在同批 migration 補上，剩 teacher 全放行與 tasks 陣列欄位掃描兩項登錄為後續工作
+- **2026-09-05**：新增 F023（CSP 轉正式強制）；資安 Medium 項收尾時 nginx 先上 Report-Only 並加 `/api/csp-report` 回報端點，等真實流量回報確認 eval 類套件的影響後再強制
