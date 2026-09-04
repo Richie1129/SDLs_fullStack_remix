@@ -145,6 +145,8 @@ daily_file/
 # *.md
 *.txt
 *.sh
+# 容器 entrypoint 必須進版控（Dockerfile.prod 會 COPY），例外於上面的 *.sh
+!sdl-backend-main/docker-entrypoint.sh
 *.example
 
 # folders

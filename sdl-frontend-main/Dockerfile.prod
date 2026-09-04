@@ -27,4 +27,7 @@ COPY --from=builder /app/dist .
 
 EXPOSE 5173
 
+# 執行期以非 root 身分運作（serve 只讀靜態檔、監聽 5173，不需要 root）
+USER node
+
 CMD ["serve", "-s", ".", "-l", "5173"]

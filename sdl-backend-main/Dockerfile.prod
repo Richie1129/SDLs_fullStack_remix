@@ -4,13 +4,18 @@ FROM node:22-alpine AS base
 WORKDIR /sdl-backend-main
 ENV NODE_ENV=production
 
+# su-exec：entrypoint 以 root 修正 bind mount 目錄權限後，降權為 node 執行
+RUN apk add --no-cache su-exec
+
 # Install production dependencies
 COPY package*.json ./
-# If you use a package-lock.json, consider npm ci --only=production
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy application code
 COPY . .
+RUN chmod +x /sdl-backend-main/docker-entrypoint.sh
 
-# EXPOSE 3000 # Not strictly necessary as docker-compose handles port mapping
+# 執行期以非 root 身分運作：不直接寫 USER node，因為 /logs 是宿主機 bind mount，
+# 需要先由 root 修正擁有者再降權（見 docker-entrypoint.sh）
+ENTRYPOINT ["/sdl-backend-main/docker-entrypoint.sh"]
 CMD ["npm", "start"]

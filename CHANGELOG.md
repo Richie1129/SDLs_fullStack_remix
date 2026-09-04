@@ -20,6 +20,9 @@
 - **RAGFlow 代理加固**（`routes/ragflowProxy.js`、`config/index.js`）
   - chatId 與 sessionId 只接受英數、底線與連字號，阻擋拼進上游 URL 的路徑穿越
   - 生產環境一律驗證對外連線憑證，`SSL_VERIFY=false` 只在非生產環境生效
+- **容器改以非 root 執行**（`sdl-backend-main/Dockerfile.prod`、`docker-entrypoint.sh`、`sdl-frontend-main/Dockerfile.prod`）
+  - 後端啟動時由 entrypoint 修正宿主機掛載的 logs 目錄擁有者後降權為 node；migration 與 seed 的臨時容器同樣走這條路
+  - 前端 serve 以 node 使用者執行
 - **相依套件弱點清理**（`npm audit --omit=dev`）
   - 後端由 4 個 Critical、22 個 High 降為 0；bcrypt 升至 6（改用內附預建二進位，脫離 node-pre-gyp 與 tar）、jsondiffpatch 升至 0.7、nodemailer 升至 10
   - 前端由 3 個 Critical、15 個 High 降為 0；移除未使用的 swiper，html2pdf.js 升至 0.14（jspdf 4）
