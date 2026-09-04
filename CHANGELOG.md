@@ -17,6 +17,12 @@
   - 成員／指導教師／角色／觀摩者的判定集中一處，`taskId → projectId` 的解析合併為單一實作
 - **多條讀取端點補上授權**：公告改為需登入且只回傳呼叫者可見範圍、問答室僅本人／教師／指導教師可讀可刪、發言者身分由資料庫角色推導、KB Coach 紀錄與 AI 任務助理求助紀錄限專案相關人員
 - **教師端點角色改查資料庫**：學生名單、教師重設學生密碼、使用者列表欄位裁切不再採信 JWT 內的角色
+- **RAGFlow 代理加固**（`routes/ragflowProxy.js`、`config/index.js`）
+  - chatId 與 sessionId 只接受英數、底線與連字號，阻擋拼進上游 URL 的路徑穿越
+  - 生產環境一律驗證對外連線憑證，`SSL_VERIFY=false` 只在非生產環境生效
+- **相依套件弱點清理**（`npm audit --omit=dev`）
+  - 後端由 4 個 Critical、22 個 High 降為 0；bcrypt 升至 6（改用內附預建二進位，脫離 node-pre-gyp 與 tar）、jsondiffpatch 升至 0.7、nodemailer 升至 10
+  - 前端由 3 個 Critical、15 個 High 降為 0；移除未使用的 swiper，html2pdf.js 升至 0.14（jspdf 4）
 - **移除未使用的使用者查詢端點**，避免以帳號 id 列舉全校名單
 - **前端 XSS 修復**（`utils/htmlEscape.js`、`utils/tempPasswordDialog.js`、`utils/formatAnalysisResult.js`）
   - 重設密碼結果對話框改為共用元件，使用者名稱一律跳脫、複製按鈕不再把密碼放進 inline 事件
@@ -28,7 +34,7 @@
 
 ### 🧪 測試
 
-- 後端新增 `projectAccess`、`fileAccess`、`idorAuthorization` 三組回歸測試（73 案例）；前端新增跳脫、對話框與分析結果格式化測試（13 案例）
+- 後端新增 `projectAccess`、`fileAccess`、`idorAuthorization`、`ragflowProxy` 四組回歸測試（83 案例）；前端新增跳脫、對話框與分析結果格式化測試（13 案例）
 
 ---
 

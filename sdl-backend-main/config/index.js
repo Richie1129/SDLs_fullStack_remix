@@ -64,9 +64,17 @@ class Config {
     }
 
     // SSL 配置
+    // 生產環境一律驗證對外連線（RAGFlow）的憑證；SSL_VERIFY=false 只在非生產環境生效，
+    // 供本機對自簽憑證測試用，避免生產環境因設定殘留而暴露於中間人攻擊。
     get ssl() {
+        const disabled = process.env.SSL_VERIFY === 'false';
+        const isProduction = process.env.NODE_ENV === 'production';
+        if (disabled && isProduction && !this._sslWarned) {
+            this._sslWarned = true;
+            console.warn('[config] SSL_VERIFY=false 在 production 環境被忽略，對外連線仍會驗證憑證');
+        }
         return {
-            verify: process.env.SSL_VERIFY !== 'false'
+            verify: !(disabled && !isProduction)
         };
     }
 

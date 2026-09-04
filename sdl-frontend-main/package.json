@@ -17,7 +17,7 @@
     "date-fns": "^3.3.1",
     "dateformat": "^5.0.3",
     "framer-motion": "^11.0.28",
-    "html2pdf.js": "^0.12.1",
+    "html2pdf.js": "^0.14.0",
     "js-file-download": "^0.4.12",
     "lottie-react": "^2.4.0",
     "lucide-react": "^0.511.0",
@@ -39,7 +39,6 @@
     "streamdown": "^1.4.0",
     "styled-components": "^6.1.8",
     "sweetalert2": "^11.10.5",
-    "swiper": "^11.1.1",
     "uuid": "^9.0.0",
     "vis-data": "^7.1.6",
     "vis-network": "^9.1.6"

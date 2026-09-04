@@ -8,10 +8,24 @@ const { requireAiEnabled } = require('../services/aiAccessService');
 
 const router = express.Router();
 
-// 創建 HTTPS 代理（根據配置決定是否驗證 SSL）
+// 創建 HTTPS 代理（根據配置決定是否驗證 SSL；production 一律驗證，見 config/index.js）
 const agent = new https.Agent({
     rejectUnauthorized: config.ssl.verify
 });
+
+// 路徑參數白名單：chatId / sessionId 會直接拼進上游 URL，
+// 不限制字元就能用 ../ 或 ? 把請求導到 RAGFlow 的其他端點（路徑穿越）。
+const ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+function validatePathIds(...names) {
+    return function validatePathIds(req, res, next) {
+        for (const name of names) {
+            if (!ID_PATTERN.test(String(req.params[name] ?? ''))) {
+                return res.status(400).json({ message: `無效的 ${name}`, code: 'INVALID_PATH_ID' });
+            }
+        }
+        next();
+    };
+}
 
 /**
  * RAGFlow API 代理路由
@@ -19,7 +33,7 @@ const agent = new https.Agent({
  */
 
 // 創建 RAGFlow 會話
-router.post('/:chatId/sessions', validateToken, async (req, res) => {
+router.post('/:chatId/sessions', validateToken, validatePathIds('chatId'), async (req, res) => {
     try {
         const { chatId } = req.params;
 
@@ -60,7 +74,7 @@ router.post('/:chatId/sessions', validateToken, async (req, res) => {
 });
 
 // RAGFlow 完成請求
-router.post('/:chatId/completions', validateToken, requireAiEnabled, async (req, res) => {
+router.post('/:chatId/completions', validateToken, validatePathIds('chatId'), requireAiEnabled, async (req, res) => {
     try {
         const { chatId } = req.params;
 
@@ -101,7 +115,7 @@ router.post('/:chatId/completions', validateToken, requireAiEnabled, async (req,
 });
 
 // 刪除 RAGFlow 會話
-router.delete('/:chatId/sessions/:sessionId', validateToken, async (req, res) => {
+router.delete('/:chatId/sessions/:sessionId', validateToken, validatePathIds('chatId', 'sessionId'), async (req, res) => {
     try {
         const { chatId, sessionId } = req.params;
 
