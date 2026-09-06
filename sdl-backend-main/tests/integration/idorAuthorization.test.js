@@ -4,7 +4,7 @@
  * 涵蓋五組修復：
  *   1. GET /api/announcements — 加 validateToken，查詢範圍依角色/專案成員關係限制
  *   2. GET /api/users/:userId — 前端零呼叫，整條路由與 controller 函式移除
- *   3. 問答室 messages / chatrooms — 只有本人、teacher/admin、該專案 mentor 可查看／刪除
+ *   3. 問答室 messages / chatrooms — 只有本人、admin、該專案 mentor 可查看／刪除（教師不再全放行，F021）
  *   4. KB Coach history / history/:id — 依 projectId／nodeId／擁有者限制查詢範圍
  *   5. AI 任務助理 task-history — 跨班觀摩者（readOnly）不可查看求助紀錄
  *
@@ -61,6 +61,8 @@ beforeEach(() => {
     // 預設：不是專案成員，避免忘記 mock 時 getProjectAccess 直接爆炸
     jest.spyOn(UserProject, 'findOne').mockResolvedValue(null);
     jest.spyOn(UserProject, 'findAll').mockResolvedValue([]);
+    // getMentoredProjectIds / isMentorOfStudent：預設沒有指導任何專案
+    jest.spyOn(Project, 'findAll').mockResolvedValue([]);
 });
 
 // ---------- 1. 公告 ----------
@@ -130,8 +132,8 @@ describe('announcement.getAnnouncements', () => {
         }));
     });
 
-    test('總覽：teacher/admin 維持看全部公告', async () => {
-        jest.spyOn(User, 'findByPk').mockResolvedValue({ id: 1, role: 'teacher' });
+    test('總覽：admin 維持看全部公告', async () => {
+        jest.spyOn(User, 'findByPk').mockResolvedValue({ id: 1, role: 'admin' });
         const findAllSpy = jest.spyOn(Announcement, 'findAll').mockResolvedValue([]);
 
         const req = { query: {}, userId: 1 };
@@ -140,6 +142,44 @@ describe('announcement.getAnnouncements', () => {
 
         expect(res.status).toHaveBeenCalledWith(200);
         expect(findAllSpy).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+    });
+
+    test('總覽：教師只看全站公告 + 自己指導專案的公告 + 自己與所屬學生的個人公告（F021）', async () => {
+        jest.spyOn(User, 'findByPk').mockResolvedValue({ id: 1, role: 'teacher' });
+        Project.findAll.mockResolvedValue([{ id: 30 }, { id: 40 }]);
+        // 第一次（where.userId）查自己的成員關係，第二次（where.projectId）查指導專案的學生
+        UserProject.findAll.mockImplementation(async ({ where }) => (
+            where.userId ? [] : [{ userId: 7 }, { userId: 8 }, { userId: 7 }]
+        ));
+        const findAllSpy = jest.spyOn(Announcement, 'findAll').mockResolvedValue([]);
+
+        const req = { query: {}, userId: 1 };
+        const res = fakeRes();
+        await announcementController.getAnnouncements(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(findAllSpy).toHaveBeenCalledWith(expect.objectContaining({
+            where: {
+                [Op.or]: [
+                    { projectId: null },
+                    { projectId: -1 },
+                    { projectId: { [Op.in]: [30, 40] } },
+                    { projectId: { [Op.in]: [-7, -8] } }
+                ]
+            }
+        }));
+    });
+
+    test('指定 projectId：非 mentor 的教師 → 403（教師不再對所有專案放行）', async () => {
+        jest.spyOn(User, 'findByPk').mockResolvedValue({ ...studentUser, role: 'teacher' });
+        jest.spyOn(Project, 'findByPk').mockResolvedValue(otherMentorProject);
+        const findAllSpy = jest.spyOn(Announcement, 'findAll').mockResolvedValue([]);
+
+        const res = fakeRes();
+        await announcementController.getAnnouncements({ query: { projectId: '55' }, userId: 7 }, res);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(findAllSpy).not.toHaveBeenCalled();
     });
 });
 
@@ -274,8 +314,9 @@ describe('question.createMessage', () => {
         expect(create).toHaveBeenCalledWith(expect.objectContaining({ author: 'student', questionId: 5 }));
     });
 
-    test('teacher（DB 角色）發言 author 為 teacher', async () => {
+    test('該專案 mentor 教師（DB 角色）發言 author 為 teacher', async () => {
         jest.spyOn(User, 'findByPk').mockResolvedValue({ ...studentUser, role: 'teacher' });
+        jest.spyOn(Project, 'findByPk').mockResolvedValue({ ...otherMentorProject, mentorId: 7 });
         jest.spyOn(Question, 'findByPk').mockResolvedValue({ id: 5, projectId: 55, userId: 999 });
         const create = jest.spyOn(QuestionMessage, 'create').mockResolvedValue({ id: 1 });
 
@@ -284,6 +325,19 @@ describe('question.createMessage', () => {
 
         expect(res.status).toHaveBeenCalledWith(200);
         expect(create).toHaveBeenCalledWith(expect.objectContaining({ author: 'teacher' }));
+    });
+
+    test('非 mentor 的教師對學生問答室發言 → 403（教師不再全放行）', async () => {
+        jest.spyOn(User, 'findByPk').mockResolvedValue({ ...studentUser, role: 'teacher' });
+        jest.spyOn(Project, 'findByPk').mockResolvedValue(otherMentorProject);
+        jest.spyOn(Question, 'findByPk').mockResolvedValue({ id: 5, projectId: 55, userId: 999 });
+        const create = jest.spyOn(QuestionMessage, 'create').mockResolvedValue({ id: 1 });
+
+        const res = fakeRes();
+        await questionController.createMessage({ body: { message: 'hi', questionId: 5 }, userId: 7 }, res);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(create).not.toHaveBeenCalled();
     });
 });
 

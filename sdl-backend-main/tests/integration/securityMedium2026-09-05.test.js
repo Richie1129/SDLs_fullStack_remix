@@ -175,7 +175,7 @@ describe('客戶端稽核事件淨化（routes/auditClient.js sanitizeClientEven
         expect(classifyClientAction('SCROLL_X').consentLevel).toBe('full');
     });
 
-    test('resolveAllowedProjectIds：學生只拿到成員或指導的專案，教師／admin 全部放行，沒有 id 就不查 DB', async () => {
+    test('resolveAllowedProjectIds：學生與教師只拿到成員或指導的專案，admin 全部放行，沒有 id 就不查 DB', async () => {
         const findByPk = jest.spyOn(User, 'findByPk').mockResolvedValue({ id: 1, role: 'student' });
         jest.spyOn(UserProject, 'findAll').mockResolvedValue([{ projectId: 10 }]);
         jest.spyOn(Project, 'findAll').mockResolvedValue([{ id: 30 }]);
@@ -184,8 +184,14 @@ describe('客戶端稽核事件淨化（routes/auditClient.js sanitizeClientEven
         expect([...allowed].sort()).toEqual(['10', '30']);
         expect(UserProject.findAll.mock.calls[0][0].where.userId).toBe(1);
 
+        // 教師不再全放行（F021）：只拿到自己指導（mentorId）或身為成員的專案
         findByPk.mockResolvedValue({ id: 2, role: 'teacher' });
-        expect([...await resolveAllowedProjectIds(2, ['20'])]).toEqual(['20']);
+        UserProject.findAll.mockResolvedValue([]);
+        Project.findAll.mockResolvedValue([{ id: 20 }]);
+        expect([...await resolveAllowedProjectIds(2, ['20', '21'])]).toEqual(['20']);
+
+        findByPk.mockResolvedValue({ id: 3, role: 'admin' });
+        expect([...await resolveAllowedProjectIds(3, ['20', '21'])].sort()).toEqual(['20', '21']);
 
         findByPk.mockClear();
         expect((await resolveAllowedProjectIds(1, [null, null])).size).toBe(0);

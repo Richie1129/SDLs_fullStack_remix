@@ -5,7 +5,7 @@
  *   - 反思日誌／作品集附件（daily_personals / daily_teams）本人與同專案成員必須可讀（防止修過頭）
  *   - 他專案的檔案 → 403
  *   - 評論附件不再無條件放行
- *   - 孤立檔案只有 teacher / admin
+ *   - 孤立檔案只有 admin；教師只在自己指導（mentorId）的專案算 mentor，不再對所有專案放行（F021）
  *   - /download（免認證 presigned URL）已移除
  */
 jest.mock('../../config/logger', () => {
@@ -68,6 +68,7 @@ beforeEach(() => {
     jest.spyOn(UserProject, 'findOne').mockResolvedValue(null);
     jest.spyOn(User, 'findByPk').mockResolvedValue(student);
     jest.spyOn(Project, 'findByPk').mockResolvedValue(closedProject);
+    jest.spyOn(Project, 'findAll').mockResolvedValue([]); // isMentorOfStudent：預設沒有指導任何專案
     installQuerySpy();
 });
 
@@ -146,7 +147,7 @@ describe('canReadFile：反思日誌／作品集附件不可被修過頭', () =>
 });
 
 describe('canReadFile：其他來源', () => {
-    test('他專案的任務圖片 → 拒絕；成員 → 放行；teacher（DB 角色）→ 放行', async () => {
+    test('他專案的任務圖片 → 拒絕；成員 → 放行；非 mentor 教師 → 拒絕；mentor → 放行', async () => {
         installQuerySpy({ task: [{ projectId: 42 }] });
         expect(await canReadFile(7, FILE)).toBe(false);
 
@@ -156,6 +157,8 @@ describe('canReadFile：其他來源', () => {
         apiCache.clear();
         UserProject.findOne.mockResolvedValue(null);
         User.findByPk.mockResolvedValue({ ...student, role: 'teacher' });
+        expect(await canReadFile(7, FILE)).toBe(false); // 教師不再對所有專案放行（F021）
+        Project.findByPk.mockResolvedValue({ ...closedProject, mentorId: 7 });
         expect(await canReadFile(7, FILE)).toBe(true);
     });
 
@@ -177,7 +180,10 @@ describe('canReadFile：其他來源', () => {
         expect(await canDeleteFile(7, FILE)).toBe(true);
     });
 
-    test('孤立檔案：學生拒絕，teacher / admin 放行', async () => {
+    test('孤立檔案：學生與教師拒絕，只有 admin 放行', async () => {
+        expect(await canReadFile(7, FILE)).toBe(false);
+        expect(await canDeleteFile(7, FILE)).toBe(false);
+        User.findByPk.mockResolvedValue({ ...student, role: 'teacher' });
         expect(await canReadFile(7, FILE)).toBe(false);
         expect(await canDeleteFile(7, FILE)).toBe(false);
         User.findByPk.mockResolvedValue({ ...student, role: 'admin' });
@@ -203,10 +209,21 @@ describe('剛上傳、尚未儲存的卡片附件（file_uploads）', () => {
         expect(await canDeleteFile(8, FILE)).toBe(false);
     });
 
-    test('非本人但為 teacher（DB 角色）可讀', async () => {
+    test('非本人：指導該上傳者的教師可讀，其他教師不可，admin 可', async () => {
         FileUpload.findOne.mockResolvedValue({ userId: 7 });
         User.findByPk.mockResolvedValue({ ...student, id: 8, role: 'teacher' });
+        expect(await canReadFile(8, FILE)).toBe(false);
+
+        Project.findAll.mockResolvedValue([{ id: 42 }]);          // 8 指導專案 42
+        UserProject.findOne.mockResolvedValue({ projectId: 42 });  // 7 是專案 42 的成員
         expect(await canReadFile(8, FILE)).toBe(true);
+        expect(UserProject.findOne).toHaveBeenCalledWith(expect.objectContaining({
+            where: { userId: 7, projectId: { [Op.in]: [42] } }
+        }));
+
+        Project.findAll.mockResolvedValue([]);
+        User.findByPk.mockResolvedValue({ ...student, id: 9, role: 'admin' });
+        expect(await canReadFile(9, FILE)).toBe(true);
     });
 });
 
@@ -297,13 +314,19 @@ describe('routes/file', () => {
         expect(minio.deleteFileFromMinio).not.toHaveBeenCalled();
     });
 
-    test('DELETE 角色以 DB 為準：JWT 說 teacher 但 DB 是 student 仍拒絕；DB teacher 放行', async () => {
+    test('DELETE 角色以 DB 為準：JWT 說 admin 但 DB 是 student 仍拒絕；DB admin 放行（孤立檔案教師也不可刪）', async () => {
         installQuerySpy();
         let res = fakeRes();
-        await handlerOf('/:fileName', 'delete')({ params: { fileName: FILE }, userId: 7, user: { role: 'teacher' } }, res);
+        await handlerOf('/:fileName', 'delete')({ params: { fileName: FILE }, userId: 7, user: { role: 'admin' } }, res);
         expect(res.status).toHaveBeenCalledWith(403);
 
         User.findByPk.mockResolvedValue({ ...student, role: 'teacher' });
+        res = fakeRes();
+        await handlerOf('/:fileName', 'delete')({ params: { fileName: FILE }, userId: 7, user: { role: 'teacher' } }, res);
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(minio.deleteFileFromMinio).not.toHaveBeenCalled();
+
+        User.findByPk.mockResolvedValue({ ...student, role: 'admin' });
         res = fakeRes();
         await handlerOf('/:fileName', 'delete')({ params: { fileName: FILE }, userId: 7, user: { role: 'student' } }, res);
         expect(minio.deleteFileFromMinio).toHaveBeenCalledWith(FILE);

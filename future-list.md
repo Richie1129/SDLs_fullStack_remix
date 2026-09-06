@@ -570,26 +570,23 @@
 ### F021: teacher 存取範圍收斂為 project.mentorId 綁定
 
 - **類別**：Security / Backend
-- **狀態**：`backlog`
+- **狀態**：`backlog → done (2026-09-05)`
 - **優先級**：P2
 - **建立日期**：2026-09-03
-- **提案來源**：2026-09-03 資安審查 High 項「teacher 角色權限過寬」；IDOR 修復時刻意維持現況
-- **為什麼現在不做**：
-  - 目前 teacher 對所有專案放行的判斷散在 `checkProjectOwnerOrTeacher`、`checkTeacherRole`、teacherAgent、auditClient 等多處，IDOR 修復先把新路由的判定集中到 `middlewares/projectAccess.js` 的 `getProjectAccess`，teacher 放行只剩一個判斷點
-  - 現行資料裡 `projects.mentorId` 是否每個專案都有填尚未盤點，貿然收斂會讓沒有 mentor 的專案教師端整個看不到
-- **觸發條件**（任一成立）：
-  - 平台跨校／跨機構使用，教師不應看到別校專案
-  - 完成 `projects.mentorId` 的補齊盤點（無 null）
-- **怎麼做**：
-  1. 盤點 `projects.mentorId` 為 null 的專案並補齊（或提供 admin 指派介面）
-  2. `getProjectAccess` 的 teacher 分支改為「僅當 `project.mentorId === userId`」，以 feature flag（例如 `TEACHER_SCOPE=mentor`）切換，預設維持全放行
-  3. 逐一把 `checkProjectOwnerOrTeacher`、teacherAgent、auditClient 的 teacher 判斷改呼叫 `getProjectAccess`
-  4. 回歸測試補「非 mentor 的教師 → 403」
+- **提案來源**：2026-09-03 資安審查 High 項「teacher 角色權限過寬」；IDOR 修復時刻意維持現況。2026-09-05 使用者確認產品規則就是「老師只能看自己是指導老師的專案」，前端清單雖然只列自己的專案，但伺服器端沒有擋
+- **為什麼現在不做**：—（已完成）
+- **觸發條件**：—
+- **怎麼做**（實際做法）：
+  1. 生產 DB 盤點：151 個專案只有第 26 號（114-1 普202 第六組）缺 `mentorId`，經使用者確認補為 id 5；`mentorId` 指向不存在或非教師帳號的專案 0 個、`mentorId` 與 `mentor` 名字欄位不一致 0 個。教師以成員身分加入但不是 mentor 的情況只有 3 個 114-2 測試專案，多對多關聯不需要
+  2. `getProjectAccess` 移除 teacher 全放行分支，教師只在 `project.mentorId` 指向自己的專案算 `mentor`；沒有做 feature flag，回退方式是 revert 該 commit 重新部署
+  3. 新增 `isAdmin`、`getMentoredProjectIds`、`isMentorOfStudent`、`requireProjectMentor`；`isTeacherOrAdmin` 只剩「教師身分」語意（欄位可見度、發言者標籤），跨專案的全域範圍一律改用 `isAdmin`
+  4. 改走同一判定的地方：`checkProjectOwnerOrTeacher`、檔案讀取／刪除、公告查詢／建立／刪除／socket 廣播、問答室、KB Coach 歷史與回饋統計、求助統計、稽核事件歸屬與查詢、依老師名稱列專案／列學期、批次觀摩設定、專案列表 `userId` 參數、專案成員清單（單筆／批次）
+  5. teacher-agent 三條路由與 kb-coach orchestrator 手動觸發加 `requireProjectMentor`
+  6. 回歸測試 `tests/integration/teacherScope.test.js`（36 案例），既有四個測試檔的教師斷言同步更新
 - **估計工作量**：`M`
-- **依賴 / 前置條件**：`projects.mentorId` 資料完整
-- **風險 / 副作用**：多位教師共同指導同一專案時需要多對多關聯（目前只有單一 mentorId）
-- **替代方案**：維持全放行，改以稽核紀錄追蹤教師跨專案讀取
-- **相關檔案**：`sdl-backend-main/middlewares/projectAccess.js`、`sdl-backend-main/middlewares/projectViewingMiddleware.js`、`sdl-backend-main/routes/teacherAgent.js`、`sdl-backend-main/routes/auditClient.js`
+- **依賴 / 前置條件**：`projects.mentorId` 資料完整（已達成）
+- **風險 / 副作用**：教師開啟非自己指導的專案會拿到 403（原本就是，`checkProjectViewingPermission` 一直只認 mentor）；公告總覽不再看到其他老師專案的公告
+- **相關檔案**：`sdl-backend-main/middlewares/projectAccess.js`、`sdl-backend-main/middlewares/projectViewingMiddleware.js`、`sdl-backend-main/routes/teacherAgent.js`、`sdl-backend-main/routes/auditClient.js`、`sdl-backend-main/tests/integration/teacherScope.test.js`
 
 ---
 
@@ -639,6 +636,29 @@
 
 ---
 
+### F024: 專案範圍以外的列舉面：socket 房間加入與班級清單端點未做授權
+
+- **類別**：Security / Backend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-05
+- **提案來源**：F021 教師範圍收斂時盤點發現；HTTP 端點已全面走 `getProjectAccess`，但下列兩處仍是任何登入者都能碰
+- **為什麼現在不做**：
+  - `join_project`／`join_room`／`join_ideawall` 三個 socket 事件直接 `socket.join`，沒有驗證呼叫者對該專案／看板的存取權，任何登入者知道 id 就能收到該專案的即時事件（看板、想法牆、公告）。修法要在 handler 加 `canAccessProject(allowViewer: true)`，並確認觀摩者、指導教師與 socket 重連流程不受影響，需要在 dev 環境用真實前端驗證，不適合跟 F021 一起推
+  - `GET /api/projects/classes/list` 與 `GET /api/projects/classes/:className/users-projects` 任何登入者都能列出某班的學生與專案名稱；觀摩設定頁需要它，收斂成教師／admin 前要先確認學生端沒有用到
+- **觸發條件**（任一成立）：
+  - 下一輪資安審查
+  - 平台跨校使用
+- **怎麼做**：
+  1. `sockets/handlers/messageHandler.js` 的 `handleJoinProject` 加 `canAccessProject(socket.user.id, projectId, { allowViewer: true })`，不符則 emit 錯誤且不 join；`join_ideawall` 先由 ideaWallId 反查 projectId 再判定；`join_room` 依 roomId 的型別（聊天室／問答室）反查
+  2. `socketHandlers.js` 的 `broadcastToProject` 自動 join 的路徑同樣過一次判定
+  3. 班級清單兩個端點加 `checkTeacherRole`（或 admin）；學生端若有使用改走自己所屬專案的資料
+  4. 回歸測試補「非成員 join → 拒絕」
+- **估計工作量**：`S`
+- **相關檔案**：`sdl-backend-main/sockets/handlers/messageHandler.js`、`sdl-backend-main/sockets/socketHandlers.js`、`sdl-backend-main/controllers/project/projectViewingController.js`、`sdl-backend-main/routes/project.js`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
@@ -648,3 +668,4 @@
 - **2026-09-03**：新增 F020（JWT claim 失效機制）；資安止血項 code review 指出角色降級在 access token 到期前不生效，止血版先讓 `requireAdmin` 一律查 DB，全面方案登錄為後續工作
 - **2026-09-03**：新增 F021（teacher 範圍收斂為 mentorId）、F022（tasks 附件正規化）；High 級 IDOR／XSS 修復時把專案存取判定集中到 `middlewares/projectAccess.js`，fileName 索引已在同批 migration 補上，剩 teacher 全放行與 tasks 陣列欄位掃描兩項登錄為後續工作
 - **2026-09-05**：新增 F023（CSP 轉正式強制）；資安 Medium 項收尾時 nginx 先上 Report-Only 並加 `/api/csp-report` 回報端點，等真實流量回報確認 eval 類套件的影響後再強制
+- **2026-09-05**：完成 F021（teacher 範圍收斂為 mentorId）；生產 151 個專案只有第 26 號缺 mentorId、已補，共同指導只出現在 3 個測試專案、不需多對多；新增 F024（socket 房間加入與班級清單端點的列舉面）

@@ -54,12 +54,18 @@ describe('getProjectAccess', () => {
         expect(await getProjectAccess(7, 42, { allowViewer: true })).toEqual({ allowed: false, level: null });
     });
 
-    test('角色以 DB 為準：admin / teacher 放行', async () => {
+    test('角色以 DB 為準：admin 放行且不查專案', async () => {
         User.findByPk.mockResolvedValue({ ...student, role: 'admin' });
         expect(await getProjectAccess(7, 42)).toEqual({ allowed: true, level: 'admin' });
-        User.findByPk.mockResolvedValue({ ...student, role: 'teacher' });
-        expect(await getProjectAccess(7, 42)).toEqual({ allowed: true, level: 'teacher' });
         expect(Project.findByPk).not.toHaveBeenCalled();
+    });
+
+    test('teacher 不再全放行（F021）：非 mentor 的教師 → 拒絕；mentorId 指向自己 → mentor', async () => {
+        User.findByPk.mockResolvedValue({ ...student, role: 'teacher' });
+        Project.findByPk.mockResolvedValue({ ...openProject, is_open_for_viewing: false });
+        expect(await getProjectAccess(7, 42)).toEqual({ allowed: false, level: null });
+        Project.findByPk.mockResolvedValue({ ...openProject, mentorId: 7, is_open_for_viewing: false });
+        expect(await getProjectAccess(7, 42)).toEqual({ allowed: true, level: 'mentor' });
     });
 
     test('專案 mentor 放行', async () => {

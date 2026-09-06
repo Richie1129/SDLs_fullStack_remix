@@ -16,7 +16,8 @@ const config = require('../config');
 const { logAudit } = require('../services/auditService');
 const logger = require('../config/logger');
 const { writeErrorReport } = require('../utils/errorHandler');
-const { isTeacherOrAdmin } = require('../middlewares/projectAccess');
+const UserProject = require('../models/user_project');
+const { isTeacherOrAdmin, isAdmin, canAccessProject, getMentoredProjectIds, toPositiveInt } = require('../middlewares/projectAccess');
 
 //get all users
 exports.getUsers = async (req, res) => {
@@ -609,7 +610,14 @@ exports.adminResetPassword = async (req, res) => {
 
 exports.getProjectUsers = async (req, res) => {
     try {
-        const projectId = req.params.projectId;
+        const projectId = toPositiveInt(req.params.projectId);
+        if (!projectId) {
+            return res.status(400).json({ message: '無效的專案 ID', code: 'INVALID_PROJECT_ID' });
+        }
+        // 成員／指導教師／admin／跨班觀摩者才可看成員清單（教師不再對所有專案放行，F021）
+        if (!(await canAccessProject(req.userId, projectId, { allowViewer: true }))) {
+            return res.status(403).json({ message: '無權查看此專案的成員', code: 'PERMISSION_DENIED' });
+        }
         const result = await User.findAll({
             attributes: ['id', 'username', 'class', 'seatNumber'],
             include: [{
@@ -641,6 +649,25 @@ exports.batchGetProjectUsers = async (req, res) => {
             });
         }
 
+        // 只回呼叫者能存取的專案：admin 不限；其他人限自己是成員或指導教師的專案（教師不再對所有專案放行，F021）
+        const requestedIds = [...new Set(projectIds.map(toPositiveInt).filter(Boolean))];
+        let allowedIds = requestedIds;
+        if (requestedIds.length > 0 && !(await isAdmin(req.userId))) {
+            const [memberships, mentoredIds] = await Promise.all([
+                UserProject.findAll({
+                    where: { userId: req.userId, projectId: { [Op.in]: requestedIds } },
+                    attributes: ['projectId'],
+                    raw: true
+                }),
+                getMentoredProjectIds(req.userId)
+            ]);
+            const allowed = new Set([...memberships.map((m) => m.projectId), ...mentoredIds]);
+            allowedIds = requestedIds.filter((id) => allowed.has(id));
+        }
+        if (allowedIds.length === 0) {
+            return res.status(200).json({});
+        }
+
         console.log('[batchGetProjectUsers] 開始查詢資料庫...');
 
         // 單次查詢獲取所有專案的用戶
@@ -650,7 +677,7 @@ exports.batchGetProjectUsers = async (req, res) => {
                 model: Project,
                 attributes: ['id', 'name'],
                 where: {
-                    id: projectIds
+                    id: allowedIds
                 },
                 through: { attributes: [] }
             }]

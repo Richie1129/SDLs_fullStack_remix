@@ -462,15 +462,30 @@ exports.batchUpdateViewingSettings = async (req, res) => {
         const sourceUserIds = sourceUsers.map(user => user.id);
 
         // 2. 取得這些用戶參與的專案(需要是指定老師指導的，且為指定學期)
-        // 先以 mentorName 查出教師 id，再用 mentorId 外鍵過濾（防止 username 異動導致關聯斷裂）
-        const mentorUser = await User.findOne({
-            where: { username: mentorName },
-            attributes: ['id'],
-            transaction: t
-        });
-        const projectWhereClause = mentorUser
-            ? { mentorId: mentorUser.id }
-            : { mentor: mentorName }; // fallback：mentor id 尚未回填時仍可用
+        // 教師只能批次設定自己指導的專案：非 admin 一律以呼叫者本人為 mentorId（username 不唯一，
+        // 也不採信 body 指名的老師）；admin 才允許用 mentorName 指定任一老師
+        const requester = await User.findByPk(req.userId, { attributes: ['id', 'role', 'username'], transaction: t });
+        if (!requester) {
+            await t.rollback();
+            return res.status(401).json({ message: '用戶身份驗證失敗', code: 'USER_NOT_FOUND' });
+        }
+        let projectWhereClause;
+        if (requester.role === 'admin') {
+            const mentorUser = await User.findOne({
+                where: { username: mentorName },
+                attributes: ['id'],
+                transaction: t
+            });
+            projectWhereClause = mentorUser
+                ? { mentorId: mentorUser.id }
+                : { mentor: mentorName }; // fallback：mentor id 尚未回填時仍可用
+        } else {
+            if (requester.username !== mentorName) {
+                await t.rollback();
+                return res.status(403).json({ message: '只能批次設定自己指導的專案', code: 'PERMISSION_DENIED' });
+            }
+            projectWhereClause = { mentorId: requester.id };
+        }
         if (semesterFilter !== 'all') {
             projectWhereClause.semester = semesterFilter;
         }

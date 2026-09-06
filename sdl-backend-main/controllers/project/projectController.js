@@ -15,6 +15,8 @@ const Stage = require('../../models/stage');
 const Sub_stage = require('../../models/sub_stage');
 const User_project = require('../../models/user_project');
 const sequelize = require('../../util/database');
+const { Op } = require('sequelize');
+const { isAdmin } = require('../../middlewares/projectAccess');
 const projectViewingController = require('./projectViewingController');
 const { getTaiwanSemester } = require('../../utils/semesterUtils');
 const { logAudit } = require('../../services/auditService');
@@ -37,8 +39,11 @@ exports.getProject = async (req, res) => {
 exports.getAllProject = async (req, res) => {
     try {
         const { viewable_by, semester } = req.query;
-        // 支援 query.userId 或由驗證中介層掛上的 req.userId
-        const rawUserId = typeof req.query.userId !== 'undefined' ? req.query.userId : req.userId;
+        // query.userId 只有 admin 可以指定別人；其他人一律用自己的 id（任何登入者都不該列得到他人的專案）
+        let rawUserId = req.userId;
+        if (typeof req.query.userId !== 'undefined' && String(req.query.userId) !== String(req.userId)) {
+            if (await isAdmin(req.userId)) rawUserId = req.query.userId;
+        }
 
         // 決定學期過濾條件（預設為當前學期，'all' 表示不過濾）
         const semesterFilter = semester || getTaiwanSemester();
@@ -99,14 +104,43 @@ exports.getAllProject = async (req, res) => {
     }
 };
 
+/**
+ * 「依指導老師名稱列專案」的可見範圍（2026-09-05 教師範圍收斂，future-list F021）：
+ *   - admin：指定老師的全部專案
+ *   - 老師本人（DB username 相符）：自己指導的全部專案；直接用自己的 id 當 mentorId，不再以 username 反查（username 不唯一）
+ *   - 其他人（學生、其他老師）：只回自己也是成員的那些專案（TopBar 的專案切換清單會拿專案的 mentor 名稱來查）
+ * 回傳 null 代表呼叫者不存在。
+ */
+async function resolveMentorScope(req, mentorName) {
+    const requester = await User.findByPk(req.userId, { attributes: ['id', 'role', 'username'] });
+    if (!requester) return null;
+
+    if (requester.role !== 'admin' && requester.username === mentorName) {
+        return { where: { mentorId: requester.id } };
+    }
+
+    // 以 mentorId 外鍵查詢，避免 username 異動導致查不到資料
+    const mentorUser = await User.findOne({ where: { username: mentorName }, attributes: ['id'] });
+    const where = mentorUser ? { mentorId: mentorUser.id } : { mentor: mentorName };
+    if (requester.role === 'admin') return { where };
+
+    const memberships = await User_project.findAll({
+        where: { userId: requester.id },
+        attributes: ['projectId'],
+        raw: true
+    });
+    const memberProjectIds = memberships.map((m) => m.projectId);
+    return { where: { ...where, id: { [Op.in]: memberProjectIds } } };
+}
+
 exports.getProjectsByMentor = async (req, res) => {
     const mentorName = req.params.mentor; // 從 URL 參數中獲取 mentor 名字
     const semester = req.query.semester || getTaiwanSemester();
     console.log("mentorName:", mentorName, "semester:", semester);
     try {
-        // 以 mentorId 外鍵查詢，避免 username 異動導致查不到資料
-        const mentorUser = await User.findOne({ where: { username: mentorName }, attributes: ['id'] });
-        const whereClause = mentorUser ? { mentorId: mentorUser.id } : { mentor: mentorName };
+        const scope = await resolveMentorScope(req, mentorName);
+        if (!scope) return res.status(401).json({ message: '用戶身份驗證失敗', code: 'USER_NOT_FOUND' });
+        const whereClause = { ...scope.where };
         if (semester !== 'all') {
             whereClause.semester = semester;
         }
@@ -141,10 +175,10 @@ exports.getProjectsByMentor = async (req, res) => {
 exports.getAvailableSemesters = async (req, res) => {
     try {
         const mentorName = req.params.mentor;
-        const mentorUser = await User.findOne({ where: { username: mentorName }, attributes: ['id'] });
-        const mentorWhereClause = mentorUser ? { mentorId: mentorUser.id } : { mentor: mentorName };
+        const scope = await resolveMentorScope(req, mentorName);
+        if (!scope) return res.status(401).json({ message: '用戶身份驗證失敗', code: 'USER_NOT_FOUND' });
         const semesters = await Project.findAll({
-            where: mentorWhereClause,
+            where: scope.where,
             attributes: [[sequelize.fn('DISTINCT', sequelize.col('semester')), 'semester']],
             order: [[sequelize.col('semester'), 'DESC']],
             raw: true

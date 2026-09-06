@@ -9,7 +9,7 @@ const { Op } = require('sequelize');
 const { logAudit } = require('../services/auditService');
 const helpSeekingEffectivenessService = require('../services/helpSeekingEffectivenessService');
 const { isAiEnabled } = require('../services/aiAccessService');
-const { isTeacherOrAdmin } = require('../middlewares/projectAccess');
+const { isTeacherOrAdmin, isAdmin, isMentorOfStudent } = require('../middlewares/projectAccess');
 
 // Helper functions
 function calculateStartDate(timeRange) {
@@ -235,9 +235,12 @@ async function getHelpSeekingStats(req, res) {
     const { userId } = req.params;
     const { timeRange = '7d', projectId } = req.query;
 
-    // 授權檢查：只能查自己，或 teacher/admin（角色一律查 DB，不信任 JWT 的 role）
-    if (parseInt(userId) !== req.user.id && !(await isTeacherOrAdmin(req.userId))) {
-      return res.status(403).json({ error: 'Not authorized to view this data' });
+    // 授權檢查：只能查自己、admin、或指導該學生所屬專案的教師（角色一律查 DB，不信任 JWT 的 role）
+    if (parseInt(userId) !== req.user.id) {
+      const allowed = (await isAdmin(req.userId)) || (await isMentorOfStudent(req.userId, userId));
+      if (!allowed) {
+        return res.status(403).json({ error: 'Not authorized to view this data' });
+      }
     }
 
     // Calculate start date

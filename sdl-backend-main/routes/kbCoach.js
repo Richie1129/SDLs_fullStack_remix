@@ -11,6 +11,7 @@ const router = express.Router();
 const kbCoachController = require('../controllers/kbCoach');
 const { validateToken } = require('../middlewares/AuthMiddleware');
 const { checkTeacherRole } = require('../middlewares/projectViewingMiddleware');
+const { requireProjectMentor } = require('../middlewares/projectAccess');
 
 // ============================================================================
 // Phase 1 端點
@@ -84,7 +85,7 @@ router.get('/orchestrator/status/:ideaWallId', validateToken, async (req, res) =
  * 手動觸發 Orchestrator 分析（Debug 用）
  * Body: { "ideaWallId": 1, "projectId": 1 }
  */
-router.post('/orchestrator/analyze', validateToken, checkTeacherRole, async (req, res) => {
+router.post('/orchestrator/analyze', validateToken, checkTeacherRole, requireProjectMentor, async (req, res) => {
     try {
         const { orchestrate } = require('../services/orchestrator');
         const { ideaWallId, projectId } = req.body;

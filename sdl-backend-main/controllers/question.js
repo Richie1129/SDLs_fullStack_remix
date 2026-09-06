@@ -1,16 +1,17 @@
 const Question = require('../models/question')
 const QuestionMessage = require('../models/question_message')
 const { logAudit } = require('../services/auditService');
-const { isTeacherOrAdmin, getProjectAccess, toPositiveInt } = require('../middlewares/projectAccess');
+const { isTeacherOrAdmin, isAdmin, getProjectAccess, toPositiveInt } = require('../middlewares/projectAccess');
 
 /**
- * 問答室是學生向老師的私訊：本人、teacher/admin、或該專案的指導教師（mentor）才可查看／刪除。
+ * 問答室是學生向老師的私訊：本人、admin、或該專案的指導教師（mentor）才可查看／刪除。
+ * 教師不再對所有專案放行（2026-09-05，future-list F021）。
  * questionRecord 由 middlewares/projectAccess.js 的 getProjectIdFromQuestion 掛在 req.questionRecord。
  */
 async function canAccessQuestionRecord(userId, questionRecord) {
     if (!questionRecord) return false;
     if (questionRecord.userId === userId) return true;
-    if (await isTeacherOrAdmin(userId)) return true;
+    if (await isAdmin(userId)) return true;
     if (questionRecord.projectId) {
         const access = await getProjectAccess(userId, questionRecord.projectId);
         if (access.level === 'mentor') return true;

@@ -1,5 +1,6 @@
 const Project = require('../models/project');
 const User = require('../models/user');
+const { getProjectAccess, toPositiveInt } = require('./projectAccess');
 
 /**
  * 跨班觀摩權限檢查中介層
@@ -109,38 +110,31 @@ const checkTeacherRole = async (req, res, next) => {
 };
 
 /**
- * 檢查是否為專案創建者或教師的中介層
+ * 專案成員、該專案的指導教師（project.mentorId）或 admin 才可通過的中介層
+ *
+ * 2026-09-05 起教師不再對所有專案放行（future-list F021）：判定改走 projectAccess.getProjectAccess，
+ * 成員／mentor／admin 三種身分都有專案的管理權限，跨班觀摩者不算。
+ * 名稱與錯誤碼維持不變，避免動到既有路由與前端。
  */
 const checkProjectOwnerOrTeacher = async (req, res, next) => {
     try {
-        const projectId = req.params.projectId || req.params.id;
+        const projectId = toPositiveInt(req.params.projectId || req.params.id);
         const userId = req.userId;
 
-        const user = await User.findByPk(userId);
-        
-        // 如果是教師，直接通過
-        if (user.role === 'teacher') {
-            return next();
+        if (!projectId) {
+            return res.status(400).json({ message: '缺少或無效的專案 ID', code: 'INVALID_PROJECT_ID' });
         }
 
-        // 檢查是否為專案成員（假設專案成員都有管理權限）
-        const project = await Project.findByPk(projectId, {
-            include: [{
-                model: User,
-                through: { attributes: [] }
-            }]
-        });
-
+        const project = await Project.findByPk(projectId, { attributes: ['id'] });
         if (!project) {
             return res.status(404).json({ message: '專案不存在' });
         }
 
-        const isProjectMember = project.users.some(projectUser => projectUser.id === parseInt(userId));
-        
-        if (!isProjectMember) {
-            return res.status(403).json({ 
-                message: '僅限專案成員或教師操作',
-                code: 'PROJECT_MEMBER_OR_TEACHER_ONLY' 
+        const access = await getProjectAccess(userId, projectId);
+        if (!access.allowed) {
+            return res.status(403).json({
+                message: '僅限專案成員或指導教師操作',
+                code: 'PROJECT_MEMBER_OR_TEACHER_ONLY'
             });
         }
 

@@ -6,13 +6,17 @@
 const Announcement = require('../models/announcement');
 const User = require('../models/user');
 const logger = require('../config/logger');
+const { canAccessProject, isMentorOfStudent } = require('./projectAccess');
 
 /**
  * 檢查用戶是否有權限刪除公告
  *
  * 權限規則：
- * 1. 教師（teacher）和管理員（admin）可以刪除所有公告
- * 2. 學生（student）不能刪除公告
+ * 1. 管理員（admin）可以刪除所有公告
+ * 2. 教師（teacher）只能刪除自己指導範圍內的公告：專案公告限該專案的成員／指導教師，
+ *    個人公告限指導該學生的教師；全域公告教師皆可刪（2026-09-05 教師範圍收斂，future-list F021）
+ * 3. 學生（student）不能刪除公告
+ * 4. 角色一律查 DB，不採信 JWT payload
  *
  * 注意：由於 Announcement 模型目前沒有 creatorId 欄位，
  * 暫時無法驗證「只有作者可以刪除自己的公告」。
@@ -34,26 +38,21 @@ const canDeleteAnnouncement = async (req, res, next) => {
             });
         }
 
-        // 獲取完整的用戶資訊（包含角色）
-        let userRole = currentUser?.role;
+        // 角色一律查 DB，不採信 JWT payload（與 requireAdmin / projectAccess 同方針）
+        const user = await User.findByPk(userId, {
+            attributes: ['id', 'role', 'username']
+        });
 
-        // 如果 JWT token 中沒有 role，從資料庫查詢
-        if (!userRole) {
-            const user = await User.findByPk(userId, {
-                attributes: ['id', 'role', 'username']
+        if (!user) {
+            logger.error({ userId }, '找不到用戶資訊');
+            return res.status(401).json({
+                message: '用戶身份驗證失敗',
+                code: 'USER_NOT_FOUND'
             });
-
-            if (!user) {
-                logger.error({ userId }, '找不到用戶資訊');
-                return res.status(401).json({
-                    message: '用戶身份驗證失敗',
-                    code: 'USER_NOT_FOUND'
-                });
-            }
-
-            userRole = user.role;
-            req.user = { ...currentUser, role: user.role, username: user.username };
         }
+
+        const userRole = user.role;
+        req.user = { ...currentUser, role: user.role, username: user.username };
 
         // 權限檢查：只有教師和管理員可以刪除公告
         const allowedRoles = ['teacher', 'admin'];
@@ -70,6 +69,25 @@ const canDeleteAnnouncement = async (req, res, next) => {
                 code: 'PERMISSION_DENIED',
                 requiredRole: '教師或管理員'
             });
+        }
+
+        // 範圍檢查（教師不再對所有專案放行）：專案公告限該專案成員／指導教師，個人公告限指導該學生的教師；
+        // 全域公告（projectId = null）維持教師／admin 皆可，Announcement 沒有 creatorId 可比對作者
+        if (userRole !== 'admin') {
+            const targetProjectId = Number(announcement.projectId);
+            let inScope = true;
+            if (Number.isInteger(targetProjectId) && targetProjectId > 0) {
+                inScope = await canAccessProject(userId, targetProjectId);
+            } else if (Number.isInteger(targetProjectId) && targetProjectId < 0) {
+                inScope = await isMentorOfStudent(userId, -targetProjectId);
+            }
+            if (!inScope) {
+                logger.warn({ userId, userRole, announcementId: id, projectId: announcement.projectId }, '教師嘗試刪除非自己指導範圍的公告');
+                return res.status(403).json({
+                    message: '只能刪除自己指導範圍內的公告',
+                    code: 'PERMISSION_DENIED'
+                });
+            }
         }
 
         // 將公告附加到 request 中，避免後續重複查詢
@@ -112,25 +130,21 @@ const canCreateAnnouncement = async (req, res, next) => {
         const userId = req.userId;
         const currentUser = req.user;
 
-        // 獲取用戶角色
-        let userRole = currentUser?.role;
+        // 角色一律查 DB，不採信 JWT payload；專案／個人公告的範圍檢查在 controller 解析 projectId 後進行
+        const user = await User.findByPk(userId, {
+            attributes: ['id', 'role', 'username']
+        });
 
-        if (!userRole) {
-            const user = await User.findByPk(userId, {
-                attributes: ['id', 'role', 'username']
+        if (!user) {
+            logger.error({ userId }, '找不到用戶資訊');
+            return res.status(401).json({
+                message: '用戶身份驗證失敗',
+                code: 'USER_NOT_FOUND'
             });
-
-            if (!user) {
-                logger.error({ userId }, '找不到用戶資訊');
-                return res.status(401).json({
-                    message: '用戶身份驗證失敗',
-                    code: 'USER_NOT_FOUND'
-                });
-            }
-
-            userRole = user.role;
-            req.user = { ...currentUser, role: user.role, username: user.username };
         }
+
+        const userRole = user.role;
+        req.user = { ...currentUser, role: user.role, username: user.username };
 
         // 權限檢查
         const allowedRoles = ['teacher', 'admin'];

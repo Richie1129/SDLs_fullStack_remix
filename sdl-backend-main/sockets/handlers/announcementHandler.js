@@ -2,6 +2,7 @@ const { SocketHandlerFactory } = require('../socketHandlers');
 const { writeSocketErrorReport } = require('../../utils/errorHandler');
 const Announcement = require('../../models/announcement');
 const auditService = require('../../services/auditService');
+const { canAccessProject, toPositiveInt } = require('../../middlewares/projectAccess');
 
 /**
  * 公告相關 Socket 事件處理器
@@ -37,22 +38,38 @@ class AnnouncementHandler {
 
         const { title, content, author, projectId, userId } = data;
 
+        // 範圍檢查：指定專案時，教師必須是該專案的成員／指導教師（admin 不受限）；'all' 為全域公告
+        const isGlobal = projectId === 'all' || !projectId;
+        const targetProjectId = isGlobal ? null : toPositiveInt(projectId);
+        if (!isGlobal && !targetProjectId) {
+            this.socket.emit('announcementError', { message: '無效的專案 ID', code: 'INVALID_PROJECT_ID' });
+            return;
+        }
+        if (targetProjectId && !(await canAccessProject(this.socket.user?.id, targetProjectId))) {
+            console.warn(`教師嘗試對非自己指導的專案發送公告: user=${this.socket.user?.id} project=${targetProjectId}`);
+            this.socket.emit('announcementError', {
+                message: '只能對自己指導的專案發送公告',
+                code: 'PERMISSION_DENIED'
+            });
+            return;
+        }
+
         try {
             // 儲存公告至資料庫
             const newAnnouncement = await Announcement.create({
                 title,
                 content,
                 author,
-                projectId: projectId === 'all' ? null : projectId,
+                projectId: targetProjectId,
             });
 
             console.log("公告已成功儲存:", newAnnouncement);
 
             // 廣播到所有用戶或特定房間
-            if (projectId === 'all' || !projectId) {
+            if (isGlobal) {
                 this.io.emit("receiveAnnouncement", newAnnouncement);
             } else {
-                this.io.to(projectId.toString()).emit("receiveAnnouncement", newAnnouncement);
+                this.io.to(String(targetProjectId)).emit("receiveAnnouncement", newAnnouncement);
             }
 
             console.log(`✅ 公告廣播成功: ${title}`);

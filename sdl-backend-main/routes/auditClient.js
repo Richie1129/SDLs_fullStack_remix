@@ -9,6 +9,7 @@ const AuditEvent = require('../models/audit_event');
 const User = require('../models/user');
 const UserProject = require('../models/user_project');
 const Project = require('../models/project');
+const { getMentoredProjectIds } = require('../middlewares/projectAccess');
 const { ACTION_CLASSIFICATION, CONSENT_LEVELS, classifyAction } = require('../constants/retentionPolicy');
 
 // ===== 客戶端事件淨化（2026-09-05 資安審查：稽核紀錄可被任意登入者偽造）=====
@@ -129,7 +130,8 @@ function sanitizeClientEvent(event, now = new Date()) {
 
 /**
  * 回傳 actor 實際能存取的專案 id 集合（字串）。最多兩次查詢，不隨事件數成長。
- * 規則與 middlewares/projectAccess.js 一致：專案成員或指導教師；admin／teacher 目前對所有專案放行（收斂見 future-list F021）。
+ * 規則與 middlewares/projectAccess.js 一致：專案成員或指導教師；只有 admin 對所有專案放行
+ *（教師範圍已於 2026-09-05 收斂，future-list F021）。
  */
 async function resolveAllowedProjectIds(userId, requestedIds) {
   const ids = [...new Set((requestedIds || []).filter(Boolean))];
@@ -137,7 +139,7 @@ async function resolveAllowedProjectIds(userId, requestedIds) {
 
   const user = await User.findByPk(userId, { attributes: ['id', 'role'] });
   if (!user) return new Set();
-  if (user.role === 'admin' || user.role === 'teacher') return new Set(ids);
+  if (user.role === 'admin') return new Set(ids);
 
   const [memberships, mentored] = await Promise.all([
     UserProject.findAll({ where: { userId: user.id, projectId: { [Op.in]: ids } }, attributes: ['projectId'], raw: true }),
@@ -271,27 +273,41 @@ router.post('/batch', validateToken, clientAuditLimiter, async (req, res) => {
   }
 });
 
-// Query audit events (teacher/admin: unrestricted, student: own records only)
+// Query audit events (admin: unrestricted; teacher: own mentored projects or own records; student: own records only)
 router.get('/events', validateToken, async (req, res) => {
   try {
     const { action, targetType, targetId, projectId, source, actorId, limit = 20, offset = 0, before, after } = req.query;
 
-    // 權限判斷：學生只能查詢自己的 audit 紀錄
-    const user = await User.findByPk(req.userId);
-    const isPrivileged = !!user && (user.role === 'teacher' || user.role === 'admin');
+    // 權限判斷（角色查 DB）：admin 不設限；教師只看自己指導專案內的事件或自己的事件；學生只看自己的紀錄
+    const user = await User.findByPk(req.userId, { attributes: ['id', 'role'] });
+    const role = user?.role || null;
 
     const where = {};
     if (action) where.action = action;
     if (targetType) where.targetType = targetType;
     if (targetId) where.targetId = String(targetId);
-    if (projectId) where.projectId = projectId;
     if (source) where.source = source;
 
-    if (isPrivileged) {
-      // 教師／admin 可自由指定 actorId 過濾
+    if (role === 'admin') {
+      if (projectId) where.projectId = projectId;
+      if (actorId) where.actorId = actorId;
+    } else if (role === 'teacher') {
+      const mentoredIds = await getMentoredProjectIds(req.userId);
+      if (projectId) {
+        if (!mentoredIds.some((id) => String(id) === String(projectId))) {
+          return res.status(403).json({ message: '無權查看此專案的稽核紀錄', code: 'PERMISSION_DENIED' });
+        }
+        where.projectId = projectId;
+      } else {
+        // 沒指定專案：自己指導專案內的事件（反思日誌等都帶 projectId），或自己的事件
+        const scope = [{ actorId: String(req.userId) }];
+        if (mentoredIds.length > 0) scope.unshift({ projectId: { [Op.in]: mentoredIds } });
+        where[Op.or] = scope;
+      }
       if (actorId) where.actorId = actorId;
     } else {
       // 學生強制限制為自己的紀錄
+      if (projectId) where.projectId = projectId;
       where.actorId = String(req.userId);
     }
 

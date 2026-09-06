@@ -8,9 +8,10 @@
  * 若直接拿去當讀取規則，反思日誌與作品集的附件會全部 403。
  *
  * 規則：
- *   讀取：檔案擁有者本人，或對所屬專案有存取權（成員 / mentor / teacher / admin / 跨班觀摩者）
+ *   讀取：檔案擁有者本人，或對所屬專案有存取權（成員 / mentor / admin / 跨班觀摩者；教師只在自己指導的專案算 mentor）
  *   刪除：檔案擁有者本人，或對所屬專案有存取權（不含觀摩者）
- *   解析不到來源的孤立檔案：讀取與刪除都只給 teacher / admin
+ *   有擁有者但尚未掛到專案的檔案：本人、admin、或指導該擁有者的教師
+ *   解析不到來源的孤立檔案：無從判斷專案歸屬，讀取與刪除都只給 admin
  *
  * 快取：「檔案 → 歸屬」這層以 fileName 為 key 快取（量級 = 檔案數，且幾乎不變），
  * 解析不到的結果只快取很短（涵蓋剛上傳的檔案）。使用者層的判定不快取：
@@ -24,7 +25,7 @@ const DailyPersonal = require('../models/daily_personal');
 const DailyTeam = require('../models/daily_team');
 const FileUpload = require('../models/file_upload');
 const apiCache = require('../services/apiCache');
-const { getProjectAccess, isTeacherOrAdmin, toPositiveInt } = require('../middlewares/projectAccess');
+const { getProjectAccess, isAdmin, isMentorOfStudent, toPositiveInt } = require('../middlewares/projectAccess');
 
 const SCOPE_CACHE_TTL_SECONDS = 600;
 const SCOPE_MISS_TTL_SECONDS = 15;
@@ -135,9 +136,13 @@ async function decide(userId, fileName, { allowViewer }) {
     if (!uid || !fileName) return false;
 
     const fileScope = await resolveFileScopeCached(fileName);
-    if (!fileScope) return isTeacherOrAdmin(uid);            // 孤立檔案
+    if (!fileScope) return isAdmin(uid);                      // 孤立檔案：無從判斷專案歸屬，只給 admin
     if (fileScope.ownerUserId && fileScope.ownerUserId === uid) return true;
-    if (!fileScope.projectId) return isTeacherOrAdmin(uid);  // 有擁有者但無專案（例如剛上傳）：非本人只給 teacher / admin
+    if (!fileScope.projectId) {
+        // 有擁有者但無專案（例如剛上傳）：非本人只給 admin 或指導該擁有者的教師
+        if (await isAdmin(uid)) return true;
+        return fileScope.ownerUserId ? isMentorOfStudent(uid, fileScope.ownerUserId) : false;
+    }
     return (await getProjectAccess(uid, fileScope.projectId, { allowViewer })).allowed;
 }
 

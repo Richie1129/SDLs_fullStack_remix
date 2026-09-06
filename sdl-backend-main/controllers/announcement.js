@@ -5,7 +5,7 @@ const Project = require('../models/project');
 const User = require('../models/user');
 const UserProject = require('../models/user_project');
 const { logAudit } = require('../services/auditService');
-const { isTeacherOrAdmin, canAccessProject, toPositiveInt } = require('../middlewares/projectAccess');
+const { isAdmin, isMentorOfStudent, canAccessProject, getMentoredProjectIds, toPositiveInt } = require('../middlewares/projectAccess');
 
 // 發佈公告
 exports.createAnnouncement = async (req, res) => {
@@ -32,6 +32,11 @@ exports.createAnnouncement = async (req, res) => {
                 return res.status(404).json({ message: '指定的學生不存在' });
             }
 
+            // 個人公告限指導該學生的教師或 admin
+            if (!(await isAdmin(req.userId)) && !(await isMentorOfStudent(req.userId, studentId))) {
+                return res.status(403).json({ message: '只能對自己指導的學生發布個人公告', code: 'PERMISSION_DENIED' });
+            }
+
             // 在學生模式下，我們將 projectId 設為負數的學生ID，用於區分
             finalProjectId = -parseInt(studentId);
         } else {
@@ -56,6 +61,11 @@ exports.createAnnouncement = async (req, res) => {
                         message: '指定的專案不存在',
                         projectId: finalProjectId
                     });
+                }
+
+                // 專案公告限該專案成員／指導教師／admin（教師不再對所有專案放行）
+                if (!(await canAccessProject(req.userId, finalProjectId))) {
+                    return res.status(403).json({ message: '只能對自己指導的專案發布公告', code: 'PERMISSION_DENIED' });
                 }
             }
         }
@@ -110,13 +120,13 @@ exports.getAnnouncements = async (req, res) => {
         let whereCondition;
 
         if (projectId && projectId !== 'all') {
-            // 指定專案：非 teacher/admin 必須是該專案的成員/指導教師/跨班觀摩者才能查看
+            // 指定專案：admin 以外（含教師）都必須是該專案的成員/指導教師/跨班觀摩者才能查看
             const pid = toPositiveInt(projectId);
             if (!pid) {
                 return res.status(400).json({ message: '無效的專案 ID' });
             }
 
-            if (!(await isTeacherOrAdmin(userId))) {
+            if (!(await isAdmin(userId))) {
                 const allowed = await canAccessProject(userId, pid, { allowViewer: true });
                 if (!allowed) {
                     return res.status(403).json({
@@ -135,22 +145,34 @@ exports.getAnnouncements = async (req, res) => {
                 ]
             };
         } else {
-            // 總覽頁面：teacher/admin 看全部；學生只看全站公告 + 自己所屬專案的公告 + 自己的個人公告
-            if (await isTeacherOrAdmin(userId)) {
+            // 總覽頁面：admin 看全部；其他人只看全站公告 + 自己所屬／指導專案的公告 + 自己的個人公告；
+            // 指導教師另外看得到自己發給所屬學生的個人公告（projectId = -studentId）
+            if (await isAdmin(userId)) {
                 whereCondition = {};
             } else {
                 const memberships = await UserProject.findAll({
                     where: { userId },
                     attributes: ['projectId']
                 });
-                const projectIds = memberships.map((m) => m.projectId);
+                const mentoredIds = await getMentoredProjectIds(userId);
+                const projectIds = [...new Set([...memberships.map((m) => m.projectId), ...mentoredIds])];
 
                 const orConditions = [
                     { projectId: null },      // 全站公告
                     { projectId: -userId }    // 自己的個人公告
                 ];
                 if (projectIds.length > 0) {
-                    orConditions.push({ projectId: { [Op.in]: projectIds } }); // 自己所屬專案的公告
+                    orConditions.push({ projectId: { [Op.in]: projectIds } }); // 自己所屬／指導專案的公告
+                }
+                if (mentoredIds.length > 0) {
+                    const students = await UserProject.findAll({
+                        where: { projectId: { [Op.in]: mentoredIds } },
+                        attributes: ['userId']
+                    });
+                    const studentAnnouncementIds = [...new Set(students.map((s) => -s.userId))];
+                    if (studentAnnouncementIds.length > 0) {
+                        orConditions.push({ projectId: { [Op.in]: studentAnnouncementIds } }); // 發給所屬學生的個人公告
+                    }
                 }
 
                 whereCondition = { [Op.or]: orConditions };

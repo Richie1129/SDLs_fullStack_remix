@@ -8,7 +8,7 @@ const IdeaWall = require('../models/idea_wall');
 const AiFeedback = require('../models/ai_feedback');
 const KbCoachHistory = require('../models/kb_coach_history');
 const { Op } = require('sequelize');
-const { isTeacherOrAdmin, canAccessProject, toPositiveInt } = require('../middlewares/projectAccess');
+const { isAdmin, canAccessProject, getMentoredProjectIds, toPositiveInt } = require('../middlewares/projectAccess');
 
 /**
  * Agent Personas & System Prompts
@@ -476,8 +476,23 @@ exports.saveFeedback = async (req, res) => {
 exports.getFeedbackStats = async (req, res) => {
   try {
     const { projectId } = req.query;
+    const requesterId = req.userId;
+    const admin = await isAdmin(requesterId);
 
-    const whereClause = projectId ? { projectId: parseInt(projectId) } : {};
+    // 範圍：admin 看全部；教師只看自己指導的專案（指定 projectId 時必須是自己能存取的專案）
+    const pid = toPositiveInt(projectId);
+    if (projectId && !pid) {
+      return res.status(400).json({ error: '無效的 projectId' });
+    }
+    let whereClause = {};
+    if (pid) {
+      if (!admin && !(await canAccessProject(requesterId, pid))) {
+        return res.status(403).json({ message: '無權查看此專案的統計', code: 'PERMISSION_DENIED' });
+      }
+      whereClause = { projectId: pid };
+    } else if (!admin) {
+      whereClause = { projectId: { [Op.in]: await getMentoredProjectIds(requesterId) } };
+    }
 
     const stats = await AiFeedback.findAll({
       where: whereClause,
@@ -530,7 +545,8 @@ exports.getHistory = async (req, res) => {
     const MAX_LIMIT = 100;
     const safeLimit = Math.min(parseInt(limit) || 20, MAX_LIMIT);
     const requesterId = req.userId;
-    const privileged = await isTeacherOrAdmin(requesterId);
+    // 只有 admin 可跨專案；教師與學生一樣走 canAccessProject（教師只在自己指導的專案算 mentor）
+    const privileged = await isAdmin(requesterId);
 
     // 建構查詢條件
     const whereClause = {};
@@ -565,7 +581,7 @@ exports.getHistory = async (req, res) => {
     }
 
     if (!privileged) {
-      // 非 teacher/admin：query 帶的 userId 一律忽略。
+      // 非 admin：query 帶的 userId 一律忽略。
       // 沒指定 projectId / nodeId 時只能看自己的；已通過專案存取檢查者，與 getHistoryDetail 一致，
       // 同專案成員可互看共享節點上的建議紀錄（KB 協作情境）。
       if (!pid && !nid) whereClause.userId = requesterId;
@@ -642,9 +658,10 @@ exports.getHistoryDetail = async (req, res) => {
         const ideaWall = await IdeaWall.findByPk(history.ideaWallId, { attributes: ['id', 'projectId'] });
         allowed = ideaWall && ideaWall.projectId
           ? await canAccessProject(requesterId, ideaWall.projectId, { allowViewer: true })
-          : await isTeacherOrAdmin(requesterId);
+          : await isAdmin(requesterId);
       } else {
-        allowed = await isTeacherOrAdmin(requesterId);
+        // 掛不到任何專案的紀錄：只有 admin 可看
+        allowed = await isAdmin(requesterId);
       }
     }
 
