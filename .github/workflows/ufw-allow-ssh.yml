@@ -1,0 +1,110 @@
+name: 伺服器 UFW 放行 SSH 來源網段
+
+# 用途：當本機來源 IP 換到不在 UFW 白名單的網段、SSH 進不去伺服器時，
+# 透過裝在伺服器本機的 self-hosted runner（以 richie 身分執行、sudo 免密碼）
+# 直接在伺服器上新增或移除「22/tcp 放行某網段」的 UFW 規則。
+#
+# 只能手動觸發（workflow_dispatch），不會被 push 觸發。
+# 安全邊界：
+# - 只接受 RFC1918 私有網段，且遮罩不得寬於 /16，避免誤把 SSH 開給公網。
+# - 不提供 ufw disable / reset 之類的操作，只有 allow 與 delete 兩種。
+# - 輸入值一律透過 env 傳進 shell，不直接內插到指令字串，避免注入。
+#
+# 執行方式（本機）：
+#   gh workflow run ufw-allow-ssh.yml -f cidr=192.168.4.0/24 -f note="WSL Wi-Fi 網段"
+#   gh run watch
+# 之後要收回：
+#   gh workflow run ufw-allow-ssh.yml -f cidr=192.168.4.0/24 -f action=delete
+
+on:
+  workflow_dispatch:
+    inputs:
+      cidr:
+        description: '來源網段（CIDR，僅限私有 IP，例如 192.168.4.0/24）'
+        required: true
+        default: '192.168.4.0/24'
+      action:
+        description: 'allow = 新增放行規則；delete = 移除同一條規則'
+        required: true
+        type: choice
+        default: allow
+        options:
+          - allow
+          - delete
+      note:
+        description: '寫進 UFW 規則的 comment，方便日後辨識'
+        required: false
+        default: 'WSL Wi-Fi 網段'
+
+# 不需要任何 GITHUB_TOKEN 權限：整個 job 不 checkout、不呼叫 GitHub API
+permissions: {}
+
+# 與部署流程互斥：避免正在改防火牆時同時跑部署
+concurrency:
+  group: server-maintenance
+  cancel-in-progress: false
+
+jobs:
+  ufw-ssh:
+    name: 在伺服器上 ${{ inputs.action }} 22/tcp 來自 ${{ inputs.cidr }}
+    runs-on: self-hosted
+    timeout-minutes: 5
+    env:
+      CIDR: ${{ inputs.cidr }}
+      ACTION: ${{ inputs.action }}
+      NOTE: ${{ inputs.note }}
+      # runner 以 systemd service 執行，locale 可能是 C；固定 UTF-8 讓中文 comment 與長度計算行為一致
+      LC_ALL: C.UTF-8
+    steps:
+      - name: 驗證輸入
+        run: |
+          set -euo pipefail
+          # 只接受 RFC1918 三段私有位址，遮罩 16–32
+          re_ip='(10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3})'
+          re_mask='(1[6-9]|2[0-9]|3[0-2])'
+          if [[ ! "$CIDR" =~ ^${re_ip}/${re_mask}$ ]]; then
+            echo "::error::cidr 必須是私有網段且遮罩在 /16 到 /32 之間，收到：$CIDR"
+            exit 1
+          fi
+          if [[ "$ACTION" != "allow" && "$ACTION" != "delete" ]]; then
+            echo "::error::action 只能是 allow 或 delete，收到：$ACTION"
+            exit 1
+          fi
+          # comment 擋掉 shell 特殊字元與過長字串（值本身是用 "$NOTE" 引號傳給 ufw，這裡是第二道保險）
+          if [[ "$NOTE" == *[\$\`\"\'\;\|\&\<\>\\]* ]] || (( ${#NOTE} > 60 )); then
+            echo "::error::note 含不允許的字元（\$ \` 引號 ; | & < > 反斜線）或超過 60 字"
+            exit 1
+          fi
+          echo "輸入檢查通過：action=$ACTION cidr=$CIDR note=$NOTE"
+
+      - name: 確認 sudo 免密碼與 UFW 狀態
+        run: |
+          set -euo pipefail
+          # -n：若需要密碼就直接失敗，不要卡住 runner
+          sudo -n true
+          echo "=== 變更前 ==="
+          sudo -n ufw status numbered
+
+      - name: 套用規則
+        run: |
+          set -euo pipefail
+          if [[ "$ACTION" == "allow" ]]; then
+            sudo -n ufw allow from "$CIDR" to any port 22 proto tcp comment "$NOTE"
+          else
+            sudo -n ufw delete allow from "$CIDR" to any port 22 proto tcp
+          fi
+
+      - name: 顯示變更後狀態並驗證
+        run: |
+          set -euo pipefail
+          echo "=== 變更後 ==="
+          sudo -n ufw status numbered
+          if [[ "$ACTION" == "allow" ]]; then
+            sudo -n ufw status | grep -F "$CIDR" | grep -q "22/tcp" \
+              && echo "驗證通過：$CIDR 已可連 22/tcp" \
+              || { echo "::error::規則沒有出現在 ufw status 裡"; exit 1; }
+          else
+            sudo -n ufw status | grep -F "$CIDR" | grep -q "22/tcp" \
+              && { echo "::error::規則仍然存在"; exit 1; } \
+              || echo "驗證通過：$CIDR 的 22/tcp 規則已移除"
+          fi
