@@ -55,6 +55,20 @@ npm run migrate:undo # 回滾遷移
 | `/feature <描述>` | 確認互動模型與受影響檔案 |
 | `/auth-sync` | 比對並同步 auth 頁面樣式 |
 
+### 第三方 UI/動畫 skills（`npx skills add` 安裝，`skills-lock.json` 追蹤版本）
+
+| 指令 | 來源 | 用途 |
+|------|------|------|
+| `/improve-animations` | emilkowalski/skills | 唯讀稽核全站動畫，輸出 `plans/` 供 sonnet 執行 |
+| `/review-animations` | emilkowalski/skills | 以 Emil 標準嚴審單一 diff 的動畫 |
+| `/find-animation-opportunities` | emilkowalski/skills | 找該動但沒動的地方，克制優先 |
+| `/animate` | emilkowalski/skills | 從零實作一個動畫（緩動、時長、可中斷） |
+| `/mobile-native` | emilkowalski/skills | 手機原生感檢查（100dvh、tap highlight、safe-area） |
+| `/pick-ui-library`、`/ask-sonner` | emilkowalski/skills | 選套件與 Sonner 遷移 |
+| `/redesign-existing-projects` | Leonxlnx/taste-skill | 既有頁面的收尾品質清單（按壓回饋、焦點環、空/錯誤/載入狀態、404） |
+
+**衝突優先序**：這些 skill 的規則與 `DESIGN_SYSTEM.md` 衝突時，一律以 `DESIGN_SYSTEM.md` 為準（例如 hover 不得用 scale/translate、字型與圖示庫不更換、時長只用 token）。動畫決策以 emilkowalski 系列的「克制優先」為準，不採 taste-skill 的高強度動畫建議。
+
 ## Git 規範
 
 - commit 訊息一律**繁體中文**（技術術語除外）

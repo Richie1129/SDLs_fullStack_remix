@@ -659,6 +659,121 @@
 
 ---
 
+### F025: 通知系統統一為單一套件，Toaster 掛到根層
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-17
+- **提案來源**：`/improve-animations` 動畫稽核（`plans/README.md`）；`/pick-ui-library` skill 的「toast 用 Sonner」建議
+- **為什麼現在不做**：
+  - 目前三套通知並存：react-hot-toast（93 次呼叫，`<Toaster />` 分散掛在 6 個頁面）、sweetalert2（81 次，多為確認對話框）、`QuickActions.jsx` 自製內聯 keyframes toast。react-hot-toast 預設進場 `scale(.6)` 且是不可中斷的 keyframes，新 toast 堆疊時既有 toast 位移會從頭重播
+  - 替換觸及 170 餘處呼叫與多個頁面，屬 L 級改動，且 sweetalert2 的「確認 / 取消」用法不是 toast，需先決定是否一併換成 base-ui 之類的 dialog
+- **觸發條件**（任一成立）：
+  - 下一次大規模 UI 收尾或設計系統升版
+  - 使用者回報通知重疊、閃爍或跑到 Modal 後面
+- **怎麼做**：
+  1. 短期止血：`react-hot-toast` 的 `<Toaster />` 移到 `App.jsx` 根層一份，並用 `toastOptions` 覆寫進場 scale 為 0.95、時長 200ms
+  2. 中期：以 Sonner 取代 react-hot-toast，依 `/ask-sonner` skill 設定 `<Toaster richColors position="top-right" />`；sweetalert2 只保留確認對話框用途或改 base-ui Dialog
+  3. 移除 `QuickActions.jsx` 自製 toast，改呼叫統一 API
+- **估計工作量**：`L`
+- **風險 / 副作用**：toast 樣式與位置全站改變；需回歸測試每個呼叫點的成功 / 錯誤路徑
+- **相關檔案**：`sdl-frontend-main/src/App.jsx`、`sdl-frontend-main/src/pages/teacher-dashboard/components/QuickActions.jsx`、所有 `import toast from 'react-hot-toast'` 的檔案
+
+---
+
+### F026: 全站可按壓元件缺少按壓回饋
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：`/improve-animations` 動畫稽核（`plans/README.md`）
+- **為什麼現在不做**：
+  - `grep ":active" src` 只有 2 處（其中 1 處只是游標樣式），framer `whileTap` 只出現在死碼。這不是單點缺陷而是系統性缺席，正確做法是在共用元件層（按鈕、卡片、NavItem）統一加，而非逐處補
+  - 專案沒有共用 Button 元件，各頁面自己寫 `<button className=...>`，先做元件抽取才有地方放
+- **觸發條件**（任一成立）：
+  - 抽出共用 Button / Card 元件時
+  - 手機端使用者回報「按了沒反應」
+- **怎麼做**：
+  1. 在 `tailwind.config.cjs` 的 `plugins` 加一個 `pressable` utility：`active:scale-[0.97] transition-transform duration-fast ease-out`（`DESIGN_SYSTEM.md` 只禁 hover 用 scale，`:active` 不衝突）
+  2. 套到 `SideBar.jsx` NavItem、`ProjectCard.jsx`、Kanban `CarditemRefactored.jsx`、`TopBar.jsx` 下拉選項、各頁主要 CTA
+  3. `DESIGN_SYSTEM.md`「互動狀態」節補「按壓回饋」規範（scale 0.95 到 0.98、100 到 160ms）
+- **估計工作量**：`M`
+- **相關檔案**：`sdl-frontend-main/tailwind.config.cjs`、`sdl-frontend-main/DESIGN_SYSTEM.md`、`sdl-frontend-main/src/components/SideBar.jsx`
+
+---
+
+### F027: 進度條與手風琴改用 transform / grid-rows，並統一進度條時長
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：`/improve-animations` 動畫稽核（`plans/README.md`）；`plans/003` 只修 class 無效問題，layout 屬性動畫留此
+- **為什麼現在不做**：
+  - 進度條有 12 處以上用 `transition-all` 搭配 inline `width: X%`，時長 500 / 700 / 1000ms 三種並存，都超過 300ms 預算；改成 `scaleX` 需要把圓角與漸層背景的視覺處理一併調整（scaleX 會壓扁圓角）
+  - `ProjectSection.jsx` 與 `ManagementOverview.jsx` 手風琴以像素 height 過渡，改 `grid-template-rows: 0fr / 1fr` 要動 DOM 結構並移除 rAF 量測
+  - `FiveRsReflectionForm.jsx`、`FiveRsReflectionDisplay.jsx` 的 framer `height: 'auto'` 展開同理
+- **觸發條件**（任一成立）：
+  - dashboard 一次渲染數十條進度條時出現可感知的掉幀
+  - 抽出共用 ProgressBar 元件時
+- **怎麼做**：
+  1. 抽 `ProgressBar` 元件：外層 `overflow-hidden rounded-full`，內層 `origin-left transition-transform duration-normal ease-out` 用 `style={{ transform: \`scaleX(${pct / 100})\` }}`
+  2. 手風琴改 grid-rows 兩層結構，移除 `useEffect` + rAF 的 scrollHeight 量測
+  3. framer `height: 'auto'` 的三處改用同一 grid-rows 模式或 `AnimatePresence` + `layout`
+- **估計工作量**：`M`
+- **相關檔案**：`sdl-frontend-main/src/pages/student-dashboard/components/PersonalData.jsx`、`LearningGoals.jsx`、`Achievements.jsx`、`HelpSeekingAwareness.jsx`、`sdl-frontend-main/src/pages/overview/ManagementOverview.jsx`、`sdl-frontend-main/src/pages/home/components/ProjectSection.jsx`、`sdl-frontend-main/src/components/FiveRsReflectionForm.jsx`
+
+---
+
+### F028: Kanban 樂觀新增卡片在 temp id 換真 id 時重掛閃動
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-17
+- **提案來源**：`/improve-animations` 動畫稽核「錯失機會」類別（`plans/README.md`）；與 `CLAUDE.md` 已知地雷「React Query 與 vis-network ID 同步」同源
+- **為什麼現在不做**：
+  - `KanbanColumn.jsx:84` 的 `key={item.id.toString()}`，`useKanbanData.js:301` 樂觀插入 `temp-${Date.now()}`，伺服器回傳真實 id 後 key 改變，React 卸載再重掛同一張卡，使用者看到「出現、消失、再出現」；且卡片沒有 mount 動畫，也沒有「暫存中」的視覺訊號
+  - 修法需要一個穩定的 client key（例如 `clientId` 欄位在整個生命週期不變），牽涉樂觀更新、socket 廣播與 React Query 快取三層的資料形狀，需獨立驗證
+- **觸發條件**（任一成立）：
+  - 使用者回報新增卡片閃一下
+  - 重構 Kanban 樂觀更新流程時
+- **怎麼做**：
+  1. 樂觀物件加 `clientId: nanoid()`，`confirmCreate` 替換 id 時保留 `clientId`；`key` 改用 `item.clientId ?? item.id`
+  2. `CarditemRefactored.jsx` 依 `id` 前綴 `temp-` 顯示半透明或細邊框的「送出中」狀態
+  3. 卡片 mount 加 `animate-fade-in`（計畫 004 統一後的 200ms 版本）
+- **估計工作量**：`M`
+- **依賴 / 前置條件**：`plans/004` 完成（fade-in 單一定義）
+- **相關檔案**：`sdl-frontend-main/src/pages/Kanban/hooks/useKanbanData.js`、`sdl-frontend-main/src/pages/Kanban/components/KanbanColumn.jsx`、`sdl-frontend-main/src/pages/Kanban/components/carditem/CarditemRefactored.jsx`
+
+---
+
+### F029: 錯失的狀態轉場：階段列切換、骨架換內容、Onboarding 進場、活動串流 stagger
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：`/improve-animations` 動畫稽核「錯失機會」類別（`plans/README.md`）
+- **為什麼現在不做**：
+  - 這四項都是「該動但沒動」的加法，不是修錯；依克制原則先把現有錯誤（`plans/001` 到 `007`）修完，再評估加法是否真的提升體驗
+  - 各項具體接縫：`SubStageBar.jsx:275-280` 目前階段 pill 的底色寫在 inline style 且無 `transition-colors`，階段推進時 0ms 互換，這是 SDL 流程最核心的狀態指示器；`teacher-dashboard/index.jsx:104-114` 與 `KnowledgeGraphView.jsx:471` 的 `loading` early return 讓骨架與內容不共用容器，pulse 在隨機相位被硬切；`KanbanOnboarding.jsx:51`、`IdeaWallOnboarding.jsx:51` 是每專案只看一次的 overlay，卻連 backdrop 淡入都沒有；`ActivityItem.jsx` 有 `index` prop 卻沒用於 stagger，整份列表同時落下
+- **觸發條件**（任一成立）：
+  - `plans/001` 到 `007` 全部完成後的下一輪動畫檢視
+  - 使用者回報「階段推進了但沒感覺」
+- **怎麼做**：
+  1. SubStageBar pill 加 `transition-colors duration-normal`（底色改用 class 或保留 inline 皆可）
+  2. 骨架與內容改為同一容器內的 opacity crossfade（`AnimatePresence mode="wait"` 或 CSS `@starting-style`）
+  3. Onboarding overlay：backdrop `opacity` 200ms、卡片 `scale 0.95 → 1` 250ms ease-out
+  4. ActivityItem `transition={{ delay: Math.min(index, 8) * 0.04 }}`，上限避免長列表尾端延遲過久；同時把 `y: -20` 簡寫改 transform 字串
+- **估計工作量**：`M`
+- **依賴 / 前置條件**：`plans/002`（reduced-motion 防線）與 `plans/004`（easing token）
+- **相關檔案**：`sdl-frontend-main/src/components/SubStageBar.jsx`、`sdl-frontend-main/src/pages/teacher-dashboard/index.jsx`、`sdl-frontend-main/src/pages/Kanban/components/KanbanOnboarding.jsx`、`sdl-frontend-main/src/components/ActivityStream/components/ActivityItem.jsx`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
@@ -669,3 +784,4 @@
 - **2026-09-03**：新增 F021（teacher 範圍收斂為 mentorId）、F022（tasks 附件正規化）；High 級 IDOR／XSS 修復時把專案存取判定集中到 `middlewares/projectAccess.js`，fileName 索引已在同批 migration 補上，剩 teacher 全放行與 tasks 陣列欄位掃描兩項登錄為後續工作
 - **2026-09-05**：新增 F023（CSP 轉正式強制）；資安 Medium 項收尾時 nginx 先上 Report-Only 並加 `/api/csp-report` 回報端點，等真實流量回報確認 eval 類套件的影響後再強制
 - **2026-09-05**：完成 F021（teacher 範圍收斂為 mentorId）；生產 151 個專案只有第 26 號缺 mentorId、已補，共同指導只出現在 3 個測試專案、不需多對多；新增 F024（socket 房間加入與班級清單端點的列舉面）
+- **2026-09-17**：新增 F025–F029；安裝 emilkowalski/skills 與 taste-skill 的 `redesign-existing-projects` 後跑 `/improve-animations` 全站稽核，7 項可直接執行的修法寫成 `plans/001` 到 `007`，通知系統統一、按壓回饋、layout 屬性動畫、Kanban 樂觀卡片閃動、錯失的狀態轉場五項登錄為後續工作
