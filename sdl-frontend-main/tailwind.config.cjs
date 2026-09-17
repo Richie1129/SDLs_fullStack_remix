@@ -18,7 +18,7 @@ module.exports = {
       // ========================================
       keyframes: {
         'fade-in': {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '0%': { opacity: '0', transform: 'translateY(6px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         'slide-up': {
@@ -37,7 +37,7 @@ module.exports = {
         },
       },
       animation: {
-        'fade-in':    'fade-in 0.3s ease forwards',
+        'fade-in':    'fade-in 200ms cubic-bezier(0.23, 1, 0.32, 1) both',
         'slide-up':   'slide-up 0.3s ease-out forwards',
         'float':      'float 6s ease-in-out infinite',
         'float-slow': 'float 9s ease-in-out infinite',
@@ -157,6 +157,11 @@ module.exports = {
         'fast': '150ms',      // 微互動（hover, focus）
         'normal': '250ms',    // 一般過渡（modal 淡入淡出）
         'slow': '400ms',      // 複雜動畫（抽屜滑動）
+      },
+      transitionTimingFunction: {
+        'out':    'cubic-bezier(0.23, 1, 0.32, 1)',     // 進場 / 退場（UI 預設）
+        'in-out': 'cubic-bezier(0.77, 0, 0.175, 1)',    // 畫面上的移動 / 變形
+        'drawer': 'cubic-bezier(0.32, 0.72, 0, 1)',     // 抽屜滑入（iOS 風格）
       },
     },
   },

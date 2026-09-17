@@ -167,6 +167,16 @@ colors: {
 | normal | 250ms | `duration-normal` | Modal 淡入淡出 |
 | slow | 400ms | `duration-slow` | Drawer 滑動、頁面過渡 |
 
+### 標準化曲線
+
+| Token | Tailwind Class | 使用場景 |
+|-------|---------------|---------|
+| out | `ease-out` | 進場、退場（預設） |
+| in-out | `ease-in-out` | 已在畫面上的元素移動或變形 |
+| drawer | `ease-drawer` | 抽屜、側欄滑入 |
+
+Hover 的顏色與陰影變化用 Tailwind 預設的 `ease` 即可。**禁止 `ease-in`**：起步慢會讓使用者覺得介面遲鈍。
+
 ### 使用範例
 
 ```jsx

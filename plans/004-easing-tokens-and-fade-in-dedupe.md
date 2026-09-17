@@ -1,6 +1,6 @@
 # 004 — 建立 easing token，並把三份互相覆蓋的 `.animate-fade-in` 定義收斂為一份
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: df1cb1b
 - **Severity**: MEDIUM（基礎建設；其他計畫依賴此曲線）
 - **Category**: 7. Cohesion & tokens（兼 2. Easing & duration）
