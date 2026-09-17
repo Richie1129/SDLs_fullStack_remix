@@ -774,6 +774,91 @@
 
 ---
 
+### F030: 手機側欄改抽屜式導覽，底部階段列改可橫向捲動
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-17
+- **提案來源**：2026-09-17 用學生帳號在 390px 寬度實測（`plans/README.md` 第二批）
+- **為什麼現在不做**：
+  - `SideBar.jsx` 收合狀態的圖示欄約 100px，在 390px 螢幕佔四分之一，Kanban 與想法牆內容區只剩約 290px；改成手機專用的抽屜式導覽（漢堡鈕開啟、遮罩關閉）要動 `ProjectLayout.jsx` 的 flex 殼層與 SideBar 的展開狀態，屬佈局變更，依 CLAUDE.md 規則要同時確認 sm / md / lg
+  - `SubStageBar.jsx` 底部三個階段 pill 在手機擠成一排，第三個被 AI 助手圖示切掉；改成可橫向捲動並自動捲到目前階段，需要先決定互動模型（自動捲 vs 只縮字）
+- **觸發條件**（任一成立）：
+  - 學生手機端使用回饋集中在「看板太窄」
+  - `plans/010` 完成後的下一輪手機檢視
+- **怎麼做**：
+  1. `< md` 時 SideBar 改為 `fixed inset-y-0 left-0 -translate-x-full` 的抽屜，TopBar 左側加漢堡鈕，開啟時顯示遮罩、Escape 與遮罩點擊關閉
+  2. `SubStageBar.jsx` 內層容器已有 `overflow-x-auto`，補 `scroll-snap` 與 `scrollIntoView` 到目前階段；pill 在 `< sm` 用 `text-caption`
+  3. 依 CLAUDE.md 規則確認 sm / md / lg 三個斷點
+- **估計工作量**：`M`
+- **相關檔案**：`sdl-frontend-main/src/components/SideBar.jsx`、`sdl-frontend-main/src/layouts/ProjectLayout.jsx`、`sdl-frontend-main/src/components/TopBar.jsx`、`sdl-frontend-main/src/components/SubStageBar.jsx`
+
+---
+
+### F031: UI 收尾雜項（AI 助手定位、刪除鈕降級、alert 統一、emoji、文案）
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-17
+- **提案來源**：2026-09-17 靜態稽核（`redesign-existing-projects` 清單）與實測
+- **為什麼現在不做**：每項都小，但分散在十幾個檔案，且部分要先決定文案與互動（例如刪除確認的用語），適合集中成一個「收尾 PR」而不是塞進 `plans/008` 到 `012`
+- **觸發條件**：`plans/008` 到 `012` 完成後
+- **怎麼做**（逐項可獨立）：
+  1. AI 助手泡泡在手機版蓋住 Kanban「新增卡片」：`DraggableImage/index.jsx` 的 `computeMessagePosition` 在 `isMobile` 時改為貼齊頭像上方且不超出 `安全區`；首次導覽（`KanbanOnboarding` 開啟）期間不顯示泡泡
+  2. Kanban 欄位標題旁的「刪除列」X（`KanbanColumn.jsx` 的 `刪除列` 按鈕）降級為 hover / 長按才出現的次要圖示，確認對話框改用 Swal，不用 `window.confirm`
+  3. 10 處 `window.alert` / `confirm`（`usePersonalDaily.js:135`、`useTeamDaily.js:126`、`CommentSection.jsx:81`、`IdeaWall.jsx:156`、`SdlCoachChat.jsx:119,127`、`HelpSeekingView.jsx:56`、`AvoidanceRiskAlert.jsx:68`、`ExportPreview/index.jsx:97`、`KanbanErrorBoundary.jsx:160`）統一走 Swal
+  4. 約 30 處 UI emoji（`StudentPortfolio/templates/*.jsx`、`TemplateSelector.jsx`、`QuickActions.jsx`、`HelpSeekingView.jsx:316`、`CreateNodeModal.jsx:30`、學習歷程任務狀況區）換 react-icons；`✕` 關閉字元換 `FiX`
+  5. 學習歷程頁「學習狀態提醒 2 項 今天不看」標題列在手機換行斷裂，改 `flex-wrap` 與 `whitespace-nowrap` 配置
+  6. `notFound/NotFound.jsx` 文案改繁中、`<button>` 包 `<Link>` 改為直接用 `<Link>`
+  7. 約 25 處成功訊息去驚嘆號、`GlobalErrorBoundary.jsx:97`「糟糕」改直述；反思頁空狀態「還沒新增過個人日誌！趕快新增你的第一個【個人日誌】吧～」改「還沒有個人日誌，寫下第一篇吧」
+  8. `ChatRoom.jsx:153,204` 兩個 `<img>` 補 `alt`
+- **估計工作量**：`M`
+- **相關檔案**：見各項
+
+---
+
+### F032: 共用 Button / Overlay 元件、全域 focus ring、skip-to-content、導覽 aria-current
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：2026-09-17 靜態稽核：主要按鈕至少 8 種 className 寫法、15 處在 Modal 之外自畫 `fixed inset-0` 遮罩、495 個 `<button>` 無 focus 樣式、`focus-visible:` 僅 1 處、無 skip link、SideBar 目前頁只靠 20% 底色且無 `aria-current`
+- **為什麼現在不做**：抽共用元件是全站性重構，要逐頁替換與回歸；先把 `plans/008` 到 `012` 的基礎打好再做，避免重工
+- **觸發條件**：設計系統升版或下一次大規模 UI 收尾
+- **怎麼做**：
+  1. `src/components/ui/Button.jsx`：`variant`（primary / secondary / danger / ghost）+ `size`，內建 `focus-visible:ring-2 ring-customgreen ring-offset-2` 與 `active:scale-[0.97]`（`DESIGN_SYSTEM.md` 只禁 hover 用 scale）
+  2. `src/components/ui/Overlay.jsx` 或直接讓 `Modal.jsx` 接手 15 處自畫遮罩
+  3. `index.css` 加全域 `:focus-visible` ring，移除 `Profile.jsx:254,298` 的裸 `focus:outline-none`
+  4. `ProjectLayout.jsx` 最前面加 `sr-only focus:not-sr-only` 的「跳至主內容」連結（`<main>` 已存在）
+  5. `SideBar.jsx` 目前項加 `aria-current="page"`、字重與底色加強
+- **估計工作量**：`L`
+- **相關檔案**：`sdl-frontend-main/src/components/`、`sdl-frontend-main/src/index.css`、`sdl-frontend-main/src/layouts/ProjectLayout.jsx`
+
+---
+
+### F033: 合併 authUtils / userUtils，統一日期格式化到 date-fns
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：2026-09-17 死碼稽核
+- **為什麼現在不做**：
+  - `src/utils/authUtils.js` 與 `src/utils/userUtils.js` 各自實作 `getCurrentUserId`、`getCurrentUserRole`、`getCurrentUsername`，`TopBar.jsx` 同時從兩邊 import；`getCurrentUserId` 被 29 個檔案引用，合併要改 import 路徑並回歸登入流程
+  - 日期有 `dateformat`（3 檔）、`date-fns`（3 檔）、自製 `timeUtils.js`、25 處裸 `toLocaleDateString` 四套並存，統一要逐處確認格式一致
+- **觸發條件**：登入 / 使用者資訊相關功能要改動時順手做
+- **怎麼做**：
+  1. 以 `authUtils.js` 為唯一來源，`userUtils.js` 只留 socket / listener 部分，其餘 re-export 一個版本後逐檔改 import
+  2. 刪 `userDisplayUtils.js:16` 的 `getUserDisplayName` alias（0 引用）
+  3. `dateformat` 的 3 處改 `date-fns` 的 `format`，移除 `dateformat` 相依
+- **估計工作量**：`M`
+- **相關檔案**：`sdl-frontend-main/src/utils/authUtils.js`、`sdl-frontend-main/src/utils/userUtils.js`、`sdl-frontend-main/src/utils/userDisplayUtils.js`、`sdl-frontend-main/src/utils/timeUtils.js`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
@@ -785,3 +870,4 @@
 - **2026-09-05**：新增 F023（CSP 轉正式強制）；資安 Medium 項收尾時 nginx 先上 Report-Only 並加 `/api/csp-report` 回報端點，等真實流量回報確認 eval 類套件的影響後再強制
 - **2026-09-05**：完成 F021（teacher 範圍收斂為 mentorId）；生產 151 個專案只有第 26 號缺 mentorId、已補，共同指導只出現在 3 個測試專案、不需多對多；新增 F024（socket 房間加入與班級清單端點的列舉面）
 - **2026-09-17**：新增 F025–F029；安裝 emilkowalski/skills 與 taste-skill 的 `redesign-existing-projects` 後跑 `/improve-animations` 全站稽核，7 項可直接執行的修法寫成 `plans/001` 到 `007`，通知系統統一、按壓回饋、layout 屬性動畫、Kanban 樂觀卡片閃動、錯失的狀態轉場五項登錄為後續工作
+- **2026-09-17**：完成 `plans/001` 到 `007`（動畫稽核七項，commit dd55663 到 564c298）；新增 F030–F033；以學生帳號在本機 dev 實測桌面與 390px 寬度，加上 redesign-existing-projects 與 mobile-native 清單的靜態稽核與死碼稽核，五項可直接執行的修法寫成 `plans/008` 到 `012`，側欄抽屜化、收尾雜項、共用元件與 focus ring、utils 合併四項登錄為後續工作

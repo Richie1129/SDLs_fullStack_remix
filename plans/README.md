@@ -1,50 +1,52 @@
-# 動畫改善計畫（improve-animations 稽核產出）
+# 前端改善計畫（動畫稽核 + UI/UX 實測產出）
 
-- **稽核日期**：2026-09-17
-- **稽核基準 commit**：df1cb1b
-- **產出方式**：`/improve-animations` skill，四個唯讀子代理各審兩個類別（目的與頻率、緩動與時長、物理感與原點、可中斷性、效能、無障礙、一致性與 token、錯失機會），主代理逐筆回讀原始碼驗證後才列入。
-- **執行方式**：每份計畫自成一體，可直接交給 sonnet 或任何代理執行；執行完成用 `/review-animations` 審 diff。
+- **產出方式**：每份計畫自成一體，含現況程式碼摘錄、精確目標值、步驟、邊界、驗證與 feel check，可直接交給 sonnet 或任何代理執行。執行完成用 `/review-animations`（動畫類）或 `everything-claude-code:code-reviewer`（其他）審 diff。
+- **執行規則**：一次一份或不重疊檔案的幾份平行；並行時執行者只跑 grep，`npm run build` 與 `npx vitest run` 由主代理合併後統一跑一次；每批一個 commit。
 
-## 計畫清單
+## 第一批：動畫（2026-09-17，全部完成）
+
+稽核基準 commit `df1cb1b`，`/improve-animations` skill 四個子代理各審兩個類別後逐筆驗證。
+
+| 編號 | 標題 | 嚴重度 | 狀態 |
+|---|---|---|---|
+| [001](001-modal-scale-origin.md) | 共用 Modal 縮放 0.75 改 0.95，只過渡 transform/opacity | HIGH | DONE |
+| [002](002-global-reduced-motion.md) | 全域 prefers-reduced-motion 防線 | HIGH | DONE |
+| [003](003-accordion-transition-height.md) | 修復無效的 `transition-height`，手風琴真的有過渡 | HIGH | DONE |
+| [004](004-easing-tokens-and-fade-in-dedupe.md) | 建立 easing token、收斂三份 `fade-in` | MEDIUM | DONE |
+| [005](005-right-drawers-transform-string.md) | 三個右側抽屜改百分比 transform 字串與共用 preset | MEDIUM | DONE |
+| [006](006-remove-decorative-motion.md) | 移除高頻與常駐元件上的裝飾動畫 | HIGH | DONE |
+| [007](007-remove-dead-motion-code.md) | 移除無人引用的動畫元件、CSS 與套件 | LOW | DONE |
+
+## 第二批：UI/UX 收尾（2026-09-17 實測產出，待執行）
+
+基準 commit `564c298`。來源：`redesign-existing-projects` 與 `mobile-native` 清單靜態稽核、死碼稽核，加上用學生帳號在本機 dev 環境實測桌面與 390px 寬度（見 `HANDOFF_NEXT_SESSION.md` 的實測條件）。
 
 | 編號 | 標題 | 嚴重度 | 範圍 | 狀態 |
 |---|---|---|---|---|
-| [001](001-modal-scale-origin.md) | 共用 Modal 縮放 0.75 改 0.95，只過渡 transform/opacity | HIGH | 1 檔 2 行，影響 18 個模組 | DONE |
-| [002](002-global-reduced-motion.md) | 全域 prefers-reduced-motion 防線 | HIGH | 2 檔約 25 行 | DONE |
-| [003](003-accordion-transition-height.md) | 修復無效的 `transition-height`，手風琴真的有過渡 | HIGH | 2 檔各 1 行 | DONE |
-| [004](004-easing-tokens-and-fade-in-dedupe.md) | 建立 easing token、收斂三份 `fade-in` | MEDIUM | 4 檔約 30 行 | DONE |
-| [005](005-right-drawers-transform-string.md) | 三個右側抽屜改百分比 transform 字串與共用 preset | MEDIUM | 3 檔 + 1 新檔 | DONE |
-| [006](006-remove-decorative-motion.md) | 移除高頻與常駐元件上的裝飾動畫 | HIGH | 6 檔約 12 行 | DONE |
-| [007](007-remove-dead-motion-code.md) | 移除無人引用的動畫元件、CSS 與套件 | LOW | 刪 4 檔 + CSS 4 區塊 + 1 套件 | DONE |
+| [008](008-z-index-tokens.md) | z-index 語意 token，AI 助手落到抽屜與 Modal 之下 | HIGH | config + 14 檔 class 替換 + 移除 Swal hack | TODO |
+| [009](009-modal-a11y-and-portal.md) | Modal 補 Escape、焦點陷阱、role，改 portal；想法牆節點視窗加遮罩 | HIGH | Modal.jsx 重寫 + 2 檔 1 prop | TODO |
+| [010](010-mobile-foundation.md) | 手機基礎：dvh、hover 守衛、觸控回饋、input 16px、safe-area；修 TopBar `xs:` bug 與首頁橫向捲軸 | HIGH | 3 個基礎檔 + 12 檔 class | TODO |
+| [011](011-states-and-copy.md) | `isError.message` 兩處實質 bug、Kanban 載入骨架、首頁學期假空狀態、除錯文案 | HIGH | 6 檔約 60 行 | TODO |
+| [012](012-dead-code-and-drop-console.md) | 刪 14 個零引用檔、3 條測試路由、4 個相依、孤兒資源；production drop console | LOW | 純刪除 + vite 3 行 | TODO |
 
-## 建議執行順序
+### 建議順序與依賴
 
-1. **004**（token 基礎）：先做，後續計畫的 `ease-out` 會自動升級為強化曲線。
-2. **001、003、006**：各自獨立、改動極小、可同一個 PR。
-3. **002**：獨立；若在 007 之前執行，007 的第 5 步會清掉多餘的選擇器。
-4. **005**：獨立；feel check 有一項依賴 002。
-5. **007**：最後做，純清理。
+1. **008**：先做，009 的 Modal 會用到 `z-modal`。
+2. **009、010、011**：三者檔案幾乎不重疊，可平行。重疊點只有 `SubStageBar.jsx`（010 加 `pb-safe`）與 `Kanban.jsx`（011），不衝突。
+3. **012**：最後做。它會刪 SkeletonLoader 的未用 export，要保留 011 新增的 `SkeletonKanbanColumn`。
 
-依賴關係：沒有硬依賴，只有上述「先做更省事」的軟順序。全部可在一個工作日內完成。
+### 實測發現但未列入計畫的項目
 
-## 稽核發現但未列入計畫的項目
-
-以下屬於較大改動或需要產品決策，已登錄在專案根目錄 `future-list.md`：
+登錄在專案根目錄 `future-list.md`：
 
 | future-list | 內容 |
 |---|---|
-| F025 | 三套通知系統並存（react-hot-toast、sweetalert2、QuickActions 自製），toast 進場 scale 0.6、Toaster 掛在 6 個頁面而非根層 |
-| F026 | 全站可按壓元件幾乎沒有按壓回饋（`:active` 僅 2 處、`whileTap` 僅死碼 1 處） |
-| F027 | 進度條用 width、手風琴用 height 做 layout 屬性動畫；進度條時長 500 / 700 / 1000ms 三種並存 |
-| F028 | Kanban 樂觀新增卡片的 key 綁 id，temp id 換真 id 時 React 重掛造成閃動；卡片無 mount 動畫 |
-| F029 | 錯失的狀態轉場：SubStageBar 階段切換底色瞬變、骨架換內容硬切、Onboarding overlay 無進場、ActivityStream 清單無 stagger |
+| F030 | 手機側欄改抽屜式導覽（收合欄佔 390px 的四分之一）；底部階段列改可橫向捲動（第三個 pill 被 AI 助手圖示切掉） |
+| F031 | 收尾雜項：AI 助手泡泡手機定位蓋住「新增卡片」、導覽期間隱藏泡泡、Kanban「刪除列」X 降級並改 Swal 確認、10 處 `window.alert` / `confirm` 統一、約 30 處 UI emoji 換 react-icons、學習歷程標題列手機換行、404 頁中文化、成功訊息去驚嘆號 |
+| F032 | 共用 `Button` / `Overlay` 元件、全域 `:focus-visible` ring、skip-to-content、SideBar `aria-current` |
+| F033 | `authUtils` / `userUtils` 合併、日期格式化統一到 date-fns |
+| F025 到 F029 | 第一批留下的：通知系統統一、按壓回饋、layout 屬性動畫、Kanban 樂觀卡片閃動、錯失的狀態轉場 |
 
-## 稽核判定合理、不需處理的項目
+### 實測判定做得好、不需處理
 
-- `src/components/SideBar.jsx`：高頻導覽刻意不用 framer，只過渡 colors 與 opacity，正確。
-- `src/components/TopBar.jsx` 與所有 Escape / Enter 觸發路徑：鍵盤動作零動畫，正確。
-- Login / Register / ForgotPassword 的 `animate-rise`、`animate-float`：唯一行銷型頁面，時長可較長，且已加 `motion-safe:`。
-- `PersonalDailyModal` / `TeamDailyModal` 的 framer variant 用 `scale: 0.95`，正確。
-- `animate-spin`（28 處）與骨架用 `animate-pulse`：狀態指示，保留。
-- `useVisNetwork.js:195` 的 `network.fit` 500ms ease-in-out：畫布相機平移屬 on-screen movement，只在載入時跑一次。
-- `chartConfig.js` 的 750ms 圖表進場：資料圖表而非 UI chrome，可接受；若 dashboard 使用者反映慢再降到 400ms。
+首頁、反思、Kanban 欄位的空狀態有設計過的畫面；Kanban 與想法牆的四步導覽文案精簡有情境；學習歷程頁資訊層次清楚、手機堆疊正確；提交頁的寫作提示側欄實用；ErrorBoundary 分六層且換頁自動重置；Modal 開啟時焦點有進第一個輸入框。
