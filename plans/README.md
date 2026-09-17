@@ -41,12 +41,28 @@
 
 | future-list | 內容 |
 |---|---|
-| F030 | 手機側欄改抽屜式導覽（收合欄佔 390px 的四分之一）；底部階段列改可橫向捲動（第三個 pill 被 AI 助手圖示切掉） |
-| F031 | 收尾雜項：AI 助手泡泡手機定位蓋住「新增卡片」、導覽期間隱藏泡泡、Kanban「刪除列」X 降級並改 Swal 確認、10 處 `window.alert` / `confirm` 統一、約 30 處 UI emoji 換 react-icons、學習歷程標題列手機換行、404 頁中文化、成功訊息去驚嘆號 |
-| F032 | 共用 `Button` / `Overlay` 元件、全域 `:focus-visible` ring、skip-to-content、SideBar `aria-current` |
-| F033 | `authUtils` / `userUtils` 合併、日期格式化統一到 date-fns |
+| F030（已於第三批完成） | 手機側欄改抽屜式導覽（收合欄佔 390px 的四分之一）；底部階段列改可橫向捲動（第三個 pill 被 AI 助手圖示切掉） |
+| F031（已於第三批完成） | 收尾雜項：AI 助手泡泡手機定位蓋住「新增卡片」、導覽期間隱藏泡泡、Kanban「刪除列」X 降級並改 Swal 確認、10 處 `window.alert` / `confirm` 統一、約 30 處 UI emoji 換 react-icons、學習歷程標題列手機換行、404 頁中文化、成功訊息去驚嘆號 |
+| F032（已於第三批完成） | 共用 `Button` / `Overlay` 元件、全域 `:focus-visible` ring、skip-to-content、SideBar `aria-current` |
+| F033（已於第三批完成） | `authUtils` / `userUtils` 合併、日期格式化統一到 date-fns |
 | F025 到 F029 | 第一批留下的：通知系統統一、按壓回饋、layout 屬性動畫、Kanban 樂觀卡片閃動、錯失的狀態轉場 |
 
 ### 實測判定做得好、不需處理
 
 首頁、反思、Kanban 欄位的空狀態有設計過的畫面；Kanban 與想法牆的四步導覽文案精簡有情境；學習歷程頁資訊層次清楚、手機堆疊正確；提交頁的寫作提示側欄實用；ErrorBoundary 分六層且換頁自動重置；Modal 開啟時焦點有進第一個輸入框。
+
+## 第三批：future-list F030 到 F034（2026-09-17，全部完成）
+
+基準 commit `b0dda75`。來源：第二批留下的 F030 到 F034，直接把 future-list 的「怎麼做」展開成計畫執行。
+
+| 編號 | 標題 | 嚴重度 | 範圍 | 狀態 |
+|---|---|---|---|---|
+| [013](013-mobile-nav-drawer-and-substage-scroll.md) | 手機側欄改抽屜、底部階段列可橫向捲動；skip link 與 aria-current | HIGH | SideBar / ProjectLayout / TopBar / SubStageBar + 新 hook | DONE |
+| [014](014-ui-loose-ends.md) | 收尾雜項九項：AI 助手泡泡、刪除鈕降級、alert 統一、emoji、404、文案、alt、scrollbar-hidden | MEDIUM | 約 40 檔小改 + `utils/dialogs.js` | DONE |
+| [015](015-utils-merge-and-date-fns.md) | authUtils / userUtils 合併、dateformat 改 date-fns | LOW | 2 utils + 23 個 import + 3 檔 + 移除相依 | DONE |
+| [016](016-button-overlay-focus-ring.md) | 共用 Button / Overlay、全域 focus-visible ring | MEDIUM | 2 新元件 + 11 處遮罩 + index.css | DONE |
+| [017](017-kanban-card-first-frame.md) | Kanban 卡片首幀空殼與圖片灰底佔位 | LOW | 2 檔 | DONE |
+
+執行方式：013、014、017 平行（commit 670bc20），015、016 平行（第二個 commit）；平行代理只能用 Edit 改既有檔，避免互相覆蓋。兩批合併後用 `everything-claude-code:code-reviewer` 審完整 diff，15 點回饋全部處理。
+
+注意：這五份計畫「驗證」段落寫的 `npx eslint <檔>.jsx` 其實不會執行（flat config 沒 match `.jsx`，見 `future-list.md` F037），真正的驗證是 `npm run build` 與 `npx vitest run`。

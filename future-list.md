@@ -777,20 +777,17 @@
 ### F030: 手機側欄改抽屜式導覽，底部階段列改可橫向捲動
 
 - **類別**：Frontend
-- **狀態**：`backlog`
+- **狀態**：`backlog → done (2026-09-17)`
 - **優先級**：P2
 - **建立日期**：2026-09-17
 - **提案來源**：2026-09-17 用學生帳號在 390px 寬度實測（`plans/README.md` 第二批）
-- **為什麼現在不做**：
-  - `SideBar.jsx` 收合狀態的圖示欄約 100px，在 390px 螢幕佔四分之一，Kanban 與想法牆內容區只剩約 290px；改成手機專用的抽屜式導覽（漢堡鈕開啟、遮罩關閉）要動 `ProjectLayout.jsx` 的 flex 殼層與 SideBar 的展開狀態，屬佈局變更，依 CLAUDE.md 規則要同時確認 sm / md / lg
-  - `SubStageBar.jsx` 底部三個階段 pill 在手機擠成一排，第三個被 AI 助手圖示切掉；改成可橫向捲動並自動捲到目前階段，需要先決定互動模型（自動捲 vs 只縮字）
-- **觸發條件**（任一成立）：
-  - 學生手機端使用回饋集中在「看板太窄」
-  - `plans/010` 完成後的下一輪手機檢視
-- **怎麼做**：
-  1. `< md` 時 SideBar 改為 `fixed inset-y-0 left-0 -translate-x-full` 的抽屜，TopBar 左側加漢堡鈕，開啟時顯示遮罩、Escape 與遮罩點擊關閉
-  2. `SubStageBar.jsx` 內層容器已有 `overflow-x-auto`，補 `scroll-snap` 與 `scrollIntoView` 到目前階段；pill 在 `< sm` 用 `text-caption`
-  3. 依 CLAUDE.md 規則確認 sm / md / lg 三個斷點
+- **為什麼現在不做**：—（已完成，commit 670bc20，計畫 `plans/013`）
+- **觸發條件**：—
+- **怎麼做**（實際做法）：
+  1. 新增 `hooks/useMediaQuery.js`；`SideBar` 在 md 以下改為 `fixed` 抽屜（256px、遮罩、Escape / 遮罩 / 點連結關閉、開啟時焦點進第一個連結、關閉時 `invisible` 離開 Tab 順序），手機一律展開顯示文字；md 以上維持原本的靜態收合欄與行為
+  2. `TopBar` 專案頁在 md 以下加漢堡鈕（只有 `ProjectLayout` 傳入 `onOpenMobileNav` 才顯示，首頁 / 總覽頁不受影響）
+  3. `SubStageBar` 把 `overflow-x-auto` 移到 pill 容器，加 `snap-x` 與 `scrollIntoView` 自動捲到目前子階段（尊重 reduced motion），機器人圖示固定不被擠掉
+  4. 順手完成 F032 第 4、5 項：`ProjectLayout` 加「跳至主內容」連結、`SideBar` 目前項 `aria-current="page"` 與綠色粗體
 - **估計工作量**：`M`
 - **相關檔案**：`sdl-frontend-main/src/components/SideBar.jsx`、`sdl-frontend-main/src/layouts/ProjectLayout.jsx`、`sdl-frontend-main/src/components/TopBar.jsx`、`sdl-frontend-main/src/components/SubStageBar.jsx`
 
@@ -799,22 +796,22 @@
 ### F031: UI 收尾雜項（AI 助手定位、刪除鈕降級、alert 統一、emoji、文案）
 
 - **類別**：Frontend
-- **狀態**：`backlog`
+- **狀態**：`backlog → done (2026-09-17)`
 - **優先級**：P2
 - **建立日期**：2026-09-17
 - **提案來源**：2026-09-17 靜態稽核（`redesign-existing-projects` 清單）與實測
-- **為什麼現在不做**：每項都小，但分散在十幾個檔案，且部分要先決定文案與互動（例如刪除確認的用語），適合集中成一個「收尾 PR」而不是塞進 `plans/008` 到 `012`
-- **觸發條件**：`plans/008` 到 `012` 完成後
-- **怎麼做**（逐項可獨立）：
-  1. AI 助手泡泡在手機版蓋住 Kanban「新增卡片」：`DraggableImage/index.jsx` 的 `computeMessagePosition` 在 `isMobile` 時改為貼齊頭像上方且不超出 `安全區`；首次導覽（`KanbanOnboarding` 開啟）期間不顯示泡泡
-  2. Kanban 欄位標題旁的「刪除列」X（`KanbanColumn.jsx` 的 `刪除列` 按鈕）降級為 hover / 長按才出現的次要圖示，確認對話框改用 Swal，不用 `window.confirm`
-  3. 10 處 `window.alert` / `confirm`（`usePersonalDaily.js:135`、`useTeamDaily.js:126`、`CommentSection.jsx:81`、`IdeaWall.jsx:156`、`SdlCoachChat.jsx:119,127`、`HelpSeekingView.jsx:56`、`AvoidanceRiskAlert.jsx:68`、`ExportPreview/index.jsx:97`、`KanbanErrorBoundary.jsx:160`）統一走 Swal
-  4. 約 30 處 UI emoji（`StudentPortfolio/templates/*.jsx`、`TemplateSelector.jsx`、`QuickActions.jsx`、`HelpSeekingView.jsx:316`、`CreateNodeModal.jsx:30`、學習歷程任務狀況區）換 react-icons；`✕` 關閉字元換 `FiX`
-  5. 學習歷程頁「學習狀態提醒 2 項 今天不看」標題列在手機換行斷裂，改 `flex-wrap` 與 `whitespace-nowrap` 配置
-  6. `notFound/NotFound.jsx` 文案改繁中、`<button>` 包 `<Link>` 改為直接用 `<Link>`
-  7. 約 25 處成功訊息去驚嘆號、`GlobalErrorBoundary.jsx:97`「糟糕」改直述；反思頁空狀態「還沒新增過個人日誌！趕快新增你的第一個【個人日誌】吧～」改「還沒有個人日誌，寫下第一篇吧」
-  8. `ChatRoom.jsx:153,204` 兩個 `<img>` 補 `alt`
-  9. `HomePage.jsx:305`、`ManagementOverview.jsx:163` 的 `scrollbar-hidden` 不是套件提供的 class（plans/010 只處理了 `TabbedSections.jsx`）；這兩處是整頁垂直捲動容器，改 `scrollbar-none` 會把頁面捲軸藏起來，先確認是否真的想隱藏再改
+- **為什麼現在不做**：—（已完成，commit 670bc20，計畫 `plans/014`）
+- **觸發條件**：—
+- **怎麼做**（實際做法）：
+  1. AI 助手泡泡：手機 FAB 與泡泡改為緊貼底部階段列上方並含 safe-area；使用者關過一次後不再每 10 秒重現；`Kanban.jsx` 傳 `suppressMessage={showOnboarding}` 讓導覽期間不顯示
+  2. Kanban 刪除欄位鈕改 hover / focus-visible 才出現（觸控裝置半透明常駐），確認對話框本來就是 Swal，文案改「刪除欄位」
+  3. 新增 `utils/dialogs.js`（`confirmDialog` / `alertError` / `alertInfo`），10 處 `window.alert` / `confirm` 全部改走
+  4. 約 30 處 UI emoji 換 `react-icons/fi`（歷程模板、TemplateSelector、QuickActions 通知改 type 驅動圖示、`✓` / `✕` 字元）；`<option>` 內的 `★` 改「（推薦）」後綴
+  5. 學習狀態提醒標題列 `flex-wrap` + `whitespace-nowrap`
+  6. 404 頁改繁中，`<Link>` 直接當按鈕
+  7. 約 25 處成功訊息去驚嘆號、錯誤頁「糟糕」改「頁面發生錯誤」、反思與任務空狀態文案改直述
+  8. `ChatRoom` 頭像補 `alt`
+  9. `scrollbar-hidden` 確認為無效 class 且頁面捲軸本來就可見，決定保留捲軸、只刪掉該 class
 - **估計工作量**：`M`
 - **相關檔案**：見各項
 
@@ -823,18 +820,18 @@
 ### F032: 共用 Button / Overlay 元件、全域 focus ring、skip-to-content、導覽 aria-current
 
 - **類別**：Frontend
-- **狀態**：`backlog`
+- **狀態**：`backlog → done (2026-09-17)`
 - **優先級**：P3
 - **建立日期**：2026-09-17
 - **提案來源**：2026-09-17 靜態稽核：主要按鈕至少 8 種 className 寫法、15 處在 Modal 之外自畫 `fixed inset-0` 遮罩、495 個 `<button>` 無 focus 樣式、`focus-visible:` 僅 1 處、無 skip link、SideBar 目前頁只靠 20% 底色且無 `aria-current`
-- **為什麼現在不做**：抽共用元件是全站性重構，要逐頁替換與回歸；先把 `plans/008` 到 `012` 的基礎打好再做，避免重工
-- **觸發條件**：設計系統升版或下一次大規模 UI 收尾
-- **怎麼做**：
-  1. `src/components/ui/Button.jsx`：`variant`（primary / secondary / danger / ghost）+ `size`，內建 `focus-visible:ring-2 ring-customgreen ring-offset-2` 與 `active:scale-[0.97]`（`DESIGN_SYSTEM.md` 只禁 hover 用 scale）
-  2. `src/components/ui/Overlay.jsx` 或直接讓 `Modal.jsx` 接手 15 處自畫遮罩
-  3. `index.css` 加全域 `:focus-visible` ring，移除 `Profile.jsx:254,298` 的裸 `focus:outline-none`
-  4. `ProjectLayout.jsx` 最前面加 `sr-only focus:not-sr-only` 的「跳至主內容」連結（`<main>` 已存在）
-  5. `SideBar.jsx` 目前項加 `aria-current="page"`、字重與底色加強
+- **為什麼現在不做**：—（已完成，計畫 `plans/016`；第 4、5 項隨 `plans/013` 在 commit 670bc20 完成）
+- **觸發條件**：—
+- **怎麼做**（實際做法）：
+  1. 新增 `components/ui/Button.jsx`（primary / secondary / danger / ghost 四種 variant、sm / md / lg 三種 size，內建 `focus-visible` ring 與 `active:scale-[0.97]`）；先採用在 GlobalErrorBoundary、HelpSeekingView 錯誤態、Kanban 與想法牆導覽主按鈕，全站逐頁替換登錄為 F036
+  2. 新增 `components/ui/Overlay.jsx`（portal 到 body、Escape 與點遮罩關閉、開啟時焦點進面板、`stacked` / `align="bottom"`），11 處自畫 `fixed inset-0` 對話框遮罩全部改走（其中 `ProjectViewingSettings.jsx` 經 review 發現是 import 路徑壞掉的零引用死檔，直接刪除）；表單類對話框（範例任務、樣板欄位、觀摩設定兩處）傳 `closeOnBackdrop={false}` 保留原本「點遮罩不關」的行為；導覽、聊天遮罩、點擊外部關閉層依計畫不動
+  3. `index.css` 在 `@layer base` 加全域 `:focus-visible` 綠色 outline（放 base 層讓既有 `focus:outline-none` + `focus:ring` 能覆寫）；`Profile.jsx` 兩處裸 `focus:outline-none` 補 ring；另外 9 個檔有 `focus:ring-*` 但沒有 `focus:outline-none`，會同時出現 outline 與 ring，一併補上
+  4. `ProjectLayout` 加「跳至主內容」連結（`plans/013`）
+  5. `SideBar` 目前項 `aria-current="page"` 與綠色粗體（`plans/013`）
 - **估計工作量**：`L`
 - **相關檔案**：`sdl-frontend-main/src/components/`、`sdl-frontend-main/src/index.css`、`sdl-frontend-main/src/layouts/ProjectLayout.jsx`
 
@@ -843,18 +840,17 @@
 ### F033: 合併 authUtils / userUtils，統一日期格式化到 date-fns
 
 - **類別**：Frontend
-- **狀態**：`backlog`
+- **狀態**：`backlog → done (2026-09-17)`
 - **優先級**：P3
 - **建立日期**：2026-09-17
 - **提案來源**：2026-09-17 死碼稽核
-- **為什麼現在不做**：
-  - `src/utils/authUtils.js` 與 `src/utils/userUtils.js` 各自實作 `getCurrentUserId`、`getCurrentUserRole`、`getCurrentUsername`，`TopBar.jsx` 同時從兩邊 import；`getCurrentUserId` 被 29 個檔案引用，合併要改 import 路徑並回歸登入流程
-  - 日期有 `dateformat`（3 檔）、`date-fns`（3 檔）、自製 `timeUtils.js`、25 處裸 `toLocaleDateString` 四套並存，統一要逐處確認格式一致
-- **觸發條件**：登入 / 使用者資訊相關功能要改動時順手做
-- **怎麼做**：
-  1. 以 `authUtils.js` 為唯一來源，`userUtils.js` 只留 socket / listener 部分，其餘 re-export 一個版本後逐檔改 import
-  2. 刪 `userDisplayUtils.js:16` 的 `getUserDisplayName` alias（0 引用）
-  3. `dateformat` 的 3 處改 `date-fns` 的 `format`，移除 `dateformat` 相依
+- **為什麼現在不做**：—（已完成，計畫 `plans/015`）
+- **觸發條件**：—
+- **怎麼做**（實際做法）：
+  1. `userUtils.js` 只留 `getCurrentUserAccount` / `getCurrentUserClass` / `getCurrentUserInfo` / `isCurrentUser` / `getUserForSocket` / `addUserUpdateListener` / `triggerUserUpdate`，單一欄位 getter 一律從 `authUtils` 匯入；23 個引用檔的 import 逐檔改好；review 時發現其中 12 個檔原本就沒用到搬過去的函式，一併刪掉未用 import，`userUtils` 最後只剩 `TopBar`、`IdeaWall`、`CardDetailModal` 三個引用檔
+  2. 刪 `userDisplayUtils.js` 與 `userUtils.js` 的 `getUserDisplayName`（0 引用）
+  3. 新增 `utils/dateFormat.js`（date-fns `format` + `isValid` 防呆），`dateformat` 的 3 處改走並 `npm uninstall dateformat`
+  4. 25 處裸 `toLocaleDateString` / `toLocaleString` 未動，登錄為 F035
 - **估計工作量**：`M`
 - **相關檔案**：`sdl-frontend-main/src/utils/authUtils.js`、`sdl-frontend-main/src/utils/userUtils.js`、`sdl-frontend-main/src/utils/userDisplayUtils.js`、`sdl-frontend-main/src/utils/timeUtils.js`
 
@@ -863,19 +859,73 @@
 ### F034: Kanban 卡片首幀空殼與圖片延後出現
 
 - **類別**：Frontend
-- **狀態**：`backlog`
+- **狀態**：`backlog → done (2026-09-17)`
 - **優先級**：P3
 - **建立日期**：2026-09-17
 - **提案來源**：plans/011 Step 5 診斷（2026-09-17）。`GET /kanbans/:projectId` 一次帶回每欄的 `task` 陣列（實測欄 62/63 各 1 張、64 為 0 張），不存在第二段請求；「欄位先出現、卡片約 3 秒後才到」是自動化實測時分頁處於 `document.visibilityState === 'hidden'`，Chrome 對背景分頁節流與凍結造成的假象，前景使用者看不到 3 秒空窗。真正存在的只有兩個小閃現：
   1. `carditem/hooks/useCardData.js` 用空物件初始化 `cardData`，再靠 `useEffect` 從 props 複製，首幀卡片是沒有標題的白殼（一幀）
   2. 卡片圖片走 `AuthImage.jsx` 帶授權 fetch 轉 blob，圖片區在回應前沒有佔位高度
-- **為什麼現在不做**：不影響功能，plans/011 的 Boundaries 明訂不改 Kanban 資料流；per-column 骨架無法解決（卡片殼本來就在）
-- **觸發條件**：下一次動 Kanban 卡片元件時順手做
-- **怎麼做**：
-  1. `useCardData.js` 改 `useState(() => normalize(initialData))` 直接從 props 初始化，effect 只負責後續變動
-  2. `CardImage` 在 blob 未回來前給固定長寬比的灰底佔位，避免圖片載入時卡片高度跳動
+- **為什麼現在不做**：—（已完成，commit 670bc20，計畫 `plans/017`）
+- **觸發條件**：—
+- **怎麼做**（實際做法）：
+  1. `useCardData` 抽出 `normalizeCard`，`useState(() => normalizeCard(initialData))` 首幀即有內容，掛載那一次的 effect 跳過避免多一次 render
+  2. `SharedComponents.CardImage` 容器加 `bg-gray-100 rounded-t-lg overflow-hidden`，圖片 blob 回來前顯示 160px 灰底
 - **估計工作量**：`S`
 - **相關檔案**：`sdl-frontend-main/src/pages/Kanban/components/carditem/hooks/useCardData.js`、`sdl-frontend-main/src/components/AuthImage.jsx`、`sdl-frontend-main/src/pages/Kanban/components/carditem/components/CardImage.jsx`
+
+---
+
+### F035: 25 處裸 `toLocaleDateString` / `toLocaleString` 統一到 `utils/dateFormat.js`
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：F033 執行時（`plans/015`）只把 `dateformat` 的 3 處改成 date-fns，剩下的裸呼叫散在歷程模板、教師儀表板、公告、學生儀表板等 25 處
+- **為什麼現在不做**：各處格式刻意不同（有的只要月日、有的含星期、有的是 `dateStyle: 'long'`），統一前要先決定每個情境的顯示格式，屬文案 / 產品決策，不是純技術替換
+- **觸發條件**：使用者反映日期格式不一致，或下一次動歷程模板 / 儀表板時順手做
+- **怎麼做**：
+  1. 在 `utils/dateFormat.js` 加固定情境的 helper（`formatDateShort`、`formatDateTime`、`formatDateLong`）
+  2. 用 `grep -rn "toLocale\(Date\|Time\)\?String" src | grep -v utils/timeUtils` 列清單逐處替換，每處保留原本的視覺格式
+  3. `timeUtils.js` 的 `formatTime` 內部也改用 date-fns，保留對外簽名
+- **估計工作量**：`M`
+- **相關檔案**：`sdl-frontend-main/src/utils/dateFormat.js`、`sdl-frontend-main/src/utils/timeUtils.js`、各呼叫處
+
+---
+
+### F036: 共用 `Button` 元件全站逐頁替換
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：F032 執行時（`plans/016`）建立了 `components/ui/Button.jsx`，只在錯誤頁與導覽等少數地方採用，其餘主要按鈕仍有至少 8 種 className 寫法
+- **為什麼現在不做**：全站替換要逐頁回歸每個按鈕的尺寸與狀態，工作量與風險都大；先靠全域 `:focus-visible` ring 補上鍵盤焦點，視覺一致性留到有 UI 大改版時一起做
+- **觸發條件**：設計系統升版、或某頁要重做時把該頁按鈕全部換成 `Button`
+- **怎麼做**：
+  1. 以頁為單位替換，每頁一個 commit
+  2. 替換時只允許 `variant` / `size` 對應，不允許在 `className` 覆寫顏色
+  3. 全部換完後把 `DESIGN_SYSTEM.md` 的按鈕範例改成引用 `Button`
+- **估計工作量**：`L`
+- **相關檔案**：`sdl-frontend-main/src/components/ui/Button.jsx`、`sdl-frontend-main/DESIGN_SYSTEM.md`
+
+---
+
+### F037: 前端 eslint flat config 補 `.jsx` 與 react-hooks 外掛
+
+- **類別**：Frontend / DevOps
+- **狀態**：`backlog`
+- **優先級**：P2
+- **建立日期**：2026-09-17
+- **提案來源**：`plans/013` 到 `016` 的 code review 指出 `eslint.config.js` 只 match `**/*.{js,mjs,cjs}`，所有 `.jsx` 都被靜默忽略，`react-hooks/exhaustive-deps` 的 disable 註解反而報 rule not found；各計畫寫的 `npx eslint <檔>.jsx` 驗證步驟其實是空轉
+- **為什麼現在不做**：補上 `files: ['**/*.{js,jsx}']` 與 `eslint-plugin-react` / `eslint-plugin-react-hooks` 後，既有程式碼會冒出大量 no-unused-vars 與 hooks deps 警告，要另開一輪清理才能讓 lint 在 CI 有意義
+- **觸發條件**：下一次要在 CI 加 lint gate，或連續兩次因為 deps 漏寫出現 bug
+- **怎麼做**：
+  1. `eslint.config.js` 加 jsx 檔案 pattern、`languageOptions.parserOptions.ecmaFeatures.jsx`、react 與 react-hooks 外掛
+  2. 先以 `--max-warnings` 不設限跑一次，把 error 級（no-undef、hooks 規則）修完，warning 分批清
+  3. 清完後在 `plans/README.md` 恢復用 eslint 當驗證手段
+- **估計工作量**：`M`
+- **相關檔案**：`sdl-frontend-main/eslint.config.js`、`sdl-frontend-main/package.json`
 
 ---
 
@@ -892,3 +942,4 @@
 - **2026-09-17**：新增 F025–F029；安裝 emilkowalski/skills 與 taste-skill 的 `redesign-existing-projects` 後跑 `/improve-animations` 全站稽核，7 項可直接執行的修法寫成 `plans/001` 到 `007`，通知系統統一、按壓回饋、layout 屬性動畫、Kanban 樂觀卡片閃動、錯失的狀態轉場五項登錄為後續工作
 - **2026-09-17**：完成 `plans/001` 到 `007`（動畫稽核七項，commit dd55663 到 564c298）；新增 F030–F033；以學生帳號在本機 dev 實測桌面與 390px 寬度，加上 redesign-existing-projects 與 mobile-native 清單的靜態稽核與死碼稽核，五項可直接執行的修法寫成 `plans/008` 到 `012`，側欄抽屜化、收尾雜項、共用元件與 focus ring、utils 合併四項登錄為後續工作
 - **2026-09-17**：完成 `plans/008` 到 `012`（z-index token、Modal 無障礙、手機基礎、狀態與文案、死碼清理與 production drop console）；新增 F034（Kanban 卡片首幀空殼與圖片延後）並在 F031 追加兩處 `scrollbar-hidden`；plans/011 的卡片空窗診斷結論：API 一次帶回 task，空窗是背景分頁節流假象，不補 per-column 骨架
+- **2026-09-17**：完成 F030–F034（`plans/013` 到 `017`，commit 670bc20 與後續 commit）；新增 F035（裸 `toLocale*` 統一到 `dateFormat.js`）、F036（`Button` 全站逐頁替換）；code review 後補 `closeOnBackdrop`、刪 `ProjectViewingSettings.jsx` 死檔、補 9 檔 `focus:outline-none`、清 12 檔未用 import，並新增 F037（eslint 補 `.jsx`）

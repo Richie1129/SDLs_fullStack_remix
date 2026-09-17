@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { buildFileImageUrl } from '@/utils/fileUrlBuilder.js';
 
-const EMPTY_CARD = {
+const emptyCard = () => ({
   id: "",
   title: "",
   content: "",
@@ -11,7 +11,7 @@ const EMPTY_CARD = {
   columnId: "",
   images: [],
   files: [],
-};
+});
 
 /**
  * 把 props 傳入的卡片資料轉成內部格式：
@@ -19,7 +19,7 @@ const EMPTY_CARD = {
  * - files / owner 補預設值
  */
 function normalizeCard(initialData) {
-  if (!initialData) return EMPTY_CARD;
+  if (!initialData) return emptyCard();
   const processedImages = (initialData.images || []).map((imageUrl) => {
     if (typeof imageUrl === 'string' && imageUrl.includes('sdls-files/')) {
       const fileName = imageUrl.split('/').pop();
@@ -29,7 +29,7 @@ function normalizeCard(initialData) {
   });
 
   return {
-    ...EMPTY_CARD,
+    ...emptyCard(),
     ...initialData,
     images: processedImages,
     files: initialData.files || [],

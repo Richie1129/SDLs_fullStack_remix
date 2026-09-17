@@ -251,9 +251,9 @@ export default function Profile() {
                     value={user.username}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none transition-colors ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
                       !isEditing
-                        ? 'bg-gray-50 text-gray-400 border-gray-200'
+                        ? 'bg-gray-50 text-gray-400 border-gray-200 focus:ring-customgreen/50'
                         : 'bg-[#5BA491]/5 text-gray-800 border-[#5BA491] ring-1 ring-[#5BA491]/20 focus:ring-2 focus:ring-[#5BA491]'
                     }`}
                   />
@@ -295,9 +295,9 @@ export default function Profile() {
                     value={user.email}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none transition-colors ${
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
                       !isEditing
-                        ? 'bg-gray-50 text-gray-400 border-gray-200'
+                        ? 'bg-gray-50 text-gray-400 border-gray-200 focus:ring-customgreen/50'
                         : 'bg-[#5BA491]/5 text-gray-800 border-[#5BA491] ring-1 ring-[#5BA491]/20 focus:ring-2 focus:ring-[#5BA491]'
                     }`}
                     placeholder="請輸入您的電子郵件"

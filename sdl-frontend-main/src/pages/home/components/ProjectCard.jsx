@@ -2,9 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { FiCheck, FiX } from 'react-icons/fi';
-import dateFormat from 'dateformat';
 import { getSemesterLabel } from '../../../utils/semesterUtils';
 import { formatRelativeTime } from '../../../utils/timeUtils';
+import { formatDate } from '../../../utils/dateFormat';
 
 const Tooltip = ({ children, content }) => {
   return (
@@ -292,7 +292,7 @@ export default function ProjectCard({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M3 12a9 9 0 110 18 9 9 0 010-18zm9 9a9 9 0 100-18 9 9 0 000 18z" />
             </svg>
           )}
-          創建於 {dateFormat(project.createdAt, "yyyy/mm/dd")}
+          創建於 {formatDate(project.createdAt)}
         </span>
         {type !== 'viewable' && (
           <span className='flex items-center'>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiLayout, FiCheckSquare, FiGrid, FiHelpCircle, FiX } from 'react-icons/fi';
+import Button from '../../../components/ui/Button';
 
 const STEPS = [
   {
@@ -111,19 +112,13 @@ export default function KanbanOnboarding({ onClose, projectId }) {
           </span>
 
           {isLast ? (
-            <button
-              onClick={handleDone}
-              className="px-btn-x-lg py-btn-y bg-customgreen text-white text-body-sm font-medium rounded-lg hover:bg-customgreen/90 transition-colors duration-fast"
-            >
+            <Button onClick={handleDone} variant="primary" size="lg">
               開始使用
-            </button>
+            </Button>
           ) : (
-            <button
-              onClick={() => setStep(s => s + 1)}
-              className="px-btn-x-lg py-btn-y bg-customgreen text-white text-body-sm font-medium rounded-lg hover:bg-customgreen/90 transition-colors duration-fast"
-            >
+            <Button onClick={() => setStep(s => s + 1)} variant="primary" size="lg">
               下一步
-            </button>
+            </Button>
           )}
         </div>
       </div>

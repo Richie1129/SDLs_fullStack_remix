@@ -18,9 +18,8 @@ import { useStageIndex } from '../../hooks/useStageIndex';
 import { formatTime } from '../../utils/timeUtils';
 import useObservationMode from '../../hooks/useObservationMode'; // 引入觀摩模式 hook
 import { recordObservationEvent } from '../../api/usage';
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
 import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
-import { getStageInfo, isTeacher } from '../../utils/authUtils';
+import { getStageInfo, isTeacher, getCurrentUsername } from '../../utils/authUtils';
 import { getProjectUser } from '../../api/users';
 
 // Option B: 四階段 SRL 循環（「歷程」標題已隱藏）
@@ -791,7 +790,7 @@ export default function Protfolio() {
                                                                 {key}
                                                             </label>
                                                             <textarea
-                                                                className="w-full rounded-lg border-2 border-gray-200 bg-white text-body-sm p-component-base shadow-sm transition-all duration-fast focus:border-[#5BA491] focus:ring-4 focus:ring-[#5BA491]/20 hover:border-gray-300 resize-none min-h-[100px]"
+                                                                className="w-full rounded-lg border-2 border-gray-200 bg-white text-body-sm p-component-base shadow-sm transition-all duration-fast focus:border-[#5BA491] focus:outline-none focus:ring-4 focus:ring-[#5BA491]/20 hover:border-gray-300 resize-none min-h-[100px]"
                                                                 rows={4}
                                                                 value={value}
                                                                 onChange={(e) => handleChange(key, e.target.value)}

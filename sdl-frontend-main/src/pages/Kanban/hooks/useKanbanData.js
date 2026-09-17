@@ -3,8 +3,7 @@ import { useQuery, useQueryClient } from 'react-query';
 import toast from 'react-hot-toast';
 import { getKanbanColumns } from '../../../api/kanban';
 import { socket } from '../../../utils/socket';
-import { getCurrentUsername } from '../../../utils/userUtils';
-import { getCurrentUserId } from '../../../utils/authUtils';
+import { getCurrentUserId, getCurrentUsername } from '../../../utils/authUtils';
 import Swal from 'sweetalert2';
 
 /**

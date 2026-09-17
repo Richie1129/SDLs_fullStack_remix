@@ -9,8 +9,7 @@ import { getAllSubmit } from "../../../api/submit";
 import { getProjectsByMentor } from "../../../api/project";
 import { getUsageSummary } from "../../../api/usage";
 import { getRagMessageHistory } from "../../../api/rag";
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils';
-import { getCurrentUserId } from '../../../utils/authUtils';
+import { getCurrentUserId, getCurrentUsername } from '../../../utils/authUtils';
 
 /**
  * API 適配器 - 統一處理所有API呼叫

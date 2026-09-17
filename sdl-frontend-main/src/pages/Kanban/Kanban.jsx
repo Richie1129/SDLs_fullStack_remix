@@ -25,6 +25,7 @@ import ExampleTasksDialog from './components/ExampleTasksDialog';
 import { PHASE_TEMPLATES, PHASES, COLUMN_ICON_MAP } from '../../config/kanbanTemplates';
 import { setStageInfo } from '../../utils/authUtils';
 import { FiHelpCircle } from 'react-icons/fi';
+import Overlay from '../../components/ui/Overlay';
 
 /**
  * Kanban Component (Refactored)
@@ -452,21 +453,27 @@ export default function Kanban() {
       <div ref={kanbanContainerRef} className="h-full min-h-0 w-full bg-white flex flex-col">
 
       {/* Template Selection Modal */}
-      {selectedTemplatePhase && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden">
+      <Overlay
+        open={!!selectedTemplatePhase}
+        onClose={() => setSelectedTemplatePhase(null)}
+        closeOnBackdrop={false}
+        label="選擇要新增的列表"
+        panelClassName="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 overflow-hidden"
+      >
+        {selectedTemplatePhase && (
+        <>
             <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-body-lg font-medium text-gray-900">
                 選擇要新增的列表 ({PHASE_TEMPLATES[selectedTemplatePhase].label})
               </h3>
-              <button 
+              <button
                 onClick={() => setSelectedTemplatePhase(null)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <RxCross2 className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
               <p className="text-body-sm text-gray-500 mb-4">
                 {PHASE_TEMPLATES[selectedTemplatePhase].description || 
@@ -479,7 +486,7 @@ export default function Kanban() {
                   }`}>
                     <input
                       type="checkbox"
-                      className="h-4 w-4 text-[#5BA491] focus:ring-[#5BA491] border-gray-300 rounded mt-1"
+                      className="h-4 w-4 text-[#5BA491] focus:outline-none focus:ring-[#5BA491] border-gray-300 rounded mt-1"
                       checked={selectedTemplateColumns.includes(idx)}
                       onChange={() => toggleTemplateColumnSelection(idx)}
                     />
@@ -527,9 +534,9 @@ export default function Kanban() {
                   : '新增欄位'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+        </>
+        )}
+      </Overlay>
 
       {!isObservationMode && (
         <DraggableImage
@@ -735,7 +742,7 @@ export default function Kanban() {
                           >
                             <input
                               type="checkbox"
-                              className="h-4 w-4 text-customgreen focus:ring-customgreen border-gray-300 rounded cursor-pointer"
+                              className="h-4 w-4 text-customgreen focus:outline-none focus:ring-customgreen border-gray-300 rounded cursor-pointer"
                               checked={viewConfig.filter?.assignee?.includes(member.username) || false}
                               onChange={() => toggleMemberSelection(member.username)}
                             />

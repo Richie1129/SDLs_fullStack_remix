@@ -29,10 +29,4 @@ export const formatUserDisplay = (user) => {
   return username;
 };
 
-/**
- * 獲取用戶顯示名稱的純函數版本
- * 專門用於不涉及組件狀態的場景
- */
-export const getUserDisplayName = formatUserDisplay;
-
 export default formatUserDisplay;

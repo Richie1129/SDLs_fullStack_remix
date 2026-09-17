@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from 'react-query';
-import { getCurrentUsername } from '../utils/userUtils';
+import { getCurrentUsername } from '../utils/authUtils';
 import { getProjectsByMentor } from '../api/project';
 import { getProjectUser, batchGetProjectUsers } from '../api/users';
 

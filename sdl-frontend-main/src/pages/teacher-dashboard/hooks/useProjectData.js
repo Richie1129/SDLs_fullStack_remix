@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiAdapter } from "../utils/apiAdapter";
 import { DataNormalizer } from "../utils/DataNormalizer";
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../../utils/userUtils';
+import { getCurrentUsername } from '../../../utils/authUtils';
 
 /**
  * 專案和活動資料的專門 Hook

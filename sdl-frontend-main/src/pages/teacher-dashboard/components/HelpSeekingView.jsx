@@ -17,6 +17,8 @@ import { FiAlertTriangle } from 'react-icons/fi';
 import { useHelpSeeking } from '../hooks/useHelpSeeking';
 import AvoidanceRiskAlert from './AvoidanceRiskAlert';
 import { alertError } from '../../../utils/dialogs';
+import Overlay from '../../../components/ui/Overlay';
+import Button from '../../../components/ui/Button';
 
 /**
  * 教師端 Help-Seeking 儀表板主組件 (A2)
@@ -318,12 +320,9 @@ const HelpSeekingView = ({ projectId }) => {
           <div className="mb-4"><FiAlertTriangle className="w-10 h-10 mx-auto text-red-500" /></div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">載入失敗</h3>
           <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={refresh}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
+          <Button onClick={refresh} variant="primary">
             重試
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -426,9 +425,12 @@ const HelpSeekingView = ({ projectId }) => {
       </div>
 
       {/* 學生詳情模態框 */}
-      {selectedStudent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <Overlay
+        open={!!selectedStudent}
+        onClose={handleCloseDetails}
+        label="學生求助詳情"
+        panelClassName="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+      >
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-800">學生求助詳情</h3>
               <button
@@ -438,7 +440,7 @@ const HelpSeekingView = ({ projectId }) => {
                 &times;
               </button>
             </div>
-            
+
             <div className="p-6">
               {loadingDetails ? (
                 <div className="text-center py-8">
@@ -522,9 +524,7 @@ const HelpSeekingView = ({ projectId }) => {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+      </Overlay>
     </div>
   );
 };

@@ -21,8 +21,7 @@ import StageSuggestions from "./components/StageSuggestions";
 import ClassAverageComparison from "./components/ClassAverageComparison";
 import HelpSeekingAwareness from "./components/HelpSeekingAwareness";
 import ActivityHeatmap from "./components/ActivityHeatmap";
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
-import { getCurrentUserId } from '../../utils/authUtils';
+import { getCurrentUserId, getCurrentUsername } from '../../utils/authUtils';
 
 // 載入組件
 const LoadingComponent = () => (

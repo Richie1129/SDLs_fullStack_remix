@@ -8,6 +8,3 @@ export async function confirmDialog({ title = '請確認', text = '', confirmTex
 export function alertError(text, title = '發生錯誤') {
   return Swal.fire({ title, text, icon: 'error', confirmButtonColor: BRAND, confirmButtonText: '確定' });
 }
-export function alertInfo(text, title = '提示') {
-  return Swal.fire({ title, text, icon: 'info', confirmButtonColor: BRAND, confirmButtonText: '確定' });
-}

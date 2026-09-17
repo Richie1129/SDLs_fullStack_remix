@@ -74,13 +74,14 @@ export default function ModernTemplate({ data, narrative }) {
       {/* 四階段 */}
       {stages.filter(s => s.hasContent).map(stage => {
         const palette = STAGE_PALETTE[stage.stageNumber];
+        const StageIcon = STAGE_ICONS[stage.stageNumber];
         const hasContent = stage.reflections.length > 0 || stage.submits.length > 0 || stage.nodes.length > 0;
 
         return (
           <div key={stage.stageNumber} style={{ background: '#fff', borderRadius: '8px', marginBottom: '6mm', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
             {/* 階段標頭 */}
             <div style={{ background: palette.bg, borderBottom: `3px solid ${palette.border}`, padding: '4mm 8mm', display: 'flex', alignItems: 'center', gap: '3mm', breakAfter: 'avoid' }}>
-              <span style={{ fontSize: '16pt' }}>{React.createElement(STAGE_ICONS[stage.stageNumber], { size: 20, style: { verticalAlign: 'middle' } })}</span>
+              <span style={{ fontSize: '16pt' }}>{StageIcon && <StageIcon size={20} style={{ verticalAlign: 'middle' }} />}</span>
               <div>
                 <div style={{ fontSize: '8pt', color: palette.text, fontWeight: '600', letterSpacing: '1px' }}>STAGE {stage.stageNumber}</div>
                 <div style={{ fontSize: '13pt', fontWeight: '800', color: palette.text }}>{stage.stageTitle}</div>

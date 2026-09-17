@@ -5,6 +5,7 @@ export default function useMediaQuery(query) {
   const [matches, setMatches] = useState(get);
 
   useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return undefined;
     const mql = window.matchMedia(query);
     const onChange = (e) => setMatches(e.matches);
     setMatches(mql.matches);

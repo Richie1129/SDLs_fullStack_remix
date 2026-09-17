@@ -8,8 +8,9 @@ import FileDownload from 'js-file-download';
 import { getAuditEvents } from '@/api/audit.js';
 import { formatAuditAction, extractAuditDiffLines } from '@/utils/auditUtils.js';
 import { buildFileDownloadUrl, downloadFileWithAuth } from '@/utils/fileUrlBuilder.js';
-import { getCurrentUserId, getCurrentUserRole, isTeacher as checkIsTeacher } from '../../utils/authUtils';
+import { getCurrentUserId, isTeacher as checkIsTeacher } from '../../utils/authUtils';
 import { STAGE_NAMES } from '@/pages/submit/config/guidedQuestionsConfig';
+import Overlay from '../ui/Overlay';
 
 const LogCard = ({
   item,
@@ -290,9 +291,13 @@ const LogCard = ({
                 </div>
 
                 {/* 模型選擇彈出框 */}
-                {showProviderPicker && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowProviderPicker(false)}>
-                    <div className="bg-white rounded-xl shadow-xl p-component-md w-72" onClick={(e) => e.stopPropagation()}>
+                <Overlay
+                  open={showProviderPicker}
+                  onClose={() => setShowProviderPicker(false)}
+                  label="選擇 AI 模型"
+                  className="!bg-black/40"
+                  panelClassName="bg-white rounded-xl shadow-xl p-component-md w-72"
+                >
                       <h3 className="text-body font-semibold text-gray-800 mb-3">選擇 AI 模型</h3>
                       <div className="space-y-2 mb-4">
                         {PROVIDERS.map((p) => (
@@ -323,9 +328,7 @@ const LogCard = ({
                           開始分析
                         </button>
                       </div>
-                    </div>
-                  </div>
-                )}
+                </Overlay>
               </>
             );
           })()}

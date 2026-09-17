@@ -3,7 +3,7 @@ import { useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import toast from 'react-hot-toast';
 import { socket } from '../../../utils/socket';
-import { getCurrentUsername } from '../../../utils/userUtils';
+import { getCurrentUsername } from '../../../utils/authUtils';
 import svgConvertUrl from '../../../utils/svgConvertUrl';
 import { NODE_COLORS } from '../constants/ideaWallConstants';
 

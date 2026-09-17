@@ -17,6 +17,9 @@ import useMediaQuery from "../hooks/useMediaQuery";
 import { userStorage } from '../services/storageService';
 import { getStageColor } from '../utils/stageUtils';
 
+const MOBILE_FOCUSABLE = 'a[href], button:not([disabled])';
+export const MOBILE_NAV_TOGGLE_ID = 'mobile-nav-toggle';
+
 // Simple NavItem without framer-motion
 const NavItem = ({ children, selected, id, setSelected }) => {
   return (
@@ -314,23 +317,38 @@ export default function SideBar({ mobileOpen = false, onMobileClose }) {
     }
   }, [location, menus]);
 
-  // 手機抽屜開啟時，Escape 鍵關閉
+  // 手機抽屜：Escape 關閉、Tab 在面板內循環（配合 aria-modal）
   useEffect(() => {
+    if (!mobileOpen || isMdUp) return undefined;
     const handleKeyDown = (e) => {
-      if (mobileOpen && !isMdUp && e.key === 'Escape') {
+      if (e.key === 'Escape') {
         onMobileClose?.();
+        return;
       }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const items = Array.from(panelRef.current.querySelectorAll(MOBILE_FOCUSABLE));
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mobileOpen, isMdUp, onMobileClose]);
 
-  // 手機抽屜開啟時，焦點移到第一個連結
+  // 手機抽屜開啟時焦點移到第一個連結；由開啟轉為關閉時還給 TopBar 的漢堡鈕（首次掛載不動焦點）
+  const wasMobileOpenRef = useRef(false);
   useEffect(() => {
-    if (mobileOpen && !isMdUp) {
+    if (isMdUp) return;
+    if (mobileOpen) {
+      wasMobileOpenRef.current = true;
       panelRef.current?.querySelector('a[href]')?.focus();
+    } else if (wasMobileOpenRef.current) {
+      wasMobileOpenRef.current = false;
+      document.getElementById(MOBILE_NAV_TOGGLE_ID)?.focus();
     }
-  }, [mobileOpen]);
+  }, [mobileOpen, isMdUp]);
 
   // Handle stage click for collapsed state
   const handleStageClick = (stage, event) => {

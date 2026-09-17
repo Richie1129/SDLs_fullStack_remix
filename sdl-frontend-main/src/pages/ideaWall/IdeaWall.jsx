@@ -32,7 +32,8 @@ import { useVisNetwork } from './hooks/useVisNetwork';
 import useObservationMode from '../../hooks/useObservationMode';
 
 // Utils
-import { getCurrentUsername, isCurrentUser } from '../../utils/userUtils';
+import { isCurrentUser } from '../../utils/userUtils';
+import { getCurrentUsername } from '../../utils/authUtils';
 
 // Assets
 import Adding_icon from "../../assets/AnimationAddingNode.json";

@@ -40,7 +40,7 @@ const ChatInput = ({
           placeholder="輸入您的問題..."
           className={`flex-1 ${
             screenWidth < 768 ? 'py-[10px] px-[14px] text-[13px]' : 'py-3 px-4 text-[14px]'
-          } border border-[#dee2e6] rounded-full outline-none transition-all bg-[#f8f9fa] focus:border-[#5BA491] focus:bg-white focus:ring-2 focus:ring-[rgba(91,164,145,0.1)]`}
+          } border border-[#dee2e6] rounded-full outline-none transition-all bg-[#f8f9fa] focus:border-[#5BA491] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[rgba(91,164,145,0.1)]`}
         />
         <button
           type="submit"

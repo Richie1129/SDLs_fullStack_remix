@@ -9,7 +9,6 @@ import {
   removePersonalDailyAttachment,
 } from "../../../api/reflection";
 import { extractErrorMessage } from '@/constants/dailyErrorCodes.js';
-import { getCurrentUsername } from '../../../utils/userUtils';
 import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
 import { confirmDialog } from '../../../utils/dialogs';
 

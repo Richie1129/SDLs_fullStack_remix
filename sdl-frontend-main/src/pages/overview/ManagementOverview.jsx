@@ -5,11 +5,10 @@ import { useQuery, useQueryClient } from 'react-query';
 import { getAllProject, getProjectsByMentor } from '../../api/project';
 import { getAllTeachers, getProjectUser, batchGetProjectUsers } from '../../api/users';
 import { useNavigate } from 'react-router-dom';
-import dateFormat from 'dateformat';
 import { FaChevronDown, FaChevronUp } from 'react-icons/fa';  // 引入Font Awesome圖標
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
-import { getCurrentUserId, getCurrentUserRole } from '../../utils/authUtils';
+import { getCurrentUserId, getCurrentUserRole, getCurrentUsername } from '../../utils/authUtils';
 import { formatRelativeTime } from '../../utils/timeUtils';
+import { formatDate } from '../../utils/dateFormat';
 import { calculateProgress } from '../../utils/stageUtils';
 import { getCurrentSemester } from '../../utils/semesterUtils';
 
@@ -193,7 +192,7 @@ export default function ManagementOverview() {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M3 12a9 9 0 110 18 9 9 0 010-18zm9 9a9 9 0 100-18 9 9 0 000 18z" />
                         </svg>
-                        創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
+                        創建於 {formatDate(projectItem.createdAt)}
                       </span>
                       <span className='flex items-center text-gray-500'>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -280,7 +279,7 @@ export default function ManagementOverview() {
                     </div>
                     <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center'>
-                        創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
+                        創建於 {formatDate(projectItem.createdAt)}
                       </span>
                       <span className='flex items-center'>
                         更新於 {formatRelativeTime(projectItem.updatedAt)}
@@ -367,7 +366,7 @@ export default function ManagementOverview() {
                     </div>
                     <div className='flex justify-between text-body-sm text-gray-500'>
                       <span className='flex items-center'>
-                        創建於 {dateFormat(projectItem.createdAt, "yyyy/mm/dd")}
+                        創建於 {formatDate(projectItem.createdAt)}
                       </span>
                       <span className='flex items-center'>
                         更新於 {formatRelativeTime(projectItem.updatedAt)}

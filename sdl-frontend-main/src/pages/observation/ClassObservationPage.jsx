@@ -7,9 +7,9 @@ import TopBar from '../../components/TopBar';
 import { getProjectsByMentor, getAllClasses, updateViewingSettings, batchUpdateViewingSettings, getAvailableSemesters } from '../../api/project';
 import { getProjectUser } from '../../api/users';
 import Swal from 'sweetalert2';
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
-import { getCurrentUserRole } from '../../utils/authUtils';
+import { getCurrentUserRole, getCurrentUsername } from '../../utils/authUtils';
 import { getCurrentSemester, getSemesterLabel } from '../../utils/semesterUtils';
+import Overlay from '../../components/ui/Overlay';
 
 /**
  * 專案分享與權限管理頁面
@@ -289,7 +289,7 @@ const ClassObservationPage = () => {
                                                 value={projectSearch}
                                                 onChange={(e) => setProjectSearch(e.target.value)}
                                                 placeholder='搜尋專案名稱或描述...'
-                                                className='w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                                className='w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                                             />
                                             <FaSearch className='absolute right-3 top-1/2 -translate-y-1/2 text-gray-400' />
                                             {projectSearch && (
@@ -308,7 +308,7 @@ const ClassObservationPage = () => {
                                             <select
                                                 value={filterStatus}
                                                 onChange={(e) => setFilterStatus(e.target.value)}
-                                                className='px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                                className='px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                                             >
                                                 <option value='ALL'>全部狀態</option>
                                                 <option value='OPEN'>已開放</option>
@@ -320,7 +320,7 @@ const ClassObservationPage = () => {
                                             <select
                                                 value={filterClass}
                                                 onChange={(e) => setFilterClass(e.target.value)}
-                                                className='w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                                className='w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                                             >
                                                 <option value='ALL'>全部班級</option>
                                                 {ownedClassOptions.map((cls) => (
@@ -333,7 +333,7 @@ const ClassObservationPage = () => {
                                             <select
                                                 value={semesterFilter}
                                                 onChange={(e) => setSemesterFilter(e.target.value)}
-                                                className='w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                                className='w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                                             >
                                                 {[...new Set([getCurrentSemester(), ...(semesterData?.semesters || [])])].sort().reverse().map(sem => (
                                                     <option key={sem} value={sem}>
@@ -435,9 +435,15 @@ const ClassObservationPage = () => {
                             </div>
 
                             {/* 觀摩設定Modal */}
-                            {showViewingSettings && selectedProjectForSetting && (
-                                <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-                                    <div className='bg-white rounded-lg shadow-xl max-w-md w-full mx-4'>
+                            <Overlay
+                                open={showViewingSettings && !!selectedProjectForSetting}
+                                onClose={() => setShowViewingSettings(false)}
+                                closeOnBackdrop={false}
+                                label="設定專案觀摩權限"
+                                panelClassName="bg-white rounded-lg shadow-xl max-w-md w-full mx-4"
+                            >
+                                {selectedProjectForSetting && (
+                                <>
                                         <div className='px-6 py-4 border-b border-gray-200'>
                                             <h3 className='text-body-lg font-semibold text-gray-800'>
                                                 設定專案觀摩權限
@@ -482,7 +488,7 @@ const ClassObservationPage = () => {
                                                             placeholder='搜尋班級...'
                                                             value={classSearch}
                                                             onChange={(e) => setClassSearch(e.target.value)}
-                                                            className='text-body-sm px-3 py-1 pr-8 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
+                                                            className='text-body-sm px-3 py-1 pr-8 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
                                                         />
                                                         {classSearch && (
                                                             <button
@@ -537,14 +543,18 @@ const ClassObservationPage = () => {
                                                 儲存設定
                                             </button>
                                         </div>
-                                    </div>
-                                </div>
-                            )}
+                                </>
+                                )}
+                            </Overlay>
 
                             {/* 批量觀摩設定Modal */}
-                            {showBatchModal && (
-                                <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
-                                    <div className='bg-white rounded-lg shadow-xl max-w-lg w-full mx-4'>
+                            <Overlay
+                                open={showBatchModal}
+                                onClose={() => setShowBatchModal(false)}
+                                closeOnBackdrop={false}
+                                label="班級觀摩設定"
+                                panelClassName="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4"
+                            >
                                         <div className='px-6 py-4 border-b border-gray-200'>
                                             <h3 className='text-body-lg font-semibold text-gray-800'>
                                                 班級觀摩設定
@@ -560,7 +570,7 @@ const ClassObservationPage = () => {
                                                 <select
                                                     value={selectedSourceClass}
                                                     onChange={(e) => setSelectedSourceClass(e.target.value)}
-                                                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                                    className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                                                 >
                                                     <option value=''>請選擇來源班級</option>
                                                     {ownedClassOptions.map((cls) => (
@@ -647,9 +657,7 @@ const ClassObservationPage = () => {
                                                 確認設定
                                             </button>
                                         </div>
-                                    </div>
-                                </div>
-                            )}
+                            </Overlay>
                         </div>
                     </div>
                 </main>

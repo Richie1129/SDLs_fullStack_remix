@@ -8,10 +8,11 @@ import {
   FiX, FiChevronRight, FiLayout, FiMessageSquare
 } from "react-icons/fi";
 import TopBar from "../../components/TopBar";
-import { getCurrentUsername } from "../../utils/userUtils";
+import { getCurrentUsername } from "../../utils/authUtils";
 import { getTeacherProjectsSummary } from "../../api/project";
 import { getAllSubmit } from "../../api/submit";
 import { formatRelativeTime } from "../../utils/timeUtils";
+import Overlay from "../../components/ui/Overlay";
 
 // SDL 四階段定義
 const STAGES = [
@@ -401,9 +402,7 @@ const PortfolioDrawer = ({ project, onClose }) => {
   }, [allSubStages]);
 
   return (
-    <>
-      {/* 背景遮罩 */}
-      <div className="fixed inset-0 bg-black/20 z-40" onClick={onClose} />
+    <Overlay onClose={onClose} label={`${project.name} 歷程檔案預覽`} className="!bg-black/20">
       {/* 抽屜面板 */}
       <div className="fixed right-0 top-0 h-full w-full sm:w-[520px] bg-gray-50 shadow-xl z-50 flex flex-col">
         {/* 標題 */}
@@ -533,7 +532,7 @@ const PortfolioDrawer = ({ project, onClose }) => {
           </button>
         </div>
       </div>
-    </>
+    </Overlay>
   );
 };
 

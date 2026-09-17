@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getIdeaWallMessages, createIdeaWallMessage, getIdeaWallContext } from '../api/ideaWallMessage';
 import { socket } from '../utils/socket';
-import { getCurrentUsername, getCurrentUserId } from '../utils/userUtils';
+import { getCurrentUserId } from '../utils/authUtils';
 
 export const useIdeaWallChat = (ideaWallId) => {
     const [allMessages, setAllMessages] = useState([]);

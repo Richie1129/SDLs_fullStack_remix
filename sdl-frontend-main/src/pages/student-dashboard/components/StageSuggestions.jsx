@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiTarget, FiBookOpen, FiMessageSquare, FiZap, FiCpu, FiCheckSquare, FiChevronDown, FiChevronUp, FiArrowRight, FiX } from 'react-icons/fi';
 import LazyFallback from '../../../components/LazyFallback';
+import Overlay from '../../../components/ui/Overlay';
 
 // 自主學習助手改為動態載入：學生儀表板首屏不再帶入對話元件，開啟時才下載
 const SdlCoachChat = lazy(() => import('../../../components/SdlCoachChat'));
@@ -240,15 +241,14 @@ const StageSuggestions = ({ personalData, projectId }) => {
       </div>
 
       {/* SDL Coach modal */}
-      {coachOpen && (
-        <div
-          className="fixed inset-0 z-modal bg-black/40 flex items-end sm:items-center justify-center p-component-sm sm:p-component-md"
-          onClick={() => setCoachOpen(false)}
-        >
-          <div
-            className="bg-white w-full max-w-2xl h-[80vh] sm:h-[70vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+      <Overlay
+        open={coachOpen}
+        onClose={() => setCoachOpen(false)}
+        label="自主學習助手"
+        align="bottom"
+        className="!bg-black/40"
+        panelClassName="bg-white w-full max-w-2xl h-[80vh] sm:h-[70vh] rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+      >
             <div className="flex items-center justify-between px-component-base py-component-sm border-b border-gray-200 bg-customgreen/5">
               <div className="flex items-center gap-stack-xs">
                 <FiBookOpen className="w-4 h-4 text-customgreen" />
@@ -276,9 +276,7 @@ const StageSuggestions = ({ personalData, projectId }) => {
                 />
               </Suspense>
             </div>
-          </div>
-        </div>
-      )}
+      </Overlay>
 
       {/* Suggestions list */}
       {!collapsed && (

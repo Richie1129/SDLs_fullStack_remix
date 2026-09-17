@@ -20,7 +20,7 @@ export default function CommonInput({ handleChange, type, name, index }) {
                 <textarea
                     className="w-full rounded-lg outline-none ring-2 ring-customgreen p-3
                                min-h-[120px] resize-y text-body-sm
-                               focus:ring-customgreen/80 focus:shadow-md
+                               focus:outline-none focus:ring-customgreen/80 focus:shadow-md
                                transition-shadow duration-fast
                                placeholder:text-gray-400"
                     name={index}
@@ -69,7 +69,7 @@ export default function CommonInput({ handleChange, type, name, index }) {
             <input
                 className="w-full rounded-lg outline-none ring-2 ring-customgreen p-2
                            text-body-sm
-                           focus:ring-customgreen/80 focus:shadow-md
+                           focus:outline-none focus:ring-customgreen/80 focus:shadow-md
                            transition-shadow duration-fast
                            placeholder:text-gray-400"
                 type="text"

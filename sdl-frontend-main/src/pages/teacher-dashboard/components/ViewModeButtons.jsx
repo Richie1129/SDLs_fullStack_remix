@@ -40,7 +40,7 @@ const ViewModeButtons = ({ viewMode, setViewMode }) => {
         <select 
           value={viewMode}
           onChange={(e) => setViewMode(e.target.value)}
-          className="w-full px-4 py-3 rounded-xl bg-white border border-gray-300 text-body-sm font-medium shadow-sm focus:ring-2 focus:ring-customgreen focus:border-transparent transition-all"
+          className="w-full px-4 py-3 rounded-xl bg-white border border-gray-300 text-body-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-customgreen focus:border-transparent transition-all"
           aria-label="選擇視圖模式"
         >
           {modes.map(({ key, label }) => (

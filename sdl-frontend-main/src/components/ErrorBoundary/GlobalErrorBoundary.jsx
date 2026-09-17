@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiTool } from 'react-icons/fi';
 import errorReportingService from '../../services/errorReportingService';
+import Button from '../ui/Button';
 
 /**
  * 全域錯誤邊界組件 - Linus式簡潔設計
@@ -104,19 +105,21 @@ class GlobalErrorBoundary extends React.Component {
 
             {/* 操作按鈕 */}
             <div className="space-y-3">
-              <button
+              <Button
                 onClick={this.handleRetry}
-                className="w-full px-4 py-2 bg-customgreen text-white rounded-md hover:bg-teal-600 transition-colors"
+                variant="primary"
+                className="w-full"
               >
                 重新載入
-              </button>
+              </Button>
 
-              <button
+              <Button
                 onClick={this.handleGoHome}
-                className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                variant="secondary"
+                className="w-full"
               >
                 返回首頁
-              </button>
+              </Button>
             </div>
 
             {/* 錯誤ID - 用於技術支援 */}

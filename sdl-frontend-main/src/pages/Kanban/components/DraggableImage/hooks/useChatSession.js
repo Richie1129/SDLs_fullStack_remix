@@ -9,8 +9,7 @@ import {
   createNewSessionInDB,
   generateSessionTitle
 } from "../../../../../api/rag";
-import { getCurrentUsername } from "../../../../../utils/userUtils";
-import { getCurrentUserId } from "../../../../../utils/authUtils";
+import { getCurrentUserId, getCurrentUsername } from "../../../../../utils/authUtils";
 import storageService, { authStorage, projectStorage } from "../../../../../services/storageService";
 
 const RAGFLOW_CHAT_ID = import.meta.env.VITE_RAGFLOW_CHAT_ID;

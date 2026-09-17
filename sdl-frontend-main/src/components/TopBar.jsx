@@ -11,10 +11,11 @@ import { socket } from '../utils/socket';
 import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import Announcement from './Announcement'; // 引入新的 Announcement 元件
 import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模式 hook
-import { getCurrentUsername, addUserUpdateListener } from '../utils/userUtils'; // 引入用戶資訊工具
-import { getCurrentUserRole, setStageInfo, clearStageInfo } from '../utils/authUtils';
+import { addUserUpdateListener } from '../utils/userUtils'; // 引入用戶資訊工具
+import { getCurrentUserRole, setStageInfo, clearStageInfo, getCurrentUsername } from '../utils/authUtils';
+import { MOBILE_NAV_TOGGLE_ID } from './SideBar';
 
-export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer, onOpenMobileNav }) {
+export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer, onOpenMobileNav, mobileNavOpen = false }) {
   const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
   const [projectInfo, setProjectInfo] = useState({});
   const [referralCodeModalOpen, setReferralCodeModalOpen] = useState(false);
@@ -266,7 +267,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
     <div className="z-nav h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
         {onOpenMobileNav && projectId && !isOverviewPage && (
-          <button type="button" onClick={onOpenMobileNav} aria-label="開啟導覽" className="md:hidden mr-1 p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-fast">
+          <button type="button" id={MOBILE_NAV_TOGGLE_ID} onClick={onOpenMobileNav} aria-label="開啟導覽" aria-expanded={mobileNavOpen} className="md:hidden mr-1 p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-fast">
             <Menu className="h-5 w-5" />
           </button>
         )}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiAdapter } from "../utils/apiAdapter";
 import { DataNormalizer } from "../utils/DataNormalizer";
-import { getCurrentUserId, getCurrentUserRole } from "../../../utils/authUtils";
+import { getCurrentUserId } from "../../../utils/authUtils";
 
 /**
  * 學生相關資料的專門 Hook

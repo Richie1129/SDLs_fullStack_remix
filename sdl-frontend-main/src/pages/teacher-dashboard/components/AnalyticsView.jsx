@@ -9,6 +9,7 @@ import {
   getSafeValue
 } from '../../student-dashboard/utils';
 import LoadingState from '../../student-dashboard/components/LoadingState';
+import Overlay from '../../../components/ui/Overlay';
 
 // 圖表元件
 import {
@@ -464,10 +465,13 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
         )}
       </div>
 
-      {nodeDetailModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40" onClick={closeNodeDetailModal} />
-          <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden">
+      <Overlay
+        open={nodeDetailModal.isOpen}
+        onClose={closeNodeDetailModal}
+        label="延伸節點詳情"
+        className="!bg-black/40"
+        panelClassName="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] overflow-hidden"
+      >
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <div>
                 <h3 className="text-body-lg font-semibold text-gray-800">延伸節點詳情</h3>
@@ -532,9 +536,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 <p className="text-gray-500 text-body-sm">無延伸節點</p>
               )}
             </div>
-          </div>
-        </div>
-      )}
+      </Overlay>
 
       {/* 進度看板統計 */}
       <div className="bg-white p-component-base rounded-lg shadow-md">

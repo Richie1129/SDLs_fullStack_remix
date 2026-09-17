@@ -68,6 +68,7 @@ export default function TimelineTemplate({ data, narrative }) {
         {stages.filter(s => s.hasContent).map((stage) => {
           const color = TIMELINE_COLORS[stage.stageNumber - 1];
           const hasContent = stage.reflections.length > 0 || stage.submits.length > 0 || stage.nodes.length > 0;
+          const StageIcon = STAGE_ICONS[stage.stageNumber];
 
           return (
             <div key={stage.stageNumber} style={{ marginBottom: '10mm', position: 'relative' }}>
@@ -82,7 +83,7 @@ export default function TimelineTemplate({ data, narrative }) {
 
               {/* 階段標題 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', marginBottom: '4mm', breakAfter: 'avoid' }}>
-                <span style={{ fontSize: '16pt' }}>{React.createElement(STAGE_ICONS[stage.stageNumber], { size: 20, style: { verticalAlign: 'middle' } })}</span>
+                <span style={{ fontSize: '16pt' }}>{StageIcon && <StageIcon size={20} style={{ verticalAlign: 'middle' }} />}</span>
                 <div>
                   <div style={{ fontSize: '8pt', color: color, fontWeight: '700', letterSpacing: '1px' }}>
                     STAGE {stage.stageNumber}

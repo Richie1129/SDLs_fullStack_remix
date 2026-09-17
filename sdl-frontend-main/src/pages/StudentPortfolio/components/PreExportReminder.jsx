@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiAlertCircle, FiCheckCircle, FiArrowLeft } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
+import Overlay from '../../../components/ui/Overlay';
 
 export default function PreExportReminder({ completeness, onConfirm, onCancel }) {
   const navigate = useNavigate();
@@ -21,8 +22,12 @@ export default function PreExportReminder({ completeness, onConfirm, onCancel })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+    <Overlay
+      onClose={onCancel}
+      label="目前學習進度"
+      className="!bg-black/40 backdrop-blur-sm"
+      panelClassName="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+    >
 
         {/* 標頭 */}
         <div className="bg-amber-50 border-b border-amber-100 px-6 py-4 flex items-center gap-3">
@@ -68,7 +73,6 @@ export default function PreExportReminder({ completeness, onConfirm, onCancel })
             匯出目前進度
           </button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }

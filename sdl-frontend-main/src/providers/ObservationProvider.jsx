@@ -3,8 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { getProjectUser } from '../api/users';
 import { getProject } from '../api/project';
-import { getCurrentUsername } from '../utils/userUtils';
-import { getCurrentUserId } from '../utils/authUtils';
+import { getCurrentUserId, getCurrentUsername } from '../utils/authUtils';
 import { projectStorage } from '../services/storageService';
 
 /**

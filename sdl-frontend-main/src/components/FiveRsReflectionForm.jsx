@@ -248,7 +248,7 @@ const FiveRsReflectionForm = ({
             value={title}
             onChange={(e) => onTitleChange(e.target.value)}
             placeholder="請輸入日誌標題..."
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-fast bg-gray-50 focus:bg-white"
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all duration-fast bg-gray-50 focus:bg-white"
           />
         </div>
         
@@ -497,7 +497,7 @@ const FiveRsReflectionForm = ({
                     onChange={(e) => handleInputChange(step, e.target.value)}
                     placeholder={framework.placeholder}
                     rows={5}
-                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none bg-gray-50 focus:bg-white transition-colors text-body-sm placeholder:text-gray-400"
+                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none bg-gray-50 focus:bg-white transition-colors text-body-sm placeholder:text-gray-400"
                   />
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-caption text-gray-400">
@@ -552,7 +552,7 @@ const FiveRsReflectionForm = ({
               <select
                 value={aiProvider}
                 onChange={(e) => setAiProvider(e.target.value)}
-                className="text-caption border border-purple-200 rounded-lg px-3 py-1.5 bg-white/80 text-purple-700 focus:ring-2 focus:ring-purple-300 focus:border-transparent"
+                className="text-caption border border-purple-200 rounded-lg px-3 py-1.5 bg-white/80 text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-transparent"
                 title="選擇 AI 分析模型"
               >
                 <option value="auto">自動選擇</option>

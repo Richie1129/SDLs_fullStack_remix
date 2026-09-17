@@ -71,3 +71,16 @@ button, a, [role="button"], input, select, textarea {
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
+
+/* =====================================================
+   鍵盤焦點：只在 focus-visible 顯示，滑鼠點擊不出現；放在 base 層讓 outline-none / focus:ring 等 utility 能覆寫
+   ===================================================== */
+@layer base {
+  :focus-visible {
+    outline: 2px solid theme('colors.customgreen');
+    outline-offset: 2px;
+  }
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline-offset: 0;
+  }
+}

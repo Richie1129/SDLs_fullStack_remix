@@ -160,7 +160,7 @@ class KanbanErrorBoundary extends React.Component {
     // 提醒用戶保存工作，然後重新載入頁面
     confirmDialog({ title: '重新載入頁面', text: '請確認您的工作已保存。', confirmText: '重新載入', icon: 'question' }).then((ok) => {
       if (ok) window.location.reload();
-    });
+    }).catch(() => {});
   };
 
   getErrorMessage = () => {

@@ -12,8 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { HiArrowLeft } from "react-icons/hi";
 import { FiBookOpen, FiTrendingUp, FiClipboard, FiMessageSquare, FiInfo, FiCpu } from 'react-icons/fi';
 import TopBar from "../../components/TopBar";
-import { getCurrentUsername, getUserForSocket, isCurrentUser } from '../../utils/userUtils';
-import { getCurrentUserId } from '../../utils/authUtils';
+import { getCurrentUserId, getCurrentUsername } from '../../utils/authUtils';
 import { getCurrentSemester } from '../../utils/semesterUtils';
 
 // 總覽頁每批並行抓取的專案數（F10）

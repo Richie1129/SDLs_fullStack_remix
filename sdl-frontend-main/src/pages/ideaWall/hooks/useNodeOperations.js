@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import toast from 'react-hot-toast';
 import { getIdeaWall, createIdeaWall } from '../../../api/ideaWall';
-import { getCurrentUsername } from '../../../utils/userUtils';
+import { getCurrentUsername } from '../../../utils/authUtils';
 
 /**
  * 節點操作 Hook

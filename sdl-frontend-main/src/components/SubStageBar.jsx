@@ -184,17 +184,17 @@ export default function SubStageComponent() {
         setStages(isValidStageIndex ? stageInfo[currentStageIndex - 1] : []);
     }, [currentStageIndex, currentSubStageIndex]);
 
-    // 底部子階段 pill 超出可視寬度時，自動捲動到目前子階段
+    // 底部子階段 pill 超出可視寬度時，把目前子階段捲到容器中央
+    // 用容器自己的 scrollTo 而不是 scrollIntoView，避免連帶捲動外層 overflow-hidden 的版面
     useEffect(() => {
-        if (!pillsRef.current) return;
-        if (pillsRef.current.scrollWidth > pillsRef.current.clientWidth) {
-            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            currentPillRef.current?.scrollIntoView({
-                block: 'nearest',
-                inline: 'center',
-                behavior: prefersReduced ? 'auto' : 'smooth',
-            });
-        }
+        const box = pillsRef.current;
+        const el = currentPillRef.current;
+        if (!box || !el || box.scrollWidth <= box.clientWidth) return;
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        box.scrollTo({
+            left: el.offsetLeft - (box.clientWidth - el.clientWidth) / 2,
+            behavior: prefersReduced ? 'auto' : 'smooth',
+        });
     }, [currentSubStageIndex, stages]);
 
     const handleRobotClick = () => {

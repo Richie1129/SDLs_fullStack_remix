@@ -4,7 +4,7 @@ import { HiLink, HiTrash } from 'react-icons/hi';
 import Modal from '../../../../components/Modal';
 import KnowledgeForumScaffolds from '../KnowledgeForumScaffolds';
 import { formatTime } from '../../../../utils/timeUtils';
-import { getCurrentUsername } from '../../../../utils/userUtils';
+import { getCurrentUsername } from '../../../../utils/authUtils';
 
 /**
  * 更新/檢視節點 Modal 元件

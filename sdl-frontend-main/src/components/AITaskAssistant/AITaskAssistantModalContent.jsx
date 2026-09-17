@@ -229,7 +229,7 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
                 value={option.value}
                 checked={selectedState === option.value}
                 onChange={(e) => setSelectedState(e.target.value)}
-                className="mt-1 text-customgreen focus:ring-customgreen"
+                className="mt-1 text-customgreen focus:outline-none focus:ring-customgreen"
               />
               <div className="ml-3 flex-1">
                 <div className="flex items-center gap-2">
@@ -271,7 +271,7 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
                   checked={askedSources.includes(source)}
                   onChange={() => handleSourceChange(source)}
                   disabled={isDisabled}
-                  className="text-purple-600 focus:ring-purple-500 disabled:cursor-not-allowed"
+                  className="text-purple-600 focus:outline-none focus:ring-purple-500 disabled:cursor-not-allowed"
                 />
                 <span className="text-body-sm text-gray-700">{source}</span>
               </label>
@@ -499,7 +499,7 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
                 <textarea
                   placeholder="例如：我需要更基礎的說明、建議太抽象、我想要程式碼範例..."
                   className="w-full p-3 border border-gray-300 rounded-lg text-body-sm
-                           focus:ring-2 focus:ring-customgreen focus:border-transparent"
+                           focus:outline-none focus:ring-2 focus:ring-customgreen focus:border-transparent"
                   rows={3}
                   value={feedbackDetail}
                   onChange={(e) => setFeedbackDetail(e.target.value)}

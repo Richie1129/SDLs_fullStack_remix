@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiShare2, FiPlusCircle, FiLink, FiMessageCircle, FiX } from 'react-icons/fi';
+import Button from '../../../components/ui/Button';
 
 const STEPS = [
   {
@@ -111,19 +112,23 @@ export default function IdeaWallOnboarding({ onClose, projectId }) {
           </span>
 
           {isLast ? (
-            <button
+            <Button
               onClick={handleDone}
-              className="px-btn-x-lg py-btn-y bg-indigo-500 text-white text-body-sm font-medium rounded-lg hover:bg-indigo-500/90 transition-colors duration-fast"
+              variant="primary"
+              size="lg"
+              className="!bg-indigo-500 hover:!bg-indigo-500/90 active:!bg-indigo-600"
             >
               開始探索
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
               onClick={() => setStep(s => s + 1)}
-              className="px-btn-x-lg py-btn-y bg-indigo-500 text-white text-body-sm font-medium rounded-lg hover:bg-indigo-500/90 transition-colors duration-fast"
+              variant="primary"
+              size="lg"
+              className="!bg-indigo-500 hover:!bg-indigo-500/90 active:!bg-indigo-600"
             >
               下一步
-            </button>
+            </Button>
           )}
         </div>
       </div>

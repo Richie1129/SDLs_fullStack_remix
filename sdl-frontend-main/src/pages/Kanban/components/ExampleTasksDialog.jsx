@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiX } from 'react-icons/fi';
+import Overlay from '../../../components/ui/Overlay';
 
 /**
  * 載入範例任務的確認對話框，支援個別任務勾選。
@@ -72,8 +73,13 @@ export default function ExampleTasksDialog({ pendingExampleTasks, onConfirm, onS
   };
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+    <Overlay
+      onClose={onClose || onSkip}
+      closeOnBackdrop={false}
+      label="選擇要載入的任務"
+      className="!bg-black/60"
+      panelClassName="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+    >
 
         {/* 標題列 */}
         <div className="px-6 pt-6 pb-4 border-b border-gray-100 flex items-start justify-between">
@@ -101,7 +107,7 @@ export default function ExampleTasksDialog({ pendingExampleTasks, onConfirm, onS
                 <label className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-50 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded text-customgreen border-gray-300 focus:ring-customgreen cursor-pointer"
+                    className="h-4 w-4 rounded text-customgreen border-gray-300 focus:outline-none focus:ring-customgreen cursor-pointer"
                     checked={checkState === 'all'}
                     ref={el => { if (el) el.indeterminate = checkState === 'partial'; }}
                     onChange={() => toggleColumn(col)}
@@ -123,7 +129,7 @@ export default function ExampleTasksDialog({ pendingExampleTasks, onConfirm, onS
                     >
                       <input
                         type="checkbox"
-                        className="h-4 w-4 mt-0.5 rounded text-customgreen border-gray-300 focus:ring-customgreen cursor-pointer shrink-0"
+                        className="h-4 w-4 mt-0.5 rounded text-customgreen border-gray-300 focus:outline-none focus:ring-customgreen cursor-pointer shrink-0"
                         checked={selected[col.columnId]?.has(i) || false}
                         onChange={() => toggleTask(col.columnId, i)}
                       />
@@ -167,7 +173,6 @@ export default function ExampleTasksDialog({ pendingExampleTasks, onConfirm, onS
               : `載入 ${totalSelected} 張任務`}
           </button>
         </div>
-      </div>
-    </div>
+    </Overlay>
   );
 }

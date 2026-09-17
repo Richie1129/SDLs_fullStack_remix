@@ -7,8 +7,7 @@ import {
   deleteProject
 } from '../../../api/project';
 import { getAllTeachers, batchGetProjectUsers } from '../../../api/users';
-import { getCurrentUsername } from '../../../utils/userUtils';
-import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
+import { getCurrentUserId, getCurrentUserRole, getCurrentUsername } from '../../../utils/authUtils';
 import { userStorage, authStorage } from '../../../services/storageService';
 import { getCurrentSemester } from '../../../utils/semesterUtils';
 import { calculateProgress } from '../../../utils/stageUtils';

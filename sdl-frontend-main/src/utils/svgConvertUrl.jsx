@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
-import dateFormat from 'dateformat';
+import { formatDate } from './dateFormat';
 import { PiNoteFill } from "react-icons/pi";
 
 /**
@@ -136,7 +136,7 @@ export default function svgConvertUrl(title, owner, createdAt, userColor, conten
                             color: "#94A3B8",
                             fontWeight: "500"
                         }}>
-                            {dateFormat(createdAt, "mm/dd HH:MM")}
+                            {formatDate(createdAt, 'MM/dd HH:mm')}
                         </span>
                     </div>
                 </div>
