@@ -1,6 +1,6 @@
 # 005 — 三個右側抽屜改用百分比 transform 字串與抽屜曲線，並抽成共用 preset
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: df1cb1b
 - **Severity**: MEDIUM
 - **Category**: 3. Physicality & origin（兼 5. Performance、7. Cohesion）

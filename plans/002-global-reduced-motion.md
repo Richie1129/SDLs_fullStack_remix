@@ -1,6 +1,6 @@
 # 002 — 建立全域 prefers-reduced-motion 防線（framer MotionConfig + CSS media query）
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: df1cb1b
 - **Severity**: HIGH
 - **Category**: 6. Accessibility

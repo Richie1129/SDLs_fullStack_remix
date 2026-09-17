@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { DRAWER_RIGHT } from '../utils/motionPresets';
 import { FiX, FiImage, FiPaperclip, FiSend, FiDownload, FiFile, FiFileText, FiTrash, FiInfo } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import Swal from 'sweetalert2';
@@ -401,9 +402,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
 
   return (
     <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 300, opacity: 0 }}
+      {...DRAWER_RIGHT}
       className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-[120] overflow-hidden flex flex-col"
     >
       {/* Header */}

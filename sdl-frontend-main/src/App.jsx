@@ -1,4 +1,5 @@
 import React, { Suspense, lazy } from 'react';
+import { MotionConfig } from 'framer-motion';
 import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route } from "react-router-dom";
 import { ProtectedLogin, ProtectedRoute } from "./utils/ProtectedRoute";
 import { AuthProvider } from "./utils/AuthContext";
@@ -87,10 +88,12 @@ export default function App() {
   )
 
   return (
-    <AuthProvider>
-      <Suspense fallback={<RouteFallback />}>
-        <RouterProvider router={router} future={{ v7_startTransition: true }} />
-      </Suspense>
-    </AuthProvider>
+    <MotionConfig reducedMotion="user">
+      <AuthProvider>
+        <Suspense fallback={<RouteFallback />}>
+          <RouterProvider router={router} future={{ v7_startTransition: true }} />
+        </Suspense>
+      </AuthProvider>
+    </MotionConfig>
   )
 }

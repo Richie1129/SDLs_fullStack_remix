@@ -30,3 +30,25 @@ td.numeric,
 .text-caption {
   letter-spacing: 0.03em;
 }
+
+/* =====================================================
+   減少動態：保留淡入與顏色回饋，移除位移、縮放與裝飾性循環
+   ===================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-rise,
+  .animate-float,
+  .animate-float-slow,
+  .animate-bounce {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .glass-card-hover:hover,
+  .card-hover:hover,
+  .group:hover .icon-bg {
+    transform: none;
+  }
+}

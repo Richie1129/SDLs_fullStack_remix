@@ -13,6 +13,7 @@
 
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { DRAWER_RIGHT } from '../../utils/motionPresets';
 import { FiActivity } from 'react-icons/fi';
 import { useActivityData } from './hooks/useActivityData';
 import { useActivityStream } from './hooks/useActivityStream';
@@ -71,9 +72,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
 
     return (
         <motion.div
-            initial={{ x: 300, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 300, opacity: 0 }}
+            {...DRAWER_RIGHT}
             className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-8rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-50 overflow-hidden"
         >
             {/* 標題列 */}
