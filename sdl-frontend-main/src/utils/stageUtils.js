@@ -54,7 +54,7 @@ export function getStageColor(stageIndex, currentIndex) {
 export function getStageTextColor(stageIndex, currentIndex) {
     const current = parseInt(currentIndex, 10);
     if (current === stageIndex) {
-        return 'text-white animate-pulse'; // 當前階段
+        return 'text-white'; // 當前階段
     } else if (stageIndex < current) {
         return 'text-slate-200'; // 已完成階段
     } else {

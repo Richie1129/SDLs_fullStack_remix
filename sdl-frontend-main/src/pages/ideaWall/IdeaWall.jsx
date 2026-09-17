@@ -291,7 +291,7 @@ export default function IdeaWall() {
 
             {/* 連線模式提示 UI */}
             {state.isLinkingMode && state.linkingSourceNode && (
-                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-4 animate-bounce">
+                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-blue-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-4">
                     <HiLink className="w-6 h-6 flex-shrink-0" />
                     <div className="flex-1">
                         <p className="font-bold text-lg">連線模式</p>

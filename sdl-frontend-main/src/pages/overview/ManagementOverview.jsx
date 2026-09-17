@@ -431,7 +431,7 @@ const Accordion = ({ index, title, children, activeIndex, setActiveIndex }) => {
       <div
         ref={contentRef}
         style={{ height: isActive ? `${height}px` : "0px", overflow: 'hidden' }}
-        className="transition-height bg-customgreen/5 duration-slow ease-in-out my-1  "
+        className="transition-[height] bg-customgreen/5 duration-normal ease-out my-1"
       >
         <div className="text-left px-2 py-2">
           {children}

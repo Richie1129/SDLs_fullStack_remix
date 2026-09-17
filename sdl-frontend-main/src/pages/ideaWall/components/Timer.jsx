@@ -117,7 +117,7 @@ const Timer = () => {
               r={radius}
               cx="40"
               cy="40"
-              className="transition-all duration-1000 ease-in-out"
+              className="transition-[stroke-dashoffset] duration-1000 ease-linear"
               transform="rotate(-90 40 40)" // Rotate the circle to start at the top
             />
           </svg>

@@ -225,7 +225,7 @@ const ProjectSection = ({
           minHeight: isActive ? `${minContentHeight}px` : "0px",
           overflow: 'hidden'
         }}
-        className="transition-height bg-customgreen/5 duration-500 ease-in-out my-1"
+        className="transition-[height] bg-customgreen/5 duration-normal ease-out my-1"
       >
         <div className="text-left px-2 py-2">
           {/* 控制按鈕和篩選 */}

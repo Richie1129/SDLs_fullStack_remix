@@ -1,6 +1,6 @@
 # 006 — 移除高頻與常駐元件上的裝飾性動畫（設計系統違規與無限循環）
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: df1cb1b
 - **Severity**: HIGH
 - **Category**: 1. Purpose & frequency（兼 2. Easing & duration）

@@ -18,7 +18,6 @@ export function ReflectionTypeSelector({
       <div className={`grid grid-cols-2 gap-3 ${className}`}>
         {/* 傳統日誌 - 緊湊版 */}
         <motion.div
-          whileHover={{ y: -2 }}
           data-track
           data-track-action="REFLECTION_TYPE_TRADITIONAL"
           data-track-type="reflection"
@@ -41,7 +40,6 @@ export function ReflectionTypeSelector({
 
         {/* 5Rs 反思 - 緊湊版 */}
         <motion.div
-          whileHover={{ y: -2 }}
           data-track
           data-track-action="REFLECTION_TYPE_5RS"
           data-track-type="reflection"
@@ -72,7 +70,6 @@ export function ReflectionTypeSelector({
     <div className={`grid grid-cols-1 md:grid-cols-2 gap-stack-base sm:gap-stack-md ${className}`}>
       {/* 傳統日誌卡片 - 綠色主題 */}
       <motion.div
-        whileHover={{ y: -4 }}
         data-track
         data-track-action="REFLECTION_TYPE_TRADITIONAL"
         data-track-type="reflection"
@@ -144,7 +141,6 @@ export function ReflectionTypeSelector({
 
       {/* 5Rs 反思卡片 - 紫色漸層主題 */}
       <motion.div
-        whileHover={{ y: -4 }}
         data-track
         data-track-action="REFLECTION_TYPE_5RS"
         data-track-type="reflection"

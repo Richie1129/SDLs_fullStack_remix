@@ -1,6 +1,6 @@
 # 001 — 共用 Modal 的進場縮放從 0.75 改為 0.95，並只過渡 transform/opacity
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: df1cb1b
 - **Severity**: HIGH
 - **Category**: 3. Physicality & origin（兼 5. Performance）

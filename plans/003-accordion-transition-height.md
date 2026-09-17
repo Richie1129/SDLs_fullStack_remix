@@ -1,6 +1,6 @@
 # 003 — 修復兩個手風琴的無效 `transition-height` class，讓展開收合真的有過渡
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: df1cb1b
 - **Severity**: HIGH（功能性缺陷：宣告了動畫但實際是瞬間跳變）
 - **Category**: 2. Easing & duration（兼 5. Performance）

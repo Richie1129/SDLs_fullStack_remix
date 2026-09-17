@@ -9,12 +9,12 @@
 
 | 編號 | 標題 | 嚴重度 | 範圍 | 狀態 |
 |---|---|---|---|---|
-| [001](001-modal-scale-origin.md) | 共用 Modal 縮放 0.75 改 0.95，只過渡 transform/opacity | HIGH | 1 檔 2 行，影響 18 個模組 | TODO |
+| [001](001-modal-scale-origin.md) | 共用 Modal 縮放 0.75 改 0.95，只過渡 transform/opacity | HIGH | 1 檔 2 行，影響 18 個模組 | DONE |
 | [002](002-global-reduced-motion.md) | 全域 prefers-reduced-motion 防線 | HIGH | 2 檔約 25 行 | TODO |
-| [003](003-accordion-transition-height.md) | 修復無效的 `transition-height`，手風琴真的有過渡 | HIGH | 2 檔各 1 行 | TODO |
+| [003](003-accordion-transition-height.md) | 修復無效的 `transition-height`，手風琴真的有過渡 | HIGH | 2 檔各 1 行 | DONE |
 | [004](004-easing-tokens-and-fade-in-dedupe.md) | 建立 easing token、收斂三份 `fade-in` | MEDIUM | 4 檔約 30 行 | DONE |
 | [005](005-right-drawers-transform-string.md) | 三個右側抽屜改百分比 transform 字串與共用 preset | MEDIUM | 3 檔 + 1 新檔 | TODO |
-| [006](006-remove-decorative-motion.md) | 移除高頻與常駐元件上的裝飾動畫 | HIGH | 6 檔約 12 行 | TODO |
+| [006](006-remove-decorative-motion.md) | 移除高頻與常駐元件上的裝飾動畫 | HIGH | 6 檔約 12 行 | DONE |
 | [007](007-remove-dead-motion-code.md) | 移除無人引用的動畫元件、CSS 與套件 | LOW | 刪 4 檔 + CSS 4 區塊 + 1 套件 | TODO |
 
 ## 建議執行順序
