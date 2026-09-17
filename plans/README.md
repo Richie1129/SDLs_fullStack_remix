@@ -15,7 +15,7 @@
 | [004](004-easing-tokens-and-fade-in-dedupe.md) | 建立 easing token、收斂三份 `fade-in` | MEDIUM | 4 檔約 30 行 | DONE |
 | [005](005-right-drawers-transform-string.md) | 三個右側抽屜改百分比 transform 字串與共用 preset | MEDIUM | 3 檔 + 1 新檔 | DONE |
 | [006](006-remove-decorative-motion.md) | 移除高頻與常駐元件上的裝飾動畫 | HIGH | 6 檔約 12 行 | DONE |
-| [007](007-remove-dead-motion-code.md) | 移除無人引用的動畫元件、CSS 與套件 | LOW | 刪 4 檔 + CSS 4 區塊 + 1 套件 | TODO |
+| [007](007-remove-dead-motion-code.md) | 移除無人引用的動畫元件、CSS 與套件 | LOW | 刪 4 檔 + CSS 4 區塊 + 1 套件 | DONE |
 
 ## 建議執行順序
 

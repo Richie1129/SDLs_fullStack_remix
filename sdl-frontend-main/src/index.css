@@ -46,8 +46,6 @@ td.numeric,
     transform: none;
   }
 
-  .glass-card-hover:hover,
-  .card-hover:hover,
   .group:hover .icon-bg {
     transform: none;
   }

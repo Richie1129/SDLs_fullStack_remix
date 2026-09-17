@@ -1,6 +1,6 @@
 # 007 — 移除稽核中確認無人引用的動畫元件、CSS class 與相依套件
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: df1cb1b
 - **Severity**: LOW（清理；但這些死碼各含教科書級違例，容易被複製沿用）
 - **Category**: 7. Cohesion & tokens
@@ -69,7 +69,7 @@
    grep -rlF "AnimatedHamburgerButton" src | grep -v "AnimatedHamburgerButton.jsx"
    grep -rlF "Kanban/k'" src; grep -rlF 'Kanban/k"' src
    grep -rlF "IdeaWallSideBar" src | grep -v "IdeaWallSideBar.jsx"
-   grep -rn "glass-card-hover\|card-hover\|progress-bar\|tab-button" src index.html | grep -v "glassmorphism.css"
+   grep -rn "glass-card-hover\|card-hover\|progress-bar\|tab-button" src index.html | grep -v "glassmorphism.css\|src/index.css"   # index.css 的 reduced-motion 區塊由步驟 5 處理
    grep -rn "react-type-animation" src
    ```
    任一條有輸出，停止並回報該項目，其餘項目照常進行。

@@ -9,16 +9,6 @@
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
-/* Glass Card Hover 效果 */
-.glass-card-hover {
-  transition: all 0.25s ease;
-}
-
-.glass-card-hover:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.25);
-}
-
 /* Dark Glass Card - 深色背景（可選） */
 .glass-card-dark {
   background: rgba(30, 41, 59, 0.7);
@@ -43,21 +33,6 @@
 
 .group:hover .icon-bg {
   transform: scale(1.1) rotate(5deg);
-}
-
-/* 進度條動畫 */
-.progress-bar {
-  transition: width 1s ease-out;
-}
-
-/* 卡片 Hover 效果 */
-.card-hover {
-  transition: all 0.25s ease;
-}
-
-.card-hover:hover {
-  transform: scale(1.05) translateY(-4px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 /* 按鈕漣漪效果 */
@@ -95,12 +70,3 @@
   }
 }
 
-/* Tab 按鈕樣式 */
-.tab-button {
-  transition: all 0.25s ease;
-}
-
-.tab-button:not(.active):hover {
-  background: rgba(91, 164, 145, 0.1);
-  color: #5BA491;
-}
