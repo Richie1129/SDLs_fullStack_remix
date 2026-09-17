@@ -395,8 +395,8 @@ export default function Kanban() {
     if (isObservationMode) return;
     
     Swal.fire({
-      title: "刪除",
-      text: "列表中的卡片將一併刪除，確定要刪除嗎?",
+      title: "刪除欄位",
+      text: "欄位內的卡片會一併刪除，確定要刪除嗎",
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#5BA491",
@@ -532,11 +532,12 @@ export default function Kanban() {
       )}
 
       {!isObservationMode && (
-        <DraggableImage 
+        <DraggableImage
           containerRef={kanbanContainerRef}
           projectId={projectId}
           currentStage={currentStage}
           currentSubStage={currentSubStage}
+          suppressMessage={showOnboarding}
         />
       )}
       

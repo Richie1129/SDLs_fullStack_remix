@@ -130,7 +130,7 @@ const ClassObservationPage = () => {
             // ✅ 成功提示
             Swal.fire({
                 icon: 'success',
-                title: '觀摩設定已更新！',
+                title: '觀摩設定已更新',
                 showConfirmButton: false,
                 timer: 1500
             });
@@ -141,7 +141,7 @@ const ClassObservationPage = () => {
             Swal.fire({
                 icon: 'error',
                 title: '更新失敗',
-                text: '請重試！'
+                text: '請重試'
             });
         }
     };
@@ -195,7 +195,7 @@ const ClassObservationPage = () => {
 
             Swal.fire({
                 icon: 'success',
-                title: '批量設定成功！',
+                title: '批量設定成功',
                 text: `已設定 ${result.updatedProjects} 個專案開放給 ${selectedTargetClasses.join(', ')} 觀摩`,
                 showConfirmButton: true
             });
@@ -204,7 +204,7 @@ const ClassObservationPage = () => {
             Swal.fire({
                 icon: 'error',
                 title: '批量設定失敗',
-                text: error.response?.data?.message || '請重試！'
+                text: error.response?.data?.message || '請重試'
             });
         }
     };

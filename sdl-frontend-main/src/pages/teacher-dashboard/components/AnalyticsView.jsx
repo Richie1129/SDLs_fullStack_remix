@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { FaMedal } from 'react-icons/fa';
+import { FiX } from 'react-icons/fi';
 import AuthImage from '@/components/AuthImage';
 import { generateStudentActivityStats, calculateCreatorStats } from '../utils';
 import {
@@ -477,7 +478,7 @@ const AnalyticsView = ({ enhancedStudents, realData }) => {
                 className="text-gray-500 hover:text-gray-700 text-body-lg"
                 aria-label="關閉延伸節點詳情"
               >
-                ✕
+                <FiX className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 

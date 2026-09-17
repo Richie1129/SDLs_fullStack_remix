@@ -175,7 +175,7 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                     acc.elements.push(
                         <div key={index} className={`flex h-auto p-1 ${messages.author === currentUsername ? "justify-end" : "justify-start"}`}>
                             <div className={`flex items-center ${isCurrentUser ? "flex-row-reverse" : "flex-row"}`}>
-                                <img src={currentUserImg ? currentUserImg : userImg} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full mx-1 sm:mx-2" />
+                                <img src={currentUserImg ? currentUserImg : userImg} alt={messages.author ? `${messages.author} 的頭像` : '使用者頭像'} className="w-6 h-6 sm:w-8 sm:h-8 rounded-full mx-1 sm:mx-2" />
                                 <div className={`flex flex-col ${isCurrentUser ? "items-end" : "items-start"}`}>
                                     <div className={`shadow-md w-fit max-w-[180px] sm:max-w-[240px] lg:max-w-[280px] rounded-lg text-white flex items-center break-all px-2 sm:px-3 py-1 sm:py-2 text-caption sm:text-body-sm ${isCurrentUser ? "bg-[#5BA491]" : "bg-sky-700"}`}>
                                         {messages.message}

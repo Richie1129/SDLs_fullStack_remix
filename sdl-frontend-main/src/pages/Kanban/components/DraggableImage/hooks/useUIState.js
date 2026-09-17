@@ -12,17 +12,24 @@ export const useUIState = () => {
 
   const messageTimeoutRef = useRef(null);
   const prevTabRef = useRef('science');
+  const dismissedRef = useRef(false);
 
-  // 每 10 秒顯示一次訊息（拖曳中不顯示）
+  // 每 10 秒顯示一次訊息（拖曳中不顯示；使用者關過一次後不再跳出）
   useEffect(() => {
     messageTimeoutRef.current = setInterval(() => {
-      if (!showChat) {
+      if (!showChat && !dismissedRef.current) {
         setShowMessage(true);
       }
     }, 10000);
 
     return () => clearInterval(messageTimeoutRef.current);
   }, [showChat]);
+
+  // 使用者按 X 關閉提示氣泡
+  const dismissMessage = () => {
+    dismissedRef.current = true;
+    setShowMessage(false);
+  };
 
   // 監聽 ESC 鍵退出全螢幕模式
   useEffect(() => {
@@ -109,6 +116,7 @@ export const useUIState = () => {
     setActiveTab,
     mentorStarted,
     setMentorStarted,
+    dismissMessage,
     showSwalWithCorrectZIndex,
     toggleFullscreen,
     toggleMinimize,

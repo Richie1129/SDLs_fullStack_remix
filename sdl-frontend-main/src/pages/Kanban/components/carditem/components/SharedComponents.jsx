@@ -18,7 +18,7 @@ const personImg = [
  * CardImage - 卡片圖片顯示
  */
 export const CardImage = ({ image, onClick, additionalCount }) => (
-  <div className="relative w-full h-40 group">
+  <div className="relative w-full h-40 group bg-gray-100 rounded-t-lg overflow-hidden">
     <AuthImage
       src={image}
       alt="Card Background"

@@ -68,10 +68,10 @@ export const useResponsive = () => {
     // 手機：FAB 固定在右下角 (right:16, bottom:96)，氣泡對齊 FAB 左側
     // 使用 right 定位，避免計算 position.x 時 SideBar 重疊問題
     if (viewW < 768) {
-      const bubbleW = Math.min(240, viewW - 80); // 手機氣泡縮小，確保不超出螢幕
+      const bubbleW = Math.min(240, viewW - 32); // 手機氣泡縮小，確保不超出螢幕
       return {
         right: 16,          // 對齊 FAB 右邊
-        bottom: 160,        // FAB bottom:96 + avatar height 56 + gap
+        bottom: 'calc(4rem + 3.5rem + 0.5rem + env(safe-area-inset-bottom, 0px))', // FAB 底 + 頭像 56px + 8px 間隙
         left: 'auto',
         top: 'auto',
         maxWidth: bubbleW,

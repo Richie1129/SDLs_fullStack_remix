@@ -92,7 +92,7 @@ const PersonalData = ({ personalData, ideaNodes, kanbanTasks }) => {
                 })
               ) : (
                 <div className="text-center py-3 bg-white/50 rounded-lg">
-                  <span className="text-teal-600 text-caption font-medium inline-flex items-center gap-1"><FiTarget className="w-3.5 h-3.5" /> 準備開始建立任務吧！</span>
+                  <span className="text-teal-600 text-caption font-medium inline-flex items-center gap-1"><FiTarget className="w-3.5 h-3.5" /> 還沒有任務，到看板建立第一張卡片</span>
                 </div>
               )}
             </div>

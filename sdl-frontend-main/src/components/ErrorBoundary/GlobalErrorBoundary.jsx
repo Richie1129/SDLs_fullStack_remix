@@ -94,7 +94,7 @@ class GlobalErrorBoundary extends React.Component {
 
             {/* 錯誤標題 */}
             <h1 className="text-h3 font-semibold text-gray-900 mb-2">
-              糟糕，出現了一個問題
+              頁面發生錯誤
             </h1>
 
             {/* 錯誤描述 */}

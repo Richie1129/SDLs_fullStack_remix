@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Modal from '../Modal';
-import { FiHelpCircle, FiInfo, FiThumbsUp, FiThumbsDown, FiUsers, FiX, FiClock, FiArrowLeft, FiAlertTriangle } from 'react-icons/fi';
+import { FiHelpCircle, FiInfo, FiThumbsUp, FiThumbsDown, FiUsers, FiX, FiClock, FiArrowLeft, FiAlertTriangle, FiCheck } from 'react-icons/fi';
 import { generateSuggestions, submitFeedback, getTaskHistory } from '../../api/aiTaskAssistant';
 import toast from 'react-hot-toast';
 import AITaskHistoryList from './AITaskHistoryList';
@@ -400,7 +400,7 @@ const AITaskAssistantModal = ({ open, onClose, cardData, projectId }) => {
                   <div className="space-y-2">
                     {suggestions.humanHelpSuggestions.map((suggestion, index) => (
                       <div key={index} className="flex items-start gap-2 text-body-sm">
-                        <span className="flex-shrink-0">✓</span>
+                        <span className="flex-shrink-0"><FiCheck className="w-4 h-4" /></span>
                         <span className="text-gray-700">{suggestion}</span>
                       </div>
                     ))}

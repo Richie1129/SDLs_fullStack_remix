@@ -172,8 +172,9 @@ const ChatWindow = ({
               onClick={closeChat}
               className="flex items-center justify-center w-8 h-8 rounded cursor-pointer text-[16px] font-medium transition-colors duration-fast bg-transparent text-[#dc3545] hover:bg-[#f8d7da]"
               title="關閉聊天室"
+              aria-label="關閉"
             >
-              ✕
+              <FiX className="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
         </div>

@@ -173,6 +173,8 @@ export default function SubStageComponent() {
     const [isHovered, setIsHovered] = useState(false);
     const [ignoreHover, setIgnoreHover] = useState(false); // 新增狀態
     const dialogRef = useRef();
+    const pillsRef = useRef();
+    const currentPillRef = useRef();
     const queryClient = useQueryClient();
     const { projectId } = useParams();
 
@@ -181,6 +183,19 @@ export default function SubStageComponent() {
         const isValidStageIndex = currentStageIndex > 0 && currentStageIndex <= stageInfo.length;
         setStages(isValidStageIndex ? stageInfo[currentStageIndex - 1] : []);
     }, [currentStageIndex, currentSubStageIndex]);
+
+    // 底部子階段 pill 超出可視寬度時，自動捲動到目前子階段
+    useEffect(() => {
+        if (!pillsRef.current) return;
+        if (pillsRef.current.scrollWidth > pillsRef.current.clientWidth) {
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            currentPillRef.current?.scrollIntoView({
+                block: 'nearest',
+                inline: 'center',
+                behavior: prefersReduced ? 'auto' : 'smooth',
+            });
+        }
+    }, [currentSubStageIndex, stages]);
 
     const handleRobotClick = () => {
         document.body.style.overflow = 'hidden'; // 開啟DialogBox時禁止滾動
@@ -270,13 +285,15 @@ export default function SubStageComponent() {
 
     return (
         <div className="relative w-full bg-[#F5F5F5] h-[calc(3rem+env(safe-area-inset-bottom,0px))] sm:h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] lg:h-[calc(4rem+env(safe-area-inset-bottom,0px))] border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4 pb-safe">
-            <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-component-xs lg:p-component-base overflow-x-auto" ref={dialogRef}>
-                <div className="flex items-center space-x-1 sm:space-x-stack-xs lg:space-x-stack-sm min-w-0 flex-1">
+            <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-component-xs lg:p-component-base min-w-0" ref={dialogRef}>
+                <div className="flex items-center space-x-1 sm:space-x-stack-xs lg:space-x-stack-sm min-w-0 flex-1 overflow-x-auto scrollbar-none snap-x snap-mandatory scroll-smooth motion-reduce:scroll-auto" ref={pillsRef}>
                     {stages.map((subStage, index) => (
                         <React.Fragment key={index}>
                             <div
+                                ref={index + 1 === currentSubStageIndex ? currentPillRef : undefined}
+                                aria-current={index + 1 === currentSubStageIndex ? 'step' : undefined}
                                 style={{ backgroundColor: getStageColor(index + 1, currentSubStageIndex) }}
-                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getStageTextColor(index + 1, currentSubStageIndex)} font-semibold rounded-lg shadow-inner text-caption sm:text-body-sm lg:text-body whitespace-nowrap`}
+                                className={`px-2 sm:px-3 lg:px-4 py-1 sm:py-2 lg:py-3 ${getStageTextColor(index + 1, currentSubStageIndex)} font-semibold rounded-lg shadow-inner text-caption sm:text-body-sm lg:text-body whitespace-nowrap snap-center shrink-0`}
                             >
                                 {subStage}
                             </div>

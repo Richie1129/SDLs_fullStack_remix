@@ -45,7 +45,7 @@ const KanbanColumn = ({
         <div
           {...provided.draggableProps}
           ref={provided.innerRef}
-          className="group-container w-full md:w-60 h-auto md:shrink-0 md:max-h-full md:min-h-0 flex flex-col bg-slate-50 rounded-lg shadow-lg"
+          className="group-container group/column w-full md:w-60 h-auto md:shrink-0 md:max-h-full md:min-h-0 flex flex-col bg-slate-50 rounded-lg shadow-lg"
         >
           <div
             {...(!isObservationMode ? provided.dragHandleProps : {})}
@@ -59,8 +59,9 @@ const KanbanColumn = ({
                 data-track-action="KANBAN_COLUMN_DELETE"
                 data-track-type="column"
                 data-track-id={column.id}                onClick={() => onDelete(column)}
-                className="text-[#494b4a] hover:text-[#494b4a]/60"
-                title="删除列"
+                className="text-[#494b4a] hover:text-[#494b4a]/60 transition-opacity duration-fast opacity-0 group-hover/column:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-60"
+                title="刪除欄位"
+                aria-label="刪除欄位"
               >
                 <RxCross2 size={20} />
               </button>

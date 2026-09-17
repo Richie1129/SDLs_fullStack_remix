@@ -13,8 +13,10 @@ import {
   FaArrowDown 
 } from 'react-icons/fa';
 import { HiChartBar } from 'react-icons/hi';
+import { FiAlertTriangle } from 'react-icons/fi';
 import { useHelpSeeking } from '../hooks/useHelpSeeking';
 import AvoidanceRiskAlert from './AvoidanceRiskAlert';
+import { alertError } from '../../../utils/dialogs';
 
 /**
  * 教師端 Help-Seeking 儀表板主組件 (A2)
@@ -53,7 +55,7 @@ const HelpSeekingView = ({ projectId }) => {
       setStudentDetails(details);
     } catch (err) {
       console.error('獲取學生詳情失敗:', err);
-      alert('無法載入學生詳情，請重試');
+      alertError('無法載入學生詳情，請重試');
       setSelectedStudent(null);
     } finally {
       setLoadingDetails(false);
@@ -313,7 +315,7 @@ const HelpSeekingView = ({ projectId }) => {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center bg-white p-8 rounded-xl shadow-sm border border-red-200">
-          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <div className="mb-4"><FiAlertTriangle className="w-10 h-10 mx-auto text-red-500" /></div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">載入失敗</h3>
           <p className="text-red-600 mb-4">{error}</p>
           <button

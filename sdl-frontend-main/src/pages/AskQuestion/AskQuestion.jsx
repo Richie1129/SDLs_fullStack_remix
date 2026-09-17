@@ -139,7 +139,7 @@ export default function AskQuestion() {
 
         Swal.fire({
             title: '確定要刪除這個聊天室嗎？',
-            text: "你將無法恢復此操作！",
+            text: "此操作無法復原",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#5BA491',

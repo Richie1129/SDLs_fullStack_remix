@@ -163,7 +163,7 @@ const FiveRsReflectionForm = ({
         
         // 使用 SweetAlert2 顯示分析結果
         Swal.fire({
-          title: 'AI 分析完成！',
+          title: 'AI 分析完成',
           html: formatAnalysisResult(result.feedback, result.provider),
           icon: 'success',
           width: '800px',

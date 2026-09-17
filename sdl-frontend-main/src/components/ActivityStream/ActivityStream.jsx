@@ -14,7 +14,7 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DRAWER_RIGHT } from '../../utils/motionPresets';
-import { FiActivity } from 'react-icons/fi';
+import { FiActivity, FiX } from 'react-icons/fi';
 import { useActivityData } from './hooks/useActivityData';
 import { useActivityStream } from './hooks/useActivityStream';
 import ActivityItem from './components/ActivityItem';
@@ -85,8 +85,9 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
                 <button
                     onClick={onClose}
                     className="text-gray-400 hover:text-gray-600 transition-colors text-body-lg sm:text-h3"
+                    aria-label="關閉"
                 >
-                    ✕
+                    <FiX className="w-5 h-5" aria-hidden="true" />
                 </button>
             </div>
 

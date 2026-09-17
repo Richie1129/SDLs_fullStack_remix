@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FiDownload, FiPrinter, FiFileText, FiShare2, FiChevronDown } from 'react-icons/fi';
+import { FiDownload, FiPrinter, FiFileText, FiShare2, FiChevronDown, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 
 /**
  * QuickActions 元件 - 快速操作工具欄
@@ -15,6 +15,7 @@ const QuickActions = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -31,8 +32,9 @@ const QuickActions = ({
   }, []);
 
   // 顯示提示訊息
-  const showNotification = useCallback((message) => {
+  const showNotification = useCallback((message, type = 'success') => {
     setToastMessage(message);
+    setToastType(type);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   }, []);
@@ -52,11 +54,11 @@ const QuickActions = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      showNotification('✅ JSON 檔案已下載');
+      showNotification('JSON 檔案已下載');
       if (onExport) onExport('json');
     } catch (error) {
       console.error('匯出 JSON 失敗:', error);
-      showNotification('❌ 匯出失敗，請稍後再試');
+      showNotification('匯出失敗，請稍後再試', 'error');
     } finally {
       setIsExporting(false);
     }
@@ -99,11 +101,11 @@ const QuickActions = ({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      showNotification('✅ CSV 檔案已下載');
+      showNotification('CSV 檔案已下載');
       if (onExport) onExport('csv');
     } catch (error) {
       console.error('匯出 CSV 失敗:', error);
-      showNotification('❌ 匯出失敗，請稍後再試');
+      showNotification('匯出失敗，請稍後再試', 'error');
     } finally {
       setIsExporting(false);
     }
@@ -178,12 +180,12 @@ const QuickActions = ({
           printWindow.close();
         }, 250);
         
-        showNotification('✅ 列印視窗已開啟');
+        showNotification('列印視窗已開啟');
         if (onExport) onExport('print');
       }
     } catch (error) {
       console.error('列印失敗:', error);
-      showNotification('❌ 列印失敗，請稍後再試');
+      showNotification('列印失敗，請稍後再試', 'error');
     }
   }, [onExport, showNotification]);
 
@@ -199,11 +201,11 @@ const QuickActions = ({
           text: '查看學習數據分析',
           url: url
         });
-        showNotification('✅ 分享成功');
+        showNotification('分享成功');
       } else if (navigator.clipboard) {
         // 複製到剪貼簿
         await navigator.clipboard.writeText(url);
-        showNotification('✅ 連結已複製到剪貼簿');
+        showNotification('連結已複製到剪貼簿');
       } else {
         // 降級方案
         const textArea = document.createElement('textarea');
@@ -215,11 +217,11 @@ const QuickActions = ({
         textArea.select();
         document.execCommand('copy');
         document.body.removeChild(textArea);
-        showNotification('✅ 連結已複製');
+        showNotification('連結已複製');
       }
     } catch (error) {
       console.error('分享失敗:', error);
-      showNotification('❌ 分享失敗');
+      showNotification('分享失敗', 'error');
     }
   }, [showNotification]);
 
@@ -298,11 +300,16 @@ const QuickActions = ({
 
       {/* Toast 提示訊息 */}
       {showToast && (
-        <div 
-          className="fixed bottom-4 right-4 z-50 glass-card px-4 py-3 rounded-lg shadow-xl animate-fade-in"
+        <div
+          className="fixed bottom-4 right-4 z-50 glass-card px-4 py-3 rounded-lg shadow-xl animate-fade-in flex items-center gap-stack-xs"
           role="alert"
           aria-live="polite"
         >
+          {toastType === 'error' ? (
+            <FiAlertCircle className="w-4 h-4 text-red-600 shrink-0" aria-hidden="true" />
+          ) : (
+            <FiCheckCircle className="w-4 h-4 text-customgreen shrink-0" aria-hidden="true" />
+          )}
           <p className="text-body-sm font-medium text-gray-800">
             {toastMessage}
           </p>

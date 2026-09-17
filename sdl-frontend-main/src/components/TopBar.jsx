@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ChevronDown, Eye, KeyRound, LogOut, MessageSquare, PlusCircle, X } from 'lucide-react';
+import { Activity, ChevronDown, Eye, KeyRound, LogOut, Menu, MessageSquare, PlusCircle, X } from 'lucide-react';
 import { getProjectUser } from '../api/users';
 import { getProject, getProjectsByMentor } from '../api/project';
 import { logout } from '../api/auth';  // 引入 logout API
@@ -14,7 +14,7 @@ import useObservationMode from '../hooks/useObservationMode'; // 引入觀摩模
 import { getCurrentUsername, addUserUpdateListener } from '../utils/userUtils'; // 引入用戶資訊工具
 import { getCurrentUserRole, setStageInfo, clearStageInfo } from '../utils/authUtils';
 
-export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer }) {
+export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer, onOpenMobileNav }) {
   const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
   const [projectInfo, setProjectInfo] = useState({});
   const [referralCodeModalOpen, setReferralCodeModalOpen] = useState(false);
@@ -265,7 +265,12 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   return (
     <div className="z-nav h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
-        <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-body-lg sm:text-h2">
+        {onOpenMobileNav && projectId && !isOverviewPage && (
+          <button type="button" onClick={onOpenMobileNav} aria-label="開啟導覽" className="md:hidden mr-1 p-2 rounded-md text-gray-700 hover:bg-gray-100 transition-colors duration-fast">
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
+        <Link to="/homepage" className="flex px-1 sm:px-5 items-center font-bold font-Mulish text-body-lg sm:text-h2">
           <img src="/SDLS_LOGO_GEMINI.webp" alt="Logo" width={132} height={56} className="h-10 sm:h-14 w-auto" />
         </Link>
         {!isOverviewPage && projectId && (

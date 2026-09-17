@@ -5,6 +5,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import Lottie from "lottie-react";
 import { HiLink, HiX } from 'react-icons/hi';
 import { FiHelpCircle } from 'react-icons/fi';
+import { confirmDialog } from '../../utils/dialogs';
 
 // API
 import { getIdeaWall } from '../../api/ideaWall';
@@ -141,7 +142,7 @@ export default function IdeaWall() {
         state.setIsLinkingMode(false);
         state.setLinkingSourceNode(null);
 
-        toast.success('連線建立成功！');
+        toast.success('連線建立成功');
     };
 
     // 取消連線模式
@@ -152,14 +153,15 @@ export default function IdeaWall() {
     };
 
     // 刪除連線 — Optimistic Update
-    const handleDeleteRelation = (fromId, toId) => {
-        if (window.confirm('確定要取消此連結嗎？')) {
+    const handleDeleteRelation = async (fromId, toId) => {
+        const ok = await confirmDialog({ title: '取消連結', text: '確定要取消此連結嗎？', confirmText: '取消連結', danger: true });
+        if (ok) {
             mutations.deleteRelation({
                 from_id: fromId,
                 to_id: toId,
             });
 
-            toast.success('連線已取消！');
+            toast.success('連線已取消');
         }
     };
 

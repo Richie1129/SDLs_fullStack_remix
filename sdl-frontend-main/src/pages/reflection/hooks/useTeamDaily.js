@@ -10,6 +10,7 @@ import {
 } from "../../../api/reflection";
 import { extractErrorMessage } from '@/constants/dailyErrorCodes.js';
 import { getCurrentUsername } from '../../../utils/userUtils';
+import { confirmDialog } from '../../../utils/dialogs';
 
 /**
  * Hook for managing team daily logs
@@ -123,8 +124,8 @@ export function useTeamDaily(projectId) {
 
   const handleDelete = async (item) => {
     if (!item?.id) return;
-    const confirm = window.confirm(`確定要刪除小組日誌「${item.title || '未命名'}」嗎？此動作無法復原。`);
-    if (!confirm) return;
+    const ok = await confirmDialog({ title: '刪除日誌', text: `確定要刪除小組日誌「${item.title || '未命名'}」嗎？此動作無法復原。`, confirmText: '刪除', danger: true });
+    if (!ok) return;
     deleteMutation.mutate(item.id);
   };
 

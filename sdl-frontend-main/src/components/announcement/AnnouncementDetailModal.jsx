@@ -15,7 +15,7 @@ export default function AnnouncementDetailModal({
     const handleDeleteAnnouncement = async () => {
         const result = await Swal.fire({
             title: '確認刪除',
-            text: '確定要刪除此公告嗎？此操作無法復原！',
+            text: '確定要刪除此公告嗎？此操作無法復原',
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',

@@ -1,5 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { buildFileImageUrl } from '@/utils/fileUrlBuilder.js';
+
+const EMPTY_CARD = {
+  id: "",
+  title: "",
+  content: "",
+  labels: [],
+  owner: "",
+  assignees: [],
+  columnId: "",
+  images: [],
+  files: [],
+};
+
+/**
+ * 把 props 傳入的卡片資料轉成內部格式：
+ * - `sdls-files/` 的圖片路徑統一走代理 API
+ * - files / owner 補預設值
+ */
+function normalizeCard(initialData) {
+  if (!initialData) return EMPTY_CARD;
+  const processedImages = (initialData.images || []).map((imageUrl) => {
+    if (typeof imageUrl === 'string' && imageUrl.includes('sdls-files/')) {
+      const fileName = imageUrl.split('/').pop();
+      return buildFileImageUrl(fileName);
+    }
+    return imageUrl;
+  });
+
+  return {
+    ...EMPTY_CARD,
+    ...initialData,
+    images: processedImages,
+    files: initialData.files || [],
+    owner: initialData.owner || "",
+  };
+}
 
 /**
  * useCardData - 管理卡片數據狀態
@@ -16,34 +52,17 @@ import { buildFileImageUrl } from '@/utils/fileUrlBuilder.js';
  * @returns {{ cardData: Object, setCardData: Function }}
  */
 export function useCardData(initialData) {
-  const [cardData, setCardData] = useState({
-    id: "",
-    title: "",
-    content: "",
-    labels: [],
-    owner: "",
-    assignees: [],
-    columnId: "",
-    images: [],
-    files: [],
-  });
+  // 首幀就用 props 初始化，避免第一次 render 出現沒有標題的白殼
+  const [cardData, setCardData] = useState(() => normalizeCard(initialData));
+  const isFirstRunRef = useRef(true);
 
   useEffect(() => {
-    // 完全按照原始 Carditem.jsx 的邏輯
-    const processedImages = (initialData.images || []).map(imageUrl => {
-      if (imageUrl.includes('sdls-files/')) {
-        const fileName = imageUrl.split('/').pop();
-        return buildFileImageUrl(fileName);
-      }
-      return imageUrl;
-    });
-
-    setCardData({
-      ...initialData,
-      images: processedImages,
-      files: initialData.files || [],
-      owner: initialData.owner || "",
-    });
+    // 掛載那一次 state 已經是 props 的內容，跳過以免多一次 render
+    if (isFirstRunRef.current) {
+      isFirstRunRef.current = false;
+      return;
+    }
+    setCardData(normalizeCard(initialData));
     // deps 改成具體欄位（F6）：父層重新 render 傳入同內容的新物件時不再重算；
     // 任一欄位（含陣列引用）變動仍會重新處理
     // eslint-disable-next-line react-hooks/exhaustive-deps

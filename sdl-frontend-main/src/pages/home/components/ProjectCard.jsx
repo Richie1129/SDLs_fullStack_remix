@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
+import { FiCheck, FiX } from 'react-icons/fi';
 import dateFormat from 'dateformat';
 import { getSemesterLabel } from '../../../utils/semesterUtils';
 import { formatRelativeTime } from '../../../utils/timeUtils';
@@ -264,12 +265,12 @@ export default function ProjectCard({
         <div className='text-body-sm text-gray-500'>
           {project.is_open_for_viewing ? (
             <span className='flex items-center'>
-              <span className='text-green-600 mr-1'>✓</span>
+              <FiCheck className="inline w-3.5 h-3.5 mr-1 text-green-600" />
               可觀摩班級：{project.allowed_classes?.length > 0 ? project.allowed_classes.join('、') : '無'}
             </span>
           ) : (
             <span className='flex items-center'>
-              <span className='text-gray-400 mr-1'>✗</span>
+              <FiX className="inline w-3.5 h-3.5 mr-1 text-gray-400" />
               未開放觀摩
             </span>
           )}

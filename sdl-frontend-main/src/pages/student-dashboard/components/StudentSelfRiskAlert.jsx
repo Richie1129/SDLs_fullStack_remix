@@ -99,22 +99,22 @@ const StudentSelfRiskAlert = ({ personalData, projectId }) => {
     <div className={`${bgColor} border ${borderColor} rounded-xl overflow-hidden mb-4 sm:mb-6`}>
       {/* Header */}
       <div
-        className="flex items-center justify-between px-component-base py-3 cursor-pointer"
+        className="flex items-center justify-between gap-2 flex-wrap px-component-base py-3 cursor-pointer"
         onClick={() => setExpanded(v => !v)}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <FiAlertCircle className={`w-4 h-4 shrink-0 ${iconColor}`} />
-          <span className={`text-body-sm font-semibold ${headerColor}`}>
+          <span className={`text-body-sm font-semibold whitespace-nowrap ${headerColor}`}>
             學習狀態提醒
           </span>
-          <span className={`text-caption px-2 py-0.5 rounded-full font-medium ${hasHigh ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>
+          <span className={`text-caption px-2 py-0.5 rounded-full font-medium whitespace-nowrap shrink-0 ${hasHigh ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>
             {signals.length} 項
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
           <button
             onClick={e => { e.stopPropagation(); handleDismiss(); }}
-            className={`text-caption ${headerColor} opacity-60 hover:opacity-100 transition-opacity px-2 py-1 rounded`}
+            className={`text-caption ${headerColor} opacity-60 hover:opacity-100 transition-opacity px-2 py-1 rounded whitespace-nowrap`}
             title="關閉提醒"
           >
             今天不看

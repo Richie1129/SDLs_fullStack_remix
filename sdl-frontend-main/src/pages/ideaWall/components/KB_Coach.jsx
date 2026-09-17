@@ -135,7 +135,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
                     setCoaching(response.data);
                     setResponseId(Date.now().toString());
                     setFeedbackGiven(false);
-                    toast.success(`${agentType} 分析完成！`);
+                    toast.success(`${agentType} 分析完成`);
                 }
             }
         } catch (error) {
@@ -193,7 +193,7 @@ const KB_Coach = ({ nodeInfo, nodes = [], onClose, onNewNode, suggestedAgent = n
             }
 
             setFeedbackGiven(true);
-            toast.success(feedbackType === 'helpful' ? '感謝您的回饋！' : '感謝您的回饋，我們會持續改進！');
+            toast.success(feedbackType === 'helpful' ? '感謝您的回饋' : '感謝您的回饋，我們會持續改進');
         } catch (error) {
             console.error('Error sending feedback:', error);
         }

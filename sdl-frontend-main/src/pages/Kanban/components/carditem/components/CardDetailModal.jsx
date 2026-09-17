@@ -149,7 +149,7 @@ export function CardDetailModal({
 
       onClose();
     } else {
-      toast.error("請填寫卡片標題!");
+      toast.error("請填寫卡片標題");
     }
   };
 

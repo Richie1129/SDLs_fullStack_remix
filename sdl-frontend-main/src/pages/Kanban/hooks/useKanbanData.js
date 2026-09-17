@@ -173,7 +173,7 @@ export const useKanbanData = (projectId) => {
   const handleColumnDeleted = useCallback((serverData) => {
     console.log("🗑️ Server confirmed column deletion:", serverData);
     Swal.fire({
-      title: '已刪除！',
+      title: '已刪除',
       text: '看板列表已被刪除。',
       icon: 'success',
       timer: 2000,
@@ -205,7 +205,7 @@ export const useKanbanData = (projectId) => {
     try {
       console.log('🗑️ 成功刪除卡片，ID:', data?.taskId);
       Swal.fire({
-        title: '已刪除！',
+        title: '已刪除',
         text: '卡片已刪除。',
         icon: 'success',
         timer: 1800,

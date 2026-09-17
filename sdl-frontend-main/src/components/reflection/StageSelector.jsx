@@ -62,7 +62,7 @@ export default function StageSelector({
             <optgroup key={stageNum} label={group.name}>
               {group.stages.map(({ key, name }) => (
                 <option key={key} value={key}>
-                  {key === recommendedStage ? `★ ${key} ${name}` : `${key} ${name}`}
+                  {key === recommendedStage ? `${key} ${name}（推薦）` : `${key} ${name}`}
                 </option>
               ))}
             </optgroup>

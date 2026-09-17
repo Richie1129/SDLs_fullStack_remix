@@ -201,7 +201,7 @@ export default function HomePage() {
   const handleDeleteProject = (projectId) => {
     Swal.fire({
       title: "確定要刪除這個專案嗎？",
-      text: "刪除後將無法恢復！",
+      text: "刪除後將無法恢復",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -302,7 +302,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className='min-w-full min-h-screen bg-gray-100 overflow-auto scrollbar-hidden' data-tour={`${role}-dashboard`}>
+    <div className='min-w-full min-h-screen bg-gray-100 overflow-auto' data-tour={`${role}-dashboard`}>
       <TopBar />
 
       {/* AI 使用說明（右下角常駐，點擊展開） */}

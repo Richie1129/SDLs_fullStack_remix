@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FiZap } from 'react-icons/fi';
 import Modal from '../../../../components/Modal';
 import KnowledgeForumScaffolds from '../KnowledgeForumScaffolds';
 import ReactMarkdown from 'react-markdown';
@@ -27,7 +28,7 @@ export default function CreateNodeModal({
                 {aiCoachingNote && (
                     <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                         <p className="text-caption font-semibold text-blue-700 mb-1 flex items-center gap-1">
-                            💡 AI 建議參考
+                            <FiZap className="inline w-4 h-4 mr-1" />AI 建議參考
                         </p>
                         <div className={`text-caption text-blue-600 prose prose-sm max-w-none prose-blue ${isNoteExpanded ? '' : 'line-clamp-4'}`}>
                             <ReactMarkdown>{aiCoachingNote}</ReactMarkdown>

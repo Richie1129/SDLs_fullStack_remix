@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { FiZap } from 'react-icons/fi';
 import NarrativeRenderer from '../components/NarrativeRenderer';
 
 const STAGE_COLORS = {
@@ -150,7 +151,7 @@ export default function ClassicTemplate({ data, narrative }) {
                     <div style={{ fontSize: '8.5pt', fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '2.5mm' }}>想法節點</div>
                     {iw.nodes.map((n, j) => (
                       <div key={j} style={{ marginBottom: '2.5mm', paddingLeft: '3mm', borderLeft: '2px solid #1e3a5f40', breakInside: 'avoid' }}>
-                        <div style={{ fontWeight: '600', fontSize: '9.5pt', color: '#1e3a5f' }}>💡 {n.title}</div>
+                        <div style={{ fontWeight: '600', fontSize: '9.5pt', color: '#1e3a5f' }}><FiZap size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{n.title}</div>
                         {n.content && <div style={{ fontSize: '9pt', color: '#444', marginTop: '0.5mm' }}>{String(n.content).slice(0, 250)}</div>}
                       </div>
                     ))}
@@ -289,7 +290,7 @@ function StageSection({ stage }) {
             <SubTitle>想法牆貢獻節點</SubTitle>
             {stage.nodes.map((n, i) => (
               <div key={i} style={{ marginBottom: '3mm', paddingLeft: '4mm', borderLeft: '2px solid #c8d4e8', breakInside: 'avoid' }}>
-                <div style={{ fontWeight: '600', fontSize: '9.5pt', color: '#1e3a5f', marginBottom: '0.5mm' }}>💡 {n.title}</div>
+                <div style={{ fontWeight: '600', fontSize: '9.5pt', color: '#1e3a5f', marginBottom: '0.5mm' }}><FiZap size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{n.title}</div>
                 {n.content && (
                   <div style={{ fontSize: '9pt', color: '#444', lineHeight: '1.6' }}>{String(n.content).slice(0, 300)}</div>
                 )}

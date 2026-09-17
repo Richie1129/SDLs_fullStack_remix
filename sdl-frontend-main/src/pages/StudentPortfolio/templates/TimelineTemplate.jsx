@@ -4,10 +4,11 @@
  */
 
 import React from 'react';
+import { FiTarget, FiMap, FiSearch, FiRefreshCw, FiStar, FiZap, FiSun, FiMapPin, FiCpu } from 'react-icons/fi';
 import NarrativeRenderer from '../components/NarrativeRenderer';
 
 const TIMELINE_COLORS = ['#5BA491', '#4a7cc7', '#e08b2a', '#9b59b6'];
-const STAGE_ICONS = { 1: '🎯', 2: '🗺️', 3: '🔬', 4: '🔄' };
+const STAGE_ICONS = { 1: FiTarget, 2: FiMap, 3: FiSearch, 4: FiRefreshCw };
 
 export default function TimelineTemplate({ data, narrative }) {
   if (!data) return null;
@@ -48,7 +49,7 @@ export default function TimelineTemplate({ data, narrative }) {
       {/* AI 學習敘事 */}
       {narrative && (
         <div style={{ marginBottom: '10mm', padding: '6mm 8mm', background: '#f8fdfb', border: '1px solid #c8e6dc', borderRadius: '8px' }}>
-          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm' }}>✨ 學習旅程總述</div>
+          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm' }}><FiStar size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />學習旅程總述</div>
           <NarrativeRenderer narrative={narrative} accentColor="#5BA491" baseFontSize="10pt" />
         </div>
       )}
@@ -81,7 +82,7 @@ export default function TimelineTemplate({ data, narrative }) {
 
               {/* 階段標題 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '3mm', marginBottom: '4mm', breakAfter: 'avoid' }}>
-                <span style={{ fontSize: '16pt' }}>{STAGE_ICONS[stage.stageNumber]}</span>
+                <span style={{ fontSize: '16pt' }}>{React.createElement(STAGE_ICONS[stage.stageNumber], { size: 20, style: { verticalAlign: 'middle' } })}</span>
                 <div>
                   <div style={{ fontSize: '8pt', color: color, fontWeight: '700', letterSpacing: '1px' }}>
                     STAGE {stage.stageNumber}
@@ -135,7 +136,7 @@ export default function TimelineTemplate({ data, narrative }) {
                       <TimelineSubTitle color={color}>想法牆貢獻</TimelineSubTitle>
                       {stage.nodes.map((n, i) => (
                         <div key={i} style={{ marginBottom: '2mm', paddingLeft: '4mm', borderLeft: `2px solid ${color}50`, fontSize: '9pt', breakInside: 'avoid' }}>
-                          <div style={{ fontWeight: '700', color }}>💡 {n.title}</div>
+                          <div style={{ fontWeight: '700', color }}><FiZap size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{n.title}</div>
                           {n.content && <div style={{ color: '#555', marginTop: '0.5mm' }}>{String(n.content).slice(0, 200)}</div>}
                         </div>
                       ))}
@@ -156,7 +157,7 @@ export default function TimelineTemplate({ data, narrative }) {
               background: '#888', borderRadius: '50%',
               border: '2px solid #fff', boxShadow: '0 0 0 2px #888'
             }} />
-            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#666', marginBottom: '4mm', breakAfter: 'avoid' }}>🌟 跨階段自由省思</div>
+            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#666', marginBottom: '4mm', breakAfter: 'avoid' }}><FiSun size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />跨階段自由省思</div>
             {freeReflections.map((r, i) => (
               <TimelineReflectionCard key={i} reflection={r} color="#888" />
             ))}
@@ -172,7 +173,7 @@ export default function TimelineTemplate({ data, narrative }) {
               background: '#4a7cc7', borderRadius: '50%',
               border: '2px solid #fff', boxShadow: '0 0 0 2px #4a7cc7'
             }} />
-            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '4mm', breakAfter: 'avoid' }}>📌 想法牆記錄</div>
+            <div style={{ fontSize: '12pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '4mm', breakAfter: 'avoid' }}><FiMapPin size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />想法牆記錄</div>
             {ideaWallChats.map((iw, i) => (
               <div key={i} style={{ marginBottom: '3mm', padding: '3mm 5mm', background: '#f0f5fd', borderRadius: '6px', borderLeft: '3px solid #4a7cc7', breakInside: 'avoid' }}>
                 <div style={{ fontWeight: '700', fontSize: '9.5pt', color: '#2a5da8', marginBottom: '2mm', display: 'flex', justifyContent: 'space-between' }}>
@@ -184,7 +185,7 @@ export default function TimelineTemplate({ data, narrative }) {
                     <div style={{ fontSize: '8.5pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '1.5mm', breakAfter: 'avoid' }}>想法節點</div>
                     {iw.nodes.map((n, j) => (
                       <div key={j} style={{ marginBottom: '2mm', paddingLeft: '3mm', borderLeft: '1px solid #4a7cc750', fontSize: '9pt', breakInside: 'avoid' }}>
-                        <div style={{ fontWeight: '700', color: '#2a5da8' }}>💡 {n.title}</div>
+                        <div style={{ fontWeight: '700', color: '#2a5da8' }}><FiZap size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{n.title}</div>
                         {n.content && <div style={{ color: '#555', marginTop: '0.5mm' }}>{String(n.content).slice(0, 180)}</div>}
                       </div>
                     ))}
@@ -216,7 +217,7 @@ export default function TimelineTemplate({ data, narrative }) {
                 background: '#5BA491', borderRadius: '50%',
                 border: '2px solid #fff', boxShadow: '0 0 0 2px #5BA491'
               }} />
-              <div style={{ fontSize: '12pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm', breakAfter: 'avoid' }}>🤖 科學助手對話摘要</div>
+              <div style={{ fontSize: '12pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm', breakAfter: 'avoid' }}><FiCpu size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />科學助手對話摘要</div>
               <div style={{ padding: '4mm 5mm', background: '#f8fdfb', borderRadius: '6px', borderLeft: '3px solid #5BA491' }}>
                 {/* 統計 */}
                 <div style={{ display: 'flex', gap: '8mm', marginBottom: '4mm' }}>

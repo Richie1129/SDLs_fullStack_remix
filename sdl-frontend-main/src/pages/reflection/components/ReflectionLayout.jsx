@@ -185,8 +185,7 @@ export function ReflectionLayout({
               showEmptyMessage={showPersonalEmptyMessage}
               emptyStateConfig={{
                 animationData: personalDailyIcon,
-                message:
-                  "還沒新增過個人日誌 ! 趕快新增你的第一個【個人日誌】吧 ~",
+                message: "還沒有個人日誌，寫下第一篇吧",
               }}
               buttons={[]}
               onEdit={onPersonalEdit}
@@ -253,8 +252,7 @@ export function ReflectionLayout({
               showEmptyMessage={showTeamEmptyMessage}
               emptyStateConfig={{
                 animationData: teamDailyIcon,
-                message:
-                  "還沒新增過小組日誌 ! 趕快新增你的第一個【小組日誌】吧 ~",
+                message: "還沒有小組日誌，寫下第一篇吧",
               }}
               buttons={[]}
               onEdit={onTeamEdit}

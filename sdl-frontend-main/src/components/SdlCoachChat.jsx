@@ -5,6 +5,7 @@ import { createChatTurn, completeChatTurn, getChatHistory, deleteChatSession } f
 import { useUsername } from '../hooks/useUserInfo';
 import { getCurrentUserId } from '../utils/authUtils';
 import MessageContent from './MessageContent';
+import { confirmDialog, alertError } from '../utils/dialogs';
 
 const SDL_COACH_USERNAME = '自主學習助手';
 
@@ -116,7 +117,8 @@ export default function SdlCoachChat({
   const handleClearHistory = async () => {
     if (!projectId || !sessionId) return;
     if (history.length === 0 && messages.length === 0) return;
-    if (!window.confirm('確定要清空與自主學習助手的所有歷史紀錄嗎？此動作無法復原。')) return;
+    const ok = await confirmDialog({ title: '清空歷史紀錄', text: '確定要清空與自主學習助手的所有歷史紀錄嗎？此動作無法復原。', confirmText: '清空', danger: true });
+    if (!ok) return;
     setIsClearing(true);
     try {
       await deleteChatSession({ projectId, sessionId });
@@ -124,7 +126,7 @@ export default function SdlCoachChat({
       setMessages([]);
       setProvider(null);
     } catch (_) {
-      window.alert('清空失敗，請稍後再試。');
+      alertError('清空失敗，請稍後再試');
     } finally {
       setIsClearing(false);
     }

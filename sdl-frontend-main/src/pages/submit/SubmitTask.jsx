@@ -188,7 +188,7 @@ export default function SubmitTask() {
             }
         }
         if (!allFieldsFilled) {
-            toast.error("請確認所有欄位皆填寫完整!");
+            toast.error("請確認所有欄位皆填寫完整");
             return;
         }
 

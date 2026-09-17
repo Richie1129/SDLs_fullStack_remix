@@ -523,7 +523,7 @@ export const useChatSession = () => {
   const handleDeleteSession = async (sessionId, sessionName, showSwalWithCorrectZIndex) => {
     const result = await showSwalWithCorrectZIndex({
       title: `確定要刪除「${sessionName}」這個對話嗎？`,
-      text: '刪除後將無法恢復！',
+      text: '刪除後將無法恢復',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: '是的，刪除！',
@@ -579,7 +579,7 @@ export const useChatSession = () => {
         console.log("對話刪除完成");
 
         await showSwalWithCorrectZIndex({
-          title: '刪除成功！',
+          title: '刪除成功',
           text: `對話「${sessionName}」已成功刪除。`,
           icon: 'success',
           confirmButtonText: '確定'

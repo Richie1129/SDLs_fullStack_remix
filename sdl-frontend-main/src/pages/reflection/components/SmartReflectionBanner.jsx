@@ -112,7 +112,7 @@ export function SmartReflectionBanner({
         return (
           <BannerCard
             icon={<FaGraduationCap className="w-7 h-7 text-purple-600" />}
-            title="試試看深度反思吧！"
+            title="試試看深度反思"
             description={`您已經寫了 ${recentLogs.length} 篇傳統日誌！要不要試試「5Rs 結構反思」，透過系統化的思考建立更深入的知識連結？`}
             actionText="撰寫 5Rs 反思"
             variant="purple"
@@ -125,7 +125,7 @@ export function SmartReflectionBanner({
         return (
           <BannerCard
             icon={<FiTarget className="w-7 h-7 text-amber-600" />}
-            title="恭喜進入新階段！"
+            title="已進入新階段"
             description={`您已進入專案的「${formatStage(currentStage)}」階段。建議進行一次深度反思，總結上個階段的學習成果。`}
             actionText="撰寫階段反思"
             variant="milestone"

@@ -10,6 +10,7 @@ import { FiClipboard, FiInfo, FiFileText, FiLoader, FiUsers, FiPaperclip } from 
 import { getExportData } from '../../api/export';
 import Loader from '../../components/Loader';
 import './ExportPreview.css';
+import { alertError } from '../../utils/dialogs';
 
 export default function ExportPreview() {
   const { projectId } = useParams();
@@ -94,7 +95,7 @@ export default function ExportPreview() {
 
     } catch (error) {
       console.error('PDF 生成失敗:', error);
-      alert('PDF 生成失敗，請稍後再試');
+      alertError('PDF 生成失敗，請稍後再試');
     } finally {
       setIsGenerating(false);
     }

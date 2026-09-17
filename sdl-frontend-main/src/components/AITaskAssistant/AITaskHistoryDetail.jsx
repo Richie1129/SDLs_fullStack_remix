@@ -6,6 +6,7 @@ import {
   FiUsers,
   FiClock,
   FiUser,
+  FiCheck,
 } from 'react-icons/fi';
 import { formatTime } from '../../utils/timeUtils';
 
@@ -164,7 +165,7 @@ const AITaskHistoryDetail = ({ entry, onBack }) => {
                   <div className="space-y-2">
                     {suggestions.humanHelpSuggestions.map((suggestion, index) => (
                       <div key={index} className="flex items-start gap-2 text-body-sm">
-                        <span className="flex-shrink-0">✓</span>
+                        <span className="flex-shrink-0"><FiCheck className="w-4 h-4" /></span>
                         <span className="text-gray-700">{suggestion}</span>
                       </div>
                     ))}

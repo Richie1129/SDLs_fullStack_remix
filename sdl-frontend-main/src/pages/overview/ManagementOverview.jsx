@@ -160,7 +160,7 @@ export default function ManagementOverview() {
     console.log("專案成員：", projectData);
 
     return (
-      <div className='min-w-full min-h-screen bg-gray-100 overflow-auto scrollbar-hidden'>
+      <div className='min-w-full min-h-screen bg-gray-100 overflow-auto'>
         <TopBar />
         <div className='flex flex-col my-10 px-4 sm:px-6 md:px-8 lg:px-10 xl:px-20 2xl:px-40 py-10 w-full items-center'>
           <div className='flex flex-col w-full '>

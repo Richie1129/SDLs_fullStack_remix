@@ -11,6 +11,7 @@ import {
 import { extractErrorMessage } from '@/constants/dailyErrorCodes.js';
 import { getCurrentUsername } from '../../../utils/userUtils';
 import { getCurrentUserId, getCurrentUserRole } from '../../../utils/authUtils';
+import { confirmDialog } from '../../../utils/dialogs';
 
 /**
  * Hook for managing personal daily logs
@@ -132,8 +133,8 @@ export function usePersonalDaily(projectId) {
 
   const handleDelete = async (item) => {
     if (!item?.id) return;
-    const confirm = window.confirm(`確定要刪除「${item.title || '未命名'}」嗎？此動作無法復原。`);
-    if (!confirm) return;
+    const ok = await confirmDialog({ title: '刪除日誌', text: `確定要刪除「${item.title || '未命名'}」嗎？此動作無法復原。`, confirmText: '刪除', danger: true });
+    if (!ok) return;
     deleteMutation.mutate(item.id);
   };
 

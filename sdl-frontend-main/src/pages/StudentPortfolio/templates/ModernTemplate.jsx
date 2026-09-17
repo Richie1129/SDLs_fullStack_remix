@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { FiTarget, FiMap, FiSearch, FiRefreshCw, FiBookOpen, FiUser, FiCalendar, FiStar, FiClipboard, FiMessageCircle, FiZap, FiCpu, FiSun, FiMapPin } from 'react-icons/fi';
 import NarrativeRenderer from '../components/NarrativeRenderer';
 
 const STAGE_PALETTE = {
@@ -13,7 +14,7 @@ const STAGE_PALETTE = {
   4: { bg: '#f3e8fb', border: '#9b59b6', text: '#7d3f99', light: '#f9f3fd' }
 };
 
-const STAGE_ICONS = { 1: '🎯', 2: '🗺️', 3: '🔬', 4: '🔄' };
+const STAGE_ICONS = { 1: FiTarget, 2: FiMap, 3: FiSearch, 4: FiRefreshCw };
 
 export default function ModernTemplate({ data, narrative }) {
   if (!data) return null;
@@ -43,9 +44,9 @@ export default function ModernTemplate({ data, narrative }) {
         <div style={{ fontSize: '20pt', fontWeight: '800', marginBottom: '2mm' }}>{project.name}</div>
         <div style={{ fontSize: '13pt', opacity: 0.9 }}>{student.username} 的個人學習歷程</div>
         <div style={{ display: 'flex', gap: '8mm', marginTop: '4mm', fontSize: '9pt', opacity: 0.8 }}>
-          {student.class && <span>📚 {student.class}</span>}
-          {project.mentor && <span>👩‍🏫 {project.mentor}</span>}
-          <span>📅 {new Date().toLocaleDateString('zh-TW')}</span>
+          {student.class && <span><FiBookOpen size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{student.class}</span>}
+          {project.mentor && <span><FiUser size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{project.mentor}</span>}
+          <span><FiCalendar size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{new Date().toLocaleDateString('zh-TW')}</span>
         </div>
       </div>
 
@@ -65,7 +66,7 @@ export default function ModernTemplate({ data, narrative }) {
       {/* AI 敘事 */}
       {narrative && (
         <div style={{ background: '#fff', borderRadius: '8px', padding: '6mm 8mm', marginBottom: '8mm', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #5BA491' }}>
-          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm' }}>✨ AI 學習敘事</div>
+          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#5BA491', marginBottom: '4mm' }}><FiStar size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />AI 學習敘事</div>
           <NarrativeRenderer narrative={narrative} accentColor="#5BA491" baseFontSize="9.5pt" />
         </div>
       )}
@@ -79,7 +80,7 @@ export default function ModernTemplate({ data, narrative }) {
           <div key={stage.stageNumber} style={{ background: '#fff', borderRadius: '8px', marginBottom: '6mm', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
             {/* 階段標頭 */}
             <div style={{ background: palette.bg, borderBottom: `3px solid ${palette.border}`, padding: '4mm 8mm', display: 'flex', alignItems: 'center', gap: '3mm', breakAfter: 'avoid' }}>
-              <span style={{ fontSize: '16pt' }}>{STAGE_ICONS[stage.stageNumber]}</span>
+              <span style={{ fontSize: '16pt' }}>{React.createElement(STAGE_ICONS[stage.stageNumber], { size: 20, style: { verticalAlign: 'middle' } })}</span>
               <div>
                 <div style={{ fontSize: '8pt', color: palette.text, fontWeight: '600', letterSpacing: '1px' }}>STAGE {stage.stageNumber}</div>
                 <div style={{ fontSize: '13pt', fontWeight: '800', color: palette.text }}>{stage.stageTitle}</div>
@@ -93,7 +94,7 @@ export default function ModernTemplate({ data, narrative }) {
               {/* 正式提交 */}
               {stage.submits.length > 0 && (
                 <div style={{ marginBottom: '5mm' }}>
-                  <TagLabel color={palette.text} bg={palette.light}>📋 正式提交</TagLabel>
+                  <TagLabel color={palette.text} bg={palette.light}><FiClipboard size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />正式提交</TagLabel>
                   {stage.submits.map((s, i) => (
                     <div key={i} style={{ marginBottom: '3mm', padding: '3mm 5mm', background: palette.light, borderRadius: '6px', borderLeft: `3px solid ${palette.border}`, breakInside: 'avoid' }}>
                       <div style={{ fontWeight: '700', fontSize: '9.5pt', color: palette.text, marginBottom: '1.5mm' }}>{s.stage} · {s.stageTitle}</div>
@@ -111,7 +112,7 @@ export default function ModernTemplate({ data, narrative }) {
               {/* 反思 */}
               {stage.reflections.length > 0 && (
                 <div style={{ marginBottom: '5mm' }}>
-                  <TagLabel color={palette.text} bg={palette.light}>💭 個人反思</TagLabel>
+                  <TagLabel color={palette.text} bg={palette.light}><FiMessageCircle size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />個人反思</TagLabel>
                   {stage.reflections.map((r, i) => (
                     <ModernReflectionCard key={i} reflection={r} palette={palette} />
                   ))}
@@ -121,10 +122,10 @@ export default function ModernTemplate({ data, narrative }) {
               {/* 想法牆節點 */}
               {stage.nodes.length > 0 && (
                 <div>
-                  <TagLabel color={palette.text} bg={palette.light}>💡 想法牆貢獻</TagLabel>
+                  <TagLabel color={palette.text} bg={palette.light}><FiZap size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />想法牆貢獻</TagLabel>
                   {stage.nodes.map((n, i) => (
                     <div key={i} style={{ marginBottom: '2.5mm', padding: '2.5mm 4mm', background: palette.bg, borderRadius: '6px', borderLeft: `3px solid ${palette.border}`, breakInside: 'avoid' }}>
-                      <div style={{ fontWeight: '700', fontSize: '9.5pt', color: palette.text, marginBottom: '0.5mm' }}>💡 {n.title}</div>
+                      <div style={{ fontWeight: '700', fontSize: '9.5pt', color: palette.text, marginBottom: '0.5mm' }}><FiZap size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{n.title}</div>
                       {n.content && <div style={{ fontSize: '9pt', color: '#444' }}>{String(n.content).slice(0, 250)}</div>}
                     </div>
                   ))}
@@ -138,7 +139,7 @@ export default function ModernTemplate({ data, narrative }) {
       {/* 自由反思 */}
       {freeReflections.length > 0 && (
         <div style={{ background: '#fff', borderRadius: '8px', padding: '5mm 8mm', marginBottom: '6mm', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#555', marginBottom: '4mm', breakAfter: 'avoid' }}>🌟 跨階段自由省思</div>
+          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#555', marginBottom: '4mm', breakAfter: 'avoid' }}><FiSun size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />跨階段自由省思</div>
           {freeReflections.map((r, i) => (
             <ModernReflectionCard key={i} reflection={r} palette={{ bg: '#f5f5f5', border: '#aaa', text: '#555', light: '#fafafa' }} />
           ))}
@@ -148,7 +149,7 @@ export default function ModernTemplate({ data, narrative }) {
       {/* 想法牆記錄 */}
       {ideaWallChats && ideaWallChats.length > 0 && (
         <div style={{ background: '#fff', borderRadius: '8px', padding: '5mm 8mm', marginBottom: '6mm', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #4a7cc7' }}>
-          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '4mm', breakAfter: 'avoid' }}>📌 想法牆記錄</div>
+          <div style={{ fontSize: '11pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '4mm', breakAfter: 'avoid' }}><FiMapPin size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />想法牆記錄</div>
           {ideaWallChats.map((iw, i) => (
             <div key={i} style={{ marginBottom: '4mm', background: '#f0f5fd', borderRadius: '6px', breakInside: 'avoid' }}>
               <div style={{ padding: '2.5mm 5mm', fontWeight: '700', fontSize: '9.5pt', color: '#2a5da8', borderBottom: '1px solid #d4e3f8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -165,7 +166,7 @@ export default function ModernTemplate({ data, narrative }) {
                     <div style={{ fontSize: '8.5pt', fontWeight: '700', color: '#4a7cc7', marginBottom: '2mm', breakAfter: 'avoid' }}>想法節點</div>
                     {iw.nodes.map((n, j) => (
                       <div key={j} style={{ marginBottom: '2mm', padding: '2mm 3mm', background: '#e8f0fb', borderRadius: '4px', borderLeft: '2px solid #4a7cc7', breakInside: 'avoid' }}>
-                        <div style={{ fontWeight: '700', fontSize: '9pt', color: '#2a5da8' }}>💡 {n.title}</div>
+                        <div style={{ fontWeight: '700', fontSize: '9pt', color: '#2a5da8' }}><FiZap size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{n.title}</div>
                         {n.content && <div style={{ fontSize: '8.5pt', color: '#555', marginTop: '0.5mm' }}>{String(n.content).slice(0, 200)}</div>}
                       </div>
                     ))}
@@ -197,7 +198,7 @@ export default function ModernTemplate({ data, narrative }) {
         const displayQ = allQuestions.slice(0, 16);
         return (
           <div style={{ background: '#fff', borderRadius: '8px', padding: '5mm 8mm', marginBottom: '6mm', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', borderLeft: '4px solid #5BA491' }}>
-            <div style={{ fontSize: '11pt', fontWeight: '700', color: '#2d7a65', marginBottom: '4mm', breakAfter: 'avoid' }}>🤖 科學助手對話摘要</div>
+            <div style={{ fontSize: '11pt', fontWeight: '700', color: '#2d7a65', marginBottom: '4mm', breakAfter: 'avoid' }}><FiCpu size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />科學助手對話摘要</div>
             {/* 統計 */}
             <div style={{ display: 'flex', gap: '5mm', marginBottom: '4mm' }}>
               <div style={{ background: '#f0faf7', borderRadius: '6px', padding: '3mm 6mm', textAlign: 'center', minWidth: '20mm' }}>

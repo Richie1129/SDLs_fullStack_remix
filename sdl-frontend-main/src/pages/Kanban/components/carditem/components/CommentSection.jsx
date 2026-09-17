@@ -10,6 +10,7 @@ import AuthImage from '@/components/AuthImage';
 import { CommentErrorBoundary } from '../../../../../components/ErrorBoundary';
 import { validateFileSize } from '@/utils/fileValidation';
 import { getCurrentUserId } from '../../../../../utils/authUtils';
+import { confirmDialog } from '../../../../../utils/dialogs';
 
 const personImg = [
   '/person/man1.png', '/person/man2.png', '/person/man3.png',
@@ -77,8 +78,9 @@ const CommentActions = ({ comment, onAfterChange }) => {
         編輯
       </button>
       <button
-        onClick={() => {
-          if (window.confirm('確定要刪除這則評論嗎？')) {
+        onClick={async () => {
+          const ok = await confirmDialog({ title: '刪除評論', text: '確定要刪除這則評論嗎？', confirmText: '刪除', danger: true });
+          if (ok) {
             delMutation.mutate({ commentId: comment.id });
           }
         }}

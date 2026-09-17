@@ -10,6 +10,7 @@ import {
   FaCheck
 } from 'react-icons/fa';
 import { HiChartBar } from 'react-icons/hi';
+import { alertError } from '../../../utils/dialogs';
 
 /**
  * 迴避風險預警組件 (B3)
@@ -65,7 +66,7 @@ const AvoidanceRiskAlert = ({ risks, onUpdate, loading, onRefresh }) => {
       await onUpdate(riskId, updateData);
     } catch (err) {
       console.error('更新失敗:', err);
-      alert('更新失敗，請重試');
+      alertError('更新失敗，請重試');
     } finally {
       setUpdateLoading(null);
     }

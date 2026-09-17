@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AiTwotoneFolderAdd, AiOutlineCloudDownload, AiOutlineUpload } from "react-icons/ai";
-import { FiInfo, FiTrash2 } from 'react-icons/fi';
+import { FiInfo, FiTrash2, FiCheck } from 'react-icons/fi';
 import { BiTask } from 'react-icons/bi';
 import { GrFormClose } from "react-icons/gr";
 import { useQuery, useQueryClient } from 'react-query';
@@ -171,7 +171,7 @@ export default function Protfolio() {
     
             Swal.fire({
                 icon: "success",
-                title: "儲存成功！",
+                title: "儲存成功",
                 text: "內容已成功儲存",
                 confirmButtonColor: "#5BA491",
             });
@@ -472,7 +472,7 @@ export default function Protfolio() {
                                                     index === parseInt(currentStageIndex) - 1 ? 'bg-[#5BA491]' : 
                                                     'bg-gray-300'
                                                 }`}>
-                                                    {index < parseInt(currentStageIndex) - 1 ? '✓' : index + 1}
+                                                    {index < parseInt(currentStageIndex) - 1 ? <FiCheck className="w-4 h-4" /> : index + 1}
                                                 </div>
                                                 <h3 className={`ml-3 font-semibold text-body-lg ${
                                                     index < parseInt(currentStageIndex) ? 'text-gray-900' : 'text-gray-500'

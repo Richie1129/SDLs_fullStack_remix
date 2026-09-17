@@ -12,7 +12,7 @@ const DraggableAvatar = ({
   // 手機：固定右下角 FAB（避免被拖離畫面、位置可預測）
   // 桌面：跟隨拖拽位置
   const avatarStyle = isMobile
-    ? { right: 16, bottom: 96 }   // bottom: 96 = SubStageBar(~56px) + gap
+    ? { right: 16, bottom: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }   // SubStageBar 手機高 3rem + 16px 間隙
     : { left: position.x, top: position.y + 150 };
 
   return (

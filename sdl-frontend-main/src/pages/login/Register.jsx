@@ -101,7 +101,7 @@ export default function Register() {
         class: res.data.class,
         seatNumber: res.data.seatNumber,
       }));
-      Swal.fire({ icon: 'success', title: '註冊成功！', text: '您已成功註冊！', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' })
+      Swal.fire({ icon: 'success', title: '註冊成功', text: '您已成功註冊', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' })
         .then(() => navigate('/homepage'));
     },
     onError: (err) => {
@@ -109,7 +109,7 @@ export default function Register() {
         Swal.fire({ icon: 'error', title: '註冊失敗', text: '該用戶已存在，請嘗試其他用戶名稱。', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' });
       } else {
         setError('帳號或密碼錯誤');
-        Swal.fire({ icon: 'error', title: '註冊失敗', text: '請檢查您的帳號或密碼！', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' });
+        Swal.fire({ icon: 'error', title: '註冊失敗', text: '請檢查您的帳號或密碼', confirmButtonText: '確定', timer: 2000, timerProgressBar: true, confirmButtonColor: '#5BA491' });
       }
     }
   });

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { FiFilter, FiCalendar, FiUsers, FiX, FiChevronDown } from 'react-icons/fi';
+import { FiFilter, FiCalendar, FiUsers, FiX, FiChevronDown, FiCheck } from 'react-icons/fi';
 
 /**
  * FilterBar 元件 - 數據篩選工具欄
@@ -197,7 +197,7 @@ const FilterBar = ({
                         <div className="flex items-center justify-between">
                           <span>{studentName}</span>
                           {isSelected && (
-                            <span className="text-trust-blue-500">✓</span>
+                            <span className="text-trust-blue-500"><FiCheck className="w-4 h-4" /></span>
                           )}
                         </div>
                       </button>

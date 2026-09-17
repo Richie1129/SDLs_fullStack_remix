@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiTool } from 'react-icons/fi';
 import errorReportingService from '../../services/errorReportingService';
+import { confirmDialog } from '../../utils/dialogs';
 
 /**
  * Kanban 專用錯誤邊界 - 針對拖放和實時協作優化
@@ -157,10 +158,9 @@ class KanbanErrorBoundary extends React.Component {
 
   handleSaveAndReload = () => {
     // 提醒用戶保存工作，然後重新載入頁面
-    const userConfirmed = window.confirm('即將重新載入頁面。請確認您的工作已保存。');
-    if (userConfirmed) {
-      window.location.reload();
-    }
+    confirmDialog({ title: '重新載入頁面', text: '請確認您的工作已保存。', confirmText: '重新載入', icon: 'question' }).then((ok) => {
+      if (ok) window.location.reload();
+    });
   };
 
   getErrorMessage = () => {

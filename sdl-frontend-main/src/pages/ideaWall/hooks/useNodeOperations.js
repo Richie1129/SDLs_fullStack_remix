@@ -83,7 +83,7 @@ export function useNodeOperations({
     const handleCreateSubmit = async (e) => {
         e.preventDefault();
         if (title.trim() === "" || content.trim() === "") {
-            toast.error("標題及內容請填寫完整!");
+            toast.error("標題及內容請填寫完整");
             return;
         }
 
@@ -150,7 +150,7 @@ export function useNodeOperations({
     const handleUpdateSubmit = (e) => {
         e.preventDefault();
         if (selectNodeInfo.title.trim() === "" || selectNodeInfo.content.trim() === "") {
-            toast.error("標題及內容請填寫完整!");
+            toast.error("標題及內容請填寫完整");
             return;
         }
 
@@ -240,7 +240,7 @@ export function useNodeOperations({
 
         setCreateNodeModalOpen(true);
 
-        toast.success('已為您準備好節點，請繼續完成您的想法！');
+        toast.success('已為您準備好節點，請繼續完成您的想法');
     };
 
     return {

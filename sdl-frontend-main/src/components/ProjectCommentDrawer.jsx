@@ -58,7 +58,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
       setEditingContent('');
       queryClient.invalidateQueries(['project-comments', projectId]);
       Swal.fire({
-        title: '儲存成功！',
+        title: '儲存成功',
         icon: 'success',
         timer: 1500,
         showConfirmButton: false,
@@ -214,7 +214,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   const handleDeleteComment = (commentId) => {
     Swal.fire({
       title: '確定要刪除這則評論嗎？',
-      text: '這個操作將無法復原！',
+      text: '此操作無法復原',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#d33',

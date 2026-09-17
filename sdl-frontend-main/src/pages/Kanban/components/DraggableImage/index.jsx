@@ -1,4 +1,5 @@
 import React from "react";
+import { FiX } from "react-icons/fi";
 import { useDraggable } from "./hooks/useDraggable";
 import { useChatSession } from "./hooks/useChatSession";
 import { useUIState } from "./hooks/useUIState";
@@ -6,7 +7,7 @@ import { useResponsive } from "./hooks/useResponsive";
 import DraggableAvatar from "./components/DraggableAvatar";
 import ChatWindow from "./components/ChatWindow";
 
-const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage }) => {
+const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage, suppressMessage = false }) => {
   // 使用自訂 hooks 來管理各種狀態
   const {
     position,
@@ -40,7 +41,6 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
 
   const {
     showMessage,
-    setShowMessage,
     showChat,
     setShowChat,
     isFullscreen,
@@ -53,6 +53,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
     setActiveTab,
     mentorStarted,
     setMentorStarted,
+    dismissMessage,
     showSwalWithCorrectZIndex,
     toggleFullscreen,
     toggleMinimize,
@@ -107,8 +108,8 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
         />
       )}
 
-      {/* 提示氣泡：手機開啟聊天時不顯示 */}
-      {showMessage && !(isMobile && showChat) && (
+      {/* 提示氣泡：手機開啟聊天時不顯示；導覽期間隱藏 */}
+      {showMessage && !suppressMessage && !(isMobile && showChat) && (
         <div
           className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-body-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-assistant max-w-[300px] font-medium animate-fade-in"
           style={computeMessagePosition(position)}
@@ -118,11 +119,12 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
             <span>有什麼問題需要我幫你解答的嗎？</span>
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); setShowMessage(false); }}
+              onClick={(e) => { e.stopPropagation(); dismissMessage(); }}
               title="關閉"
+              aria-label="關閉提示"
               className="ml-[2px] bg-transparent border-0 text-white cursor-pointer text-[14px] leading-none py-[2px] px-[6px] rounded hover:bg-white/15 transition-colors"
             >
-              ✕
+              <FiX className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </div>
         </div>

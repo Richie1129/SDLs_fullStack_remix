@@ -1,4 +1,5 @@
 import React from 'react';
+import { FiTarget, FiMap } from 'react-icons/fi';
 
 const TEMPLATES = [
   {
@@ -39,7 +40,7 @@ const TEMPLATES = [
         </div>
         <div style={{ background: '#fff', borderRadius: '4px', overflow: 'hidden', border: '1px solid #eee' }}>
           <div style={{ background: '#e8f5f1', borderBottom: '2px solid #5BA491', padding: '2px 4px', fontSize: '6.5px', fontWeight: '700', color: '#2d7a65' }}>
-            🎯 定標階段
+            <FiTarget className="inline w-3.5 h-3.5 mr-1" />定標階段
           </div>
           <div style={{ padding: '2px 4px', fontSize: '6px', color: '#555' }}>
             反思內容摘要...
@@ -60,10 +61,10 @@ const TEMPLATES = [
           <div style={{ fontSize: '6.5px', color: '#888' }}>學習歷程紀錄</div>
           <div style={{ height: '2px', background: 'linear-gradient(90deg, #5BA491, #9b59b6)', borderRadius: '1px', marginTop: '2px' }} />
         </div>
-        {['🎯 定標階段', '🗺️ 擇策階段'].map((s, i) => (
+        {[{ Icon: FiTarget, label: '定標階段' }, { Icon: FiMap, label: '擇策階段' }].map(({ Icon, label }, i) => (
           <div key={i} style={{ position: 'relative', marginBottom: '4px' }}>
             <div style={{ position: 'absolute', left: '-8.5px', top: '2px', width: '7px', height: '7px', background: ['#5BA491', '#4a7cc7'][i], borderRadius: '50%', border: '1px solid #fff' }} />
-            <div style={{ fontWeight: '700', color: ['#2d7a65', '#2a5da8'][i], fontSize: '7px' }}>{s}</div>
+            <div style={{ fontWeight: '700', color: ['#2d7a65', '#2a5da8'][i], fontSize: '7px' }}><Icon className="inline w-3.5 h-3.5 mr-1" />{label}</div>
             <div style={{ fontSize: '6px', color: '#888' }}>反思與提交摘要...</div>
           </div>
         ))}

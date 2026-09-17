@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import { FaRegLightbulb } from "react-icons/fa";
 import { MdOutlineViewKanban } from "react-icons/md";
@@ -9,10 +9,11 @@ import { BiTask } from "react-icons/bi";
 import { BsChatDots } from "react-icons/bs";
 import { TbMessageQuestion } from "react-icons/tb";
 import { RiDashboardLine } from "react-icons/ri";
-import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiX } from "react-icons/fi";
 import { useStageIndex, useSubStageIndex } from '../hooks/useStageIndex';
 import ChatRoom from "./ChatRoom";
 import useObservationMode from "../hooks/useObservationMode"; // 引入觀摩模式 hook
+import useMediaQuery from "../hooks/useMediaQuery";
 import { userStorage } from '../services/storageService';
 import { getStageColor } from '../utils/stageUtils';
 
@@ -86,18 +87,16 @@ const FloatingTooltip = ({ isVisible, position, content, onClose }) => {
       
       <button
         onClick={onClose}
+        aria-label="關閉"
         className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors duration-fast"
       >
-        <span className="text-gray-500 text-body-sm">×</span>
+        <FiX className="w-4 h-4 text-gray-500" aria-hidden="true" />
       </button>
       <div className="pr-8">
         <h3 className="font-bold text-[#5BA491] mb-2">{content.title}</h3>
-        <ul className="text-body-sm text-gray-700 space-y-1">
+        <ul className="text-body-sm text-gray-700 space-y-1 list-disc list-inside">
           {content.items.map((item, index) => (
-            <li key={index} className="flex items-start">
-              <span className="text-[#5BA491] mr-2">•</span>
-              {item}
-            </li>
+            <li key={index}>{item}</li>
           ))}
         </ul>
       </div>
@@ -168,7 +167,7 @@ const ToggleButton = ({ isOpen, onClick }) => {
   );
 };
 
-export default function SideBar() {
+export default function SideBar({ mobileOpen = false, onMobileClose }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [chatRoomOpen, setChatRoomOpen] = useState(false);
@@ -176,6 +175,9 @@ export default function SideBar() {
   const [currentStageIndex, setCurrentStageIndex] = useStageIndex();
   const [currentSubStageIndex, setCurrentSubStageIndex] = useSubStageIndex();
   const role = userStorage.get("role");
+  const panelRef = useRef(null);
+  const isMdUp = useMediaQuery('(min-width: 768px)');
+  const expanded = isMdUp ? open : true;
 
   // 使用觀摩模式 hook
   const { isObservationMode } = useObservationMode();
@@ -312,9 +314,27 @@ export default function SideBar() {
     }
   }, [location, menus]);
 
+  // 手機抽屜開啟時，Escape 鍵關閉
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (mobileOpen && !isMdUp && e.key === 'Escape') {
+        onMobileClose?.();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mobileOpen, isMdUp, onMobileClose]);
+
+  // 手機抽屜開啟時，焦點移到第一個連結
+  useEffect(() => {
+    if (mobileOpen && !isMdUp) {
+      panelRef.current?.querySelector('a[href]')?.focus();
+    }
+  }, [mobileOpen]);
+
   // Handle stage click for collapsed state
   const handleStageClick = (stage, event) => {
-    if (!open) {
+    if (!expanded) {
       // Get click position for tooltip
       const rect = event.currentTarget.getBoundingClientRect();
       setFloatingTooltip({
@@ -342,14 +362,39 @@ export default function SideBar() {
 
   return (
     <>
+      {/* 手機抽屜遮罩，排在面板之前，讓面板疊在遮罩之上 */}
+      {!isMdUp && mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-drawer bg-black/40 transition-opacity duration-normal"
+          onClick={onMobileClose}
+          aria-hidden="true"
+        />
+      )}
+
       <div
-        className={`z-10 bg-white flex flex-col flex-shrink-0 border-r-2 border-gray-200 h-full`}
+        ref={panelRef}
+        aria-label="專案導覽"
+        {...(!isMdUp && mobileOpen ? { role: 'dialog', 'aria-modal': true } : {})}
+        className={`fixed inset-y-0 left-0 z-drawer w-64 max-w-[80vw] md:static md:inset-auto md:z-10 md:w-auto md:max-w-none bg-white flex flex-col flex-shrink-0 border-r-2 border-gray-200 h-full transform transition-[transform,visibility] duration-slow ease-drawer motion-reduce:transition-none md:transform-none md:transition-none md:visible ${mobileOpen ? 'translate-x-0 visible' : '-translate-x-full invisible'}`}
       >
         {/* Header with Hamburger Button */}
         <div className="flex-shrink-0 p-component-sm border-b border-gray-100">
-          <div className={`flex ${open ? "justify-end" : "justify-center"}`}>
-            <ToggleButton isOpen={open} onClick={() => setOpen(!open)} />
-          </div>
+          {isMdUp ? (
+            <div className={`flex ${open ? "justify-end" : "justify-center"}`}>
+              <ToggleButton isOpen={open} onClick={() => setOpen(!open)} />
+            </div>
+          ) : (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onMobileClose}
+                aria-label="關閉導覽"
+                className="h-10 w-10 flex items-center justify-center hover:bg-gray-100 rounded-md border border-gray-200"
+              >
+                <FiX className="text-zinc-800" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Main Navigation Area - Scrollable */}
@@ -359,7 +404,7 @@ export default function SideBar() {
               ? null
               : menus?.map((menu, i) => (
                   <div key={i} className="px-2 mb-1">
-                    <HoverTooltip text={!open ? menu.name : ""} show={!open}>
+                    <HoverTooltip text={!expanded ? menu.name : ""} show={!expanded}>
                       <NavItem
                         selected={selected === i}
                         id={i}
@@ -367,15 +412,17 @@ export default function SideBar() {
                       >
                         <Link
                           to={menu?.link}
+                          aria-current={selected === i ? 'page' : undefined}
+                          onClick={() => onMobileClose?.()}
                           className={`flex items-center text-body-sm font-medium p-component-sm rounded-lg w-full ${
-                            open ? "gap-3" : "justify-center"
-                          }`}
+                            expanded ? "gap-3" : "justify-center"
+                          } ${selected === i ? "text-customgreen font-semibold" : "text-gray-700"}`}
                         >
                           <div className="flex-shrink-0 flex items-center justify-center">
                             {React.createElement(menu?.icon, { size: "24" })}
                           </div>
                           <span
-                                                    className={`whitespace-pre text-gray-700 overflow-hidden transition-opacity duration-normal ${open ? 'opacity-100' : 'opacity-0 w-0'}`}
+                                                    className={`whitespace-pre overflow-hidden transition-opacity duration-normal ${expanded ? 'opacity-100' : 'opacity-0 w-0'}`}
                           >
                             {menu?.name}
                           </span>
@@ -393,7 +440,7 @@ export default function SideBar() {
           {projectId && (
             <div className="p-component-sm">
               {/* Section Title for expanded state */}
-              {open && (
+              {expanded && (
                 <div className="text-caption font-semibold text-gray-500 uppercase tracking-wide px-1 mb-3">
                   學習階段
                 </div>
@@ -401,14 +448,14 @@ export default function SideBar() {
 
               <div
                 className={`${
-                  open ? "space-y-stack-xs" : "flex flex-col items-center space-y-3"
+                  expanded ? "space-y-stack-xs" : "flex flex-col items-center space-y-3"
                 }`}
               >
                 {stages.map((stage) => (
                   <StageProgressItem
                     key={stage.index}
                     stage={stage}
-                    isOpen={open}
+                    isOpen={expanded}
                     currentStageIndex={currentStageIndex}
                     onClick={(e) => handleStageClick(stage, e)}
                   />
@@ -420,11 +467,11 @@ export default function SideBar() {
           {/* Chat Room Button */}
           {projectId !== undefined && (
             <div className="p-component-sm border-t border-gray-100">
-              <HoverTooltip text={!open ? "聊天室" : ""} show={!open}>
+              <HoverTooltip text={!expanded ? "聊天室" : ""} show={!expanded}>
                 <div
                   onClick={() => setChatRoomOpen(true)}
                   className={`flex items-center font-medium p-component-sm rounded-lg cursor-pointer bg-zinc-800 hover:bg-zinc-700 ${
-                    open ? "gap-3" : "justify-center"
+                    expanded ? "gap-3" : "justify-center"
                   }`}
                 >
                   <div className="flex-shrink-0 flex items-center justify-center">
@@ -432,7 +479,7 @@ export default function SideBar() {
                   </div>
                   <span
                     className={`whitespace-pre text-body-sm text-white overflow-hidden transition-opacity duration-normal ${
-                      open ? "opacity-100" : "opacity-0 w-0"
+                      expanded ? "opacity-100" : "opacity-0 w-0"
                     }`}
                   >
                     聊天室
