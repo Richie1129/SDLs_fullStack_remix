@@ -139,32 +139,6 @@ export default function ChatRoom({ chatRoomOpen, setChatRoomOpen }) {
                         </button>
                     </div>
                 )}
-                {/* {
-                    messageList.map((messages, index) => {
-                        const imgIndex = parseInt(messages.userId) % 9;
-                        const currentImgIndex = parseInt(messages.creator) % 9;
-                        const userImg = personImg[imgIndex];
-                        const currentUserImg = personImg[currentImgIndex];
-                        const isCurrentUser = messages.author === currentUsername;
-
-                        return (
-                            <div key={index} className={`flex h-auto p-1 ${isCurrentUser ? "justify-end" : "justify-start"}`}>
-                                <div className={`flex items-center ${isCurrentUser ? "flex-row-reverse" : "flex-row"}`}>
-                                    <img src={currentUserImg ? currentUserImg : userImg} className="w-8 h-8 rounded-full mx-2" />
-                                    <div className={`flex flex-col ${isCurrentUser ? "items-end" : "items-start"}`}>
-                                        <div className={`shadow-md w-fit max-w-[240px] rounded-lg text-white flex items-center break-all px-3 py-2 ${isCurrentUser ? "bg-[#5BA491]" : "bg-sky-700"}`}>
-                                            {messages.message}
-                                        </div>
-                                        <div className='text-caption mt-1 text-gray-500'>
-                                            {messages.createdAt} | {messages.author}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                        );
-                    })
-                } */}
                 {messageList.reduce((acc, messages, index) => {
                     if (!messages.createdAt || typeof messages.createdAt !== 'string') {
                         return acc;

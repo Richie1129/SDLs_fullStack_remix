@@ -43,14 +43,6 @@ const VENDOR_GROUPS = [
     name: 'vendor-motion',
     match: (pkg) => ['framer-motion', 'motion-dom', 'motion-utils'].includes(pkg),
   },
-  {
-    name: 'vendor-streamdown',
-    match: (pkg) =>
-      ['streamdown', 'shiki', 'mermaid', 'katex', 'cytoscape'].includes(pkg) ||
-      pkg.startsWith('@shikijs/') ||
-      pkg.startsWith('@mermaid-js/') ||
-      pkg.startsWith('cytoscape-'),
-  },
 ]
 
 function manualChunks(id) {
@@ -71,6 +63,9 @@ export default defineConfig({
   server:{
     host:'0.0.0.0',
     port: 5173
+  },
+  esbuild: {
+    drop: process.env.NODE_ENV === 'production' ? ['console', 'debugger'] : [],
   },
   build: {
     rollupOptions: {

@@ -891,4 +891,4 @@
 - **2026-09-05**：完成 F021（teacher 範圍收斂為 mentorId）；生產 151 個專案只有第 26 號缺 mentorId、已補，共同指導只出現在 3 個測試專案、不需多對多；新增 F024（socket 房間加入與班級清單端點的列舉面）
 - **2026-09-17**：新增 F025–F029；安裝 emilkowalski/skills 與 taste-skill 的 `redesign-existing-projects` 後跑 `/improve-animations` 全站稽核，7 項可直接執行的修法寫成 `plans/001` 到 `007`，通知系統統一、按壓回饋、layout 屬性動畫、Kanban 樂觀卡片閃動、錯失的狀態轉場五項登錄為後續工作
 - **2026-09-17**：完成 `plans/001` 到 `007`（動畫稽核七項，commit dd55663 到 564c298）；新增 F030–F033；以學生帳號在本機 dev 實測桌面與 390px 寬度，加上 redesign-existing-projects 與 mobile-native 清單的靜態稽核與死碼稽核，五項可直接執行的修法寫成 `plans/008` 到 `012`，側欄抽屜化、收尾雜項、共用元件與 focus ring、utils 合併四項登錄為後續工作
-- **2026-09-17**：完成 `plans/008` 到 `011`（z-index token、Modal 無障礙、手機基礎、狀態與文案）；新增 F034（Kanban 卡片首幀空殼與圖片延後）並在 F031 追加兩處 `scrollbar-hidden`；plans/011 的卡片空窗診斷結論：API 一次帶回 task，空窗是背景分頁節流假象，不補 per-column 骨架
+- **2026-09-17**：完成 `plans/008` 到 `012`（z-index token、Modal 無障礙、手機基礎、狀態與文案、死碼清理與 production drop console）；新增 F034（Kanban 卡片首幀空殼與圖片延後）並在 F031 追加兩處 `scrollbar-hidden`；plans/011 的卡片空窗診斷結論：API 一次帶回 task，空窗是背景分頁節流假象，不補 per-column 骨架

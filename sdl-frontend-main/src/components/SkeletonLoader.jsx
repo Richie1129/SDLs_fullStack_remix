@@ -22,36 +22,6 @@ export const SkeletonCard = () => {
 };
 
 /**
- * SkeletonTable - 表格骨架屏
- * 用於學生列表或數據表格載入時的佔位符
- */
-export const SkeletonTable = ({ rows = 5 }) => {
-  return (
-    <div className="space-y-3 animate-pulse">
-      {[...Array(rows)].map((_, i) => (
-        <div key={i} className="flex space-x-4">
-          <div className="bg-gray-200 h-12 flex-1 rounded"></div>
-          <div className="bg-gray-200 h-12 w-20 rounded"></div>
-          <div className="bg-gray-200 h-12 w-24 rounded"></div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-/**
- * SkeletonChart - 圖表骨架屏
- * 用於圖表載入時的佔位符
- */
-export const SkeletonChart = () => {
-  return (
-    <div className="animate-pulse">
-      <div className="bg-gray-200 rounded-xl h-64 sm:h-80"></div>
-    </div>
-  );
-};
-
-/**
  * SkeletonStatsCards - 統計卡片組骨架屏
  * 用於整組統計卡片載入時的佔位符
  */
@@ -105,8 +75,6 @@ export const SkeletonDashboard = () => {
 
 export default {
   SkeletonCard,
-  SkeletonTable,
-  SkeletonChart,
   SkeletonStatsCards,
   SkeletonKanbanColumn,
   SkeletonDashboard,

@@ -1,6 +1,6 @@
 # 012 — 移除零引用的檔案、測試路由、相依與孤兒資源；production 去掉 console
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: 564c298
 - **Severity**: LOW（純清理；但三條測試路由掛在正式站、209 處 console.log 進 bundle）
 - **Category**: 死碼

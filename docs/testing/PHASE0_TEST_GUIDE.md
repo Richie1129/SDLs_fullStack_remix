@@ -90,29 +90,13 @@ node test-tracking-batch.js
 
 ### 步驟 3: 前端手動測試 (5 分鐘)
 
-#### 3.1 添加測試頁面路由
+#### 3.1 訪問測試頁面
 
-**選項 A: 臨時路由 (快速測試)**
-
-在 `App.jsx` 中添加:
-```jsx
-import TrackingTestPage from './test/TrackingTestPage';
-
-// 在 Routes 中添加
-<Route path="/test-tracking" element={<TrackingTestPage />} />
-```
-
-**選項 B: 直接訪問 (需登入)**
-
-如果已有路由系統，可直接將 TrackingTestPage 掛載到任意受保護路由下。
-
-#### 3.2 訪問測試頁面
-
-1. 開啟 http://localhost:5173/test-tracking (或你設定的路徑)
+1. 登入系統後開啟測試頁面 (需自行掛載 TrackingTestPage 到受保護路由下)
 2. **登入系統** (必須，因為需要 accessToken)
 3. 開啟瀏覽器開發者工具 (F12 → Console)
 
-#### 3.3 執行測試
+#### 3.2 執行測試
 
 **依序點擊以下按鈕**:
 

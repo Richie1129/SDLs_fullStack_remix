@@ -31,9 +31,6 @@ const ClassObservationPage = lazy(() => import('./pages/observation/ClassObserva
 const Profile = lazy(() => import('./pages/profile/Profile'));
 const TeacherPasswordReset = lazy(() => import('./pages/teacher-password-reset'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const StreamdownDemo = lazy(() => import('./pages/StreamdownDemo'));
-const TestRag = lazy(() => import('./pages/TestRag'));
-const TrackingTestPage = lazy(() => import('./test/TrackingTestPage'));
 const ProjectLayout = lazy(() => import("./layouts/ProjectLayout"));
 
 const RouteFallback = () => (
@@ -55,8 +52,6 @@ export default function App() {
         </Route>
         <Route element={<ProtectedRoute />}>
           <Route path="homepage" element={<HomePage />} />
-          <Route path="test-rag" element={<TestRag />} />
-          <Route path="test-tracking" element={<TrackingTestPage />} />
           <Route path="bulletin" element={<Bulletin />} />
           <Route path="List" element={<List />} />
           <Route path="overView" element={<ManagementOverview />} />
@@ -66,7 +61,6 @@ export default function App() {
           <Route path="teacher-password-reset" element={<TeacherPasswordReset />} />
           <Route path="admin" element={<AdminDashboard />} />
           <Route path="profile" element={<Profile />} />
-          <Route path="streamdown-demo" element={<StreamdownDemo />} />
           <Route path="project/:projectId" element={<ProjectLayout />}>
             <Route path="kanban" element={<Kanban />} />
             <Route path="submitTask" element={<SubmitTask />} />

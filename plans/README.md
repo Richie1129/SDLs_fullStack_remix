@@ -17,7 +17,7 @@
 | [006](006-remove-decorative-motion.md) | 移除高頻與常駐元件上的裝飾動畫 | HIGH | DONE |
 | [007](007-remove-dead-motion-code.md) | 移除無人引用的動畫元件、CSS 與套件 | LOW | DONE |
 
-## 第二批：UI/UX 收尾（2026-09-17 實測產出，待執行）
+## 第二批：UI/UX 收尾（2026-09-17 實測產出，全部完成）
 
 基準 commit `564c298`。來源：`redesign-existing-projects` 與 `mobile-native` 清單靜態稽核、死碼稽核，加上用學生帳號在本機 dev 環境實測桌面與 390px 寬度（見 `HANDOFF_NEXT_SESSION.md` 的實測條件）。
 
@@ -27,7 +27,7 @@
 | [009](009-modal-a11y-and-portal.md) | Modal 補 Escape、焦點陷阱、role，改 portal；想法牆節點視窗加遮罩 | HIGH | Modal.jsx 重寫 + 2 檔 1 prop | DONE |
 | [010](010-mobile-foundation.md) | 手機基礎：dvh、hover 守衛、觸控回饋、input 16px、safe-area；修 TopBar `xs:` bug 與首頁橫向捲軸 | HIGH | 3 個基礎檔 + 12 檔 class | DONE |
 | [011](011-states-and-copy.md) | `isError.message` 兩處實質 bug、Kanban 載入骨架、首頁學期假空狀態、除錯文案 | HIGH | 6 檔約 60 行 | DONE |
-| [012](012-dead-code-and-drop-console.md) | 刪 14 個零引用檔、3 條測試路由、4 個相依、孤兒資源；production drop console | LOW | 純刪除 + vite 3 行 | TODO |
+| [012](012-dead-code-and-drop-console.md) | 刪 14 個零引用檔、3 條測試路由、4 個相依、孤兒資源；production drop console | LOW | 純刪除 + vite 3 行 | DONE |
 
 ### 建議順序與依賴
 

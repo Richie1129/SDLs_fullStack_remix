@@ -9,8 +9,8 @@ export { default as KanbanErrorBoundary } from './KanbanErrorBoundary';
 export { default as DashboardErrorBoundary } from './DashboardErrorBoundary';
 export { default as ChartErrorBoundary } from './ChartErrorBoundary';
 export { default as CommentErrorBoundary } from './CommentErrorBoundary';
-// SocketStatusIndicator 不再由 barrel 轉出：它會載入 services/socketManager（第二個 socket 實例），
-// 需要時請直接 import './SocketStatusIndicator'，避免所有引用 barrel 的頁面都把它拉進 bundle。
+// SocketStatusIndicator 已於 2026-09-17 移除（零引用；它會載入 services/socketManager 建立第二個 socket 實例），
+// 若日後需要類似元件，不要經由 barrel 轉出，避免所有引用 barrel 的頁面都把它拉進 bundle。
 
 // 預設導出最常用的全域 ErrorBoundary
 export { default } from './GlobalErrorBoundary';

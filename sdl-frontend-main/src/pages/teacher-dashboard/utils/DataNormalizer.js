@@ -198,6 +198,3 @@ export class DataNormalizer {
     };
   }
 }
-
-// 導出單例實例
-export const dataNomalizer = new DataNormalizer();
