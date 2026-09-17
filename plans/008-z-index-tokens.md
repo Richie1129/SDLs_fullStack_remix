@@ -1,6 +1,6 @@
 # 008 — 建立 z-index 語意 token，讓 AI 助手落到抽屜與 Modal 之下
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: 564c298
 - **Severity**: HIGH（實測：AI 助手泡泡蓋住評論抽屜、活動串流、卡片詳情 Modal；手機版蓋住 Kanban「新增卡片」按鈕）
 - **Category**: 版面層級

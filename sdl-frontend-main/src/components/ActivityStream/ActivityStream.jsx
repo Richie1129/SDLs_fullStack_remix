@@ -73,7 +73,7 @@ const ActivityStream = ({ projectId, isOpen, onClose }) => {
     return (
         <motion.div
             {...DRAWER_RIGHT}
-            className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-8rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-50 overflow-hidden"
+            className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-8rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-drawer overflow-hidden"
         >
             {/* 標題列 */}
             <div className="flex items-center justify-between p-component-sm sm:p-component-base border-b border-gray-200">

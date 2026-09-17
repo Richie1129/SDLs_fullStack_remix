@@ -72,7 +72,7 @@ export default function ExampleTasksDialog({ pendingExampleTasks, onConfirm, onS
   };
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/60">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
 
         {/* 標題列 */}

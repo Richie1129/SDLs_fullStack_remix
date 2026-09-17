@@ -192,7 +192,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
 
   if (location.pathname === "/homepage") {
     return (
-      <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2 flex-shrink-0">
+      <div className="z-nav h-16 w-full bg-[#FFFFFF] flex items-center justify-between pr-5 border-b-2 flex-shrink-0">
         <Link to="/homepage" className="flex px-5 items-center font-bold font-Mulish text-h2">
           <img src="/SDLS_LOGO_GEMINI.webp" alt="Logo" width={132} height={56} className="h-14 w-auto" />
         </Link>
@@ -230,7 +230,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
             </div>
 
             {userDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-dropdown">
                 <button
                   className="block w-full text-left px-4 py-2 text-body-sm text-gray-700 hover:bg-gray-100 transition-colors duration-fast"
                   onClick={() => {
@@ -263,7 +263,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   }
 
   return (
-    <div className="z-40 h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
+    <div className="z-nav h-16 w-full bg-[#FFFFFF] flex items-center justify-between px-3 sm:px-5 border-b-2 flex-shrink-0">
       <div className="flex items-center min-w-0 flex-1">
         <Link to="/homepage" className="flex px-2 sm:px-5 items-center font-bold font-Mulish text-body-lg sm:text-h2">
           <img src="/SDLS_LOGO_GEMINI.webp" alt="Logo" width={132} height={56} className="h-10 sm:h-14 w-auto" />

@@ -45,6 +45,7 @@ npm run migrate:undo # 回滾遷移
 - 動畫速度用 `duration-fast`/`duration-normal`/`duration-slow`
 - 進出場用 `ease-out`，禁止 `ease-in`
 - 響應式必須包含 `md:` 中間斷點，**禁止從 sm 直接跳 lg**
+- 層級只用 `z-nav` 到 `z-fullscreen` token，**禁止任意 `z-[n]`**
 - **UI/UX 佈局變更必須同步調整各裝置尺寸** — 任何新增或修改佈局（間距、高度、寬度、flex 配置等），都必須確認 sm / md / lg 斷點下的表現，不能只寫一個固定值
 
 ## Skills

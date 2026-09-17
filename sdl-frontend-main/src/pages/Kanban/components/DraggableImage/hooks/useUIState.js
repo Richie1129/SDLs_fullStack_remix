@@ -54,49 +54,9 @@ export const useUIState = () => {
   }, [activeTab]);
 
   // 確保 SweetAlert2 在全螢幕模式下正確顯示的輔助函數
+  // SweetAlert2 預設 z-index（1060）已高於 z-fullscreen（100），不需再手動改 zIndex
   const showSwalWithCorrectZIndex = (options) => {
-    if (isFullscreen) {
-      const chatContainer = document.querySelector('.chat-container.fullscreen');
-      const originalZIndex = chatContainer?.style.zIndex;
-
-      if (chatContainer) {
-        chatContainer.style.zIndex = '9998';
-      }
-
-      const result = Swal.fire({
-        ...options,
-        backdrop: true,
-        allowOutsideClick: true,
-        customClass: {
-          container: 'swal2-container-custom',
-          popup: 'swal2-popup-custom',
-          ...options.customClass
-        },
-        target: 'body',
-        heightAuto: false,
-        didOpen: () => {
-          const swalContainer = document.querySelector('.swal2-container');
-          if (swalContainer) {
-            swalContainer.style.zIndex = '99999';
-          }
-          const swalPopup = document.querySelector('.swal2-popup');
-          if (swalPopup) {
-            swalPopup.style.zIndex = '99999';
-          }
-        },
-        didClose: () => {
-          if (chatContainer && originalZIndex) {
-            chatContainer.style.zIndex = originalZIndex;
-          } else if (chatContainer) {
-            chatContainer.style.zIndex = '9999';
-          }
-        }
-      });
-
-      return result;
-    } else {
-      return Swal.fire(options);
-    }
+    return Swal.fire(options);
   };
 
   // 切換全螢幕模式

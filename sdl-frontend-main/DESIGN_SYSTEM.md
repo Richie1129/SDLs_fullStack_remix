@@ -12,6 +12,7 @@
 - [間距系統](#間距系統)
 - [色彩系統](#色彩系統)
 - [動畫速度](#動畫速度)
+- [層級系統](#層級系統)
 - [響應式設計](#響應式設計)
 - [互動設計規範](#互動設計規範)
 - [常見模式](#常見模式)
@@ -195,6 +196,26 @@ Hover 的顏色與陰影變化用 Tailwind 預設的 `ease` 即可。**禁止 `e
   側邊欄
 </aside>
 ```
+
+---
+
+## 🗂️ 層級系統
+
+由低到高，元件只能用這些語意化 token，**禁止任意 `z-[n]`**。
+
+| Token | 數值 | Tailwind Class | 用途 |
+|-------|------|---------------|------|
+| nav | 40 | `z-nav` | 頂欄、側欄 |
+| assistant | 45 | `z-assistant` | AI 助手頭像與泡泡（在抽屜與 Modal 之下） |
+| dropdown | 50 | `z-dropdown` | 下拉選單、tooltip |
+| chat | 55 | `z-chat` | AI 聊天視窗與其手機遮罩 |
+| drawer | 60 | `z-drawer` | 右側抽屜 |
+| modal | 70 | `z-modal` | 所有 Modal 與 overlay |
+| modal-stack | 80 | `z-modal-stack` | Modal 之上再疊一層（圖片放大） |
+| onboarding | 90 | `z-onboarding` | 首次導覽 |
+| fullscreen | 100 | `z-fullscreen` | 全螢幕聊天 |
+
+SweetAlert2（預設 z-index 1060）與 react-hot-toast（預設 9999）都高於 `z-fullscreen`，不需另外處理。
 
 ---
 

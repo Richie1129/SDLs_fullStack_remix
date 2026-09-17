@@ -89,7 +89,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       {/* 手機 Bottom Sheet 背景遮罩 */}
       {isMobile && showChat && (
         <div
-          className="fixed inset-0 bg-black/40 z-[1001] transition-opacity duration-normal"
+          className="fixed inset-0 bg-black/40 z-chat transition-opacity duration-normal"
           onClick={closeChat}
           aria-label="關閉科學助手"
         />
@@ -110,7 +110,7 @@ const DraggableImage = ({ containerRef, projectId, currentStage, currentSubStage
       {/* 提示氣泡：手機開啟聊天時不顯示 */}
       {showMessage && !(isMobile && showChat) && (
         <div
-          className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-body-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-[1001] max-w-[300px] font-medium animate-fade-in"
+          className="fixed bg-[#5BA491] text-white px-3 py-3 rounded-xl text-body-sm shadow-[0_6px_20px_rgba(0,0,0,0.15)] cursor-pointer z-assistant max-w-[300px] font-medium animate-fade-in"
           style={computeMessagePosition(position)}
           onClick={handleImageClick}
         >

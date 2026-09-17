@@ -68,7 +68,7 @@ const FloatingTooltip = ({ isVisible, position, content, onClose }) => {
   return (
     <div
       ref={tooltipRef}
-      className="fixed z-50 bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-component-base max-w-xs transition-opacity"
+      className="fixed z-dropdown bg-white border-2 border-[#5BA491] rounded-lg shadow-xl p-component-base max-w-xs transition-opacity"
       style={{ left: position.x + 10, top: tooltipTop }}
     >
       {/* 左側箭頭 - 對準觸發按鈕中心 */}

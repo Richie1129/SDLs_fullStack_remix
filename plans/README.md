@@ -23,7 +23,7 @@
 
 | 編號 | 標題 | 嚴重度 | 範圍 | 狀態 |
 |---|---|---|---|---|
-| [008](008-z-index-tokens.md) | z-index 語意 token，AI 助手落到抽屜與 Modal 之下 | HIGH | config + 14 檔 class 替換 + 移除 Swal hack | TODO |
+| [008](008-z-index-tokens.md) | z-index 語意 token，AI 助手落到抽屜與 Modal 之下 | HIGH | config + 14 檔 class 替換 + 移除 Swal hack | DONE |
 | [009](009-modal-a11y-and-portal.md) | Modal 補 Escape、焦點陷阱、role，改 portal；想法牆節點視窗加遮罩 | HIGH | Modal.jsx 重寫 + 2 檔 1 prop | TODO |
 | [010](010-mobile-foundation.md) | 手機基礎：dvh、hover 守衛、觸控回饋、input 16px、safe-area；修 TopBar `xs:` bug 與首頁橫向捲軸 | HIGH | 3 個基礎檔 + 12 檔 class | TODO |
 | [011](011-states-and-copy.md) | `isError.message` 兩處實質 bug、Kanban 載入骨架、首頁學期假空狀態、除錯文案 | HIGH | 6 檔約 60 行 | TODO |

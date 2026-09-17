@@ -242,7 +242,7 @@ const StageSuggestions = ({ personalData, projectId }) => {
       {/* SDL Coach modal */}
       {coachOpen && (
         <div
-          className="fixed inset-0 z-[1000] bg-black/40 flex items-end sm:items-center justify-center p-component-sm sm:p-component-md"
+          className="fixed inset-0 z-modal bg-black/40 flex items-end sm:items-center justify-center p-component-sm sm:p-component-md"
           onClick={() => setCoachOpen(false)}
         >
           <div

@@ -403,7 +403,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
   return (
     <motion.div
       {...DRAWER_RIGHT}
-      className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-[120] overflow-hidden flex flex-col"
+      className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-drawer overflow-hidden flex flex-col"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-component-sm sm:p-component-base border-b border-gray-200">
@@ -496,7 +496,7 @@ const ProjectCommentDrawer = ({ projectId, isOpen, onClose }) => {
         </div>
       </div>
         {selectedCommentImageIndex !== null && (
-          <Modal open={true} onClose={closeCommentImageModal} position="justify-center items-center z-[80]">
+          <Modal open={true} onClose={closeCommentImageModal} position="justify-center items-center z-modal-stack">
             <button onClick={closeCommentImageModal} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
               <FiX className="w-6 h-6" />
             </button>

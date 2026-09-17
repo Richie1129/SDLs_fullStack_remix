@@ -413,7 +413,7 @@ export function CardDetailModal({
         <Modal
           open={true}
           onClose={closeImageModal}
-          position="justify-center items-center z-[70]"
+          position="justify-center items-center"
         >
           <button onClick={closeImageModal} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
             <GrFormClose className="w-6 h-6" />
@@ -473,7 +473,7 @@ export function CardDetailModal({
         <Modal
           open={true}
           onClose={closeCommentImageModal}
-          position="justify-center items-center z-[80]"
+          position="justify-center items-center z-modal-stack"
         >
           <button onClick={closeCommentImageModal} className='absolute top-2 right-2 p-1 rounded-lg bg-white hover:bg-slate-200 z-10'>
             <GrFormClose className="w-6 h-6" />
