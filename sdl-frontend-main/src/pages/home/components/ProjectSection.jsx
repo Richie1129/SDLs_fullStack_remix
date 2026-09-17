@@ -68,7 +68,7 @@ const ProjectSection = ({
       </svg>
     ),
     title: type === 'viewable' ? "目前沒有可觀摩的專案" : `還沒有${title}`,
-    description: type === 'viewable' ? "請等待老師開放專案供觀摩" : "開始您的學習旅程，點擊下方按鈕加入活動吧！",
+    description: type === 'viewable' ? "請等待老師開放專案供觀摩" : "點擊下方按鈕加入活動",
     showButton: type === 'normal' && showJoinButton,
     buttonText: "加入活動",
     onButtonClick: onJoinProject

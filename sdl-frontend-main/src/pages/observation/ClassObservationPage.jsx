@@ -250,7 +250,7 @@ const ClassObservationPage = () => {
     }, [mentorProjects]);
 
     return (
-        <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-col">
+        <div className="relative h-[100dvh] bg-gray-100 overflow-hidden flex flex-col">
             <TopBar />
             <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     <div className="flex-1 overflow-y-auto">

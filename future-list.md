@@ -814,6 +814,7 @@
   6. `notFound/NotFound.jsx` 文案改繁中、`<button>` 包 `<Link>` 改為直接用 `<Link>`
   7. 約 25 處成功訊息去驚嘆號、`GlobalErrorBoundary.jsx:97`「糟糕」改直述；反思頁空狀態「還沒新增過個人日誌！趕快新增你的第一個【個人日誌】吧～」改「還沒有個人日誌，寫下第一篇吧」
   8. `ChatRoom.jsx:153,204` 兩個 `<img>` 補 `alt`
+  9. `HomePage.jsx:305`、`ManagementOverview.jsx:163` 的 `scrollbar-hidden` 不是套件提供的 class（plans/010 只處理了 `TabbedSections.jsx`）；這兩處是整頁垂直捲動容器，改 `scrollbar-none` 會把頁面捲軸藏起來，先確認是否真的想隱藏再改
 - **估計工作量**：`M`
 - **相關檔案**：見各項
 
@@ -859,6 +860,25 @@
 
 ---
 
+### F034: Kanban 卡片首幀空殼與圖片延後出現
+
+- **類別**：Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-17
+- **提案來源**：plans/011 Step 5 診斷（2026-09-17）。`GET /kanbans/:projectId` 一次帶回每欄的 `task` 陣列（實測欄 62/63 各 1 張、64 為 0 張），不存在第二段請求；「欄位先出現、卡片約 3 秒後才到」是自動化實測時分頁處於 `document.visibilityState === 'hidden'`，Chrome 對背景分頁節流與凍結造成的假象，前景使用者看不到 3 秒空窗。真正存在的只有兩個小閃現：
+  1. `carditem/hooks/useCardData.js` 用空物件初始化 `cardData`，再靠 `useEffect` 從 props 複製，首幀卡片是沒有標題的白殼（一幀）
+  2. 卡片圖片走 `AuthImage.jsx` 帶授權 fetch 轉 blob，圖片區在回應前沒有佔位高度
+- **為什麼現在不做**：不影響功能，plans/011 的 Boundaries 明訂不改 Kanban 資料流；per-column 骨架無法解決（卡片殼本來就在）
+- **觸發條件**：下一次動 Kanban 卡片元件時順手做
+- **怎麼做**：
+  1. `useCardData.js` 改 `useState(() => normalize(initialData))` 直接從 props 初始化，effect 只負責後續變動
+  2. `CardImage` 在 blob 未回來前給固定長寬比的灰底佔位，避免圖片載入時卡片高度跳動
+- **估計工作量**：`S`
+- **相關檔案**：`sdl-frontend-main/src/pages/Kanban/components/carditem/hooks/useCardData.js`、`sdl-frontend-main/src/components/AuthImage.jsx`、`sdl-frontend-main/src/pages/Kanban/components/carditem/components/CardImage.jsx`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
@@ -871,3 +891,4 @@
 - **2026-09-05**：完成 F021（teacher 範圍收斂為 mentorId）；生產 151 個專案只有第 26 號缺 mentorId、已補，共同指導只出現在 3 個測試專案、不需多對多；新增 F024（socket 房間加入與班級清單端點的列舉面）
 - **2026-09-17**：新增 F025–F029；安裝 emilkowalski/skills 與 taste-skill 的 `redesign-existing-projects` 後跑 `/improve-animations` 全站稽核，7 項可直接執行的修法寫成 `plans/001` 到 `007`，通知系統統一、按壓回饋、layout 屬性動畫、Kanban 樂觀卡片閃動、錯失的狀態轉場五項登錄為後續工作
 - **2026-09-17**：完成 `plans/001` 到 `007`（動畫稽核七項，commit dd55663 到 564c298）；新增 F030–F033；以學生帳號在本機 dev 實測桌面與 390px 寬度，加上 redesign-existing-projects 與 mobile-native 清單的靜態稽核與死碼稽核，五項可直接執行的修法寫成 `plans/008` 到 `012`，側欄抽屜化、收尾雜項、共用元件與 focus ring、utils 合併四項登錄為後續工作
+- **2026-09-17**：完成 `plans/008` 到 `011`（z-index token、Modal 無障礙、手機基礎、狀態與文案）；新增 F034（Kanban 卡片首幀空殼與圖片延後）並在 F031 追加兩處 `scrollbar-hidden`；plans/011 的卡片空窗診斷結論：API 一次帶回 task，空窗是背景分頁節流假象，不補 per-column 骨架

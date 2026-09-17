@@ -206,7 +206,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
                 title="跨班專案觀摩"
               >
                 <Eye className="h-4 w-4" />
-                <span className="hidden xs:inline">觀摩</span>
+                <span className="hidden sm:inline">觀摩</span>
               </button>
               <button
                 onClick={() => navigate("/teacher-password-reset")}
@@ -214,7 +214,7 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
                 title="學生密碼重設"
               >
                 <KeyRound className="h-4 w-4" />
-                <span className="hidden xs:inline">密碼重設</span>
+                <span className="hidden sm:inline">密碼重設</span>
               </button>
             </>
           )}

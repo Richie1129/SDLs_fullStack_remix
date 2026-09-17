@@ -1,6 +1,6 @@
 # 009 — 共用 Modal 補 Escape、焦點陷阱、role，改用 portal；想法牆兩個節點視窗加遮罩
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: 564c298
 - **Severity**: HIGH（實測：所有 Modal 都不能用 Escape 關閉；想法牆節點編輯視窗沒有遮罩、開著時畫布仍可拖曳）
 - **Category**: 鍵盤與無障礙

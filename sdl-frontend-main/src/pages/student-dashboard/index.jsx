@@ -87,11 +87,6 @@ const StudentDashboard = () => {
             <div>
               <h1 className="text-h3 sm:text-h2 lg:text-h1 font-extrabold text-teal-600 mb-2">我的學習歷程</h1>
               <p className="text-body-sm sm:text-body text-gray-600">歡迎回來，{personalData?.name || '學習者'}！繼續你的學習旅程吧。</p>
-              {ideaNodes.length > 0 && (
-                <p className="text-caption text-gray-500 mt-1">
-                  已載入 {ideaNodes.length} 個想法節點，{kanbanTasks.length} 個任務
-                </p>
-              )}
             </div>
             <div className="inline-flex items-center bg-white rounded-xl shadow-sm border border-gray-200 p-1 self-start md:self-end">
               <button

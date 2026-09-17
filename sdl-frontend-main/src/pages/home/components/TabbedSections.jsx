@@ -11,7 +11,7 @@ const TabbedSections = ({ tabs }) => {
   return (
     <div>
       {/* Tab 標頭列 */}
-      <div className="flex items-end border-b border-gray-200 mb-4 overflow-x-auto scrollbar-hidden">
+      <div className="flex items-end border-b border-gray-200 mb-4 overflow-x-auto scrollbar-none">
         {tabs.map((tab, idx) => (
           <button
             key={idx}

@@ -269,7 +269,7 @@ export default function SubStageComponent() {
     }, [isDialogOpen]); // 依賴於 isDialogOpen 的變化來重新添加/移除事件監聽器
 
     return (
-        <div className="relative w-full bg-[#F5F5F5] h-12 sm:h-14 lg:h-16 border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4">
+        <div className="relative w-full bg-[#F5F5F5] h-[calc(3rem+env(safe-area-inset-bottom,0px))] sm:h-[calc(3.5rem+env(safe-area-inset-bottom,0px))] lg:h-[calc(4rem+env(safe-area-inset-bottom,0px))] border-t border-gray-200 px-2 sm:px-4 lg:px-8 flex-shrink-0 lg:mb-4 pb-safe">
             <div className="flex justify-between lg:justify-evenly items-center p-1 sm:p-component-xs lg:p-component-base overflow-x-auto" ref={dialogRef}>
                 <div className="flex items-center space-x-1 sm:space-x-stack-xs lg:space-x-stack-sm min-w-0 flex-1">
                     {stages.map((subStage, index) => (

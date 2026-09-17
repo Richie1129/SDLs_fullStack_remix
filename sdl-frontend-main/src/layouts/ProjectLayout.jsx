@@ -21,7 +21,7 @@ export default function ProjectLayout() {
 
   return (
     <ObservationProvider>
-    <div className="relative h-screen bg-gray-100 overflow-hidden flex flex-row">
+    <div className="relative h-[100dvh] bg-gray-100 overflow-hidden flex flex-row">
       {/* Left navigation rail */}
       <SideBar />
 

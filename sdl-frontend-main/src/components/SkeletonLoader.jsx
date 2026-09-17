@@ -66,6 +66,20 @@ export const SkeletonStatsCards = ({ count = 5 }) => {
 };
 
 /**
+ * SkeletonKanbanColumn - 看板欄位骨架
+ * 用於 Kanban 初次載入，代替全頁 spinner
+ */
+export const SkeletonKanbanColumn = ({ cards = 2 }) => (
+  <div className="animate-pulse w-full md:w-60 flex-shrink-0 bg-gray-100 rounded-lg p-component-sm space-y-3">
+    <div className="h-5 bg-gray-300 rounded w-24" />
+    {Array.from({ length: cards }).map((_, i) => (
+      <div key={i} className="bg-gray-200 rounded-lg h-24" />
+    ))}
+    <div className="h-8 bg-gray-300 rounded w-20" />
+  </div>
+);
+
+/**
  * SkeletonDashboard - 完整儀錶板骨架屏
  * 用於整個儀錶板載入時的佔位符
  */
@@ -94,5 +108,6 @@ export default {
   SkeletonTable,
   SkeletonChart,
   SkeletonStatsCards,
+  SkeletonKanbanColumn,
   SkeletonDashboard,
 };

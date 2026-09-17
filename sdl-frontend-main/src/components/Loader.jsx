@@ -4,7 +4,7 @@ import LoaderIcon from "../assets/AnimationLoader.json";
 
 export default function Loader() {
     return (
-        <div className="flex h-screen w-screen items-start justify-center">
+        <div className="flex h-[100dvh] w-screen items-start justify-center">
             <Lottie className="w-96" animationData={LoaderIcon} />
 
             {/* <button type="button" className="flex items-center rounded-lg  px-4 py-2 text-white" disabled> */}

@@ -1,6 +1,6 @@
 # 011 — 錯誤態實質 bug、Kanban 載入骨架、首頁學期假空狀態、除錯文案
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: 564c298
 - **Severity**: HIGH（兩個實質 bug：API 失敗畫面空白；實測：剛登入看到假的「還沒有活動」）
 - **Category**: 狀態完整性與文案

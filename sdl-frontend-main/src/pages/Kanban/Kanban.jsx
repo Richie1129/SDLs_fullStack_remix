@@ -15,6 +15,7 @@ import DraggableImage from "./components/DraggableImage";
 import useObservationMode from '../../hooks/useObservationMode';
 import { useStageIndex, useSubStageIndex } from '../../hooks/useStageIndex';
 import KanbanErrorBoundary from '../../components/ErrorBoundary/KanbanErrorBoundary';
+import { SkeletonKanbanColumn } from '../../components/SkeletonLoader';
 import { useKanbanData } from './hooks/useKanbanData';
 import { useKanbanView } from './hooks/useKanbanView';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
@@ -37,11 +38,13 @@ export default function Kanban() {
   const queryClient = useQueryClient();
   
   // --- Hooks ---
-  const { 
-    kanbanData, 
-    isLoading: kanbanIsLoading, 
-    isError: kanbansIsError, 
-    actions 
+  const {
+    kanbanData,
+    isLoading: kanbanIsLoading,
+    isError: kanbansIsError,
+    error: kanbanError,
+    refetch: refetchKanban,
+    actions
   } = useKanbanData(projectId);
 
   const [viewConfig, setViewConfig] = useState({
@@ -905,8 +908,17 @@ export default function Kanban() {
                 )}
                 
                 {
-                  kanbanIsLoading ? <Loader /> :
-                    kanbansIsError ? <p className=' font-bold text-h2'>{kanbansIsError.message}</p> :
+                  kanbanIsLoading ? (
+                    <div className="flex gap-stack-sm">
+                      <SkeletonKanbanColumn /><SkeletonKanbanColumn /><SkeletonKanbanColumn cards={0} />
+                    </div>
+                  ) :
+                    kanbansIsError ? (
+                      <div className="flex flex-col items-center justify-center gap-stack-sm py-12 text-center">
+                        <p className="text-body font-medium text-gray-700">看板載入失敗，{kanbanError?.message || '請稍後再試'}</p>
+                        <button type="button" onClick={() => refetchKanban()} className="px-4 py-2 rounded-md bg-customgreen text-white text-body-sm font-medium hover:bg-customgreen/90 transition-colors duration-fast">重新載入</button>
+                      </div>
+                    ) :
                       renderedData.map((column, columnIndex) => (
                         <KanbanColumn
                           key={column.id.toString()}

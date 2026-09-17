@@ -83,6 +83,11 @@ export default function HomePage() {
     [...new Set(allStudentProjects.map(p => p.semester).filter(Boolean))]
   ), [allStudentProjects]);
 
+  // 其他學期的活動數（用於當前學期空狀態時提示還有活動可切換查看）
+  const otherSemesterCount = useMemo(() => (
+    role === 'student' ? allStudentProjects.filter(p => p.semester && p.semester !== semesterFilter).length : 0
+  ), [role, allStudentProjects, semesterFilter]);
+
   // AI 說明浮動提示
   const [showAITooltip, setShowAITooltip] = useState(false);
 
@@ -343,6 +348,10 @@ export default function HomePage() {
               {...buildSectionProps(sectionConfig)}
               alwaysExpanded={true}
               showSectionTitle={true}
+              emptyStateConfig={sectionConfig.type === 'normal' && otherSemesterCount > 0 ? {
+                title: '這個學期還沒有活動',
+                description: `其他學期有 ${otherSemesterCount} 個活動，可從右上角切換學期查看`,
+              } : undefined}
             />
           ))}
 

@@ -35,7 +35,7 @@ export default function UpdateNodeModal({
     if (!selectNodeInfo) return null;
 
     return (
-        <Modal open={open} onClose={onClose} opacity={false} position={"justify-center items-center"}>
+        <Modal open={open} onClose={onClose} opacity={true} position={"justify-center items-center"}>
             <div className='flex flex-col w-full'>
                 {/* 標籤頁導航 + 工具列 */}
                 <div className='flex items-center justify-between border-b border-gray-200 mb-4'>

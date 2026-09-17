@@ -163,7 +163,7 @@ export default function GuidancePanel({ stageKey, isCollapsed, onToggleCollapse 
       {/* 移動版浮動按鈕 (< md) */}
       <button
         onClick={() => setIsMobileDrawerOpen(true)}
-        className="md:hidden fixed bottom-6 right-6 z-40 bg-customgreen text-white p-4 rounded-full shadow-lg hover:bg-customgreen/90 transition-colors duration-fast"
+        className="md:hidden fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] right-6 z-40 bg-customgreen text-white p-4 rounded-full shadow-lg hover:bg-customgreen/90 transition-colors duration-fast"
         title="查看寫作提示"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -183,7 +183,7 @@ export default function GuidancePanel({ stageKey, isCollapsed, onToggleCollapse 
           />
           
           {/* 抽屜內容 */}
-          <div className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col animate-slide-up">
+          <div className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col animate-slide-up pb-safe">
             {/* 拖拽指示條 */}
             <div className="flex justify-center py-2 border-b border-gray-100">
               <div className="w-12 h-1 bg-gray-300 rounded-full"></div>

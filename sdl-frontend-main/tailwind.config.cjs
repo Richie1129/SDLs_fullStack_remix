@@ -1,5 +1,8 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  future: {
+    hoverOnlyWhenSupported: true,   // 觸控裝置不套 hover:，避免點一下就黏住
+  },
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",

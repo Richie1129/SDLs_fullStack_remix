@@ -50,3 +50,24 @@ td.numeric,
     transform: none;
   }
 }
+
+/* =====================================================
+   手機基礎：去掉點擊閃光與延遲、避免 iOS 聚焦縮放、安全區
+   ===================================================== */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  input, select, textarea {
+    font-size: 16px;
+  }
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

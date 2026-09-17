@@ -41,7 +41,7 @@ const IdeaWallChatPanel = ({ ideaWallId, selectedNodeId, nodes, onClose }) => {
     return (
         <motion.div
             {...DRAWER_RIGHT}
-            className="fixed right-0 top-16 h-[calc(100vh-7rem)] sm:h-[calc(100vh-7.5rem)] lg:h-[calc(100vh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-drawer overflow-hidden flex flex-col"
+            className="fixed right-0 top-16 h-[calc(100dvh-7rem)] sm:h-[calc(100dvh-7.5rem)] lg:h-[calc(100dvh-10rem)] w-72 sm:w-80 lg:w-96 bg-white shadow-xl border-l border-gray-200 z-drawer overflow-hidden flex flex-col"
         >
             {/* Header */}
             <div className={`p-component-sm flex justify-between items-center ${filterNodeId ? 'bg-teal-700' : 'bg-customgreen'} text-white`}>

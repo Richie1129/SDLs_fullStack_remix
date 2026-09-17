@@ -86,6 +86,8 @@ export default function Protfolio() {
     const {
         isLoading,
         isError,
+        error,
+        refetch,
         data: portfolioData
     } = useQuery(["protfolioDatas", projectId], () => getAllSubmit({ params: { projectId: projectId } }), {
         onSuccess: (data) => {
@@ -446,7 +448,8 @@ export default function Protfolio() {
                             </div>
                         ) : isError ? (
                             <div className="text-center py-12 px-4">
-                                <p className="text-red-500 font-medium">{isError.message}</p>
+                                <p className="text-red-500 font-medium">{error?.message || '載入失敗，請稍後再試'}</p>
+                                <button type="button" onClick={() => refetch()} className="mt-3 px-4 py-2 rounded-md bg-customgreen text-white text-body-sm font-medium hover:bg-customgreen/90 transition-colors duration-fast">重新載入</button>
                             </div>
                         ) : portfolioItemsWithTitles.length === 0 ? (
                             showEmptyMessage && (

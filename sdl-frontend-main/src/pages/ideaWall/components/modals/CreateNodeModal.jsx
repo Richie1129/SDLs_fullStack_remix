@@ -19,7 +19,7 @@ export default function CreateNodeModal({
     const [isNoteExpanded, setIsNoteExpanded] = useState(false);
 
     return (
-        <Modal open={open} onClose={onClose} opacity={false} position={"justify-center items-center"}>
+        <Modal open={open} onClose={onClose} opacity={true} position={"justify-center items-center"}>
             <div className='flex flex-col'>
                 <h3 className=' font-bold text-body mb-3'>建立想法</h3>
 

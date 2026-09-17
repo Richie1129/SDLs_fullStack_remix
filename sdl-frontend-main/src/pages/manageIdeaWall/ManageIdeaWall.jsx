@@ -28,7 +28,7 @@ function ManagePhase() {
     };
 
     return (
-        <div className="flex flex-col h-screen overflow-y-auto">
+        <div className="flex flex-col h-[100dvh] overflow-y-auto">
             <div className="flex justify-center ml-10 mt-14 items-center flex-grow">
                 <div id="vizContainer"></div>
             </div>

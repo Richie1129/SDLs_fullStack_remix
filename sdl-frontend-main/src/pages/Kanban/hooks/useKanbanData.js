@@ -33,6 +33,7 @@ export const useKanbanData = (projectId) => {
     isError,
     error,
     data: serverData,
+    refetch,
   } = useQuery(
     ['kanbanDatas', projectId],
     () => getKanbanColumns(projectId),
@@ -624,6 +625,7 @@ export const useKanbanData = (projectId) => {
     isLoading,
     isError,
     error,
+    refetch,
     actions: {
       addCard,
       addColumn,

@@ -1,6 +1,6 @@
 # 010 — 手機基礎四件套：dvh、hover 守衛、觸控回饋、輸入框 16px，並修 TopBar 的 xs 斷點 bug
 
-- **Status**: TODO
+- **Status**: DONE（2026-09-17，commit 見 git log）
 - **Commit**: 564c298
 - **Severity**: HIGH（學生手機使用比例高；實測 390px 寬度首頁有橫向捲軸、殼層用 h-screen）
 - **Category**: 手機體驗
