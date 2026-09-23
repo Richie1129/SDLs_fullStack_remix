@@ -1,0 +1,7 @@
+{
+  "directoryListing": false,
+  "rewrites": [
+    { "source": "/!(assets)/**", "destination": "/index.html" },
+    { "source": "/!(assets)", "destination": "/index.html" }
+  ]
+}

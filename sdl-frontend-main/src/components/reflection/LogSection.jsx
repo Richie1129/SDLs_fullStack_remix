@@ -32,10 +32,11 @@ const LogSection = ({
     }
 
     if (items.length === 0) {
-      if (showEmptyMessage && emptyStateConfig.animationData && emptyStateConfig.message) {
+      if (showEmptyMessage && emptyStateConfig.loadAnimation && emptyStateConfig.message) {
         return (
           <EmptyState
-            animationData={emptyStateConfig.animationData}
+            loadAnimation={emptyStateConfig.loadAnimation}
+            aspectRatio={emptyStateConfig.aspectRatio}
             message={emptyStateConfig.message}
           />
         );

@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from "react";
 import LogSection from "../../../components/reflection/LogSection";
-import personalDailyIcon from "../../../assets/AnimationPersonalDaily.json";
-import teamDailyIcon from "../../../assets/AnimationTeamDaily.json";
 import { ReflectionTypeSelector } from "./ReflectionTypeSelector";
 import { SmartReflectionBanner } from "./SmartReflectionBanner";
 import { getStageInfo } from '../../../utils/authUtils';
+
+// 空狀態動畫只在沒有日誌時才下載，不打進 Reflection 頁面 chunk
+const loadPersonalDailyIcon = () => import("../../../assets/AnimationPersonalDaily.json");
+const loadTeamDailyIcon = () => import("../../../assets/AnimationTeamDaily.json");
 
 /**
  * Two-column layout for personal and team daily logs
@@ -184,7 +186,8 @@ export function ReflectionLayout({
               error={personalError}
               showEmptyMessage={showPersonalEmptyMessage}
               emptyStateConfig={{
-                animationData: personalDailyIcon,
+                loadAnimation: loadPersonalDailyIcon,
+                aspectRatio: "750 / 500",
                 message: "還沒有個人日誌，寫下第一篇吧",
               }}
               buttons={[]}
@@ -251,7 +254,8 @@ export function ReflectionLayout({
               error={teamError}
               showEmptyMessage={showTeamEmptyMessage}
               emptyStateConfig={{
-                animationData: teamDailyIcon,
+                loadAnimation: loadTeamDailyIcon,
+                aspectRatio: "500 / 500",
                 message: "還沒有小組日誌，寫下第一篇吧",
               }}
               buttons={[]}

@@ -10,11 +10,13 @@ import Loader from '../../components/Loader';
 import { socket } from '../../utils/socket';
 import Swal from 'sweetalert2';
 import { getProject } from '../../api/project';
-import CongratulationsMain_icon from "../../assets/AnimationCongratulationsMain.json";
-import Congratulations_icon from "../../assets/AnimationCongratulations.json";
-import Lottie from "lottie-react";
+import LazyLottie from '../../components/LazyLottie';
 import { getStageInfo, setStageInfo as persistStageInfo, setStageEnd, clearStageInfo } from '../../utils/authUtils';
 import { validateFileSize } from '../../utils/fileValidation';
+
+// 完成畫面的動畫 JSON 約 0.9 MB，只在專案結束時才下載
+const loadCongratulations = () => import("../../assets/AnimationCongratulations.json");
+const loadCongratulationsMain = () => import("../../assets/AnimationCongratulationsMain.json");
 
 export default function SubmitTask() {
     const [taskData, setTaskData] = useState({});
@@ -253,9 +255,9 @@ export default function SubmitTask() {
                     恭喜 ! 已經完成所有階段囉 ~
                 </div>
                 <div className='flex flex-col lg:flex-row items-center justify-center gap-stack-sm sm:gap-stack-md-lg lg:gap-20 max-w-full'>
-                    <Lottie className="w-32 sm:w-48 lg:w-60 flex-shrink-0" animationData={Congratulations_icon} />
-                    <Lottie className="w-48 sm:w-72 lg:w-96 flex-shrink-0" animationData={CongratulationsMain_icon} />
-                    <Lottie className="w-32 sm:w-48 lg:w-60 flex-shrink-0" animationData={Congratulations_icon} />
+                    <LazyLottie className="w-32 sm:w-48 lg:w-60 flex-shrink-0" aspectRatio="512 / 512" load={loadCongratulations} />
+                    <LazyLottie className="w-48 sm:w-72 lg:w-96 flex-shrink-0" aspectRatio="365 / 240" load={loadCongratulationsMain} />
+                    <LazyLottie className="w-32 sm:w-48 lg:w-60 flex-shrink-0" aspectRatio="512 / 512" load={loadCongratulations} />
                 </div>
             </div>
         );

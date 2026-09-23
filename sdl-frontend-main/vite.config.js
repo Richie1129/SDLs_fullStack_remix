@@ -16,10 +16,19 @@ function packageNameOf(id) {
 // 以 function 依 module id 判斷：套件不存在時只是不會命中，不會讓 build 失敗。
 // 注意：markdown 管線（react-markdown / remark / rehype / unified）不放進 vendor-streamdown，
 // 因為 ChatContent / MessageContent 也用它們，放進去會讓 Kanban 連帶載入 streamdown。
+// 注意：Rollup 會把群組成員「未被指定群組」的相依一併拉進該群組 chunk。
+// prop-types / @babel/runtime / tiny-invariant 曾因此被吸進 vendor-recharts，
+// 導致 Kanban（react-beautiful-dnd）、SubmitTask、Reflection 為了幾百 bytes 的 helper 載入整包 recharts。
+// 這些小型共用 helper 併入入口必載的 vendor-react（合計約 3 kB），不另開 chunk。
+// 新增群組後可用 build 產物確認頁面 chunk 沒有多出不相干的 vendor-* import。
+const SHARED_HELPERS = ['prop-types', '@babel/runtime', 'tiny-invariant']
+
 const VENDOR_GROUPS = [
   {
     name: 'vendor-react',
-    match: (pkg) => ['react', 'react-dom', 'react-router', 'react-router-dom', 'scheduler', '@remix-run/router'].includes(pkg),
+    match: (pkg) =>
+      ['react', 'react-dom', 'react-router', 'react-router-dom', 'scheduler', '@remix-run/router'].includes(pkg) ||
+      SHARED_HELPERS.includes(pkg),
   },
   {
     name: 'vendor-query',

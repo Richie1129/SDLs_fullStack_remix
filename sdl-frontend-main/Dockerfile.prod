@@ -19,15 +19,20 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# 安裝 serve
-RUN npm install -g serve
+# 安裝 serve（鎖版本：serve.json 的 rewrite 規則依賴 serve-handler 的 glob 解析行為，升級前需重新驗證）
+RUN npm install -g serve@14.2.6
 
 # 複製 build 後的檔案
 COPY --from=builder /app/dist .
+
+# serve 設定放在公開目錄外，避免 /serve.json 被直接讀取。
+# 取代原本的 -s：SPA 路由照樣 fallback 到 index.html，但 /assets/ 下不存在的檔案回 404，
+# 否則部署後舊分頁要的舊 hash chunk 會拿到 index.html（200），再被 nginx 標成 immutable 快取一年
+COPY serve.json /etc/serve.json
 
 EXPOSE 5173
 
 # 執行期以非 root 身分運作（serve 只讀靜態檔、監聽 5173，不需要 root）
 USER node
 
-CMD ["serve", "-s", ".", "-l", "5173"]
+CMD ["serve", ".", "-l", "5173", "-c", "/etc/serve.json"]
