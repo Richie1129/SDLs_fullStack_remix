@@ -165,3 +165,6 @@ daily_file/
 
 # claude-mem 等工具產生的設定備份
 .claude/*.bak-*
+
+# 含正式網域、伺服器帳號與備份路徑的內部維運文件（repo 為公開，不進版控）
+docs/proposals/BACKUP_AND_STORAGE_PLAN.md
