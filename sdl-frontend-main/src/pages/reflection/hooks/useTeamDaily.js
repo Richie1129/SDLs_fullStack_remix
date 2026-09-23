@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "react-query";
 import toast from "react-hot-toast";
 import {
@@ -11,6 +10,9 @@ import {
 import { extractErrorMessage } from '@/constants/dailyErrorCodes.js';
 import { confirmDialog } from '../../../utils/dialogs';
 
+// 固定參考，避免資料未到時每次 render 產生新陣列
+const EMPTY_LIST = [];
+
 /**
  * Hook for managing team daily logs
  * Handles CRUD operations, file attachments, and cache management
@@ -18,32 +20,19 @@ import { confirmDialog } from '../../../utils/dialogs';
 export function useTeamDaily(projectId) {
   const queryClient = useQueryClient();
 
-  // State
-  const [teamDaily, setTeamDaily] = useState([]);
-  const [showEmptyMessage, setShowEmptyMessage] = useState(false);
-
   // Query key for cache consistency
   const QUERY_KEY = ["teamDaily", projectId];
 
   // Fetch team daily logs
-  const { isLoading, isError, error } = useQuery({
+  // 列表直接從 query data 推導：全域 staleTime 下重新進頁命中快取時不會觸發 onSuccess
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: QUERY_KEY,
     queryFn: () => getAllTeamDaily({ params: { projectId: projectId } }),
-    onSuccess: setTeamDaily,
     enabled: !!projectId,
   });
 
-  // Empty state control
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (teamDaily.length === 0 && !isLoading && !isError) {
-        setShowEmptyMessage(true);
-      } else {
-        setShowEmptyMessage(false);
-      }
-    }, 20);
-    return () => clearTimeout(timer);
-  }, [teamDaily.length, isLoading, isError]);
+  const teamDaily = Array.isArray(data) ? data : EMPTY_LIST;
+  const showEmptyMessage = teamDaily.length === 0 && !isLoading && !isError;
 
   // Create mutation
   const createMutation = useMutation(createTeamDaily, {

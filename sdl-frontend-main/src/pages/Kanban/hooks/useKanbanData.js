@@ -23,8 +23,12 @@ const extractTaskId = (payload) => {
 };
 
 export const useKanbanData = (projectId) => {
-  const [kanbanData, setKanbanData] = useState([]);
   const queryClient = useQueryClient();
+  // 重新進頁時先用快取帶入，避免背景重抓完成（onSuccess）前看板閃成空白；
+  // 命中快取時 onSuccess 不會立即觸發，只能靠初始值
+  const [kanbanData, setKanbanData] = useState(
+    () => queryClient.getQueryData(['kanbanDatas', projectId]) || []
+  );
 
   // --- Data Fetching ---
   const {

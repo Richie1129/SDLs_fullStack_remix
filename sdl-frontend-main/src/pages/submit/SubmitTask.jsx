@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from 'react-query';
 import { submitTask } from '../../api/submit';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -22,8 +22,8 @@ export default function SubmitTask() {
     const [uploadProgress, setUploadProgress] = useState(null);
     const navigate = useNavigate();
     const { projectId } = useParams();
-    const [stageFormInfo, setStageFormInfo] = useState({ userSubmit: {} });
-    const [isProjectEnded, setIsProjectEnded] = useState(false);
+    // syncStageFromServer 偵測到專案已結束時設定；另一個來源是 projectQuery.data（見下方）
+    const [projectEndedBySync, setProjectEndedBySync] = useState(false);
     const [isGuidanceCollapsed, setIsGuidanceCollapsed] = useState(false);
     // 從伺服器取得的最新階段（初始值先用 localStorage，後續由 API 覆蓋）
     const [currentStage, setCurrentStage] = useState(() => {
@@ -50,7 +50,7 @@ export default function SubmitTask() {
         try {
             const proj = await getProject(projectId);
             if (proj?.ProjectEnd) {
-                setIsProjectEnded(true);
+                setProjectEndedBySync(true);
                 return;
             }
             if (proj?.currentStage && proj?.currentSubStage) {
@@ -142,25 +142,30 @@ export default function SubmitTask() {
     // 生成 stage key (例如 '3-1') 給 GuidancePanel 使用
     const stageKey = `${currentStage}-${currentSubStage}`;
 
+    // 表單欄位直接從 query data 推導，不在 onSuccess 寫 state：
+    // 全域 staleTime 下重新進頁命中快取時不會觸發 onSuccess，表單會變成空的。
+    // key 帶 projectId，避免不同專案同階段共用快取
     const getSubStageQuery = useQuery(
-        ["getSubStage", currentStage, currentSubStage],
+        ["getSubStage", projectId, currentStage, currentSubStage],
         () => getSubStage({
             projectId: projectId,
             currentStage,
             currentSubStage
         }),
         {
-            onSuccess: (data) => {
-                setStageFormInfo(prev => ({
-                    ...prev,
-                    ...data,
-                    currentStage,
-                    currentSubStage
-                }));
-            },
             enabled: !!projectId && !!currentStage && !!currentSubStage
         }
     );
+
+    const stageFormInfo = useMemo(() => {
+        const data = getSubStageQuery.data || {};
+        return {
+            ...data,
+            userSubmit: data.userSubmit || {},
+            currentStage,
+            currentSubStage
+        };
+    }, [getSubStageQuery.data, currentStage, currentSubStage]);
 
     const handleChange = e => {
         const { name, value } = e.target;
@@ -237,11 +242,8 @@ export default function SubmitTask() {
         };
     }, [socket, syncStageFromServer])
 
-    const projectQuery = useQuery(['getProject', projectId], () => getProject(projectId), {
-        onSuccess: (data) => {
-            setIsProjectEnded(data.ProjectEnd);
-        }
-    });
+    const projectQuery = useQuery(['getProject', projectId], () => getProject(projectId));
+    const isProjectEnded = projectEndedBySync || !!projectQuery.data?.ProjectEnd;
 
     // 渲染完成狀態
     if (isProjectEnded) {

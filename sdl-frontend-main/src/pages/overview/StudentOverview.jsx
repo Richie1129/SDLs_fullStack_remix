@@ -54,22 +54,28 @@ const SdlStageBadge = ({ stage, subStage }) => {
   );
 };
 
+// 固定參考，避免資料未到時每次 render 產生新物件而讓 useMemo / effect 失效
+const EMPTY_LIST = [];
+const EMPTY_OBJECT = {};
+
 const StudentOverview = () => {
   const navigate = useNavigate();
   const userId = getCurrentUserId();
   const userName = getCurrentUsername();
   
   // 狀態管理
-  const [allProjects, setAllProjects] = useState([]);
-  const [allReflections, setAllReflections] = useState([]);
-  const [projectMembers, setProjectMembers] = useState({});
-  const [chatHistory, setChatHistory] = useState([]);
-  const [aiInteractions, setAiInteractions] = useState([]);
-  const [projectActivities, setProjectActivities] = useState([]);
-  const [ideaNodes, setIdeaNodes] = useState([]);
-  const [kanbanTasks, setKanbanTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedSemester, setSelectedSemester] = useState('all');
+
+  // 資料一律從 query data 推導，不在 onSuccess 寫 state：
+  // 命中快取（staleTime 內重新進頁、切回已抓過的學期）時不會觸發 onSuccess，state 會停在空值或上一個學期
+  // 獲取學生的所有專案
+  const { data: projectData, isLoading: projectsLoading } = useQuery(
+    ["studentAllProjects", userId],
+    () => getAllProject({ params: { userId, semester: 'all' } }),
+    { staleTime: 5 * 60 * 1000 }
+  );
+  const allProjects = projectData || EMPTY_LIST;
 
   // 從所有專案中提取可用學期（降序排列）
   const availableSemesters = React.useMemo(() => {
@@ -82,18 +88,6 @@ const StudentOverview = () => {
     if (selectedSemester === 'all') return allProjects;
     return allProjects.filter(p => p.semester === selectedSemester);
   }, [allProjects, selectedSemester]);
-
-  // 獲取學生的所有專案
-  const { data: projectData, isLoading: projectsLoading } = useQuery(
-    ["studentAllProjects", userId],
-    () => getAllProject({ params: { userId, semester: 'all' } }),
-    {
-      staleTime: 5 * 60 * 1000,
-      onSuccess: (data) => {
-        setAllProjects(data || []);
-      }
-    }
-  );
 
   // F10：專案列表載入後，預設切到目前學期（有該學期的專案才切），避免一開始就抓所有學期
   const [semesterInitialized, setSemesterInitialized] = useState(false);
@@ -192,25 +186,23 @@ const StudentOverview = () => {
     () => filteredProjects.map(p => p.id).sort((a, b) => a - b),
     [filteredProjects]
   );
-  const { isFetching: overviewFetching } = useQuery(
+  const { data: overviewData, isFetching: overviewFetching } = useQuery(
     ['studentOverviewData', userId, scopedProjectIds.join(',')],
     () => fetchOverviewData(filteredProjects),
     {
       enabled: !projectsLoading && semesterInitialized,
       staleTime: 5 * 60 * 1000,
       keepPreviousData: true,
-      onSuccess: (data) => {
-        setAllReflections(data.reflections);
-        setProjectMembers(data.members);
-        setChatHistory(data.chatHistory);
-        setAiInteractions(data.aiInteractions);
-        setProjectActivities(data.activities);
-        setKanbanTasks(data.kanbanTasks);
-        setIdeaNodes(data.ideaNodes);
-      },
       onError: (error) => console.error("獲取資料失敗:", error)
     }
   );
+  const allReflections = overviewData?.reflections || EMPTY_LIST;
+  const projectMembers = overviewData?.members || EMPTY_OBJECT;
+  const chatHistory = overviewData?.chatHistory || EMPTY_LIST;
+  const aiInteractions = overviewData?.aiInteractions || EMPTY_LIST;
+  const projectActivities = overviewData?.activities || EMPTY_LIST;
+  const kanbanTasks = overviewData?.kanbanTasks || EMPTY_LIST;
+  const ideaNodes = overviewData?.ideaNodes || EMPTY_LIST;
 
   useEffect(() => {
     setLoading(projectsLoading || (!semesterInitialized && allProjects.length > 0) || overviewFetching);

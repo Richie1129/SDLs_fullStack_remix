@@ -12,8 +12,10 @@ import { formatDate } from '../../utils/dateFormat';
 import { calculateProgress } from '../../utils/stageUtils';
 import { getCurrentSemester } from '../../utils/semesterUtils';
 
+// 固定參考，避免資料未到時每次 render 產生新陣列而重觸發 effect
+const EMPTY_PROJECTS = [];
+
 export default function ManagementOverview() {
-  const [projectData, setProjectData] = useState([]);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [ongoingProjects, setOngoingProjects] = useState([]);
@@ -29,15 +31,19 @@ export default function ManagementOverview() {
   const userName = getCurrentUsername();
   // R2-M8: 加入學期篩選，避免所有學期混在一起
   const [currentSemester] = useState(getCurrentSemester());
-  const {
-    isLoading,
-    isError,
-    error,
-    data
-  } = useQuery(["projectDatas", currentSemester], () => getAllProject(
+  // 專案清單直接從 query data 推導：全域 staleTime 下重新掛載命中快取時不會觸發 onSuccess。
+  // 教師取所指導的專案，其他角色取 getAllProject；兩支只啟用一支，避免互相覆蓋
+  const isTeacherRole = role == "teacher";
+  const { data: allProjectData } = useQuery(["projectDatas", currentSemester], () => getAllProject(
     { params: { userId: getCurrentUserId(), semester: currentSemester } }),
-    { onSuccess: setProjectData }
+    { enabled: !isTeacherRole }
   );
+  const { data: teacherProjectData } = useQuery(
+    ["TeacherProjectDatas", currentSemester],
+    () => getProjectsByMentor(userName, currentSemester),
+    { enabled: isTeacherRole }
+  );
+  const projectData = (isTeacherRole ? teacherProjectData : allProjectData) || EMPTY_PROJECTS;
 
   useEffect(() => {
     getAllTeachers().then(data => {
@@ -135,7 +141,7 @@ export default function ManagementOverview() {
     );
   };
   useEffect(() => {
-    if (projectData) {
+    if (Array.isArray(projectData)) {
       const done = projectData.filter(project => project.ProjectEnd === true);
       const ongoing = projectData.filter(project => !project.ProjectEnd && calculateProgress(project.currentStage, project.currentSubStage) < 75);
       const completed = projectData.filter(project => !project.ProjectEnd && calculateProgress(project.currentStage, project.currentSubStage) >= 75);
@@ -146,17 +152,7 @@ export default function ManagementOverview() {
     }
   }, [projectData]);
 
-   if (role == "teacher") {
-    const {
-      isLoading,
-      isError,
-      error,
-      data
-    } = useQuery(["TeacherProjectDatas", currentSemester], () => getProjectsByMentor(userName, currentSemester), {
-      onSuccess: setProjectData,
-    });
-
-    console.log("專案成員：", projectData);
+   if (isTeacherRole) {
 
     return (
       <div className='min-w-full min-h-screen bg-gray-100 overflow-auto'>

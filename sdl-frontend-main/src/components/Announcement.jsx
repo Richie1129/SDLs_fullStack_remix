@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bell, MessageCircle } from 'lucide-react';
 import { useQuery } from 'react-query';
 import { getAnnouncements } from '../api/announcement';
@@ -15,13 +15,16 @@ export default function Announcement({ projectId, role }) {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
     // 獲取公告列表
-    useQuery(
+    // 以 effect 同步 data 到本地 state（socket 會再增刪）；
+    // 全域 staleTime 下重新掛載命中快取時不會觸發 onSuccess，不能靠它寫 state
+    const { data: announcementsData } = useQuery(
         ['announcements', projectId],
-        () => getAnnouncements(projectId),
-        {
-            onSuccess: (data) => setNotifications(data),
-        }
+        () => getAnnouncements(projectId)
     );
+
+    useEffect(() => {
+        if (Array.isArray(announcementsData)) setNotifications(announcementsData);
+    }, [announcementsData]);
 
     // Socket.io 即時更新
     useAnnouncementSocket(projectId, setNotifications, selectedAnnouncement, setSelectedAnnouncement);

@@ -27,15 +27,11 @@ const INSERT_TITLES = ["定標", "擇策", "監評", "調節"]; // [Option B 隱
 
 export default function Protfolio() {
     const [currentStageIndex] = useStageIndex();
-    const [stagePortfolio, setStagePortfolio] = useState([]);
-    const [subStageTemplates, setSubStageTemplates] = useState({});
-    const [portfolioItemsWithTitles, setPortfolioItemsWithTitles] = useState([]);
     const [folderModalOpen, setFolderModalOpen] = useState(false);
     const [modalData, setModalData] = useState({});
     const { projectId } = useParams();
     const navigate = useNavigate();
     const [activeItemId, setActiveItemId] = useState(null);
-    const [showEmptyMessage, setShowEmptyMessage] = useState(false);
     const [editableContent, setEditableContent] = useState("");
     const [showSubmitChangeHistory, setShowSubmitChangeHistory] = useState(false);
     const [submitChangeLogs, setSubmitChangeLogs] = useState([]);
@@ -82,55 +78,47 @@ export default function Protfolio() {
         }
     };
     
+    // 資料一律從 query data 推導，不在 onSuccess 寫 state：
+    // 全域 staleTime 下返回此頁會直接吃快取、不觸發 onSuccess，state 會停在初始空值
     const {
         isLoading,
         isError,
         error,
         refetch,
         data: portfolioData
-    } = useQuery(["protfolioDatas", projectId], () => getAllSubmit({ params: { projectId: projectId } }), {
-        onSuccess: (data) => {
-            // Option B: 過濾掉 Stage 5 資料（只保留 Stage 1-4）
-            const filteredData = Array.isArray(data)
-                ? data.filter(item => {
-                    if (!item || !item.stage) return false;
-                    const stageNum = parseInt(item.stage.split('-')[0], 10);
-                    return !isNaN(stageNum) && stageNum >= 1 && stageNum <= 4;
-                })
-                : [];
-            setStagePortfolio(filteredData);
-            setShowEmptyMessage(filteredData.length === 0);
-        }
-    });
+    } = useQuery(["protfolioDatas", projectId], () => getAllSubmit({ params: { projectId: projectId } }));
+
+    // Option B: 過濾掉 Stage 5 資料（只保留 Stage 1-4）
+    const stagePortfolio = useMemo(() => (
+        Array.isArray(portfolioData)
+            ? portfolioData.filter(item => {
+                if (!item || !item.stage) return false;
+                const stageNum = parseInt(item.stage.split('-')[0], 10);
+                return !isNaN(stageNum) && stageNum >= 1 && stageNum <= 4;
+            })
+            : []
+    ), [portfolioData]);
 
     // 抓取所有子階段範本，供「尚未填寫」項目預覽使用
-    useQuery(
+    const { data: subStageTemplatesData, isLoading: isTemplatesLoading } = useQuery(
         ["subStageTemplates", projectId],
         () => getAllSubStageTemplates(projectId),
-        {
-            enabled: !!projectId,
-            onSuccess: (data) => {
-                const filtered = {};
-                Object.entries(data || {}).forEach(([code, template]) => {
-                    const mainStage = parseInt(code.split('-')[0], 10);
-                    if (!isNaN(mainStage) && mainStage >= 1 && mainStage <= 4) {
-                        filtered[code] = template;
-                    }
-                });
-                setSubStageTemplates(filtered);
-            }
-        }
+        { enabled: !!projectId }
     );
 
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        if (portfolioItemsWithTitles.length === 0 && !isLoading && !isError) {
-          setShowEmptyMessage(true);
-        }
-      }, 500); // 延迟500毫秒显示空状态消息
-    
-      return () => clearTimeout(timer);
-    }, [portfolioItemsWithTitles.length, isLoading, isError]);
+    const subStageTemplates = useMemo(() => {
+        const filtered = {};
+        Object.entries(subStageTemplatesData || {}).forEach(([code, template]) => {
+            const mainStage = parseInt(code.split('-')[0], 10);
+            if (!isNaN(mainStage) && mainStage >= 1 && mainStage <= 4) {
+                filtered[code] = template;
+            }
+        });
+        return filtered;
+    }, [subStageTemplatesData]);
+
+    // 已繳交與範本佔位都沒有時才算空狀態
+    const hasPortfolioItems = stagePortfolio.length > 0 || Object.keys(subStageTemplates).length > 0;
 
     // 當 modalData 更新時，解析 JSON 並初始化狀態
     useEffect(() => {
@@ -209,50 +197,6 @@ export default function Protfolio() {
         // "5-4": "內容撰寫",
         // "5-5": "反思撰寫"
     };
-    // R2-M6: 按實際 stage 欄位分組插入標題，而非按位置（每 3 筆）假設
-    // 合併已繳交項目與尚未繳交的範本佔位項目
-    useEffect(() => {
-        const submittedCodes = new Set(stagePortfolio.map(item => item.stage));
-        const pendingItems = Object.entries(subStageTemplates)
-            .filter(([code]) => !submittedCodes.has(code))
-            .map(([code, template]) => ({
-                id: `pending-${code}`,
-                stage: code,
-                _pending: true,
-                name: template.name,
-                description: template.description,
-                userSubmit: template.userSubmit || {},
-                content: '{}'
-            }));
-
-        const allItems = [...stagePortfolio, ...pendingItems];
-
-        if (allItems.length === 0) {
-            setPortfolioItemsWithTitles([]);
-            return;
-        }
-
-        const sorted = allItems.sort((a, b) => {
-            const [aMain, aSub] = (a.stage || '0-0').split('-').map(Number);
-            const [bMain, bSub] = (b.stage || '0-0').split('-').map(Number);
-            return aMain !== bMain ? aMain - bMain : aSub - bSub;
-        });
-
-        const itemsWithTitles = [];
-        let lastMainStage = null;
-        sorted.forEach((item) => {
-            const mainStage = item.stage ? parseInt(item.stage.split('-')[0], 10) : null;
-            if (mainStage && mainStage !== lastMainStage) {
-                const title = INSERT_TITLES[mainStage - 1];
-                if (title) {
-                    itemsWithTitles.push({ type: 'title', content: title });
-                }
-                lastMainStage = mainStage;
-            }
-            itemsWithTitles.push({ type: 'item', content: item });
-        });
-        setPortfolioItemsWithTitles(itemsWithTitles);
-    }, [stagePortfolio, subStageTemplates]);
 
     const downloadFile = () => {
         // 檢查是否有 MinIO 檔案資訊
@@ -441,7 +385,7 @@ export default function Protfolio() {
 
                     {/* Navigation Content */}
                     <div className="flex-1 overflow-y-auto">
-                        {isLoading ? (
+                        {isLoading || isTemplatesLoading ? (
                             <div className="flex justify-center items-center py-16">
                                 <Loader />
                             </div>
@@ -450,15 +394,13 @@ export default function Protfolio() {
                                 <p className="text-red-500 font-medium">{error?.message || '載入失敗，請稍後再試'}</p>
                                 <button type="button" onClick={() => refetch()} className="mt-3 px-4 py-2 rounded-md bg-customgreen text-white text-body-sm font-medium hover:bg-customgreen/90 transition-colors duration-fast">重新載入</button>
                             </div>
-                        ) : portfolioItemsWithTitles.length === 0 ? (
-                            showEmptyMessage && (
-                                <div className="h-full flex flex-col items-center justify-center py-12 px-4">
-                                    <Lottie className="w-32 sm:w-48" animationData={ProtfoliioIcon} />
-                                    <p className="mt-4 text-body-sm sm:text-body text-gray-600 text-center">
-                                        目前還未新增歷程檔案，快和小組成員互相討論並記錄討論結果吧！
-                                    </p>
-                                </div>
-                            )
+                        ) : !hasPortfolioItems ? (
+                            <div className="h-full flex flex-col items-center justify-center py-12 px-4">
+                                <Lottie className="w-32 sm:w-48" animationData={ProtfoliioIcon} />
+                                <p className="mt-4 text-body-sm sm:text-body text-gray-600 text-center">
+                                    目前還未新增歷程檔案，快和小組成員互相討論並記錄討論結果吧！
+                                </p>
+                            </div>
                         ) : (
                             <div className="p-component-base sm:p-component-md-lg">
                                 <nav className="space-y-stack-md">

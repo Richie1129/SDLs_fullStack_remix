@@ -204,16 +204,21 @@ export default function SubStageComponent() {
         setIgnoreHover(true);
     };
     // [Refactored] getStageColor / getTextColor 已統一至 stageUtils.js
+    // 以 effect 同步階段，不用 onSuccess：全域 staleTime 下重新進頁（或切回其他專案）命中快取時
+    // 不會觸發 onSuccess，階段會停在前一個專案 / 舊的值
     const getProjectQuery = useQuery(["getProject", projectId], () => getProject(projectId),
         {
-            onSuccess: (data) => {
-                setStageInfo(data.currentStage, data.currentSubStage);
-                setCurrentStageIndex(data.currentStage)
-                setCurrentSubStageIndex(data.currentSubStage)
-            },
             enabled: !!projectId
         }
     );
+
+    useEffect(() => {
+        const data = getProjectQuery.data;
+        if (!data) return;
+        setStageInfo(data.currentStage, data.currentSubStage);
+        setCurrentStageIndex(data.currentStage)
+        setCurrentSubStageIndex(data.currentSubStage)
+    }, [getProjectQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
     // 處理 socket 事件
     useEffect(() => {
         const handleRefreshKanban = (newStages) => {

@@ -16,7 +16,6 @@ import { getCurrentUserRole, setStageInfo, clearStageInfo, getCurrentUsername } 
 import { MOBILE_NAV_TOGGLE_ID } from './SideBar';
 
 export default function TopBar({ showActivityStream, setShowActivityStream, showProjectCommentDrawer, setShowProjectCommentDrawer, onOpenMobileNav, mobileNavOpen = false }) {
-  const [projectUsers, setProjectUsers] = useState([{ id: "", username: "" }]);
   const [projectInfo, setProjectInfo] = useState({});
   const [referralCodeModalOpen, setReferralCodeModalOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -77,10 +76,11 @@ export default function TopBar({ showActivityStream, setShowActivityStream, show
   // 使用觀摩模式 hook
   const { isObservationMode, isLoading: isObservationLoading } = useObservationMode();
 
+  // 直接從 query data 推導：全域 staleTime 下命中快取時不會觸發 onSuccess
   const getProjectUserQuery = useQuery(["getProjectUser", projectId], () => getProjectUser(projectId), {
-    onSuccess: setProjectUsers,
     enabled: !!projectId,
   });
+  const projectUsers = Array.isArray(getProjectUserQuery.data) ? getProjectUserQuery.data : [];
 
   // 監聽觀摩模式激活事件
   useEffect(() => {

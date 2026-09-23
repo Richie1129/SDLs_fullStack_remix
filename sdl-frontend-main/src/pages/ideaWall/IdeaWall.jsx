@@ -70,20 +70,23 @@ export default function IdeaWall() {
     };
 
     // 首先獲取專案信息以得到當前階段
+    // 注意：下列 query 的結果以 effect 同步到 state，不用 onSuccess —
+    // refetchOnMount: false 與全域 staleTime 下重新進頁會直接吃快取、不觸發 onSuccess，state 會停在初始值
     const projectInfoQuery = useQuery(
         ['projectInfo', projectId],
         () => getProject(projectId),
         {
-            onSuccess: (data) => {
-                if (data) {
-                    state.setCurrentStage(data.currentStage ? String(data.currentStage) : "1");
-                    state.setCurrentSubStage(data.currentSubStage ? String(data.currentSubStage) : "1");
-                }
-            },
             refetchOnMount: false,
             refetchOnWindowFocus: false,
         }
     );
+
+    useEffect(() => {
+        const data = projectInfoQuery.data;
+        if (!data) return;
+        state.setCurrentStage(data.currentStage ? String(data.currentStage) : "1");
+        state.setCurrentSubStage(data.currentSubStage ? String(data.currentSubStage) : "1");
+    }, [projectInfoQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 獲取想法牆信息
     const ideaWallInfoQuery = useQuery(
@@ -94,16 +97,19 @@ export default function IdeaWall() {
         },
         {
             enabled: !!projectId,
-            onSuccess: (data) => {
-                state.setIdeaWallInfo(data);
-                if (data) {
-                    state.setTempId(data.id);
-                }
-            },
             refetchOnMount: false,
             refetchOnWindowFocus: false,
         }
     );
+
+    useEffect(() => {
+        if (!ideaWallInfoQuery.isSuccess) return;
+        const data = ideaWallInfoQuery.data;
+        state.setIdeaWallInfo(data);
+        if (data) {
+            state.setTempId(data.id);
+        }
+    }, [ideaWallInfoQuery.isSuccess, ideaWallInfoQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 獲取節點資料（初始載入用，後續靠 socket 差量更新）
     const getNodesQuery = useQuery({
