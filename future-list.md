@@ -632,6 +632,7 @@
   2. 若 `script-src` 仍需 `'unsafe-eval'`，優先評估以 `'wasm-unsafe-eval'` 或套件升級替代，最後才放寬
   3. `nginx.conf` 的 `$csp_report_only` 改名為正式 policy，`add_header Content-Security-Policy ... always;`，保留 `report-uri` 持續監看
   4. scp 到伺服器 `~/SDLs_fullStack_remix/nginx.conf` 後 `docker compose exec nginx nginx -t && docker compose exec nginx nginx -s reload`，用 Chrome 逐頁確認 console 無 CSP 錯誤
+  5. 同一次同步順手做 F038（`/assets/` 的 404 改帶 `no-store`）
 - **相關檔案**：`nginx.conf`、`sdl-backend-main/routes/cspReport.js`、`sdl-frontend-main/src/pages/StudentPortfolio/index.jsx`、`sdl-frontend-main/src/pages/teacher-dashboard/components/QuickActions.jsx`
 
 ---
@@ -929,6 +930,38 @@
 
 ---
 
+### F038: `/assets/` 的 404 回應改帶 `no-store`，避免被快取 4 小時
+
+- **類別**：DevOps / Frontend
+- **狀態**：`backlog`
+- **優先級**：P3
+- **建立日期**：2026-09-24
+- **提案來源**：2026-09-24 前端正式建置檢查（commit fa2f823）。修正前，`serve -s` 對不存在的 `/assets/*.js` 回 200 index.html，nginx 又標成 immutable 快取一年；改用 `serve.json` 後已回 404，但前端 404 沒帶 `Cache-Control`，Cloudflare 會自動補 `max-age=14400`（Browser Cache TTL），瀏覽器會記住這個 404 四小時
+- **為什麼現在不做**：
+  - 只有「部署後 4 小時內回滾」才會受影響：舊分頁拿到舊 chunk 的 404 → 4 小時內 revert 重建（content hash 相同、檔名一樣）→ 同一個瀏覽器仍記得 404，最多 4 小時載入失敗、只看到 ErrorBoundary。不回滾時這個 404 快取完全無害（`vite:preloadError` 會重整拿新版）
+  - `nginx.conf` 不隨 CI 部署，需要手動同步伺服器；為了很窄的情境單獨手動部署一次，出錯機會可能比要防的問題還高
+- **觸發條件**（任一成立）：
+  - 做 F023（CSP 轉正式強制）或其他任何要動伺服器 `nginx.conf` 的工作時，順手一起做
+  - 開始頻繁回滾，或改成藍綠部署
+- **怎麼做**：
+  1. `nginx.conf` 的 `http` 區塊加 map（304 也要維持 immutable，否則 Cloudflare 回源驗證時會拿到 `no-store`）：
+     ```nginx
+     map $status $assets_cache_control {
+         200     "public, max-age=31536000, immutable";
+         304     "public, max-age=31536000, immutable";
+         default "no-store";
+     }
+     ```
+  2. `location ^~ /assets/` 內把 `add_header Cache-Control "public, max-age=31536000, immutable";` 改成 `add_header Cache-Control $assets_cache_control always;`（要加 `always`，404 才會帶到標頭）
+  3. scp 到伺服器後 `docker compose exec nginx nginx -t && docker compose exec nginx nginx -s reload`
+  4. 驗證：`curl -sI https://science.wuretedu.com/assets/index-OLDHASH.js` 應為 404 且 `cache-control: no-store`；現有 chunk 仍是 immutable
+- **估計工作量**：`S`
+- **依賴 / 前置條件**：—
+- **風險 / 副作用**：只影響 `/assets/` 的非 200/304 回應；map 寫錯會讓正常 chunk 失去長期快取，驗證步驟要確認現有 chunk 的標頭
+- **相關檔案**：`nginx.conf`、`sdl-frontend-main/serve.json`、`sdl-frontend-main/Dockerfile.prod`
+
+---
+
 ## 變更記錄
 
 - **2026-04-17**：建立文件；從 `sdl-coach-project-context-plan.md` 第 12、13 節遷入 F001–F013
@@ -943,3 +976,4 @@
 - **2026-09-17**：完成 `plans/001` 到 `007`（動畫稽核七項，commit dd55663 到 564c298）；新增 F030–F033；以學生帳號在本機 dev 實測桌面與 390px 寬度，加上 redesign-existing-projects 與 mobile-native 清單的靜態稽核與死碼稽核，五項可直接執行的修法寫成 `plans/008` 到 `012`，側欄抽屜化、收尾雜項、共用元件與 focus ring、utils 合併四項登錄為後續工作
 - **2026-09-17**：完成 `plans/008` 到 `012`（z-index token、Modal 無障礙、手機基礎、狀態與文案、死碼清理與 production drop console）；新增 F034（Kanban 卡片首幀空殼與圖片延後）並在 F031 追加兩處 `scrollbar-hidden`；plans/011 的卡片空窗診斷結論：API 一次帶回 task，空窗是背景分頁節流假象，不補 per-column 骨架
 - **2026-09-17**：完成 F030–F034（`plans/013` 到 `017`，commit 670bc20 與後續 commit）；新增 F035（裸 `toLocale*` 統一到 `dateFormat.js`）、F036（`Button` 全站逐頁替換）；code review 後補 `closeOnBackdrop`、刪 `ProjectViewingSettings.jsx` 死檔、補 9 檔 `focus:outline-none`、清 12 檔未用 import，並新增 F037（eslint 補 `.jsx`）
+- **2026-09-24**：新增 F038（`/assets/` 的 404 改帶 `no-store`）；前端正式建置檢查後修正舊 chunk 回 index.html 並被快取一年的問題（commit fa2f823），殘留的 Cloudflare 4 小時 404 快取只影響短時間內回滾，登錄為後續工作並在 F023 步驟加註一起做
